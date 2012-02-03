@@ -4,12 +4,14 @@ import json
 import re
 from oii.utils import gen_id
 from oii.times import iso8601
+from oii.webapi.idgen import idgen_api
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
 and https://beagle.whoi.edu/redmine/issues/943"""
 
 app = Flask(__name__)
+app.register_blueprint(idgen_api)
 
 # FIXME use real database
 db = {}
@@ -21,11 +23,6 @@ ANNOTATOR = 'annotator'
 IDENTIFICATION = 'identification'
 BOUNDING_BOX = 'boundingBox'
 IMAGE = 'image'
-
-@app.route('/generate_ids/<int:n>')
-@app.route('/generate_ids/<int:n>/<path:ns>')
-def generate_ids(n,ns=''):
-    return json.dumps([ns + gen_id() for _ in range(n)])
 
 @app.route('/create_annotation/<path:pid>',methods=['POST'])
 def create_annotation(pid):
@@ -56,7 +53,8 @@ class TestAnnotation(TestCase):
         return ann
     def test_gen_ids(self):
         with app.test_request_context():
-            ids = json.loads(self.app.get(url_for('generate_ids', n=20, ns=self.namespace)).data)
+            ids = json.loads(self.app.get(url_for('idgen_api.generate_ids', n=20, ns=self.namespace)).data)
+            #ids = json.loads(self.app.get('/generate_ids/%d/%s' % (20, self.namespace)).data)
             assert len(ids) == 20 # we asked for 20
             for id in ids:
                 assert len(id) == len(self.namespace) + 40 # sha1 hashes are 160 bits, hex-encoded 40 chars
