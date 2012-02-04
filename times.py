@@ -1,6 +1,7 @@
 import time
 import calendar
 from unittest import TestCase
+from utils import Struct
 
 """Utilities for working with timestamps"""
 
@@ -29,4 +30,3 @@ class test_formats(TestCase):
         assert iso8601(time.gmtime(1328203363)) == '2012-02-02T17:22:43Z'
         assert rfc822(time.gmtime(0)) == 'Thu, 01 Jan 1970 00:00:00 +0000'
         assert rfc822(time.gmtime(1328203363)) == 'Thu, 02 Feb 2012 17:22:43 +0000'
-

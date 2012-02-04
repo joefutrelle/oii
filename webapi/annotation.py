@@ -2,9 +2,10 @@ from flask import Flask, request, url_for
 from unittest import TestCase
 import json
 import re
-from oii.utils import gen_id
-from oii.times import iso8601
+from oii.utils import gen_id, Struct, Destruct
 from oii.webapi.idgen import idgen_api
+from oii import annotation
+from oii.times import iso8601
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
@@ -15,14 +16,6 @@ app.register_blueprint(idgen_api)
 
 # FIXME use real database
 db = {}
-
-# FIXME express annotation information model schema elsewhere (not in webapp code)
-PID = 'pid'
-TIMESTAMP = 'timestamp'
-ANNOTATOR = 'annotator'
-IDENTIFICATION = 'identification'
-BOUNDING_BOX = 'boundingBox'
-IMAGE = 'image'
 
 @app.route('/create_annotation/<path:pid>',methods=['POST'])
 def create_annotation(pid):
@@ -36,21 +29,20 @@ def fetch_annotation(pid):
 
 @app.route('/list_annotations/image/<path:image_pid>')
 def list_annotations(image_pid):
-    return json.dumps([ann for ann in db.values() if ann[IMAGE] == image_pid])
+    return json.dumps([ann for ann in db.values() if ann[annotation.IMAGE] == image_pid])
 
 class TestAnnotation(TestCase):
     def setUp(self):
         self.namespace = 'http://foo.bar.baz/fnord/'
         self.app = app.test_client()
     def random_annotation(self):
-        ann = {}
-        ann[PID] = gen_id(self.namespace)
-        ann[IMAGE] = gen_id(self.namespace)
-        ann[BOUNDING_BOX] = [(123,234), (345,456)] # doesn't matter what these are
-        ann[IDENTIFICATION] = gen_id(self.namespace)
-        ann[ANNOTATOR] = gen_id(self.namespace)
-        ann[TIMESTAMP] = iso8601()
-        return ann
+        p = gen_id(self.namespace)
+        i = gen_id(self.namespace)
+        b = [[123,234], [345,456]] # tuples do not survive JSON roundtripping
+        t = gen_id(self.namespace)
+        a = gen_id(self.namespace)
+        ts = iso8601()
+        return Struct(timestamp=ts, pid=p, image=i, geometry=b, taxon=t, annotator=a)
     def test_gen_ids(self):
         with app.test_request_context():
             ids = json.loads(self.app.get(url_for('idgen_api.generate_ids', n=20, ns=self.namespace)).data)
@@ -62,15 +54,16 @@ class TestAnnotation(TestCase):
     def test_create_fetch(self):
         with app.test_request_context():
             ann_in = self.random_annotation()
-            pid = ann_in[PID]
-            self.app.post(url_for('create_annotation', pid=pid), data=json.dumps(ann_in))
-            ann_out = json.loads(self.app.get(url_for('fetch_annotation', pid=pid)).data)
-            assert ann_out[PID] == ann_in[PID]
-            assert ann_out[IMAGE] == ann_in[IMAGE]
+            pid = ann_in.pid
+            self.app.post(url_for('create_annotation', pid=pid), data=json.dumps(Destruct(ann_in)))
+            ann_out = Struct(json.loads(self.app.get(url_for('fetch_annotation', pid=pid)).data))
+            assert ann_out.pid == ann_in.pid
+            assert ann_out.image == ann_in.image
+            assert ann_out.taxon == ann_in.taxon
+            assert ann_out.annotator == ann_in.annotator
+            assert ann_out.timestamp == ann_in.timestamp 
+            assert ann_out.geometry == ann_in.geometry
             # FIXME deal with bounding box (simple == doesn't survive JSON roundtripping)
-            assert ann_out[IDENTIFICATION] == ann_in[IDENTIFICATION]
-            assert ann_out[ANNOTATOR] == ann_in[ANNOTATOR]
-            assert ann_in[TIMESTAMP] == ann_out[TIMESTAMP]
     def test_list_annotations(self):
         with app.test_request_context():
             ns = [0,1,2,3,100]
@@ -79,10 +72,10 @@ class TestAnnotation(TestCase):
                 # create n annotations for this image pid
                 for _ in range(n):
                     ann = self.random_annotation()
-                    ann[IMAGE] = image_pid
-                    self.app.post(url_for('create_annotation', pid=ann[PID]), data=json.dumps(ann))
+                    ann.image = image_pid
+                    self.app.post(url_for('create_annotation', pid=ann.pid), data=json.dumps(Destruct(ann)))
             for (n,image_pid) in zip(ns,image_pids):
-                ann_list = json.loads(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)
+                ann_list = [Struct(ann) for ann in json.loads(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)]
                 # FIXME don't just check the length of the result, check the contents
                 assert len(ann_list) == n
 
