@@ -5,6 +5,7 @@ import re
 from hashlib import sha1
 from time import time, clock
 from unittest import TestCase
+import json
 
 genid_prev_id_tl = local()
 prev = genid_prev_id_tl.prev = None
@@ -31,24 +32,58 @@ class test_gen_id(TestCase):
                 assert new_id not in ids
                 ids.append(new_id)
 
-# due to http://stackoverflow.com/a/1305663 
-# useful to a point; for denormalized, table-like data           
+# due to http://stackoverflow.com/a/1305663
+# with enhancements. Struct class provides view of JSON or JSON-like structure that allows
+# direct member access. So a JSON structure {"foo":["bar":{"baz":7}]}
+# could be accessed like ref.foo[0].baz
+
+# note that if your JSON endpoint returns a non-dict (e.g., a list) pass it to the
+# structs factory instead of calling Struct's initializer
+
+def structs(item):
+    if type(item) == dict:
+        return Struct(item)
+    elif type(item) == list:
+        return map(structs,item)
+    elif type(item) == tuple:
+        return tuple(map(structs,item))
+    else:
+        return item
+
 class Struct():
-    def from_dict(self, d):
-        self.__dict__.update(d)
+    def __from_dict(self, d):
+        for k,v in d.items():
+            self.__dict__[k] = structs(v)
         
+    @property
     def as_dict(self):
-        return self.__dict__
-        
+        result = {}
+        for k,v in self.__dict__.iteritems():
+            if type(v) == Struct:
+                result[k] = v.as_dict
+            elif type(v) == list:
+                result[k] = map(lambda e: e.as_dict if isinstance(e,Struct) else e, v)
+            elif type(v) == tuple:
+                result[k] = tuple(map(lambda e: e.as_dict if isinstance(e,Struct) else e,v))
+            else:
+                result[k] = v
+        return result
+    
+    @property
+    def json(self):
+        return json.dumps(self.as_dict)
+    
+    def __repr__(self):
+        return self.json
+    
     def __init__(self, d=None, **kv):
         if d is not None:
-            self.from_dict(d)
+            if type(d) == dict:
+                self.__from_dict(d)
+            elif type(d) == str:
+                self.__from_dict(json.loads(d))
         else:
-            self.from_dict(kv)
-
-class Destruct(dict):
-    def __init__(self,struct):
-        self.update(struct.as_dict())
+            self.__from_dict(kv)
         
 class TestStruct(TestCase):
     def test_init_kw(self):
@@ -59,9 +94,15 @@ class TestStruct(TestCase):
         s = Struct(dict(b=2, x='flaz'))
         assert s.b == 2
         assert s.x == 'flaz'
-    def test_destruct(self):
-        s = Struct(dict(b=2, x='flaz'))
-        assert Destruct(s) == dict(x='flaz', b=2)
+    def test_init_json(self):
+        s = Struct(r'{"a":3,"b":5,"c":[1,2,{"x":7,"y":6,"z":8}]}')
+        assert s.a == 3
+        assert len(s.c) == 3
+        assert s.c[0] == 1
+        assert s.c[1] == 2
+        assert s.c[2].x == 7
+        assert s.c[2].y == 6
+        assert s.c[2].z == 8
 
 def dict_slice(d,schema):
     """d - a dict to slice

@@ -2,7 +2,7 @@ from flask import Flask, request, url_for
 from unittest import TestCase
 import json
 import re
-from oii.utils import gen_id, Struct, Destruct
+from oii.utils import gen_id, Struct, structs
 from oii.webapi.idgen import idgen_api
 from oii import annotation
 from oii.times import iso8601
@@ -55,8 +55,8 @@ class TestAnnotation(TestCase):
         with app.test_request_context():
             ann_in = self.random_annotation()
             pid = ann_in.pid
-            self.app.post(url_for('create_annotation', pid=pid), data=json.dumps(Destruct(ann_in)))
-            ann_out = Struct(json.loads(self.app.get(url_for('fetch_annotation', pid=pid)).data))
+            self.app.post(url_for('create_annotation', pid=pid), data=ann_in.json)
+            ann_out = Struct(self.app.get(url_for('fetch_annotation', pid=pid)).data)
             assert ann_out.pid == ann_in.pid
             assert ann_out.image == ann_in.image
             assert ann_out.taxon == ann_in.taxon
@@ -73,9 +73,9 @@ class TestAnnotation(TestCase):
                 for _ in range(n):
                     ann = self.random_annotation()
                     ann.image = image_pid
-                    self.app.post(url_for('create_annotation', pid=ann.pid), data=json.dumps(Destruct(ann)))
+                    self.app.post(url_for('create_annotation', pid=ann.pid), data=ann.json)
             for (n,image_pid) in zip(ns,image_pids):
-                ann_list = [Struct(ann) for ann in json.loads(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)]
+                ann_list = structs(json.loads(self.app.get(url_for('list_annotations', image_pid=image_pid)).data))
                 # FIXME don't just check the length of the result, check the contents
                 assert len(ann_list) == n
 
