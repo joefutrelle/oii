@@ -37,33 +37,55 @@ class test_gen_id(TestCase):
 # direct member access. So a JSON structure {"foo":["bar":{"baz":7}]}
 # could be accessed like ref.foo[0].baz
 
-# note that if your JSON endpoint returns a non-dict (e.g., a list) pass it to the
-# structs factory instead of calling Struct's initializer
+# factory method
 
-def structs(item):
-    if type(item) == dict:
+# internal, does not interpret strings as JSON
+def __struct_wrap(item):
+    if isinstance(item,basestring):
+        return item
+    try: # assume dict
         return Struct(item)
-    elif type(item) == list:
-        return map(structs,item)
-    elif type(item) == tuple:
-        return tuple(map(structs,item))
-    else:
+    except:
+        pass
+    try: # assume sequence
+        return map(__struct_wrap,item)
+    except TypeError:
         return item
 
+# external, accepts JSON strings, sequences, dicts, and keyword args
+def structs(item=None,**kv):
+    if item is None:
+        return __struct_wrap(kv)
+    try:
+        return __struct_wrap(json.loads(item))
+    except:
+        pass
+    return __struct_wrap(item)
+
+# external, accepts Structs, sequences, or primitive values
+def jsons(item):
+    try:
+        return map(jsons,item)
+    except TypeError:
+        pass
+    try:
+        return item.json
+    except AttributeError:
+        return item
+    
 class Struct():
-    def __from_dict(self, d):
-        for k,v in d.items():
-            self.__dict__[k] = structs(v)
-        
     @property
     def as_dict(self):
         result = {}
         for k,v in self.__dict__.iteritems():
-            if type(v) == Struct:
+            try:
                 result[k] = v.as_dict
-            elif type(v) == list:
+            except AttributeError:
+                pass
+            # handle lists and tuples separately, so no duck typing
+            if isinstance(v,list):
                 result[k] = map(lambda e: e.as_dict if isinstance(e,Struct) else e, v)
-            elif type(v) == tuple:
+            elif isinstance(v,tuple):
                 result[k] = tuple(map(lambda e: e.as_dict if isinstance(e,Struct) else e,v))
             else:
                 result[k] = v
@@ -76,26 +98,21 @@ class Struct():
     def __repr__(self):
         return self.json
     
-    def __init__(self, d=None, **kv):
-        if d is not None:
-            if type(d) == dict:
-                self.__from_dict(d)
-            elif type(d) == str:
-                self.__from_dict(json.loads(d))
-        else:
-            self.__from_dict(kv)
+    def __init__(self, d):
+        for k,v in d.items():
+            self.__dict__[k] = structs(v)
         
 class TestStruct(TestCase):
     def test_init_kw(self):
-        s = Struct(a=3, b=4)
+        s = structs(a=3, b=4)
         assert s.a == 3
         assert s.b == 4
     def test_init_dict(self):
-        s = Struct(dict(b=2, x='flaz'))
+        s = structs(dict(b=2, x='flaz'))
         assert s.b == 2
         assert s.x == 'flaz'
     def test_init_json(self):
-        s = Struct(r'{"a":3,"b":5,"c":[1,2,{"x":7,"y":6,"z":8}]}')
+        s = structs(r'{"a":3,"b":5,"c":[1,2,{"x":7,"y":6,"z":8}]}')
         assert s.a == 3
         assert len(s.c) == 3
         assert s.c[0] == 1
@@ -104,17 +121,19 @@ class TestStruct(TestCase):
         assert s.c[2].y == 6
         assert s.c[2].z == 8
 
-def dict_slice(d,schema):
+def dict_slice(d,schema,fn=None):
     """d - a dict to slice
-    keys - the keys to slice, or if a dict, a dict mapping those keys to functions to call on the values first"""
-    if type(schema) == str:
+    keys - the keys to slice, or if a dict, a dict mapping those keys to functions to call on the values first."""
+    try: # allow schema to be a string in the form x,y,z
         schema = re.split(',',schema)
-    if type(schema) == list:
-        return dict((k,v) for k,v in d.iteritems() if k in schema)
-    if type(schema) == dict:
+    except TypeError: 
+        pass
+    try: # allow schema to be a dict mapping keys to functions
         xf = dict((k,schema[k](d[k])) for k in schema.keys() if schema[k] is not None)
         xf.update(dict((k,d[k]) for k in schema.keys() if schema[k] is None))
         return xf
+    except TypeError: # ok, schema must be a sequence of keys
+        return dict((k,v) for k,v in d.iteritems() if k in schema)
     
 class TestDictSlice(TestCase):
     def test_list(self):

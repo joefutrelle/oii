@@ -2,7 +2,7 @@ from flask import Flask, request, url_for
 from unittest import TestCase
 import json
 import re
-from oii.utils import gen_id, Struct, structs
+from oii.utils import gen_id, structs, jsons
 from oii.webapi.idgen import idgen_api
 from oii import annotation
 from oii.times import iso8601
@@ -42,7 +42,7 @@ class TestAnnotation(TestCase):
         t = gen_id(self.namespace)
         a = gen_id(self.namespace)
         ts = iso8601()
-        return Struct(timestamp=ts, pid=p, image=i, geometry=b, taxon=t, annotator=a)
+        return structs(timestamp=ts, pid=p, image=i, geometry=b, taxon=t, annotator=a)
     def test_gen_ids(self):
         with app.test_request_context():
             ids = json.loads(self.app.get(url_for('idgen_api.generate_ids', n=20, ns=self.namespace)).data)
@@ -55,8 +55,8 @@ class TestAnnotation(TestCase):
         with app.test_request_context():
             ann_in = self.random_annotation()
             pid = ann_in.pid
-            self.app.post(url_for('create_annotation', pid=pid), data=ann_in.json)
-            ann_out = Struct(self.app.get(url_for('fetch_annotation', pid=pid)).data)
+            self.app.post(url_for('create_annotation', pid=pid), data=jsons(ann_in))
+            ann_out = structs(self.app.get(url_for('fetch_annotation', pid=pid)).data)
             assert ann_out.pid == ann_in.pid
             assert ann_out.image == ann_in.image
             assert ann_out.taxon == ann_in.taxon
@@ -73,9 +73,9 @@ class TestAnnotation(TestCase):
                 for _ in range(n):
                     ann = self.random_annotation()
                     ann.image = image_pid
-                    self.app.post(url_for('create_annotation', pid=ann.pid), data=ann.json)
+                    self.app.post(url_for('create_annotation', pid=ann.pid), data=jsons(ann))
             for (n,image_pid) in zip(ns,image_pids):
-                ann_list = structs(json.loads(self.app.get(url_for('list_annotations', image_pid=image_pid)).data))
+                ann_list = structs(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)
                 # FIXME don't just check the length of the result, check the contents
                 assert len(ann_list) == n
 
