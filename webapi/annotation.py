@@ -49,7 +49,7 @@ TAXONOMY = {
 @app.route('/taxonomy_autocomplete',methods=['GET','POST'])
 def taxonomy_autocomplete():
     stem = '^%s.*' % request.values['term']
-    return Response([{'label': k, 'value': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)], mimetype='application/json')
+    return Response(json.dumps([{'label': k, 'value': k, 'pid': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)]), mimetype='application/json')
 
 class TestAnnotation(TestCase):
     def setUp(self):
