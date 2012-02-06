@@ -36,30 +36,46 @@ function gotoPage(page,size) {
             clearPage();
             for(index = 0; index < r.length; index++) {
                 entry = r[index];
-                cell = '#cell' + index;
                 // append image with approprite URL
-                $('#images').append('<div id="'+cell+'" class="thumbnail"><img src="'+entry.url+'" class="thumbnail"><div class="caption ui-widget">&nbsp;</div></div>')
-                    .data('ids')[index] = entry.id;
-                // FIXME id should belong to each image, but DOM modification isn't complete yet
+                $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div></div>')
+                // FIXME now need to fetch annotations for each image
             }
         }
     });
 }
 function clearPage() {
-    // FIXME id should belong to each image
-    $('#images').empty().data('ids',[]);
+    $('#images').empty();
+}
+function setLabel(cell,label) { /* cell = thumbnail div containing image */
+    captionDiv = $(cell).find('div.caption');
+    previousLabel = captionDiv.data('previous-label');
+    previousLabel = previousLabel == undefined ? '' : previousLabel;
+    newLabel = $(cell).hasClass('selected') ? previousLabel : label;
+    captionDiv.data('previous-label',captionDiv.data('label'));
+    captionDiv.html(newLabel);
+    captionDiv.data('label',newLabel);
+    $(cell).toggleClass('selected');
+}
+function revertLabel(cell) {
+    captionDiv = $(cell).find('div.caption');
+    previousLabel = captionDiv.data('previous-label');
+    previousLabel = previousLabel == undefined ? '' : previousLabel;
+    captionDiv.data('previous-label','');
+    captionDiv.data('label',previousLabel);
+    captionDiv.html(previousLabel);
+    $(cell).removeClass('selected');
 }
 function commit() {
+    $('div.thumbnail.selected').each(function() {
+        ix = $(this).index();
+        l = $(this).find('div.caption').data('label');
+        alert('you said '+ix+' is a '+l);
+    });
     $('div.thumbnail').removeClass('selected');
 }
 function cancel() {
-    $('div.thumbnail.selected').each(function(thumbnail) {
-        captionDiv = $(this).find('div.caption');
-        previousClass = captionDiv.data('previousClass');
-        previousClass = previousClass == undefined ? '' : previousClass;
-        captionDiv.data('class',previousClass);
-        captionDiv.html(previousClass);
-        $(this).removeClass('selected');
+    $('div.thumbnail.selected').each(function(ix,cell) {
+        revertLabel(cell);
     });
 }
 $(document).ready(function() {
@@ -71,14 +87,7 @@ $(document).ready(function() {
     $('#images').disableSelection(); // note that this is a jQuery UI function
     // thumbnail divs are selectable
     $('div.thumbnail').live('click',function() {
-        captionDiv = $(this).find('div.caption');
-        previousClass = captionDiv.data('previousClass');
-        previousClass = previousClass == undefined ? '' : previousClass;
-        newClass = $(this).hasClass('selected') ? previousClass : $('#class').val();
-        captionDiv.data('previousClass',captionDiv.data('class'));
-        captionDiv.html(newClass);
-        captionDiv.data('class',newClass);
-        $(this).toggleClass('selected');
+        setLabel($(this),$('#label').val());
     });
     // images are not draggable
     $('img').live('mousedown',function(event) {
@@ -101,7 +110,7 @@ $(document).ready(function() {
         cancel();
     });
     gotoPage(page,size);
-    $('#class').autocomplete({
+    $('#label').autocomplete({
         source: '/taxonomy_autocomplete',
         minLength: 2
     });
@@ -113,7 +122,7 @@ $(document).ready(function() {
   <a href="#" id="prev" class="button">&lt; Prev</a>
   <a href="#" id="next" class="button">Next &gt;</a>
   Class
-  <input id="class"/>
+  <input id="label"/>
   <a href="#" id="commit" class="button">Commit</a>
   <a href="#" id="cancel" class="button">Cancel</a>
 </div>
