@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link type="text/css" href="css/smoothness/jquery-ui-1.8.14.custom.css" rel="Stylesheet" /> 
+<script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui-1.8.14.custom.min.js"></script>
+<title>image annotation prototype</title>
+<style type="text/css">
+div.thumbnail {
+  display: inline-block;
+  padding: 10px;
+  vertical-align: top;
+}
+img.thumbnail {
+  margin-left: auto;
+  margin-right: auto;
+}
+.caption {
+    text-align: center
+}
+.selected { background: #9999ff; }
+</style>
+<script type="text/javascript">
+function gotoPage(page,size) {
+    if(page < 1) page = 1;
+    $.ajax({
+        url: '/list_images',
+        type: 'GET',
+        data: {
+            'offset': (page-1) * size,
+            'limit': size
+        },
+        datatype: 'json',
+        success: function(r,status) {
+            clearPage();
+            for(index = 0; index < r.length; index++) {
+                entry = r[index];
+                cell = '#cell' + index;
+                // append image with approprite URL
+                $('#images').append('<div id="'+cell+'" class="thumbnail"><img src="'+entry.url+'" class="thumbnail"><div class="caption ui-widget">&nbsp;</div></div>')
+                    .data('ids')[index] = entry.id;
+                // FIXME id should belong to each image, but DOM modification isn't complete yet
+            }
+        }
+    });
+}
+function clearPage() {
+    // FIXME id should belong to each image
+    $('#images').empty().data('ids',[]);
+}
+function commit() {
+    $('div.thumbnail').removeClass('selected');
+}
+function cancel() {
+    $('div.thumbnail.selected').each(function(thumbnail) {
+        captionDiv = $(this).find('div.caption');
+        previousClass = captionDiv.data('previousClass');
+        previousClass = previousClass == undefined ? '' : previousClass;
+        captionDiv.data('class',previousClass);
+        captionDiv.html(previousClass);
+        $(this).removeClass('selected');
+    });
+}
+$(document).ready(function() {
+    page = 1;
+    size = 20;
+    // inputs are ui widget styled
+    $('input').addClass('ui-widget');
+    // images div is not text-selectable
+    $('#images').disableSelection(); // note that this is a jQuery UI function
+    // thumbnail divs are selectable
+    $('div.thumbnail').live('click',function() {
+        captionDiv = $(this).find('div.caption');
+        previousClass = captionDiv.data('previousClass');
+        previousClass = previousClass == undefined ? '' : previousClass;
+        newClass = $(this).hasClass('selected') ? previousClass : $('#class').val();
+        captionDiv.data('previousClass',captionDiv.data('class'));
+        captionDiv.html(newClass);
+        captionDiv.data('class',newClass);
+        $(this).toggleClass('selected');
+    });
+    // images are not draggable
+    $('img').live('mousedown',function(event) {
+        event.preventDefault();
+    });
+    $('a.button').button();
+    $('#prev').click(function() {
+        page--;
+        if(page < 1) page = 1;
+        gotoPage(page,25);
+    });
+    $('#next').click(function() {
+        page++;
+        gotoPage(page,25);
+    });
+    $('#commit').click(function() {
+        commit();
+    });
+    $('#cancel').click(function() {
+        cancel();
+    });
+    gotoPage(page,size);
+    $('#class').autocomplete({
+        source: '/taxonomy_autocomplete',
+        minLength: 2
+    });
+});
+</script>
+</head>
+<body>
+<div id="controls" class="ui-widget">
+  <a href="#" id="prev" class="button">&lt; Prev</a>
+  <a href="#" id="next" class="button">Next &gt;</a>
+  Class
+  <input id="class"/>
+  <a href="#" id="commit" class="button">Commit</a>
+  <a href="#" id="cancel" class="button">Cancel</a>
+</div>
+<div id="images"></div>
+</body>
+</html>

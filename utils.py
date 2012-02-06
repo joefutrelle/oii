@@ -32,13 +32,42 @@ class test_gen_id(TestCase):
                 assert new_id not in ids
                 ids.append(new_id)
 
+# recursively map a function onto an item. if the item is a sequence,
+# descend into each item; if it's a dict, descend into each value.
+def mapr(function,item):
+    if isinstance(item,basestring):
+        return function(item) # don't sequence-map on strings!
+    try:
+        return dict([(k,mapr(function,v)) for k,v in item.iteritems()])
+    except:
+        pass
+    try:
+        return map(lambda i: mapr(function,i),item)
+    except:
+        pass
+    try:
+        return function(item)
+    except:
+        pass
+    # function won't accept, pass through
+    return item
+
 # due to http://stackoverflow.com/a/1305663
 # with enhancements. Struct class provides view of JSON or JSON-like structure that allows
 # direct member access. So a JSON structure {"foo":["bar":{"baz":7}]}
 # could be accessed like ref.foo[0].baz
 
-# factory method
+# not using jsonpickle because we only want to serialize stuff that originated in JSON
+# or JSON-like structures.
 
+
+class TestMapr(TestCase):
+    def runTest(self):
+        ins = {"a": 3, "c": [1, 2, {"y": 6, "x": 7, "z": 8}], "b": 5}
+        outs = {"a": '3', "c": ['1', '2', {"y": '6', "x": '7', "z": '8'}], "b": '5'}
+        assert mapr(str,ins) == outs
+        
+# factory method
 # internal, does not interpret strings as JSON
 def __struct_wrap(item):
     if isinstance(item,basestring):
@@ -62,6 +91,19 @@ def structs(item=None,**kv):
         pass
     return __struct_wrap(item)
 
+def destructs(item):
+    if isinstance(item,basestring):
+        return item
+    try:
+        return item.as_dict
+    except:
+        pass
+    try:
+        return map(destructs,item)
+    except:
+        pass
+    return item
+    
 # external, accepts Structs, sequences, or primitive values
 def jsons(item):
     try:
@@ -132,7 +174,7 @@ def dict_slice(d,schema,fn=None):
         xf = dict((k,schema[k](d[k])) for k in schema.keys() if schema[k] is not None)
         xf.update(dict((k,d[k]) for k in schema.keys() if schema[k] is None))
         return xf
-    except TypeError: # ok, schema must be a sequence of keys
+    except: # ok, schema must be a sequence of keys
         return dict((k,v) for k,v in d.iteritems() if k in schema)
     
 class TestDictSlice(TestCase):

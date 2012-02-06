@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for
+from flask import Flask, request, url_for, Response
 from unittest import TestCase
 import json
 import re
@@ -30,6 +30,26 @@ def fetch_annotation(pid):
 @app.route('/list_annotations/image/<path:image_pid>')
 def list_annotations(image_pid):
     return json.dumps([ann for ann in db.values() if ann[annotation.IMAGE] == image_pid])
+
+IMAGE_LIST = [
+              'http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg',
+              'http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg',
+              'http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg',
+]
+
+@app.route('/list_images')
+def list_images():
+    return Response(json.dumps([{'url':url} for url in IMAGE_LIST]), mimetype='application/json')
+
+TAXONOMY = {
+            'sand dollar': 'http://foo.bar/ns/sand_dollar',
+            'trash': 'http://foo.bar/ns/trash'
+}
+
+@app.route('/taxonomy_autocomplete',methods=['GET','POST'])
+def taxonomy_autocomplete():
+    stem = '^%s.*' % request.values['term']
+    return Response([{'label': k, 'value': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)], mimetype='application/json')
 
 class TestAnnotation(TestCase):
     def setUp(self):
