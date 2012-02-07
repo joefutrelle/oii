@@ -37,9 +37,8 @@ function gotoPage(page,size) {
             clearPage();
             $.each(r, function(i,entry) {
                 // append image with approprite URL
-                $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div></div>')
+                $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
                 	.find('div.thumbnail:last').data('image_pid',entry.url);
-                // FIXME now need to fetch annotations for each image
             });
         }
     });
@@ -87,7 +86,7 @@ function commit() {
             	image: $(this).data('image_pid'),
             	timestamp: $(this).data('timestamp'),
             	annotator: 'http://people.net/joeblow',
-            	taxon: $('#workspace').data('taxonomy')[$(this).data('label')], /* FIXME taxon URI! */
+            	taxon: $('#workspace').data('taxonomy')[$(this).data('label')],
             	boundingBox: [[0, 0], [0, 0]],
             };
         as.push(a)
