@@ -35,13 +35,12 @@ function gotoPage(page,size) {
         datatype: 'json',
         success: function(r,status) {
             clearPage();
-            for(index = 0; index < r.length; index++) {
-                entry = r[index];
+            $.each(r, function(i,entry) {
                 // append image with approprite URL
                 $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div></div>')
-                	.find('div.thumbnail:last').data('pid',entry.url);
+                	.find('div.thumbnail:last').data('image_pid',entry.url);
                 // FIXME now need to fetch annotations for each image
-            }
+            });
         }
     });
 }
@@ -66,22 +65,44 @@ function revertLabel(cell) { /* cell = thumbnail div containing image */
     $(cell).find('div.caption').html(previousLabel);
     $(cell).removeClass('selected');
 }
+function preCommit() {
+    /* generate an ID for each annotation */
+    n = $('div.thumbnail.selected').length;
+    /* FIXME hardcoded namespace */
+    with_json_request('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
+        $.each(r, function(i,id) {
+            $('div.thumbnail.selected:eq('+i+')').data('annotation_pid',id);
+        });
+        commit();
+    });
+}
 function commit() {
+    var as = []
     $('div.thumbnail.selected').each(function() {
         ix = $(this).index();
         l = $(this).data('label');
         p = $(this).data('pid');
         a = {
-                'pid': 'http://lsadkfjlaskdjfasdf/', /* FIXME gen id! */
-            	'image': $(this).data('pid'),
-            	'timestamp': $(this).data('timestamp'),
-            	'annotator': 'http://people.net/joeblow',
-            	'taxon': $('#workspace').data('taxonomy')[$(this).data('label')], /* FIXME taxon URI! */
-            	'boundingBox': [[0, 0], [0, 0]],
+                pid: $(this).data('annotation_pid'),
+            	image: $(this).data('image_pid'),
+            	timestamp: $(this).data('timestamp'),
+            	annotator: 'http://people.net/joeblow',
+            	taxon: $('#workspace').data('taxonomy')[$(this).data('label')], /* FIXME taxon URI! */
+            	boundingBox: [[0, 0], [0, 0]],
             };
-        alert(a.image+' is a '+a.taxon+' at '+a.timestamp);
+        as.push(a)
+        /*alert(a.image+' is a '+a.taxon+' at '+a.timestamp+', ann_id='+a.pid);*/
     });
-    $('div.thumbnail').removeClass('selected');
+    $.ajax({
+        url: '/create_annotations',
+        type: 'POST',
+        contentType: 'json',
+        dataType: 'json',
+        data: JSON.stringify(as),
+        success: function() {
+            $('div.thumbnail').removeClass('selected');
+        }
+    });
 }
 function cancel() {
     $('div.thumbnail.selected').each(function(ix,cell) {
@@ -115,7 +136,7 @@ $(document).ready(function() {
     });
 	$('#workspace').data('taxonomy',{});
     $('#commit').click(function() {
-		commit();
+		preCommit();
  	});
   	$('#cancel').click(function() {
   	  	cancel();

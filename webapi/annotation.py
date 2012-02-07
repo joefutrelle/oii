@@ -14,15 +14,16 @@ and https://beagle.whoi.edu/redmine/issues/943"""
 
 app = Flask(__name__)
 app.register_blueprint(idgen_api)
+app.debug = True
 
 # FIXME use real database
 db = {}
 
-@app.route('/create_annotation/<path:pid>',methods=['POST'])
-def create_annotation(pid):
-    annotation = json.loads(request.data)
-    #print 'POST %s: %s' % (pid, json.dumps(annotation)) # FIXME write a log
-    db[pid] = annotation
+@app.route('/create_annotations',methods=['POST'])
+def create_annotations():
+    for ann in json.loads(request.data):
+        db[ann['pid']] = ann
+    return '{"status":"OK"}'
     
 @app.route('/fetch/annotation/<path:pid>')
 def fetch_annotation(pid):
@@ -75,9 +76,9 @@ class TestAnnotation(TestCase):
     def test_create_fetch(self):
         with app.test_request_context():
             ann_in = self.random_annotation()
-            pid = ann_in.pid
-            self.app.post(url_for('create_annotation', pid=pid), data=jsons(ann_in))
-            ann_out = structs(self.app.get(url_for('fetch_annotation', pid=pid)).data)
+            self.app.post(url_for('create_annotations'), data=jsons([ann_in]))
+            raw = self.app.get(url_for('fetch_annotation', pid=ann_in.pid)).data
+            ann_out = structs(raw)
             assert ann_out.pid == ann_in.pid
             assert ann_out.image == ann_in.image
             assert ann_out.taxon == ann_in.taxon
@@ -93,7 +94,7 @@ class TestAnnotation(TestCase):
                 for _ in range(n):
                     ann = self.random_annotation()
                     ann.image = image_pid
-                    self.app.post(url_for('create_annotation', pid=ann.pid), data=jsons(ann))
+                    self.app.post(url_for('create_annotations', pid=ann.pid), data=jsons([ann]))
             for (n,image_pid) in zip(ns,image_pids):
                 ann_list = structs(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)
                 # FIXME don't just check the length of the result, check the contents

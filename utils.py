@@ -1,5 +1,5 @@
 # utilities for oii
-from threading import local
+from threading import Lock
 import os
 import re
 from hashlib import sha1
@@ -7,17 +7,19 @@ from time import time, clock
 from unittest import TestCase
 import json
 
-genid_prev_id_tl = local()
-prev = genid_prev_id_tl.prev = None
+genid_prev_id_tl = Lock()
+genid_prev_id = None
 
 def gen_id(namespace=''):
-    prev = genid_prev_id_tl.prev
-    if prev is None:
-        prev = sha1(os.urandom(24)).hexdigest()
-    else:
-        entropy = str(clock()) + str(time()) + str(os.getpid())
-        prev = sha1(prev + entropy).hexdigest()
-    genid_prev_id_tl.prev = prev
+    global genid_prev_id
+    with genid_prev_id_tl:
+        prev = genid_prev_id
+        if prev is None:
+            prev = sha1(os.urandom(24)).hexdigest()
+        else:
+            entropy = str(clock()) + str(time()) + str(os.getpid())
+            prev = sha1(prev + entropy).hexdigest()
+        genid_prev_id = prev
     return namespace + prev
 
 class test_gen_id(TestCase):
@@ -60,7 +62,6 @@ def mapr(function,item):
 # not using jsonpickle because we only want to serialize stuff that originated in JSON
 # or JSON-like structures.
 
-
 class TestMapr(TestCase):
     def runTest(self):
         ins = {"a": 3, "c": [1, 2, {"y": 6, "x": 7, "z": 8}], "b": 5}
@@ -91,11 +92,32 @@ def structs(item=None,**kv):
         pass
     return __struct_wrap(item)
 
+class TestStructs(TestCase):
+    def test_str(self):
+        item = 'foo'
+        assert structs(item) == 'foo'
+    def test_dict(self):
+        item = dict(a=3, b=7)
+        assert structs(item).a == 3
+        assert structs(item).b == 7
+        item = structs({'a':{'b':2}})
+        assert item.a.b == 2
+        item = structs([{'a':3}])
+        assert item[0].a == 3
+    def test_seq(self):
+        item = [1,2,3]
+        assert structs(item) == [1,2,3]
+        item = [1,{'a':3},3]
+        assert structs(item)[1].a == 3
+    def test_int(self):
+        item = 2
+        assert structs(item) == 2
+        
 def destructs(item):
     if isinstance(item,basestring):
         return item
     try:
-        return item.as_dict
+        return item.destruct
     except:
         pass
     try:
@@ -107,32 +129,41 @@ def destructs(item):
     except:
         pass
     return item
-    
+
+class TestDestructs(TestCase):
+    def test_str(self):
+        assert destructs('foo') == 'foo'
+    def test_struct(self):
+        assert destructs(structs({'a':3})) == {'a':3}
+    def test_dict(self):
+        d = destructs(structs({'a':{'b':3}}))
+        assert d['a']['b'] == 3
+        assert destructs(structs([{'a':3}]))[0]['a']
+
 # external, accepts Structs, sequences, or primitive values
 def jsons(item):
     return json.dumps(destructs(item))
 
 class Struct():
     @property
-    def as_dict(self):
+    def destruct(self):
         result = {}
         for k,v in self.__dict__.iteritems():
             try:
-                result[k] = v.as_dict
+                result[k] = v.destruct
             except AttributeError:
-                pass
-            # handle lists and tuples separately, so no duck typing
-            if isinstance(v,list):
-                result[k] = map(lambda e: e.as_dict if isinstance(e,Struct) else e, v)
-            elif isinstance(v,tuple):
-                result[k] = tuple(map(lambda e: e.as_dict if isinstance(e,Struct) else e,v))
-            else:
-                result[k] = v
+                # handle lists and tuples separately, so no duck typing
+                if isinstance(v,list):
+                    result[k] = map(lambda e: e.destruct if isinstance(e,Struct) else e, v)
+                elif isinstance(v,tuple):
+                    result[k] = tuple(map(lambda e: e.destruct if isinstance(e,Struct) else e,v))
+                else:
+                    result[k] = v
         return result
     
     @property
     def json(self):
-        return json.dumps(self.as_dict)
+        return json.dumps(self.destruct)
     
     def __repr__(self):
         return self.json
