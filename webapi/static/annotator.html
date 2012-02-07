@@ -113,31 +113,26 @@ $(document).ready(function() {
         page++;
         gotoPage(page,25);
     });
-    /* before we enable commit or cancel, we need the taxonomy in our workspace */
-    
-    $.ajax({
-        url: '/taxonomy_autocomplete',
-        type: 'GET',
-        data: { 'term': '' },
-        datatype: 'json',
-        success: function(r) {
-		    var tx = {}
-            for(index = 0; index < r.length; index++) {
-                entry = r[index];
-                tx[entry.label] = entry.pid;
-            }
-		    $('#workspace').data('taxonomy',tx);
-            $('#commit').click(function() {
-                commit();
-            });
-            $('#cancel').click(function() {
-                cancel();
-            });
-        }
+	$('#workspace').data('taxonomy',{});
+    $('#commit').click(function() {
+		commit();
+ 	});
+  	$('#cancel').click(function() {
+  	  	cancel();
     });
     gotoPage(page,size);
     $('#label').autocomplete({
-        source: '/taxonomy_autocomplete',
+        source: function(req,resp) {
+            with_json_request('/taxonomy_autocomplete?term='+req.term, function(r) {
+            	resp($.map(r,function(item) {
+            	    $('#workspace').data('taxonomy')[item.label] = item.pid;
+            	    return {
+            	        'label': item.label,
+            	        'value': item.value
+            	    }
+            	}));
+            });
+        },
         minLength: 2
     });
 });
