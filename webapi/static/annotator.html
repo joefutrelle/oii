@@ -5,6 +5,7 @@
 <link type="text/css" href="css/smoothness/jquery-ui-1.8.14.custom.css" rel="Stylesheet" /> 
 <script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
 <script type="text/javascript" src="js/jquery-ui-1.8.14.custom.min.js"></script>
+<script type="text/javascript" src="js/oii-utils.js"></script>
 <title>image annotation prototype</title>
 <style type="text/css">
 div.thumbnail {
@@ -38,6 +39,7 @@ function gotoPage(page,size) {
                 entry = r[index];
                 // append image with approprite URL
                 $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div></div>')
+                	.find('div.thumbnail:last').data('pid',entry.url);
                 // FIXME now need to fetch annotations for each image
             }
         }
@@ -47,29 +49,37 @@ function clearPage() {
     $('#images').empty();
 }
 function setLabel(cell,label) { /* cell = thumbnail div containing image */
-    captionDiv = $(cell).find('div.caption');
-    previousLabel = captionDiv.data('previous-label');
+    previousLabel = $(cell).data('previous-label');
     previousLabel = previousLabel == undefined ? '' : previousLabel;
     newLabel = $(cell).hasClass('selected') ? previousLabel : label;
-    captionDiv.data('previous-label',captionDiv.data('label'));
-    captionDiv.html(newLabel);
-    captionDiv.data('label',newLabel);
+    $(cell).data('previous-label',$(cell).data('label'));
+    $(cell).find('div.caption').html(newLabel);
+    $(cell).data('label',newLabel);
     $(cell).toggleClass('selected');
+    $(cell).data('timestamp',iso8601(new Date()));
 }
-function revertLabel(cell) {
-    captionDiv = $(cell).find('div.caption');
-    previousLabel = captionDiv.data('previous-label');
+function revertLabel(cell) { /* cell = thumbnail div containing image */
+    previousLabel = $(cell).data('previous-label');
     previousLabel = previousLabel == undefined ? '' : previousLabel;
-    captionDiv.data('previous-label','');
-    captionDiv.data('label',previousLabel);
-    captionDiv.html(previousLabel);
+    $(cell).data('previous-label','');
+    $(cell).data('label',previousLabel);
+    $(cell).find('div.caption').html(previousLabel);
     $(cell).removeClass('selected');
 }
 function commit() {
     $('div.thumbnail.selected').each(function() {
         ix = $(this).index();
-        l = $(this).find('div.caption').data('label');
-        alert('you said '+ix+' is a '+l);
+        l = $(this).data('label');
+        p = $(this).data('pid');
+        a = {
+                'pid': 'http://lsadkfjlaskdjfasdf/', /* FIXME gen id! */
+            	'image': $(this).data('pid'),
+            	'timestamp': $(this).data('timestamp'),
+            	'annotator': 'http://people.net/joeblow',
+            	'taxon': $('#workspace').data('taxonomy')[$(this).data('label')], /* FIXME taxon URI! */
+            	'boundingBox': [[0, 0], [0, 0]],
+            };
+        alert(a.image+' is a '+a.taxon+' at '+a.timestamp);
     });
     $('div.thumbnail').removeClass('selected');
 }
@@ -103,11 +113,27 @@ $(document).ready(function() {
         page++;
         gotoPage(page,25);
     });
-    $('#commit').click(function() {
-        commit();
-    });
-    $('#cancel').click(function() {
-        cancel();
+    /* before we enable commit or cancel, we need the taxonomy in our workspace */
+    
+    $.ajax({
+        url: '/taxonomy_autocomplete',
+        type: 'GET',
+        data: { 'term': '' },
+        datatype: 'json',
+        success: function(r) {
+		    var tx = {}
+            for(index = 0; index < r.length; index++) {
+                entry = r[index];
+                tx[entry.label] = entry.pid;
+            }
+		    $('#workspace').data('taxonomy',tx);
+            $('#commit').click(function() {
+                commit();
+            });
+            $('#cancel').click(function() {
+                cancel();
+            });
+        }
     });
     gotoPage(page,size);
     $('#label').autocomplete({
@@ -118,6 +144,7 @@ $(document).ready(function() {
 </script>
 </head>
 <body>
+<div id="workspace" style="display: none"></div>
 <div id="controls" class="ui-widget">
   <a href="#" id="prev" class="button">&lt; Prev</a>
   <a href="#" id="next" class="button">Next &gt;</a>

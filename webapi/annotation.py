@@ -6,6 +6,7 @@ from oii.utils import gen_id, structs, jsons
 from oii.webapi.idgen import idgen_api
 from oii import annotation
 from oii.times import iso8601
+from utils import jsonr
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
@@ -25,21 +26,21 @@ def create_annotation(pid):
     
 @app.route('/fetch/annotation/<path:pid>')
 def fetch_annotation(pid):
-    return json.dumps(db[pid])
+    return jsonr(db[pid])
 
 @app.route('/list_annotations/image/<path:image_pid>')
 def list_annotations(image_pid):
-    return json.dumps([ann for ann in db.values() if ann[annotation.IMAGE] == image_pid])
+    return jsonr([ann for ann in db.values() if ann[annotation.IMAGE] == image_pid])
 
 IMAGE_LIST = [
               'http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg',
               'http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg',
               'http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg',
 ]
-
+    
 @app.route('/list_images')
 def list_images():
-    return Response(json.dumps([{'url':url} for url in IMAGE_LIST]), mimetype='application/json')
+    return jsonr([{'url':url} for url in IMAGE_LIST])
 
 TAXONOMY = {
             'sand dollar': 'http://foo.bar/ns/sand_dollar',
@@ -49,7 +50,7 @@ TAXONOMY = {
 @app.route('/taxonomy_autocomplete',methods=['GET','POST'])
 def taxonomy_autocomplete():
     stem = '^%s.*' % request.values['term']
-    return Response(json.dumps([{'label': k, 'value': k, 'pid': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)]), mimetype='application/json')
+    return jsonr([{'label': k, 'value': k, 'pid': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)])
 
 class TestAnnotation(TestCase):
     def setUp(self):
@@ -83,7 +84,6 @@ class TestAnnotation(TestCase):
             assert ann_out.annotator == ann_in.annotator
             assert ann_out.timestamp == ann_in.timestamp 
             assert ann_out.geometry == ann_in.geometry
-            # FIXME deal with bounding box (simple == doesn't survive JSON roundtripping)
     def test_list_annotations(self):
         with app.test_request_context():
             ns = [0,1,2,3,100]
@@ -98,6 +98,18 @@ class TestAnnotation(TestCase):
                 ann_list = structs(self.app.get(url_for('list_annotations', image_pid=image_pid)).data)
                 # FIXME don't just check the length of the result, check the contents
                 assert len(ann_list) == n
-
+    def test_list_images(self):
+        with app.test_request_context():
+            r = structs(self.app.get(url_for('list_images')).data)
+            assert [i.url for i in r] == IMAGE_LIST
+    def test_autocomplete(self):
+        with app.test_request_context():
+            for term,url in TAXONOMY.items():
+                for i in range(len(term))[2:]:
+                    pfx = term[:i]
+                    for r in structs(self.app.get(url_for('taxonomy_autocomplete', term=pfx)).data):
+                        assert r.label[:i] == pfx
+                        assert r.pid == url
+                         
 if __name__=='__main__':
     app.run()

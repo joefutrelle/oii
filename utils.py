@@ -99,6 +99,10 @@ def destructs(item):
     except:
         pass
     try:
+        return dict([(k,destructs(v)) for k,v in item.iteritems()])
+    except:
+        pass
+    try:
         return map(destructs,item)
     except:
         pass
@@ -106,15 +110,8 @@ def destructs(item):
     
 # external, accepts Structs, sequences, or primitive values
 def jsons(item):
-    try:
-        return map(jsons,item)
-    except TypeError:
-        pass
-    try:
-        return item.json
-    except AttributeError:
-        return item
-    
+    return json.dumps(destructs(item))
+
 class Struct():
     @property
     def as_dict(self):
