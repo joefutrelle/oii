@@ -64,7 +64,7 @@ class TestAnnotation(TestCase):
         t = gen_id(self.namespace)
         a = gen_id(self.namespace)
         ts = iso8601()
-        return structs(timestamp=ts, pid=p, image=i, geometry=b, taxon=t, annotator=a)
+        return structs(timestamp=ts, pid=p, image=i, geometry=b, category=t, annotator=a)
     def test_gen_ids(self):
         with app.test_request_context():
             ids = json.loads(self.app.get(url_for('idgen_api.generate_ids', n=20, ns=self.namespace)).data)
@@ -81,7 +81,7 @@ class TestAnnotation(TestCase):
             ann_out = structs(raw)
             assert ann_out.pid == ann_in.pid
             assert ann_out.image == ann_in.image
-            assert ann_out.taxon == ann_in.taxon
+            assert ann_out.category == ann_in.category
             assert ann_out.annotator == ann_in.annotator
             assert ann_out.timestamp == ann_in.timestamp 
             assert ann_out.geometry == ann_in.geometry

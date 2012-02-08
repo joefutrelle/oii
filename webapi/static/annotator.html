@@ -100,11 +100,11 @@ function commit() {
             	image: $(this).data('image_pid'),
             	timestamp: $(this).data('timestamp'),
             	annotator: 'http://people.net/joeblow',
-            	taxon: $('#workspace').data('taxonomy')[$(this).data('label')],
+            	category: $('#workspace').data('taxonomy')[$(this).data('label')],
             	boundingBox: [[0, 0], [0, 0]],
             };
         as.push(a)
-        /*alert(a.image+' is a '+a.taxon+' at '+a.timestamp+', ann_id='+a.pid);*/
+        /*alert(a.image+' is a '+a.category+' at '+a.timestamp+', ann_id='+a.pid);*/
     });
     $.ajax({
         url: '/create_annotations',
