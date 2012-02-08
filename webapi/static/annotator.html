@@ -37,9 +37,23 @@ function gotoPage(page,size) {
             clearPage();
             $.each(r, function(i,entry) {
                 // append image with approprite URL
-                $('#images').append('<div class="thumbnail"><img src="'+entry.url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
-                	.find('div.thumbnail:last').data('image_pid',entry.url);
+                image_url = entry.url;
+                image_pid = entry.url; // for now, pid = url
+                $('#images').append('<div class="thumbnail"><img src="'+image_url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
+                	.find('div.thumbnail:last').data('image_pid',image_pid).hover(function(evt) {
+                	    show_annotations(this);
+                	}, function() { });
             });
+        }
+    });
+}
+function show_annotations(cell) {
+    image_pid = $(cell).data('image_pid');
+    $.ajax({
+        url: '/list_annotations/image/' + image_pid,
+        dataType: 'json',
+        success: function(r) {
+            $(cell).find('.existing').html(r.length+' annotation(s)');
         }
     });
 }
