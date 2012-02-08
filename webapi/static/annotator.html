@@ -9,6 +9,7 @@
 <title>image annotation prototype</title>
 <style type="text/css">
 div.thumbnail {
+  position: relative;
   display: inline-block;
   padding: 10px;
   vertical-align: top;
@@ -16,6 +17,16 @@ div.thumbnail {
 img.thumbnail {
   margin-left: auto;
   margin-right: auto;
+}
+.underlay {
+  position: absolute;
+  top: 10px;  /* thumbnail.div's padding */
+  left: 10px;
+}
+.overlay {
+  position: absolute;
+  top: 10px;  /* thumbnail.div's padding */
+  left: 10px;
 }
 .caption {
     text-align: center
@@ -37,12 +48,60 @@ function gotoPage(page,size) {
             clearPage();
             $.each(r, function(i,entry) {
                 // append image with approprite URL
-                image_url = entry.url;
-                image_pid = entry.url; // for now, pid = url
-                $('#images').append('<div class="thumbnail"><img src="'+image_url+'" class="thumbnail" height="300px"><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
-                	.find('div.thumbnail:last').data('image_pid',image_pid).hover(function(evt) {
-                	    show_annotations(this);
-                	}, function() { });
+                var image_url = entry.url;
+                var image_pid = entry.url; // for now, pid = url
+                var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
+                	.find('div.thumbnail:last')
+                	.data('image_pid',image_pid)
+                	.disableSelection();
+                $(cell).prepend('<img style="display:none" src="'+image_url+'">')
+                	.find('img')
+                	.bind('load', {
+                    cell: cell
+                }, function() {
+            		var iw = $(this).width();
+            		var ih = $(this).height();
+            		var scalingFactor = 0.33;
+            		ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
+            		iw *= scalingFactor;
+            		var ox = -1;
+            		var oy = -1;
+            		var rect = [];
+            		$(cell).height(ih).width(iw);
+            		$(cell).find('div.spacer').height(ih); /* should probably wrap in another div */
+            		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="underlay"></canvas>')
+            			.find('canvas.underlay')[0].getContext('2d');
+            		ctx.drawImage(this, 0, 0, iw, ih);
+            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="overlay"></canvas>')
+            			.find('canvas.overlay').mousedown(function(event) {
+            				var mx = event.pageX - $(this).offset().left;
+                			var my = event.pageY - $(this).offset().top;
+                			ox = mx;
+                			oy = my;
+            			}).mousemove(function(event) {
+            			    if(ox > 0 && oy > 0) {
+              					var mx = event.pageX - $(this).offset().left;
+                				var my = event.pageY - $(this).offset().top;
+            				    ctx = $(this)[0].getContext('2d');
+            				    ctx.clearRect(0,0,iw,ih);
+            				    ctx.strokeStyle = '#0f0';
+            					var left = Math.min(ox,mx);
+            					var top = Math.min(oy,my);
+            					var w = Math.max(ox,mx) - left;
+            					var h = Math.max(oy,my) - top;
+            					rect = [left, top, left+w, top+h]
+            					$('#coords').html('drawing rect at '+rect);
+            		        	ctx.strokeRect(left, top, w, h);
+            			    }
+            			}).bind('mouseup', {
+            			    cell: cell
+            			}, function(event) {
+            			    $('#coords').html('marked '+rect+' as '+$('#label').val()+' for '+cell);
+            			    ox = -1;
+            			    oy = -1;
+            			    setLabel($(cell),$('#label').val());
+            			});
+                });
             });
         }
     });
@@ -65,6 +124,7 @@ function setLabel(cell,label) { /* cell = thumbnail div containing image */
     previousLabel = previousLabel == undefined ? '' : previousLabel;
     newLabel = $(cell).hasClass('selected') ? previousLabel : label;
     $(cell).data('previous-label',$(cell).data('label'));
+    $('#coords').html('div caption found = '+$(cell).find('div.caption').html());
     $(cell).find('div.caption').html(newLabel);
     $(cell).data('label',newLabel);
     $(cell).toggleClass('selected');
@@ -129,10 +189,6 @@ $(document).ready(function() {
     $('input').addClass('ui-widget');
     // images div is not text-selectable
     $('#images').disableSelection(); // note that this is a jQuery UI function
-    // thumbnail divs are selectable
-    $('div.thumbnail').live('click',function() {
-        setLabel($(this),$('#label').val());
-    });
     // images are not draggable
     $('img').live('mousedown',function(event) {
         event.preventDefault();
@@ -174,6 +230,7 @@ $(document).ready(function() {
 </head>
 <body>
 <div id="workspace" style="display: none"></div>
+<div id="coords">hello</div>
 <div id="controls" class="ui-widget">
   <a href="#" id="prev" class="button">&lt; Prev</a>
   <a href="#" id="next" class="button">Next &gt;</a>

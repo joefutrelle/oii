@@ -41,13 +41,14 @@ img.thumbnail {
 $(document).ready(function() {
     var cell = $('#pic');
     $(cell).disableSelection();
+    /* FIXME it's a little kludgy to use a hidden <img> tag, but an Image JS object didn't seem to work */
     $(cell).append('<img class="thumbnail" src="http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg" style="display:none">')
 		.find('img').bind('load', {
         cell: cell
     }, function() {
 		var iw = $(this).width();
 		var ih = $(this).height();
-		ih /= 2;
+		ih /= 2; /* we can apply arbitrary scaling factors here. */
 		iw /= 2;
 		var ox = -1;
 		var oy = -1;
