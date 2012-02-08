@@ -40,6 +40,7 @@ img.thumbnail {
 <script type="text/javascript">
 $(document).ready(function() {
     var cell = $('#pic');
+    $(cell).disableSelection();
     $(cell).append('<img class="thumbnail" src="http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg" style="display:none">')
 		.find('img').bind('load', {
         cell: cell
@@ -48,38 +49,40 @@ $(document).ready(function() {
 		var ih = $(this).height();
 		ih /= 2;
 		iw /= 2;
+		var ox = -1;
+		var oy = -1;
+		var rect = [];
 		$(cell).height(ih).width(iw);
 		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="underlay"></canvas>')
 			.find('canvas.underlay')[0].getContext('2d');
 		ctx.drawImage(this, 0, 0, iw, ih);
 		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="overlay"></canvas>')
-			.find('canvas.overlay').mousemove(function(event) {
-  				var mx = event.pageX - $(this).offset().left;
+			.find('canvas.overlay').mousedown(function(event) {
+				var mx = event.pageX - $(this).offset().left;
     			var my = event.pageY - $(this).offset().top;
-    			$('#coords').html('('+mx+','+my+')');
-			    ctx = $(this)[0].getContext('2d');
-				ctx.fillStyle = '#0f0';
-		        ctx.fillRect(mx, my, 5, 5)
+    			ox = mx;
+    			oy = my;
+			}).mousemove(function(event) {
+			    if(ox > 0 && oy > 0) {
+  					var mx = event.pageX - $(this).offset().left;
+    				var my = event.pageY - $(this).offset().top;
+				    ctx = $(this)[0].getContext('2d');
+				    ctx.clearRect(0,0,iw,ih);
+				    ctx.strokeStyle = '#0f0';
+					var left = Math.min(ox,mx);
+					var top = Math.min(oy,my);
+					var w = Math.max(ox,mx) - left;
+					var h = Math.max(oy,my) - top;
+					rect = [left, top, left+w, top+h]
+					$('#coords').html('drawing rect at '+rect);
+		        	ctx.strokeRect(left, top, w, h);
+			    }
+			}).mouseup(function(event) {
+			    $('#coords').html('saving that puppy: '+rect);
+			    ox = -1;
+			    oy = -1;
 			});
     });
-    /*
-    $(cell).append('<img class="thumbnail" src="http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg">')
-    	.find('img').bind('load', {
-    	    cell: cell
-    	}, function(event) {
-			var iw = $(this).width();
-			var ih = $(this).height();
-			$(this).mousemove(function(evt) {
-  				var mx = evt.pageX - $(this).offset().left;
-    			var my = evt.pageY - $(this).offset().top;
-    			ctx = $(this).siblings('canvas')[0].getContext('2d');
-    			ctx.fillStyle = '#0f0';
-        		ctx.fillRect(mx, my, 5, 5);
-    			$('#coords').html('('+mx+','+my+')');
-			});
-			$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="overlay"></canvas>');
-    	});
-    */
 });
 </script>
 </head>
