@@ -64,11 +64,10 @@ function gotoPage(page,size) {
             		var scalingFactor = 0.33;
             		ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
             		iw *= scalingFactor;
-            		var ox = -1;
-            		var oy = -1;
-            		var rect = [];
-            		$(cell).height(ih).width(iw);
-            		$(cell).find('div.spacer').height(ih); /* should probably wrap in another div */
+            		$(cell).data('ox',-1);
+            		$(cell).data('oy',-1);
+            		$(cell).width(iw);
+            		$(cell).find('div.spacer').height(ih+10);
             		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="underlay"></canvas>')
             			.find('canvas.underlay')[0].getContext('2d');
             		ctx.drawImage(this, 0, 0, iw, ih);
@@ -76,10 +75,12 @@ function gotoPage(page,size) {
             			.find('canvas.overlay').mousedown(function(event) {
             				var mx = event.pageX - $(this).offset().left;
                 			var my = event.pageY - $(this).offset().top;
-                			ox = mx;
-                			oy = my;
+                			$(cell).data('ox',mx); /* FIXME generalize to arbitrary geometries */
+                			$(cell).data('oy',my);
             			}).mousemove(function(event) {
-            			    if(ox > 0 && oy > 0) {
+            			    var ox = $(cell).data('ox');
+            			    var oy = $(cell).data('oy');
+            			    if(ox >= 0 && oy >= 0) {
               					var mx = event.pageX - $(this).offset().left;
                 				var my = event.pageY - $(this).offset().top;
             				    ctx = $(this)[0].getContext('2d');
@@ -89,17 +90,19 @@ function gotoPage(page,size) {
             					var top = Math.min(oy,my);
             					var w = Math.max(ox,mx) - left;
             					var h = Math.max(oy,my) - top;
-            					rect = [left, top, left+w, top+h]
+            					var rect = [left, top, left+w, top+h]
+            					$(cell).data('rect',rect);
             					$('#coords').html('drawing rect at '+rect);
             		        	ctx.strokeRect(left, top, w, h);
             			    }
             			}).bind('mouseup', {
             			    cell: cell
             			}, function(event) {
+            			    var rect = $(cell).data('rect'); 
             			    $('#coords').html('marked '+rect+' as '+$('#label').val()+' for '+cell);
-            			    ox = -1;
-            			    oy = -1;
-            			    setLabel($(cell),$('#label').val());
+            			    $(cell).data('ox',-1);
+            			    $(cell).data('oy',-1);
+            			    toggleSelected(cell);
             			});
                 });
             });
@@ -119,24 +122,31 @@ function show_annotations(cell) {
 function clearPage() {
     $('#images').empty();
 }
-function setLabel(cell,label) { /* cell = thumbnail div containing image */
-    previousLabel = $(cell).data('previous-label');
+function setLabel(cell,label) {
+    /* first convert undefined to '' */
+    var previousLabel = $(cell).data('previous-label');
     previousLabel = previousLabel == undefined ? '' : previousLabel;
-    newLabel = $(cell).hasClass('selected') ? previousLabel : label;
+    $(cell).data('previous-label',previousLabel);
+    /* now swap */
     $(cell).data('previous-label',$(cell).data('label'));
-    $('#coords').html('div caption found = '+$(cell).find('div.caption').html());
-    $(cell).find('div.caption').html(newLabel);
-    $(cell).data('label',newLabel);
-    $(cell).toggleClass('selected');
-    $(cell).data('timestamp',iso8601(new Date()));
+    $(cell).data('label',label);
+    var p = $(cell).data('previous-label');
+    $(cell).find('div.caption').html(label);
 }
-function revertLabel(cell) { /* cell = thumbnail div containing image */
-    previousLabel = $(cell).data('previous-label');
-    previousLabel = previousLabel == undefined ? '' : previousLabel;
-    $(cell).data('previous-label','');
-    $(cell).data('label',previousLabel);
-    $(cell).find('div.caption').html(previousLabel);
-    $(cell).removeClass('selected');
+function unsetLabel(cell) {
+    setLabel(cell,$(cell).data('previous-label'));
+}
+function toggleSelected(cell) { /* cell = thumbnail div containing image */
+    if($(cell).hasClass('selected')) {
+        /* deselect */
+		unsetLabel(cell);
+        $(cell).removeClass('selected');
+    } else {
+        /* select */
+        setLabel(cell,$('#label').val());
+        $(cell).data('timestamp',iso8601(new Date()));
+        $(cell).addClass('selected');
+    }
 }
 function preCommit() {
     /* generate an ID for each annotation */
@@ -161,7 +171,7 @@ function commit() {
             	timestamp: $(this).data('timestamp'),
             	annotator: 'http://people.net/joeblow',
             	category: $('#workspace').data('taxonomy')[$(this).data('label')],
-            	boundingBox: [[0, 0], [0, 0]],
+            	geometry: { boundingBox: $(this).data('rect') }
             };
         as.push(a)
         /*alert(a.image+' is a '+a.category+' at '+a.timestamp+', ann_id='+a.pid);*/
@@ -179,7 +189,7 @@ function commit() {
 }
 function cancel() {
     $('div.thumbnail.selected').each(function(ix,cell) {
-        revertLabel(cell);
+        toggledSelected(cell);
     });
 }
 $(document).ready(function() {

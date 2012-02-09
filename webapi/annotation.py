@@ -22,6 +22,7 @@ db = {}
 @app.route('/create_annotations',methods=['POST'])
 def create_annotations():
     for ann in json.loads(request.data):
+        print 'CREATED '+str(ann)
         db[ann['pid']] = ann
     return '{"status":"OK"}'
     
