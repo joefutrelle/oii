@@ -90,7 +90,8 @@ function gotoPage(page,size) {
             					var top = Math.min(oy,my);
             					var w = Math.max(ox,mx) - left;
             					var h = Math.max(oy,my) - top;
-            					var rect = [left, top, left+w, top+h]
+            					/* compute a rectangle in original scale pixel space */
+            					var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
             					$(cell).data('rect',rect);
             					$('#coords').html('drawing rect at '+rect);
             		        	ctx.strokeRect(left, top, w, h);
@@ -189,7 +190,7 @@ function commit() {
 }
 function cancel() {
     $('div.thumbnail.selected').each(function(ix,cell) {
-        toggledSelected(cell);
+        toggleSelected(cell);
     });
 }
 $(document).ready(function() {
