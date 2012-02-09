@@ -64,6 +64,8 @@ function gotoPage(page,size) {
             		var scalingFactor = 0.33;
             		ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
             		iw *= scalingFactor;
+            		$(cell).data('scaledWidth',iw);
+            		$(cell).data('scaledHeight',ih);
             		$(cell).data('ox',-1);
             		$(cell).data('oy',-1);
             		$(cell).width(iw);
@@ -143,11 +145,19 @@ function select(cell) {  /* cell = thumbnail div containing image */
     $(cell).data('timestamp',iso8601(new Date()));
     $(cell).addClass('selected');
 }
+function clearBoundingBox(cell) {
+    var w = $(cell).data('scaledWidth');
+    var h = $(cell).data('scaledHeight');
+    $(cell).data('ox',-1);
+    $(cell).data('oy',-1);
+    var ctx = $(cell).find('canvas.overlay')[0].getContext('2d');
+    ctx.clearRect(0,0,w,h);
+}
 function deselect(cell) {  /* cell = thumbnail div containing image */
     /* deselect */
 	unsetLabel(cell);
     $(cell).removeClass('selected');
-    /* FIXME clear bounding box */
+    clearBoundingBox(cell);
 }
 function toggleSelected(cell) { /* cell = thumbnail div containing image */
     if($(cell).hasClass('selected')) {
@@ -158,7 +168,7 @@ function toggleSelected(cell) { /* cell = thumbnail div containing image */
 }
 function commitCell(cell) {
     $(cell).removeClass('selected');
-    /* FIXME clear bounding box */
+    clearBoundingBox(cell);
 }
 function preCommit() {
     /* generate an ID for each annotation */
