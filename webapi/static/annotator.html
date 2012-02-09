@@ -134,20 +134,31 @@ function setLabel(cell,label) {
     var p = $(cell).data('previous-label');
     $(cell).find('div.caption').html(label);
 }
-function unsetLabel(cell) {
+function unsetLabel(cell) {  /* cell = thumbnail div containing image */
     setLabel(cell,$(cell).data('previous-label'));
+}
+function select(cell) {  /* cell = thumbnail div containing image */
+    /* select */
+    setLabel(cell,$('#label').val());
+    $(cell).data('timestamp',iso8601(new Date()));
+    $(cell).addClass('selected');
+}
+function deselect(cell) {  /* cell = thumbnail div containing image */
+    /* deselect */
+	unsetLabel(cell);
+    $(cell).removeClass('selected');
+    /* FIXME clear bounding box */
 }
 function toggleSelected(cell) { /* cell = thumbnail div containing image */
     if($(cell).hasClass('selected')) {
-        /* deselect */
-		unsetLabel(cell);
-        $(cell).removeClass('selected');
+        deselect(cell);
     } else {
-        /* select */
-        setLabel(cell,$('#label').val());
-        $(cell).data('timestamp',iso8601(new Date()));
-        $(cell).addClass('selected');
+        select(cell);
     }
+}
+function commitCell(cell) {
+    $(cell).removeClass('selected');
+    /* FIXME clear bounding box */
 }
 function preCommit() {
     /* generate an ID for each annotation */
@@ -184,11 +195,13 @@ function commit() {
         dataType: 'json',
         data: JSON.stringify(as),
         success: function() {
-            $('div.thumbnail').removeClass('selected');
+            $('div.thumbnail.selected').each(function(ix,cell) {
+				commitCell(cell);
+			});
         }
     });
 }
-function cancel() {
+function deselectAll() {
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
@@ -219,7 +232,7 @@ $(document).ready(function() {
 		preCommit();
  	});
   	$('#cancel').click(function() {
-  	  	cancel();
+  	  	deselectAll();
     });
     gotoPage(page,size);
     $('#label').autocomplete({
