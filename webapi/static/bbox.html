@@ -84,11 +84,16 @@ $(document).ready(function() {
 			    oy = -1;
 			});
     });
+    function turdballs(d) {
+        return d.getFullYear()+' '+d.getMonth()+' '+d.getDate();
+    }
+    $('#chunklehut').html(turdballs(new Date()));
 });
 </script>
 </head>
 <body>
 <h1>Foooooooobar!</h1>
+<div id="chunklehut"></div>
 <div id="coords">blaz</div>
 <div id="pic" class="thumbnail"></div>
 </body>

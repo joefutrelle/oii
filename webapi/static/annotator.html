@@ -18,12 +18,7 @@ img.thumbnail {
   margin-left: auto;
   margin-right: auto;
 }
-.underlay {
-  position: absolute;
-  top: 10px;  /* thumbnail.div's padding */
-  left: 10px;
-}
-.overlay {
+.atorigin {
   position: absolute;
   top: 10px;  /* thumbnail.div's padding */
   left: 10px;
@@ -34,6 +29,8 @@ img.thumbnail {
 .selected { background: #9999ff; }
 </style>
 <script type="text/javascript">
+var scalingFactor = 0.33;
+var geometryColor = '#0f0';
 function gotoPage(page,size) {
     if(page < 1) page = 1;
     $.ajax({
@@ -61,7 +58,6 @@ function gotoPage(page,size) {
                 }, function() {
             		var iw = $(this).width();
             		var ih = $(this).height();
-            		var scalingFactor = 0.33;
             		ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
             		iw *= scalingFactor;
             		$(cell).data('scaledWidth',iw);
@@ -70,11 +66,13 @@ function gotoPage(page,size) {
             		$(cell).data('oy',-1);
             		$(cell).width(iw);
             		$(cell).find('div.spacer').height(ih+10);
-            		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="underlay"></canvas>')
-            			.find('canvas.underlay')[0].getContext('2d');
+            		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
+            			.find('canvas.image')[0].getContext('2d');
             		ctx.drawImage(this, 0, 0, iw, ih);
-            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="overlay"></canvas>')
-            			.find('canvas.overlay').mousedown(function(event) {
+            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
+            		showExistingAnnotations(cell);
+            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
+            			.find('canvas.new').mousedown(function(event) {
             				var mx = event.pageX - $(this).offset().left;
                 			var my = event.pageY - $(this).offset().top;
                 			$(cell).data('ox',mx); /* FIXME generalize to arbitrary geometries */
@@ -87,7 +85,7 @@ function gotoPage(page,size) {
                 				var my = event.pageY - $(this).offset().top;
             				    ctx = $(this)[0].getContext('2d');
             				    ctx.clearRect(0,0,iw,ih);
-            				    ctx.strokeStyle = '#0f0';
+            				    ctx.strokeStyle = geometryColor;
             					var left = Math.min(ox,mx);
             					var top = Math.min(oy,my);
             					var w = Math.max(ox,mx) - left;
@@ -112,12 +110,22 @@ function gotoPage(page,size) {
         }
     });
 }
-function show_annotations(cell) {
-    image_pid = $(cell).data('image_pid');
+function showExistingAnnotations(cell) {
+    var image_pid = $(cell).data('image_pid');
+    var ctx = $(cell).find('canvas.existing')[0].getContext('2d');
     $.ajax({
         url: '/list_annotations/image/' + image_pid,
         dataType: 'json',
         success: function(r) {
+            ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
+            $(r).each(function(ix,ann) {
+                var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
+                var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
+                var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
+                var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
+                ctx.strokeStyle = geometryColor;
+                ctx.strokeRect(ox,oy,w,h);
+            });
             $(cell).find('.existing').html(r.length+' annotation(s)');
         }
     });
@@ -150,7 +158,7 @@ function clearBoundingBox(cell) {
     var h = $(cell).data('scaledHeight');
     $(cell).data('ox',-1);
     $(cell).data('oy',-1);
-    var ctx = $(cell).find('canvas.overlay')[0].getContext('2d');
+    var ctx = $(cell).find('canvas.new')[0].getContext('2d');
     ctx.clearRect(0,0,w,h);
 }
 function deselect(cell) {  /* cell = thumbnail div containing image */
@@ -207,6 +215,7 @@ function commit() {
         success: function() {
             $('div.thumbnail.selected').each(function(ix,cell) {
 				commitCell(cell);
+				showExistingAnnotations(cell);
 			});
         }
     });
