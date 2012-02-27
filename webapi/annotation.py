@@ -1,10 +1,10 @@
-from flask import Flask, request, url_for, Response
+from flask import Flask, request, url_for
 from unittest import TestCase
 import json
 import re
 from oii.utils import gen_id, structs, jsons
 from oii.webapi.idgen import idgen_api
-from oii import annotation
+from oii.annotation.storage import DebugAnnotationStore
 from oii.times import iso8601
 from utils import jsonr
 
@@ -16,23 +16,20 @@ app = Flask(__name__)
 app.register_blueprint(idgen_api)
 app.debug = True
 
-# FIXME use real database
-db = {}
+annotationStore = DebugAnnotationStore() # FIXME use real backend
 
 @app.route('/create_annotations',methods=['POST'])
 def create_annotations():
-    for ann in json.loads(request.data):
-        print 'CREATED '+str(ann)
-        db[ann['pid']] = ann
+    annotationStore.create_annotations(json.loads(request.data))
     return '{"status":"OK"}'
     
 @app.route('/fetch/annotation/<path:pid>')
 def fetch_annotation(pid):
-    return jsonr(db[pid])
+    return jsonr(annotationStore.fetch_annotation(pid))
 
 @app.route('/list_annotations/image/<path:image_pid>')
 def list_annotations(image_pid):
-    return jsonr([ann for ann in db.values() if ann[annotation.IMAGE] == image_pid])
+    return jsonr(annotationStore.list_annotations(image=image_pid))
 
 IMAGE_LIST = [
               'http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg',
@@ -42,8 +39,12 @@ IMAGE_LIST = [
     
 @app.route('/list_images')
 def list_images():
-    return jsonr([{'url':url} for url in IMAGE_LIST])
+    return jsonr({'images': [{'url':url} for url in IMAGE_LIST]})
 
+@app.route('/fetch_assignment/<path:assignment_pid>')
+def fetch_assignment(assignment_pid):
+    return jsonr({'images': [{'url':url} for url in IMAGE_LIST]})
+    
 TAXONOMY = {
             'sand dollar': 'http://foo.bar/ns/sand_dollar',
             'trash': 'http://foo.bar/ns/trash'

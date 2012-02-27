@@ -222,3 +222,47 @@ class TestDictSlice(TestCase):
         s = dict_slice(d,m)
         assert s == dict(a=5,b='7',c=8)
         
+# simple storage API allows for storing structures with random access by a key field
+# and listing by a key/value template
+# default impl fronts a dict
+class SimpleStore(object):
+    key_fn = lambda s: s
+    db = {}
+    # either use a dict key or function to extract keys from items
+    def __init__(self,key=None):
+        if type(key) is str:
+            self.key_fn = lambda s: s[key]
+        elif key is not None:
+            self.key_fn = key
+    # add single item
+    def add(self,s):
+        self.db[self.key_fn(s)] = s
+    # add multiple items
+    def addEach(self,seq):
+        for s in seq:
+            self.add(s)
+    # remove item with a given key
+    def removeKey(self,key):
+        del self.db[key]
+    # fetch item by key
+    def fetch(self,key):
+        return self.db[key]
+    # list all items matching a template item
+    # any k/v's that appear in the template item must match any candidate
+    def list(self,**template): 
+        def template_match(d,t):
+            for k,v in d.iteritems():
+                if k in t and t[k] != v:
+                    return False
+            return True
+        for s in self.db.itervalues():
+            if template_match(s,template):
+                yield s
+
+class TestSimpleStore(TestCase):
+    def test_dk(self):
+        dk = 'foo'
+        store = SimpleStore(dk)
+        d = dict(foo='quonk', bar='z')
+        store.add(d)
+        assert store.fetch('quonk') == d

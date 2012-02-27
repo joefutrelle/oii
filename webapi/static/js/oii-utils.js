@@ -30,3 +30,8 @@ function with_json_request(url, fn) {
         success : fn
     });
 }
+
+/* console log */
+function clog(s) {
+    if (window.console) console.log(s);
+}

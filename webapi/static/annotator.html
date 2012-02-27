@@ -43,7 +43,7 @@ function gotoPage(page,size) {
         datatype: 'json',
         success: function(r,status) {
             clearPage();
-            $.each(r, function(i,entry) {
+            $.each(r['images'], function(i,entry) {
                 // append image with approprite URL
                 var image_url = entry.url;
                 var image_pid = entry.url; // for now, pid = url
@@ -99,8 +99,8 @@ function gotoPage(page,size) {
             			}).bind('mouseup', {
             			    cell: cell
             			}, function(event) {
-            			    var rect = $(cell).data('rect'); 
-            			    $('#coords').html('marked '+rect+' as '+$('#label').val()+' for '+cell);
+            			    var rect = $(cell).data('rect');
+            			    clog('marked '+rect+' as '+$('#label').val()+' for '+cell);
             			    $(cell).data('ox',-1);
             			    $(cell).data('oy',-1);
             			    toggleSelected(cell);
@@ -190,7 +190,8 @@ function preCommit() {
     });
 }
 function commit() {
-    var as = []
+    clog('committing...');
+    var as = [];
     $('div.thumbnail.selected').each(function() {
         ix = $(this).index();
         l = $(this).data('label');
@@ -204,7 +205,7 @@ function commit() {
             	geometry: { boundingBox: $(this).data('rect') }
             };
         as.push(a)
-        /*alert(a.image+' is a '+a.category+' at '+a.timestamp+', ann_id='+a.pid);*/
+        clog(a.image+' is a '+a.category+' at '+a.timestamp+', ann_id='+a.pid);
     });
     $.ajax({
         url: '/create_annotations',
@@ -273,7 +274,7 @@ $(document).ready(function() {
 </head>
 <body>
 <div id="workspace" style="display: none"></div>
-<div id="coords">hello</div>
+<div id="coords"></div>
 <div id="controls" class="ui-widget">
   <a href="#" id="prev" class="button">&lt; Prev</a>
   <a href="#" id="next" class="button">Next &gt;</a>
