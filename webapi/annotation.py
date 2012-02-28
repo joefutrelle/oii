@@ -28,7 +28,7 @@ def fetch_annotation(pid):
     return jsonr(annotationStore.fetch_annotation(pid))
 
 @app.route('/list_annotations/image/<path:image_pid>')
-def list_annotations(image_pid):
+def list_annotations_by_image(image_pid):
     return jsonr(annotationStore.list_annotations(image=image_pid))
 
 IMAGE_LIST = [

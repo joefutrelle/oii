@@ -22,18 +22,6 @@ def gen_id(namespace=''):
         genid_prev_id = prev
     return namespace + prev
 
-class test_gen_id(TestCase):
-    # run collision test
-    def test_all(self):
-        for ns in ['', 'http://foo.bar/quux#']:
-            ids = []
-            len = 5000
-            while len > 0:
-                len -= 1
-                new_id = gen_id(ns)
-                assert new_id not in ids
-                ids.append(new_id)
-
 # recursively map a function onto an item. if the item is a sequence,
 # descend into each item; if it's a dict, descend into each value.
 def mapr(function,item):
@@ -62,12 +50,6 @@ def mapr(function,item):
 # not using jsonpickle because we only want to serialize stuff that originated in JSON
 # or JSON-like structures.
 
-class TestMapr(TestCase):
-    def runTest(self):
-        ins = {"a": 3, "c": [1, 2, {"y": 6, "x": 7, "z": 8}], "b": 5}
-        outs = {"a": '3', "c": ['1', '2', {"y": '6', "x": '7', "z": '8'}], "b": '5'}
-        assert mapr(str,ins) == outs
-        
 # factory method
 # internal, does not interpret strings as JSON
 def __struct_wrap(item):
@@ -91,27 +73,6 @@ def structs(item=None,**kv):
     except:
         pass
     return __struct_wrap(item)
-
-class TestStructs(TestCase):
-    def test_str(self):
-        item = 'foo'
-        assert structs(item) == 'foo'
-    def test_dict(self):
-        item = dict(a=3, b=7)
-        assert structs(item).a == 3
-        assert structs(item).b == 7
-        item = structs({'a':{'b':2}})
-        assert item.a.b == 2
-        item = structs([{'a':3}])
-        assert item[0].a == 3
-    def test_seq(self):
-        item = [1,2,3]
-        assert structs(item) == [1,2,3]
-        item = [1,{'a':3},3]
-        assert structs(item)[1].a == 3
-    def test_int(self):
-        item = 2
-        assert structs(item) == 2
         
 def destructs(item):
     if isinstance(item,basestring):
@@ -129,16 +90,6 @@ def destructs(item):
     except:
         pass
     return item
-
-class TestDestructs(TestCase):
-    def test_str(self):
-        assert destructs('foo') == 'foo'
-    def test_struct(self):
-        assert destructs(structs({'a':3})) == {'a':3}
-    def test_dict(self):
-        d = destructs(structs({'a':{'b':3}}))
-        assert d['a']['b'] == 3
-        assert destructs(structs([{'a':3}]))[0]['a']
 
 # external, accepts Structs, sequences, or primitive values
 def jsons(item):
@@ -171,27 +122,8 @@ class Struct():
     def __init__(self, d):
         for k,v in d.items():
             self.__dict__[k] = structs(v)
-        
-class TestStruct(TestCase):
-    def test_init_kw(self):
-        s = structs(a=3, b=4)
-        assert s.a == 3
-        assert s.b == 4
-    def test_init_dict(self):
-        s = structs(dict(b=2, x='flaz'))
-        assert s.b == 2
-        assert s.x == 'flaz'
-    def test_init_json(self):
-        s = structs(r'{"a":3,"b":5,"c":[1,2,{"x":7,"y":6,"z":8}]}')
-        assert s.a == 3
-        assert len(s.c) == 3
-        assert s.c[0] == 1
-        assert s.c[1] == 2
-        assert s.c[2].x == 7
-        assert s.c[2].y == 6
-        assert s.c[2].z == 8
 
-def dict_slice(d,schema,fn=None):
+def dict_slice(d,schema):
     """d - a dict to slice
     keys - the keys to slice, or if a dict, a dict mapping those keys to functions to call on the values first."""
     try: # allow schema to be a string in the form x,y,z
@@ -204,36 +136,18 @@ def dict_slice(d,schema,fn=None):
         return xf
     except: # ok, schema must be a sequence of keys
         return dict((k,v) for k,v in d.iteritems() if k in schema)
-    
-class TestDictSlice(TestCase):
-    def test_list(self):
-        d = dict(a=3, b=7, c=8)
-        k = ['a','c']
-        s = dict_slice(d,k)
-        assert s == dict(a=3, c=8)
-    def test_str(self):
-        d = dict(a=3, b=7, c=8)
-        k = 'b,c'
-        s = dict_slice(d,k)
-        assert s == dict(b=7, c=8)
-    def test_map(self):
-        d = dict(a=3, b=7, c=8)
-        m = dict(a=lambda x: x+2, b=str, c=None)
-        s = dict_slice(d,m)
-        assert s == dict(a=5,b='7',c=8)
         
 # simple storage API allows for storing structures with random access by a key field
 # and listing by a key/value template
 # default impl fronts a dict
 class SimpleStore(object):
-    key_fn = lambda s: s
-    db = {}
     # either use a dict key or function to extract keys from items
     def __init__(self,key=None):
         if type(key) is str:
             self.key_fn = lambda s: s[key]
         elif key is not None:
             self.key_fn = key
+        self.db = {}
     # add single item
     def add(self,s):
         self.db[self.key_fn(s)] = s
@@ -259,6 +173,93 @@ class SimpleStore(object):
             if template_match(s,template):
                 yield s
 
+### tests
+
+class test_gen_id(TestCase):
+    # run collision test
+    def test_all(self):
+        for ns in ['', 'http://foo.bar/quux#']:
+            ids = []
+            len = 5000
+            while len > 0:
+                len -= 1
+                new_id = gen_id(ns)
+                assert new_id not in ids
+                ids.append(new_id)
+
+class TestStructs(TestCase):
+    def test_str(self):
+        item = 'foo'
+        assert structs(item) == 'foo'
+    def test_dict(self):
+        item = dict(a=3, b=7)
+        assert structs(item).a == 3
+        assert structs(item).b == 7
+        item = structs({'a':{'b':2}})
+        assert item.a.b == 2
+        item = structs([{'a':3}])
+        assert item[0].a == 3
+    def test_seq(self):
+        item = [1,2,3]
+        assert structs(item) == [1,2,3]
+        item = [1,{'a':3},3]
+        assert structs(item)[1].a == 3
+    def test_int(self):
+        item = 2
+        assert structs(item) == 2
+
+class TestDestructs(TestCase):
+    def test_str(self):
+        assert destructs('foo') == 'foo'
+    def test_struct(self):
+        assert destructs(structs({'a':3})) == {'a':3}
+    def test_dict(self):
+        d = destructs(structs({'a':{'b':3}}))
+        assert d['a']['b'] == 3
+        assert destructs(structs([{'a':3}]))[0]['a']
+        
+class TestStruct(TestCase):
+    def test_init_kw(self):
+        s = structs(a=3, b=4)
+        assert s.a == 3
+        assert s.b == 4
+    def test_init_dict(self):
+        s = structs(dict(b=2, x='flaz'))
+        assert s.b == 2
+        assert s.x == 'flaz'
+    def test_init_json(self):
+        s = structs(r'{"a":3,"b":5,"c":[1,2,{"x":7,"y":6,"z":8}]}')
+        assert s.a == 3
+        assert len(s.c) == 3
+        assert s.c[0] == 1
+        assert s.c[1] == 2
+        assert s.c[2].x == 7
+        assert s.c[2].y == 6
+        assert s.c[2].z == 8
+    
+class TestDictSlice(TestCase):
+    def test_list(self):
+        d = dict(a=3, b=7, c=8)
+        k = ['a','c']
+        s = dict_slice(d,k)
+        assert s == dict(a=3, c=8)
+    def test_str(self):
+        d = dict(a=3, b=7, c=8)
+        k = 'b,c'
+        s = dict_slice(d,k)
+        assert s == dict(b=7, c=8)
+    def test_map(self):
+        d = dict(a=3, b=7, c=8)
+        m = dict(a=lambda x: x+2, b=str, c=None)
+        s = dict_slice(d,m)
+        assert s == dict(a=5,b='7',c=8)
+        
+class TestMapr(TestCase):
+    def runTest(self):
+        ins = {"a": 3, "c": [1, 2, {"y": 6, "x": 7, "z": 8}], "b": 5}
+        outs = {"a": '3', "c": ['1', '2', {"y": '6', "x": '7', "z": '8'}], "b": '5'}
+        assert mapr(str,ins) == outs
+        
 class TestSimpleStore(TestCase):
     def test_dk(self):
         dk = 'foo'
