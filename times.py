@@ -8,20 +8,24 @@ from utils import Struct
 ISO_8601_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 RFC_822_FORMAT = '%a, %d %b %Y %H:%M:%S +0000'
 
-def local_to_utc(t=time.localtime()):
+def local_to_utc(t=None):
     """Make sure that the dst flag is -1 -- this tells mktime to take daylight
     savings into account"""
+    if t is None: t = time.localtime()
     secs = time.mktime(t)
     return time.gmtime(secs)
 
-def utc_to_local(t=time.gmtime()):
+def utc_to_local(t=None):
+    if t is None: t=time.gmtime()
     secs = calendar.timegm(t)
     return time.localtime(secs)
 
-def iso8601(t=time.gmtime()):
+def iso8601(t=None):
+    if t is None: t=time.gmtime()
     return time.strftime(ISO_8601_FORMAT,t)
 
-def rfc822(t=time.gmtime()):
+def rfc822(t=None):
+    if t is None: t=time.gmtime()
     return time.strftime(RFC_822_FORMAT,t)
 
 class test_formats(TestCase):
