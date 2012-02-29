@@ -2,9 +2,13 @@ from flask import Flask, request, url_for
 from unittest import TestCase
 import json
 import re
+import sys
 from oii.utils import gen_id, structs, jsons
 from oii.webapi.idgen import idgen_api
 from oii.annotation.storage import DebugAnnotationStore
+from oii.annotation.psql import PsqlAnnotationStore
+from oii.annotation.categories import Categories
+from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
 from utils import jsonr
 
@@ -16,44 +20,98 @@ app = Flask(__name__)
 app.register_blueprint(idgen_api)
 app.debug = True
 
-annotationStore = DebugAnnotationStore() # FIXME use real backend
+# config options
+ANNOTATION_STORE = 'annotation_store'
+CATEGORIES = 'categories'
+ASSIGNMENT_STORE = 'assignment_store'
+
+# default config
+
+class DummyCategories(Categories):
+    def list_categories(self):
+        return [{
+            'label': 'sand dollar',
+            'pid': 'http://foo.bar/ns/sand_dollar'
+        },{
+            'label': 'trash',
+            'pid': 'http://foo.bar/ns/trash'
+        }]
+
+class DummyAssignmentStore(AssignmentStore):
+    def __init__(self):
+        self.assignments = [{
+            "pid": "http://foo.bar/assignments/baz",
+            "label": "Look for trash",
+            "status": "new",
+            "images": [{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
+                },{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg"
+                },{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
+                }]
+          }]
+        
+DEFAULT_CONFIG = {
+    ANNOTATION_STORE: DebugAnnotationStore(),
+    CATEGORIES: DummyCategories(),
+    ASSIGNMENT_STORE: DummyAssignmentStore(),
+}
+
+# get a configured component, or use a default one for testing
+def my(key):
+    if key in app.config:
+        return app.config[key]
+    else:
+        return DEFAULT_CONFIG[key]
 
 @app.route('/create_annotations',methods=['POST'])
 def create_annotations():
-    annotationStore.create_annotations(json.loads(request.data))
+    my(ANNOTATION_STORE).create_annotations(json.loads(request.data))
     return '{"status":"OK"}'
     
 @app.route('/fetch/annotation/<path:pid>')
 def fetch_annotation(pid):
-    return jsonr(annotationStore.fetch_annotation(pid))
+    return jsonr(my(ANNOTATION_STORE).fetch_annotation(pid))
 
 @app.route('/list_annotations/image/<path:image_pid>')
-def list_annotations_by_image(image_pid):
-    return jsonr(annotationStore.list_annotations(image=image_pid))
+def list_annotations(image_pid):
+    return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid)))
 
 IMAGE_LIST = [
               'http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg',
               'http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg',
               'http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg',
 ]
-    
+
 @app.route('/list_images')
 def list_images():
-    return jsonr({'images': [{'url':url} for url in IMAGE_LIST]})
+    return jsonr({'images': my(ASSIGNMENT_STORE).list_assignments()[0]['images']})
 
 @app.route('/fetch_assignment/<path:assignment_pid>')
 def fetch_assignment(assignment_pid):
-    return jsonr({'images': [{'url':url} for url in IMAGE_LIST]})
-    
-TAXONOMY = {
-            'sand dollar': 'http://foo.bar/ns/sand_dollar',
-            'trash': 'http://foo.bar/ns/trash'
-}
+    return jsonr(my(ASSIGNMENT_STORE).fetch_assignment(assignment_pid))
 
+@app.route('/list_assignments')
+def list_assignments():
+    return jsonr({'assignments': my(ASSIGNMENT_STORE).list_assignments()})
+
+def stem_search(stem):
+    for c in my(CATEGORIES).list_categories():
+        if re.match(stem,c['label'],re.I):
+            yield {
+                'pid': c['pid'],
+                'label': c['label'],
+                'value': c['label']
+            }
+            
 @app.route('/taxonomy_autocomplete',methods=['GET','POST'])
 def taxonomy_autocomplete():
     stem = '^%s.*' % request.values['term']
-    return jsonr([{'label': k, 'value': k, 'pid': v} for k,v in TAXONOMY.iteritems() if re.match(stem,k,re.I)])
+    return jsonr(list(stem_search(stem)))
 
 class TestAnnotation(TestCase):
     def setUp(self):
@@ -104,10 +162,11 @@ class TestAnnotation(TestCase):
     def test_list_images(self):
         with app.test_request_context():
             r = structs(self.app.get(url_for('list_images')).data)
-            assert [i.url for i in r] == IMAGE_LIST
+            image_list = [i['image'] for i in my(ASSIGNMENT_STORE).list_assignments()[0]['images']]
+            assert [i.image for i in r.images] == image_list
     def test_autocomplete(self):
         with app.test_request_context():
-            for term,url in TAXONOMY.items():
+            for term,url in [(c['label'],c['pid']) for c in my(CATEGORIES).list_categories()]:
                 for i in range(len(term))[2:]:
                     pfx = term[:i]
                     for r in structs(self.app.get(url_for('taxonomy_autocomplete', term=pfx)).data):
@@ -115,4 +174,6 @@ class TestAnnotation(TestCase):
                         assert r.pid == url
                          
 if __name__=='__main__':
+    if len(sys.argv) > 1:
+        app.config['ANNOTATION_STORE'] = PsqlAnnotationStore(sys.argv[1])
     app.run()

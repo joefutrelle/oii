@@ -10,6 +10,7 @@ from oii.utils import gen_id
 from oii.annotation import PID, TIMESTAMP, ANNOTATOR, IMAGE, CATEGORY
 from oii.times import iso8601
 from oii.annotation.psql import PsqlAnnotationStore
+import sys
 
 MOUNT_POINT = '/Volumes/d_work'
 DATA_DIR = os.path.join(MOUNT_POINT,'IFCB1','ifcb_data_mvco_jun06','Manual_fromClass','annotations_csv')
@@ -28,7 +29,7 @@ def annotations_for(file):
             ANNOTATOR: raw['annotator'],
         }
 
-store = PsqlAnnotationStore('dbname=ifcb user=jfutrelle password=****')
+store = PsqlAnnotationStore(sys.argv[1]) # arg must be full psql connect string dbname=xxx user=xxx password=xxx
 print 'initializing store...'
 store.create(False)
 for file in os.listdir(DATA_DIR):
@@ -37,5 +38,6 @@ for file in os.listdir(DATA_DIR):
         store.bulk_create_annotations(anns)
         now = iso8601()
         print '%s created %d annotation(s) for %s' % (now, len(anns), file)
+print 'creating indexes ... this will take a long time'
 store.create_indexes()
             

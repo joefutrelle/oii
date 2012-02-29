@@ -22,3 +22,4 @@ class DebugAnnotationStore(AnnotationStore):
         return self.store.fetch(annotation_pid)
     def create_annotations(self,annotations):
         self.store.addEach(annotations)
+

@@ -45,8 +45,8 @@ function gotoPage(page,size) {
             clearPage();
             $.each(r['images'], function(i,entry) {
                 // append image with approprite URL
-                var image_url = entry.url;
-                var image_pid = entry.url; // for now, pid = url
+                var image_url = entry.image;
+                var image_pid = entry.image; // for now, pid = url
                 var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
                 	.find('div.thumbnail:last')
                 	.data('image_pid',image_pid)

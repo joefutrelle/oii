@@ -136,7 +136,13 @@ def dict_slice(d,schema):
         return xf
     except: # ok, schema must be a sequence of keys
         return dict((k,v) for k,v in d.iteritems() if k in schema)
-        
+
+def dict_rename(d,keymap):
+    r = {}
+    for k1,k2 in keymap.items():
+        r[k2] = d[k1]
+    return r
+ 
 # simple storage API allows for storing structures with random access by a key field
 # and listing by a key/value template
 # default impl fronts a dict
