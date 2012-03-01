@@ -1,33 +1,47 @@
 from oii.utils import dict_slice
 from oii.annotation.storage import AnnotationStore
+from oii.annotation.assignments import AssignmentStore
 import psycopg2 as psql
 from unittest import TestCase
 from tempfile import NamedTemporaryFile
-import stat
 import os
 
-class PsqlAnnotationStore(AnnotationStore):
-    # name, type, unique
-    SCHEMA = [
-        ('pid', 'text', True),
-        ('image', 'text', False),
-        ('category', 'text', False),
-        ('annotator', 'text', False),
-        ('timestamp', 'timestamp with time zone', False)
-    ]
-    def __init__(self,psql_connect):
-        self.psql_connect = psql_connect
+# transaction class to use with "with". give it connection params
+# and it returns the connection and a cursor.
+class xa(object):
+    def __init__(self,connect_params):
+        self.connect_params = connect_params
+    def __enter__(self):
+        self.c = psql.connect(self.connect_params)
+        db = self.c.cursor()
+        return (self.c,db)
+    def __exit__(self, type, value, traceback):
+        self.c.close()
+
+# iterate over rows. uses fetchmany() to reduce memory load
+def iterrows(cursor,columns):
+    while True:
+        rows = cursor.fetchmany()
+        for row in rows:
+            yield dict(zip(columns,row))
+        if len(rows) == 0:
+            break
+        
+# simplest ORM ever
+class PsqlStore(object):
     @property
     def FIELDS(self):
         return zip(*self.SCHEMA)[0]
     def create(self,indexes=True):
-        c = psql.connect(self.psql_connect)
-        db = c.cursor()
-        db.execute('drop table annotations')
-        db.execute('create table annotations (%s)' % (', '.join([n+' '+t for n,t,_ in self.SCHEMA])))
-        if indexes:
-            self.create_indexes(c)
-        c.commit()
+        with xa(self.psql_connect) as (c,db):
+            try:
+                db.execute('drop table %s' % self.TABLE_NAME)
+            except:
+                c.rollback()
+            db.execute('create table %s (%s)' % (self.TABLE_NAME,', '.join([n+' '+t for n,t,_ in self.SCHEMA])))
+            if indexes:
+                self.create_indexes(c)
+            c.commit()
     def create_indexes(self,connection=None):
         if connection is None:
             c = psql.connect(self.psql_connect)
@@ -39,39 +53,62 @@ class PsqlAnnotationStore(AnnotationStore):
                 uq = 'unique '
             else:
                 uq = ''
-            db.execute('create %sindex ix_ann_%s on annotations (%s)' % (uq,n,n))
+            db.execute('create %sindex ix_%s_%s on %s (%s)' % (uq,self.TABLE_NAME,n,self.TABLE_NAME,n))
         if connection is None:
             c.commit()
-    def list_annotations(self,**template):
+    def parse_row(self,row):
+        # convert a row (represented as a column/value dict) to a record
+        return row
+    def unparse_row(self,record):
+        # convert an object to a row
+        # default is simply columns named after fields, with SQL NULL (Python None) for any missing values
+        FIELDS = self.FIELDS
+        row = dict(zip(FIELDS,[None for _ in range(len(FIELDS))]))
+        row.update(dict_slice(record,FIELDS))
+        return row
+    def insert(self,records):
+        with xa(self.psql_connect) as (c,db):
+            for record in records:
+                row = self.unparse_row(record)
+                columns = row.keys()
+                query = 'insert into %s (%s) values (%s)' % (self.TABLE_NAME,', '.join(columns), ', '.join(['%s' for _ in range(len(columns))]))
+                db.execute(query,[row[k] for k in columns])
+            c.commit()
+    def query(self,**template):
         # convert template (e.g., {'pid': 'foo', 'image': 'bar'}
         # to where clause and values, e.g.,
         # 'pid=%s and image=%s',('foo','bar')
         FIELDS = self.FIELDS
         wc = [(k+'=%s',v) for k,v in template.items() if k in FIELDS]
         (where,values) = (' and '.join(zip(*wc)[0]), zip(*wc)[1])
-        query = 'select %s from annotations where %s' % (', '.join(FIELDS), where)
-        c = psql.connect(self.psql_connect)
-        db = c.cursor()
-        db.execute(query,values)
-        while True:
-            rows = db.fetchmany()
-            for row in rows:
-                yield dict(zip(FIELDS,row))
-            if len(rows) == 0:
-                break
+        query = 'select %s from %s where %s' % (', '.join(FIELDS), self.TABLE_NAME, where)
+        with xa(self.psql_connect) as (_,db):
+            db.execute(query,values)
+            for row in iterrows(db,FIELDS):
+                yield self.parse_row(row)
+    
+class PsqlAnnotationStore(AnnotationStore,PsqlStore):
+    def __init__(self,psql_connect):
+        self.psql_connect = psql_connect
+        self.TABLE_NAME = 'annotations'
+        # name, type, unique
+        self.SCHEMA = [
+          ('pid', 'text', True),
+          ('image', 'text', False),
+          ('category', 'text', False),
+          ('annotator', 'text', False),
+          ('timestamp', 'timestamp with time zone', False)
+       ]
+    @property
+    def FIELDS(self):
+        return zip(*self.SCHEMA)[0]
+    def list_annotations(self,**template):
+        return self.query(**template)
     def fetch_annotation(self,annotation_pid):
         for ann in self.list_annotations(pid=annotation_pid):
             return ann
     def create_annotations(self,annotations):
-        FIELDS = self.FIELDS
-        c = psql.connect(self.psql_connect)
-        db = c.cursor()
-        for ann in annotations:
-            record = dict(zip(FIELDS,[None for _ in range(len(FIELDS))]))
-            record.update(dict_slice(ann,FIELDS))
-            query = 'insert into annotations (%s) values (%s)' % (', '.join(FIELDS), ', '.join(['%s' for _ in range(len(FIELDS))]))
-            db.execute(query,[record[k] for k in FIELDS])
-        c.commit()
+        self.insert(annotations)
     def bulk_create_annotations(self,annotations):
         FIELDS = self.FIELDS
         with NamedTemporaryFile(dir='/tmp',delete=False) as tmp:
@@ -88,10 +125,55 @@ class PsqlAnnotationStore(AnnotationStore):
         db.execute('copy annotations from \'%s\' with csv header' % name)
         c.commit()
         os.remove(name)
-        
+
+class PsqlAssignmentStore(AssignmentStore,PsqlStore):
+    def __init__(self,psql_connect):
+        self.psql_connect = psql_connect
+        self.TABLE_NAME = 'assignments'
+        # name, type, unique
+        self.SCHEMA = [
+          ('pid', 'text', True),
+          ('label', 'text', False),
+          ('annotator', 'text', False),
+          ('updated', 'timestamp with time zone', False),
+          ('status', 'text', False),
+          ('images', 'text[]', False)
+        ]
+    def parse_row(self,row):
+        row['images'] = [dict(pid=pid, image=pid+'.jpg') for pid in row['images']]
+        return row
+    def unparse_row(self,record):
+        record = record.copy()
+        record['images'] = [i['pid'] for i in record['images']]
+        return record
+    def list_assignments(self):
+        with xa(self.psql_connect) as (_,db):
+            db.execute('select * from %s' % self.TABLE_NAME)
+            for row in iterrows(db,self.FIELDS):
+                yield self.parse_row(row)
+
+class TestPsqlAssignmentStore(TestCase):
+    def test_stuff(self):
+        store = PsqlAssignmentStore('dbname=ifcb user=jfutrelle password=xxx')
+        store.create()
+        assignments = [{
+            "pid": "http://foo.bar/assignments/baz",
+            "label": "Identify quux for images from fnord cruise",
+            "annotator": "Ann O. Tator",
+            "status": "new",
+            "images": [{
+                 "pid": "http://foo.bar/images/abcdef",
+                 "image": "http://foo.bar/images/abcdef.jpg"
+            }]
+        }]
+        store.insert(assignments)
+        for assn in store.list_assignments():
+            print assn
+                        
+# tests
 class TestPsqlAnnotationStore(TestCase):
     def test_stuff(self):
-        store = PsqlAnnotationStore('dbname=foo user=bar password=quux')
+        store = PsqlAnnotationStore('dbname=ifcb user=jfutrelle password=xxxx')
         store.create()
         store.list_annotations(image='fish',annotator='cow',pid='zazz')
         ann = dict(pid='foo', image='bar')
