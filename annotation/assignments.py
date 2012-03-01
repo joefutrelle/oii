@@ -15,3 +15,7 @@ class AssignmentStore(object):
         }]
     def list_assignments(self):
         return self.assignments
+    def fetch_assignment(self,pid):
+        for a in self.list_assignments():
+            if a['pid'] == pid:
+                return a

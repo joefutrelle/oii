@@ -53,6 +53,20 @@ class DummyAssignmentStore(AssignmentStore):
                  "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
                  "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
                 }]
+          },{
+            "pid": "http://foo.bar/assignments/fnord",
+            "label": "Look for sand dollars",
+            "status": "new",
+            "images": [{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
+                },{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg"
+                },{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
+                }]
           }]
         
 DEFAULT_CONFIG = {
@@ -80,16 +94,6 @@ def fetch_annotation(pid):
 @app.route('/list_annotations/image/<path:image_pid>')
 def list_annotations(image_pid):
     return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid)))
-
-IMAGE_LIST = [
-              'http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg',
-              'http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg',
-              'http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg',
-]
-
-@app.route('/list_images')
-def list_images():
-    return jsonr({'images': my(ASSIGNMENT_STORE).list_assignments()[0]['images']})
 
 @app.route('/fetch_assignment/<path:assignment_pid>')
 def fetch_assignment(assignment_pid):

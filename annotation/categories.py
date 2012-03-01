@@ -1,5 +1,5 @@
 
-# abstract API for representing taxonomy
+# abstract API for representing multiple taxonomies
 class Categories(object):
     def __init__(self):
         self.categories = [{

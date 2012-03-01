@@ -33,82 +33,92 @@ var scalingFactor = 0.33;
 var geometryColor = '#0f0';
 function gotoPage(page,size) {
     if(page < 1) page = 1;
-    $.ajax({
-        url: '/list_images',
-        type: 'GET',
-        data: {
-            'offset': (page-1) * size,
-            'limit': size
-        },
-        datatype: 'json',
-        success: function(r,status) {
-            clearPage();
-            $.each(r['images'], function(i,entry) {
-                // append image with approprite URL
-                var image_url = entry.image;
-                var image_pid = entry.image; // for now, pid = url
-                var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
-                	.find('div.thumbnail:last')
-                	.data('image_pid',image_pid)
-                	.disableSelection();
-                $(cell).prepend('<img style="display:none" src="'+image_url+'">')
-                	.find('img')
-                	.bind('load', {
-                    cell: cell
-                }, function() {
-            		var iw = $(this).width();
-            		var ih = $(this).height();
-            		ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
-            		iw *= scalingFactor;
-            		$(cell).data('scaledWidth',iw);
-            		$(cell).data('scaledHeight',ih);
-            		$(cell).data('ox',-1);
-            		$(cell).data('oy',-1);
-            		$(cell).width(iw);
-            		$(cell).find('div.spacer').height(ih+10);
-            		ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
-            			.find('canvas.image')[0].getContext('2d');
-            		ctx.drawImage(this, 0, 0, iw, ih);
-            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
-            		showExistingAnnotations(cell);
-            		$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
-            			.find('canvas.new').mousedown(function(event) {
-            				var mx = event.pageX - $(this).offset().left;
-                			var my = event.pageY - $(this).offset().top;
-                			$(cell).data('ox',mx); /* FIXME generalize to arbitrary geometries */
-                			$(cell).data('oy',my);
-            			}).mousemove(function(event) {
-            			    var ox = $(cell).data('ox');
-            			    var oy = $(cell).data('oy');
-            			    if(ox >= 0 && oy >= 0) {
-              					var mx = event.pageX - $(this).offset().left;
-                				var my = event.pageY - $(this).offset().top;
-            				    ctx = $(this)[0].getContext('2d');
-            				    ctx.clearRect(0,0,iw,ih);
-            				    ctx.strokeStyle = geometryColor;
-            					var left = Math.min(ox,mx);
-            					var top = Math.min(oy,my);
-            					var w = Math.max(ox,mx) - left;
-            					var h = Math.max(oy,my) - top;
-            					/* compute a rectangle in original scale pixel space */
-            					var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
-            					$(cell).data('rect',rect);
-            					$('#coords').html('drawing rect at '+rect);
-            		        	ctx.strokeRect(left, top, w, h);
-            			    }
-            			}).bind('mouseup', {
-            			    cell: cell
-            			}, function(event) {
-            			    var rect = $(cell).data('rect');
-            			    clog('marked '+rect+' as '+$('#label').val()+' for '+cell);
-            			    $(cell).data('ox',-1);
-            			    $(cell).data('oy',-1);
-            			    toggleSelected(cell);
-            			});
-                });
-            });
-        }
-    });
+    var assignment = $('#workspace').data('assignment');
+    if(assignment == undefined) {
+        return;
+    }
+    var images = $('#workspace').data('images')
+    if(images == undefined) {
+	    $.ajax({
+    	    url: '/fetch_assignment/' + assignment,
+	        type: 'GET',
+        	datatype: 'json',
+        	success: function(r,status) {
+        	    $('#workspace').data('images',r.images);
+        	    gotoPage(page,size);
+        	}
+	    });
+	    return;
+    }
+    clearPage();
+    var offset = (page-1) * size;
+    var limit = offset + size;
+    $.each(images, function(i,entry) {
+        if(i >= offset && i < limit) {
+    	   	// append image with approprite URL
+           	var image_url = entry.image;
+           	var image_pid = entry.image; // for now, pid = url
+           	var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
+	           	.find('div.thumbnail:last')
+           		.data('image_pid',image_pid)
+           		.disableSelection();
+           	$(cell).prepend('<img style="display:none" src="'+image_url+'">')
+	          	.find('img')
+           		.bind('load', {
+                   	cell: cell
+               	}, function() {
+	           		var iw = $(this).width();
+           			var ih = $(this).height();
+           			ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
+           			iw *= scalingFactor;
+           			$(cell).data('scaledWidth',iw);
+           			$(cell).data('scaledHeight',ih);
+           			$(cell).data('ox',-1);
+           			$(cell).data('oy',-1);
+           			$(cell).width(iw);
+           			$(cell).find('div.spacer').height(ih+10);
+           			ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
+           				.find('canvas.image')[0].getContext('2d');
+           			ctx.drawImage(this, 0, 0, iw, ih);
+           			$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
+           			showExistingAnnotations(cell);
+           			$(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
+           				.find('canvas.new').mousedown(function(event) {
+           					var mx = event.pageX - $(this).offset().left;
+               				var my = event.pageY - $(this).offset().top;
+               				$(cell).data('ox',mx); /* FIXME generalize to arbitrary geometries */
+               				$(cell).data('oy',my);
+           				}).mousemove(function(event) {
+           				    var ox = $(cell).data('ox');
+           			 	   	var oy = $(cell).data('oy');
+           			 	   	if(ox >= 0 && oy >= 0) {
+           						var mx = event.pageX - $(this).offset().left;
+              					var my = event.pageY - $(this).offset().top;
+           				   		ctx = $(this)[0].getContext('2d');
+           						ctx.clearRect(0,0,iw,ih);
+       	     				    ctx.strokeStyle = geometryColor;
+       	     					var left = Math.min(ox,mx);
+       	     					var top = Math.min(oy,my);
+           						var w = Math.max(ox,mx) - left;
+           						var h = Math.max(oy,my) - top;
+           						/* compute a rectangle in original scale pixel space */
+           						var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
+           						$(cell).data('rect',rect);
+           						$('#coords').html('drawing rect at '+rect);
+           		       		 	ctx.strokeRect(left, top, w, h);
+           			   		}
+           				}).bind('mouseup', {
+           			    	cell: cell
+           				}, function(event) {
+           			    	var rect = $(cell).data('rect');
+           			    	clog('marked '+rect+' as '+$('#label').val()+' for '+cell);
+           			    	$(cell).data('ox',-1);
+           			    	$(cell).data('oy',-1);
+           			    	toggleSelected(cell);
+           				}); // bindings for new annotation canvas layer supporting rubberbanding
+               	}); // binding for load on cell
+        } // paging condition in loop over images
+    }); // loop over images
 }
 function showExistingAnnotations(cell) {
     var image_pid = $(cell).data('image_pid');
@@ -226,6 +236,14 @@ function deselectAll() {
         toggleSelected(cell);
     });
 }
+function listAssignments() {
+    with_json_request('/list_assignments', function(r) {
+        $.each(r.assignments, function(i,a) {
+            clog(a);
+            $('#assignment').append('<option value="'+a.pid+'">'+a.label+'</option>')
+        });
+    });
+}
 $(document).ready(function() {
     page = 1;
     size = 20;
@@ -254,6 +272,13 @@ $(document).ready(function() {
   	$('#cancel').click(function() {
   	  	deselectAll();
     });
+  	$('#assignment').change(function() {
+  	    var ass_pid = $('#assignment').val();
+  	    clog('user selected assignment '+ass_pid);
+  	    $('#workspace').data('assignment',ass_pid);
+  	    gotoPage(1,25);
+  	});
+  	listAssignments();
     gotoPage(page,size);
     $('#label').autocomplete({
         source: function(req,resp) {
@@ -282,6 +307,9 @@ $(document).ready(function() {
   <input id="label"/>
   <a href="#" id="commit" class="button">Commit</a>
   <a href="#" id="cancel" class="button">Cancel</a>
+  Assignment
+  <select id="assignment">
+  </select>
 </div>
 <div id="images"></div>
 </body>

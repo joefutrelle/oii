@@ -97,6 +97,7 @@ class PsqlAnnotationStore(AnnotationStore,PsqlStore):
           ('image', 'text', False),
           ('category', 'text', False),
           ('annotator', 'text', False),
+          ('assignment', 'text', False),
           ('timestamp', 'timestamp with time zone', False)
        ]
     @property
