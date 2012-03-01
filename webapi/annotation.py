@@ -28,7 +28,7 @@ ASSIGNMENT_STORE = 'assignment_store'
 # default config
 
 class DummyCategories(Categories):
-    def list_categories(self):
+    def list_categories(self,_):
         return [{
             'label': 'sand dollar',
             'pid': 'http://foo.bar/ns/sand_dollar'
@@ -43,6 +43,7 @@ class DummyAssignmentStore(AssignmentStore):
             "pid": "http://foo.bar/assignments/baz",
             "label": "Look for trash",
             "status": "new",
+            "mode": "trash",
             "images": [{
                  "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
                  "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
@@ -57,6 +58,7 @@ class DummyAssignmentStore(AssignmentStore):
             "pid": "http://foo.bar/assignments/fnord",
             "label": "Look for sand dollars",
             "status": "new",
+            "mode": "sanddollars",
             "images": [{
                  "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
                  "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
@@ -103,8 +105,8 @@ def fetch_assignment(assignment_pid):
 def list_assignments():
     return jsonr({'assignments': my(ASSIGNMENT_STORE).list_assignments()})
 
-def stem_search(stem):
-    for c in my(CATEGORIES).list_categories():
+def stem_search(stem,mode):
+    for c in my(CATEGORIES).list_categories(mode):
         if re.match(stem,c['label'],re.I):
             yield {
                 'pid': c['pid'],
@@ -112,10 +114,10 @@ def stem_search(stem):
                 'value': c['label']
             }
             
-@app.route('/taxonomy_autocomplete',methods=['GET','POST'])
-def taxonomy_autocomplete():
+@app.route('/category_autocomplete/<path:mode>',methods=['GET','POST'])
+def category_autocomplete(mode):
     stem = '^%s.*' % request.values['term']
-    return jsonr(list(stem_search(stem)))
+    return jsonr(list(stem_search(stem,mode)))
 
 class TestAnnotation(TestCase):
     def setUp(self):

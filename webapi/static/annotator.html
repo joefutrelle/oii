@@ -44,6 +44,7 @@ function gotoPage(page,size) {
 	        type: 'GET',
         	datatype: 'json',
         	success: function(r,status) {
+        	    $('#workspace').data('assignment',r);
         	    $('#workspace').data('images',r.images);
         	    gotoPage(page,size);
         	}
@@ -211,7 +212,7 @@ function commit() {
             	image: $(this).data('image_pid'),
             	timestamp: $(this).data('timestamp'),
             	annotator: 'http://people.net/joeblow',
-            	category: $('#workspace').data('taxonomy')[$(this).data('label')],
+            	category: $('#workspace').data('categories')[$(this).data('label')],
             	geometry: { boundingBox: $(this).data('rect') }
             };
         as.push(a)
@@ -265,7 +266,7 @@ $(document).ready(function() {
         page++;
         gotoPage(page,25);
     });
-	$('#workspace').data('taxonomy',{});
+	$('#workspace').data('categories',{});
     $('#commit').click(function() {
 		preCommit();
  	});
@@ -282,9 +283,13 @@ $(document).ready(function() {
     gotoPage(page,size);
     $('#label').autocomplete({
         source: function(req,resp) {
-            with_json_request('/taxonomy_autocomplete?term='+req.term, function(r) {
+            var ass = $('#workspace').data('assignment');
+            if(ass == undefined) {
+                return;
+            }
+            with_json_request('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
             	resp($.map(r,function(item) {
-            	    $('#workspace').data('taxonomy')[item.label] = item.pid;
+            	    $('#workspace').data('categories')[item.label] = item.pid;
             	    return {
             	        'label': item.label,
             	        'value': item.value

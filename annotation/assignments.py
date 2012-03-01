@@ -8,6 +8,7 @@ class AssignmentStore(object):
             "label": "Identify quux for images from fnord cruise",
             "annotator": "Ann O. Tator",
             "status": "new",
+            "mode": "quux",
             "images": [{
                  "pid": "http://foo.bar/images/abcdef",
                  "image": "http://foo.bar/images/abcdef.jpg"
