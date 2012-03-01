@@ -6,6 +6,7 @@
 # 4. annotator lid (e.g., EBrownlee)
 import os
 import csv
+from oii.annotation.ifcb import DATA_NAMESPACE, ANNOTATION_NAMESPACE, PERSON_NAMESPACE
 from oii.utils import gen_id
 from oii.annotation import PID, TIMESTAMP, ANNOTATOR, IMAGE, CATEGORY
 from oii.times import iso8601
@@ -15,10 +16,6 @@ import sys
 MOUNT_POINT = '/Volumes/d_work'
 DATA_DIR = os.path.join(MOUNT_POINT,'IFCB1','ifcb_data_mvco_jun06','Manual_fromClass','annotations_csv')
 
-DATA_NAMESPACE = 'http://ifcb-data.whoi.edu/mvco/'
-ANNOTATION_NAMESPACE = DATA_NAMESPACE + 'annotations/'
-PERSON_NAMESPACE = DATA_NAMESPACE + 'people/'
- 
 def annotations_for(file):
     for raw in csv.DictReader(fin,['bin','roi','category','annotator']):
         yield {
