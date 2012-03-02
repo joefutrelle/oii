@@ -115,7 +115,7 @@ class PsqlAnnotationStore(AnnotationStore,PsqlStore):
         with NamedTemporaryFile(dir='/tmp',delete=False) as tmp:
             tmp.write(','.join(FIELDS)+'\n')
             for ann in annotations:
-                record = dict(zip(FIELDS,[None for _ in range(len(FIELDS))]))
+                record = dict(zip(FIELDS,['NULL' for _ in range(len(FIELDS))]))
                 record.update(dict_slice(ann,FIELDS))
                 tmp.write(','.join([record[f] for f in FIELDS]) + '\n')
             tmp.flush()
@@ -123,7 +123,7 @@ class PsqlAnnotationStore(AnnotationStore,PsqlStore):
         os.chmod(name, 0777)
         c = psql.connect(self.psql_connect)
         db = c.cursor()
-        db.execute('copy annotations from \'%s\' with csv header' % name)
+        db.execute('copy annotations from \'%s\' with null as \'NULL\' csv header' % name)
         c.commit()
         os.remove(name)
 
