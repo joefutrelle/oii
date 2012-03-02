@@ -24,7 +24,11 @@ img.thumbnail {
   left: 10px;
 }
 .caption {
-    text-align: center
+    text-align: center;
+}
+.subcaption {
+    text-align: center;
+    font-size: 8px;
 }
 .selected { background: #9999ff; }
 </style>
@@ -33,6 +37,7 @@ var scalingFactor = 1;
 var geometryColor = '#0f0';
 function gotoPage(page,size) {
     if(page < 1) page = 1;
+    clog('going to page '+page);
     var images = $('#workspace').data('images')
     if(images == undefined) {
 	    return;
@@ -45,7 +50,7 @@ function gotoPage(page,size) {
     	   	// append image with approprite URL
            	var image_url = entry.image;
            	var image_pid = entry.image; // for now, pid = url
-           	var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="existing"></div></div>')
+           	var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
 	           	.find('div.thumbnail:last')
            		.data('image_pid',image_pid)
            		.disableSelection();
@@ -97,8 +102,9 @@ function gotoPage(page,size) {
            				}).bind('mouseup', {
            			    	cell: cell
            				}, function(event) {
-           			    	var rect = $(cell).data('rect');
-           			    	clog('marked '+rect+' as '+$('#label').val()+' for '+cell);
+           				    var label = $('#label').val(); // category label
+           				 	var rect = $(cell).data('rect'); // bounding box
+           			    	clog('marked '+rect+' as '+label+' for '+cell);
            			    	$(cell).data('ox',-1);
            			    	$(cell).data('oy',-1);
            			    	toggleSelected(cell);
@@ -115,6 +121,7 @@ function showExistingAnnotations(cell) {
         dataType: 'json',
         success: function(r) {
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
+            var anns = {};
             $(r).each(function(ix,ann) {
                 if('boundingBox' in ann.geometry) {
                 	var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
@@ -124,8 +131,29 @@ function showExistingAnnotations(cell) {
                 	ctx.strokeStyle = geometryColor;
                 	ctx.strokeRect(ox,oy,w,h);
                 }
+                if(!(ann.category in anns)) {
+                    anns[ann.category] = 1;
+                } else {
+                    anns[ann.category] += 1;
+                }
             });
-            $(cell).find('.existing').html(r.length+' annotation(s)');
+            // now we show which annotation has the most "votes"
+            var max = 0;
+            var theLabel = '';
+            var ex = '';
+            for(var cat in anns) {
+                var label = categoryLabelForPid(cat);
+                ex += ' ' + label;
+                if(anns[cat] > max) {
+                    max = anns[cat];
+                    theLabel = label;
+                }
+                if(anns[cat] > 1) {
+                	ex += '&nbsp;x' + anns[cat];
+                }
+            }
+            setLabel(cell,theLabel);
+            $(cell).find('.subcaption').html(ex);
         }
     });
 }
@@ -148,9 +176,15 @@ function unsetLabel(cell) {  /* cell = thumbnail div containing image */
 }
 function select(cell) {  /* cell = thumbnail div containing image */
     /* select */
-    setLabel(cell,$('#label').val());
-    $(cell).data('timestamp',iso8601(new Date()));
-    $(cell).addClass('selected');
+    var label = $('#label').val(); // category label
+    if(label == '') { // if there's no class selected, clear everything
+        $(cell).removeClass('selected');
+        clearBoundingBox(cell);
+    } else {
+    	setLabel(cell,$('#label').val());
+    	$(cell).data('timestamp',iso8601(new Date()));
+    	$(cell).addClass('selected');
+    }
 }
 function clearBoundingBox(cell) {
     var w = $(cell).data('scaledWidth');
@@ -200,7 +234,7 @@ function commit() {
             	image: $(this).data('image_pid'),
             	timestamp: $(this).data('timestamp'),
             	annotator: 'http://people.net/joeblow',
-            	category: $('#workspace').data('categories')[$(this).data('label')],
+            	category: categoryPidForLabel($(this).data('label')),
             	geometry: { boundingBox: $(this).data('rect') }
             };
         as.push(a)
@@ -234,13 +268,37 @@ function listAssignments() {
     });
 }
 function changeAssignment(ass_pid) {
+    $('#label').val('');
     var ass_pid = $('#assignment').val();
   	clog('user selected assignment '+ass_pid);
   	with_json_request('/fetch_assignment/'+ass_pid, function(r) {
+  	  clog('fetched assignment '+ass_pid);
 	    $('#workspace').data('assignment',r);
 	    $('#workspace').data('images',r.images);
-	    gotoPage(1,25);
+	    with_json_request('/list_categories/'+r.mode, function(c) {
+	        clog('fetched categories for mode '+r.mode);
+	        $('#workspace').data('categories',c);
+	    	gotoPage(1,25);
+	    });
   	});
+}
+function categoryPidForLabel(label) {
+	var cats = $('#workspace').data('categories');
+	if(cats == undefined) { return; }
+	for(var i = 0; i < cats.length; i++) {
+	    if(cats[i].label==label) {
+	        return cats[i].pid;
+	    }
+	}
+}
+function categoryLabelForPid(pid) {
+	var cats = $('#workspace').data('categories');
+	if(cats == undefined) { return; }
+	for(var i = 0; i < cats.length; i++) {
+	    if(cats[i].pid==pid) {
+	        return cats[i].label;
+	    }
+	}
 }
 $(document).ready(function() {
     page = 1;
@@ -263,7 +321,6 @@ $(document).ready(function() {
         page++;
         gotoPage(page,25);
     });
-	$('#workspace').data('categories',{});
     $('#commit').click(function() {
 		preCommit();
  	});
@@ -283,7 +340,6 @@ $(document).ready(function() {
             }
             with_json_request('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
             	resp($.map(r,function(item) {
-            	    $('#workspace').data('categories')[item.label] = item.pid;
             	    return {
             	        'label': item.label,
             	        'value': item.value

@@ -118,7 +118,10 @@ def stem_search(stem,mode):
                 'label': c['label'],
                 'value': c['label']
             }
-            
+@app.route('/list_categories/<path:mode>')
+def list_categories(mode):
+    return jsonr(list(my(CATEGORIES).list_categories(mode)))
+
 @app.route('/category_autocomplete/<path:mode>',methods=['GET','POST'])
 def category_autocomplete(mode):
     stem = '^%s.*' % request.values['term']
