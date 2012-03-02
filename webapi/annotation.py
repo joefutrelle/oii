@@ -12,6 +12,9 @@ from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
 from utils import jsonr
 
+# test with IFCB
+from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
+
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
 and https://beagle.whoi.edu/redmine/issues/943"""
@@ -73,8 +76,10 @@ class DummyAssignmentStore(AssignmentStore):
         
 DEFAULT_CONFIG = {
     ANNOTATION_STORE: DebugAnnotationStore(),
-    CATEGORIES: DummyCategories(),
-    ASSIGNMENT_STORE: DummyAssignmentStore(),
+    #CATEGORIES: DummyCategories(),
+    #ASSIGNMENT_STORE: DummyAssignmentStore()
+    CATEGORIES: IfcbCategories(),
+    ASSIGNMENT_STORE: IfcbFeedAssignmentStore()
 }
 
 # get a configured component, or use a default one for testing

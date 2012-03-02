@@ -6,7 +6,7 @@
 # 4. annotator lid (e.g., EBrownlee)
 import os
 import csv
-from oii.annotation.ifcb import DATA_NAMESPACE, ANNOTATION_NAMESPACE, PERSON_NAMESPACE
+from oii.ifcb import DATA_NAMESPACE, ANNOTATION_NAMESPACE
 from oii.utils import gen_id
 from oii.annotation import PID, TIMESTAMP, ANNOTATOR, IMAGE, CATEGORY
 from oii.times import iso8601

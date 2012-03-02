@@ -7,8 +7,12 @@ class Categories(object):
             "label": "Some Term",
             "modes": ["foo"]
         }]
+    def list_modes(self):
+        return ['foo']
     def list_categories(self,mode):
-        return self.categories
+        for cat in self.categories:
+            if mode in cat['modes']:
+                yield cat
     def fetch_category(self,pid):
         for c in self.list_categories():
             if c['pid'] == pid:

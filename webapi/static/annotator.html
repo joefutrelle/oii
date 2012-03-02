@@ -29,26 +29,12 @@ img.thumbnail {
 .selected { background: #9999ff; }
 </style>
 <script type="text/javascript">
-var scalingFactor = 0.33;
+var scalingFactor = 1;
 var geometryColor = '#0f0';
 function gotoPage(page,size) {
     if(page < 1) page = 1;
-    var assignment = $('#workspace').data('assignment');
-    if(assignment == undefined) {
-        return;
-    }
     var images = $('#workspace').data('images')
     if(images == undefined) {
-	    $.ajax({
-    	    url: '/fetch_assignment/' + assignment,
-	        type: 'GET',
-        	datatype: 'json',
-        	success: function(r,status) {
-        	    $('#workspace').data('assignment',r);
-        	    $('#workspace').data('images',r.images);
-        	    gotoPage(page,size);
-        	}
-	    });
 	    return;
     }
     clearPage();
@@ -130,12 +116,14 @@ function showExistingAnnotations(cell) {
         success: function(r) {
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
             $(r).each(function(ix,ann) {
-                var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
-                var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
-                var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
-                var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
-                ctx.strokeStyle = geometryColor;
-                ctx.strokeRect(ox,oy,w,h);
+                if('boundingBox' in ann.geometry) {
+                	var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
+                	var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
+                	var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
+                	var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
+                	ctx.strokeStyle = geometryColor;
+                	ctx.strokeRect(ox,oy,w,h);
+                }
             });
             $(cell).find('.existing').html(r.length+' annotation(s)');
         }
@@ -245,6 +233,15 @@ function listAssignments() {
         });
     });
 }
+function changeAssignment(ass_pid) {
+    var ass_pid = $('#assignment').val();
+  	clog('user selected assignment '+ass_pid);
+  	with_json_request('/fetch_assignment/'+ass_pid, function(r) {
+	    $('#workspace').data('assignment',r);
+	    $('#workspace').data('images',r.images);
+	    gotoPage(1,25);
+  	});
+}
 $(document).ready(function() {
     page = 1;
     size = 20;
@@ -274,10 +271,7 @@ $(document).ready(function() {
   	  	deselectAll();
     });
   	$('#assignment').change(function() {
-  	    var ass_pid = $('#assignment').val();
-  	    clog('user selected assignment '+ass_pid);
-  	    $('#workspace').data('assignment',ass_pid);
-  	    gotoPage(1,25);
+  	    changeAssignment($('#assignment').val());
   	});
   	listAssignments();
     gotoPage(page,size);

@@ -16,5 +16,3 @@ def list_bins(date=iso8601(),namespace='http://ifcb-data.whoi.edu/mvco/',n=25):
 
 def fetch_image(image_pid):
     return Image.open(StringIO(urlopen(image_pid+'.png').read()))
-
-print list_bins()
