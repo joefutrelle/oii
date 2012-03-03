@@ -37,21 +37,24 @@ class PsqlStore(object):
                 c.rollback()
             db.execute('create table %s (%s)' % (self.TABLE_NAME,', '.join([n+' '+t for n,t,_ in self.SCHEMA])))
             if indexes:
-                self.create_indexes(c)
+                self.create_indexes(self.FIELDS,c)
             c.commit()
-    def create_indexes(self,connection=None):
+    def create_indexes(self,fields=None,connection=None):
+        if fields is None:
+            fields = self.FIELDS
         if connection is None:
             c = psql.connect(self.psql_connect)
         else:
             c = connection
         db = c.cursor()
         for n,_,u in self.SCHEMA:
-            if u:
-                uq = 'unique '
-            else:
-                uq = ''
-            print 'create %sindex ix_%s_%s on %s (%s)' % (uq,self.TABLE_NAME,n,self.TABLE_NAME,n)
-            db.execute('create %sindex ix_%s_%s on %s (%s)' % (uq,self.TABLE_NAME,n,self.TABLE_NAME,n))
+            if n in fields:
+                if u:
+                    uq = 'unique '
+                else:
+                    uq = ''
+                print 'create %sindex ix_%s_%s on %s (%s)' % (uq,self.TABLE_NAME,n,self.TABLE_NAME,n)
+                db.execute('create %sindex ix_%s_%s on %s (%s)' % (uq,self.TABLE_NAME,n,self.TABLE_NAME,n))
         if connection is None:
             c.commit()
     def parse_row(self,row):

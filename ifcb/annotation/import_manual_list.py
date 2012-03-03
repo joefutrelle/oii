@@ -30,8 +30,9 @@ store.create(False)
 print 'bulk inserting...'
 with xa(psql_connect) as (c,db):
     db.execute('copy manual_list from \'%s\' with csv' % tmp)
-    print 'creating indexes...'
-    store.create_indexes(c)
+    c.commit()
+print 'creating indexes...'
+store.create_indexes()
 print 'done'
         
     
