@@ -12,9 +12,12 @@ from oii.annotation import PID, TIMESTAMP, ANNOTATOR, IMAGE, CATEGORY
 from oii.times import iso8601
 from oii.annotation.psql import PsqlAnnotationStore
 import sys
+import re
 
-MOUNT_POINT = '/Volumes/d_work'
-DATA_DIR = os.path.join(MOUNT_POINT,'IFCB1','ifcb_data_mvco_jun06','Manual_fromClass','annotations_csv')
+#MOUNT_POINT = '/Volumes/d_work'
+#DATA_DIR = os.path.join(MOUNT_POINT,'IFCB1','ifcb_data_mvco_jun06','Manual_fromClass','annotations_csv')
+MOUNT_POINT = '/Users/jfutrelle/dev/ifcb'
+DATA_DIR = os.path.join(MOUNT_POINT,'annotations_csv')
 
 def annotations_for(file):
     for raw in csv.DictReader(fin,['bin','roi','category','annotator']):
@@ -30,11 +33,13 @@ store = PsqlAnnotationStore(sys.argv[1]) # arg must be full psql connect string 
 print 'initializing store...'
 store.create(False)
 for file in os.listdir(DATA_DIR):
-    with open(os.path.join(DATA_DIR,file),'r') as fin:
-        anns = list(annotations_for(fin))
-        store.bulk_create_annotations(anns)
-        now = iso8601()
-        print '%s created %d annotation(s) for %s' % (now, len(anns), file)
+    if re.match(r'IFCB.*\.csv',file):
+        with open(os.path.join(DATA_DIR,file),'r') as fin:
+            anns = list(annotations_for(fin))
+            store.bulk_create_annotations(anns)
+            now = iso8601()
+            print '%s created %d annotation(s) for %s' % (now, len(anns), file)
 print 'creating indexes ... this will take a long time'
 store.create_indexes()
+print 'done'
             

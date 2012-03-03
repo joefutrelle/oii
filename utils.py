@@ -123,7 +123,9 @@ class Struct():
         for k,v in d.items():
             self.__dict__[k] = structs(v)
 
-def dict_slice(d,schema):
+__none = object()
+
+def dict_slice(d,schema,default=__none):
     """d - a dict to slice
     keys - the keys to slice, or if a dict, a dict mapping those keys to functions to call on the values first."""
     try: # allow schema to be a string in the form x,y,z
@@ -131,11 +133,21 @@ def dict_slice(d,schema):
     except TypeError: 
         pass
     try: # allow schema to be a dict mapping keys to functions
-        xf = dict((k,schema[k](d[k])) for k in schema.keys() if schema[k] is not None)
+        if default != __none:
+            xf = dict(zip(schema.keys(),[default for _ in schema.keys()]))
+        else:
+            xf = {}
+        xf.update(dict((k,v) for k,v in d.iteritems() if k in schema.keys()))
+        xf.update(dict((k,schema[k](xf[k])) for k in schema.keys() if schema[k] is not None))
         xf.update(dict((k,d[k]) for k in schema.keys() if schema[k] is None))
         return xf
     except: # ok, schema must be a sequence of keys
-        return dict((k,v) for k,v in d.iteritems() if k in schema)
+        if default != __none:
+            xf = dict(zip(schema,[default for _ in schema]))
+        else:
+            xf = {}
+        xf.update(dict((k,v) for k,v in d.iteritems() if k in schema))
+        return xf
 
 def dict_rename(d,keymap):
     r = {}
@@ -259,6 +271,25 @@ class TestDictSlice(TestCase):
         m = dict(a=lambda x: x+2, b=str, c=None)
         s = dict_slice(d,m)
         assert s == dict(a=5,b='7',c=8)
+        d = dict(a=3, b=7, c=8)
+        m = dict(a=lambda x: x+2, b=str)
+        s = dict_slice(d,m)
+        assert s == dict(a=5,b='7')
+    def test_list_default(self):
+        d = dict(a=3, b=7, c=8)
+        k = ['a','c','d']
+        s = dict_slice(d,k,default=None)
+        assert s == dict(a=3, c=8, d=None)
+    def test_str_default(self):
+        d = dict(a=3, b=7, c=8)
+        k = ['a','c','d']
+        s = dict_slice(d,k,'qunk')
+        assert s == dict(a=3, c=8, d='qunk')
+    def test_map_default(self):
+        d = dict(a=3, b=7, c=8)
+        m = dict(a=lambda x: x+2, b=str, d=lambda x: x+100)
+        s = dict_slice(d,m,20)
+        assert s == dict(a=5,b='7',d=120)
         
 class TestMapr(TestCase):
     def runTest(self):
