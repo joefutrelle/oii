@@ -315,7 +315,12 @@ $(document).ready(function() {
         minLength: 2
     });
     $('#closeRight').bind('click', function() {
-        $('#rightPanel').hide(1000);
+        $('#openRight').show();
+        $('#rightPanel').hide(100);
+    });
+    $('#openRight').bind('click', function() {
+        $('#openRight').hide();
+        $('#rightPanel').show(100, resizeAll);
     });
     $(window).bind('resize', resizeAll);
     resizeAll();

@@ -28,4 +28,7 @@ img.thumbnail {
     border: 1px solid;
     padding: 5px;
     margin-left: 5px;
+    display: none;
 }
+.left { float: left; }
+.right { float: right; }
