@@ -87,11 +87,25 @@ function gotoPage(page,size) {
         } // paging condition in loop over images
     }); // loop over images
 }
+// cell - div with image in it
+// ann - annotation
+function showBoundingBox(cell,ctx,ann) {
+    if('boundingBox' in ann.geometry) {
+        var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
+        var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
+        var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
+        var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
+        ctx.strokeStyle = geometryColor;
+        ctx.strokeRect(ox,oy,w,h);
+    }
+}
 function showPendingAnnotations(cell) {
     var image_pid = $(cell).data('image_pid');
     var p = pending()[image_pid];
     if(p != undefined) {
         var cat = categoryLabelForPid(p.category);
+        var ctx = $(cell).find('canvas.new')[0].getContext('2d');
+        showBoundingBox(cell,ctx,p);
         clog('selecting '+cat+' for '+image_pid);
         select(cell, cat);
     }
@@ -106,14 +120,7 @@ function showExistingAnnotations(cell) {
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
             var anns = {};
             $(r).each(function(ix,ann) {
-                if('boundingBox' in ann.geometry) {
-                    var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
-                    var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
-                    var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
-                    var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
-                    ctx.strokeStyle = geometryColor;
-                    ctx.strokeRect(ox,oy,w,h);
-                }
+                showBoundingBox(cell,ctx,ann);
                 if(!(ann.category in anns)) {
                     anns[ann.category] = 1;
                 } else {
