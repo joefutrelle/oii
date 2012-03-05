@@ -1,0 +1,31 @@
+div.thumbnail {
+  position: relative;
+  display: inline-block;
+  padding: 10px;
+  vertical-align: top;
+}
+img.thumbnail {
+  margin-left: auto;
+  margin-right: auto;
+}
+.atorigin {
+  position: absolute;
+  top: 10px;  /* thumbnail.div's padding */
+  left: 10px;
+}
+.caption {
+    text-align: center;
+}
+.subcaption {
+    text-align: center;
+    font-size: 8px;
+}
+.selected { background: #9999ff; }
+#rightPanel {
+    float: right;
+    width: 500px;
+    margin: auto;
+    border: 1px solid;
+    padding: 5px;
+    margin-left: 5px;
+}
