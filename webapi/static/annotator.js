@@ -90,7 +90,8 @@ function gotoPage(page,size) {
 // cell - div with image in it
 // ann - annotation
 function showBoundingBox(cell,ctx,ann) {
-    if('boundingBox' in ann.geometry) {
+    clog('showing bounding box ...' + JSON.stringify(ann));
+    if('boundingBox' in ann.geometry && ann.geometry.boundingBox != undefined) {
         var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
         var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
         var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
