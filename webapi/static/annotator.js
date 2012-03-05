@@ -118,6 +118,7 @@ function showExistingAnnotations(cell) {
         url: '/list_annotations/image/' + image_pid,
         dataType: 'json',
         success: function(r) {
+	    showPendingAnnotations(cell);
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
             var anns = {};
             $(r).each(function(ix,ann) {
@@ -143,9 +144,10 @@ function showExistingAnnotations(cell) {
                     ex += '&nbsp;x' + anns[cat];
                 }
             }
-            setLabel(cell,theLabel);
-            $(cell).find('.subcaption').html(ex);
-            showPendingAnnotations(cell);
+	    if(theLabel != '') {
+		setLabel(cell,theLabel);
+		$(cell).find('.subcaption').html(ex);
+	    }
         }
     });
 }
