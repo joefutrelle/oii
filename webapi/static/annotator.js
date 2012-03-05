@@ -14,7 +14,14 @@ function gotoPage(page,size) {
         if(i >= offset && i < limit) {
             // append image with approprite URL
             var image_url = entry.image;
-            var image_pid = entry.image; // for now, pid = url
+            var image_pid = entry.pid; // for now, pid = url
+            // each cell has the following data associted with it:
+            // image_pid: the pid of the image
+            // scaledWidth: scaled width of image
+            // scaledHeight: scaled height of image
+            // ox: x origin of (new, not existing) bounding box
+            // oy: y origin of (new, not existing) bounding box
+            // rect: the bounding box rectangle (in *non-scaled* pixel coordinates)
             var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
                 .find('div.thumbnail:last')
                 .data('image_pid',image_pid)
@@ -67,16 +74,27 @@ function gotoPage(page,size) {
                         }).bind('mouseup', {
                             cell: cell
                         }, function(event) {
-                            var label = $('#label').val(); // category label
-                            var rect = $(cell).data('rect'); // bounding box
-                            clog('marked '+rect+' as '+label+' for '+cell);
+                            queueAnnotation({
+                                image: $(cell).data('image_pid'),
+                                category: categoryPidForLabel($('#label').val()),
+                                geometry: { boundingBox: $(cell).data('rect') }
+                            });
                             $(cell).data('ox',-1);
                             $(cell).data('oy',-1);
-                            toggleSelected(cell);
+                            toggleSelected(cell,$('#label').val());
                         }); // bindings for new annotation canvas layer supporting rubberbanding
                 }); // binding for load on cell
         } // paging condition in loop over images
     }); // loop over images
+}
+function showPendingAnnotations(cell) {
+    var image_pid = $(cell).data('image_pid');
+    var p = pending()[image_pid];
+    if(p != undefined) {
+        var cat = categoryLabelForPid(p.category);
+        clog('selecting '+cat+' for '+image_pid);
+        select(cell, cat);
+    }
 }
 function showExistingAnnotations(cell) {
     var image_pid = $(cell).data('image_pid');
@@ -119,6 +137,7 @@ function showExistingAnnotations(cell) {
             }
             setLabel(cell,theLabel);
             $(cell).find('.subcaption').html(ex);
+            showPendingAnnotations(cell);
         }
     });
 }
@@ -134,20 +153,19 @@ function setLabel(cell,label) {
     $(cell).data('previous-label',$(cell).data('label'));
     $(cell).data('label',label);
     var p = $(cell).data('previous-label');
+    clog('setting caption to '+label);
     $(cell).find('div.caption').html(label);
 }
 function unsetLabel(cell) {  /* cell = thumbnail div containing image */
     setLabel(cell,$(cell).data('previous-label'));
 }
-function select(cell) {  /* cell = thumbnail div containing image */
+function select(cell,label) {  /* cell = thumbnail div containing image */
     /* select */
-    var label = $('#label').val(); // category label
     if(label == '') { // if there's no class selected, clear everything
         $(cell).removeClass('selected');
         clearBoundingBox(cell);
     } else {
-        setLabel(cell,$('#label').val());
-        $(cell).data('timestamp',iso8601(new Date()));
+        setLabel(cell,label);
         $(cell).addClass('selected');
     }
 }
@@ -165,45 +183,45 @@ function deselect(cell) {  /* cell = thumbnail div containing image */
     $(cell).removeClass('selected');
     clearBoundingBox(cell);
 }
-function toggleSelected(cell) { /* cell = thumbnail div containing image */
+function toggleSelected(cell,label) { /* cell = thumbnail div containing image */
     if($(cell).hasClass('selected')) {
         deselect(cell);
     } else {
-        select(cell);
+        select(cell,label);
     }
 }
 function commitCell(cell) {
     $(cell).removeClass('selected');
     clearBoundingBox(cell);
 }
+function pending() {
+    return $('#workspace').data('pending');
+}
 function preCommit() {
     /* generate an ID for each annotation */
-    n = $('div.thumbnail.selected').length;
+    var n = 0;
+    for(var k in pending()) { n++; }
+    var i = n-1;
     /* FIXME hardcoded namespace */
     with_json_request('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
-        $.each(r, function(i,id) {
-            $('div.thumbnail.selected:eq('+i+')').data('annotation_pid',id);
+        $.each(pending(), function(image_pid, ann) {
+            pending()[image_pid].pid = r[i--];
         });
         commit();
     });
 }
+function queueAnnotation(ann) {
+    ann.annotator = 'http://people.net/joeblow';
+    ann.timestamp = iso8601(new Date());
+    clog('enqueing '+JSON.stringify(ann));
+    pending()[ann.image] = ann;
+}
 function commit() {
     clog('committing...');
     var as = [];
-    $('div.thumbnail.selected').each(function() {
-        ix = $(this).index();
-        l = $(this).data('label');
-        p = $(this).data('pid');
-        a = {
-                pid: $(this).data('annotation_pid'),
-                image: $(this).data('image_pid'),
-                timestamp: $(this).data('timestamp'),
-                annotator: 'http://people.net/joeblow',
-                category: categoryPidForLabel($(this).data('label')),
-                geometry: { boundingBox: $(this).data('rect') }
-            };
-        as.push(a)
-        clog(a.image+' is a '+a.category+' at '+a.timestamp+', ann_id='+a.pid);
+    $.each(pending(), function(image_pid, ann) {
+        as.push(ann)
+        clog(ann.image+' is a '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
     });
     $.ajax({
         url: '/create_annotations',
@@ -216,10 +234,15 @@ function commit() {
                 commitCell(cell);
                 showExistingAnnotations(cell);
             });
+            postCommit();
         }
     });
 }
+function postCommit() {
+    $('#workspace').data('pending',{});
+}
 function deselectAll() {
+    $('#workspace').data('pending',{});
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
@@ -268,6 +291,7 @@ function categoryLabelForPid(pid) {
 $(document).ready(function() {
     page = 1;
     size = 20;
+    $('#workspace').data('pending',{}); // pending annotations by pid
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
     // images div is not text-selectable
@@ -322,11 +346,11 @@ $(document).ready(function() {
         $('#openRight').hide();
         $('#rightPanel').show(100, resizeAll);
     });
-    $(window).bind('resize', resizeAll);
-    resizeAll();
 });
 function resizeAll() {
     // resize the right panel
-    var rp = $('#rightPanel');
-    rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
+    if($('#rightPanel').is(':visible')) {
+        var rp = $('#rightPanel');
+        rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
+    }
 }
