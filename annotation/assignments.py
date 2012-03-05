@@ -1,4 +1,4 @@
-
+from oii.utils import dict_slice
         
 # abstract API for representing assignments
 class AssignmentStore(object):
@@ -15,7 +15,8 @@ class AssignmentStore(object):
             }]
         }]
     def list_assignments(self):
-        return self.assignments
+        for ass in self.assignments:
+            yield dict_slice(ass,'pid,label,annotator,status,mode')
     def fetch_assignment(self,pid):
         for a in self.list_assignments():
             if a['pid'] == pid:

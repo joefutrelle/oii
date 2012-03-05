@@ -12,7 +12,7 @@ def get_blobs(pid,limit=None):
         blob = target+'_blob.png'
         print 'fetching %s...' % blob
         yield client.fetch_image(blob)
-    
+
 PID='http://ifcb-data.whoi.edu/mvco/IFCB5_2011_339_111025'
 print('loading images from %s...' % PID)
 images = get_blobs(PID,500)

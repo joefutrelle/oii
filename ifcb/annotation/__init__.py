@@ -7,10 +7,7 @@ MVCO_CATEGORY_NAMESPACE = 'http://ifcb-data.whoi.edu/categories/mvco/'
 
 # demonstration feed that uses the most recent n bins as the set of assignments
 class IfcbFeedAssignmentStore(AssignmentStore):
-    def list_assignments(self):
-        for bin in client.list_bins():
-            yield self.fetch_assignment(bin['pid'])
-    def fetch_assignment(self,pid):
+    def fetch_header(self,pid):
         bin = client.fetch_object(pid)
         return {
             'pid': pid,
@@ -18,9 +15,14 @@ class IfcbFeedAssignmentStore(AssignmentStore):
             'annotator': 'Ann O. Tator',
             'status': 'new',
             'mode': MVCO_MODE,
-            'images': [dict(pid=i, image=i+'.jpg') for i in client.list_targets(pid)]
         }
-
+    def list_assignments(self):
+        return [self.fetch_header(bin['pid']) for bin in client.list_bins()]
+    def fetch_assignment(self,pid):
+        bin = self.fetch_header(pid)
+        bin['images'] = [dict(pid=i, image=i+'.jpg') for i in client.list_targets(pid)] 
+        return bin
+        
 mvco_cats = [
 'Asterionellopsis',
 'Cerataulina',

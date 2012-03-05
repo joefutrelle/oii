@@ -190,4 +190,4 @@ class TestAnnotation(TestCase):
 if __name__=='__main__':
     if len(sys.argv) > 1:
         app.config['ANNOTATION_STORE'] = PsqlAnnotationStore(sys.argv[1])
-    app.run()
+    app.run(host='0.0.0.0')
