@@ -1,5 +1,6 @@
+// globals (FIXME: make preferences)
 var scalingFactor = 1;
-var geometryColor = '#0f0';
+var geometryColor = '#f00';
 function gotoPage(page,size) {
     if(page < 1) page = 1;
     clog('going to page '+page);
@@ -41,48 +42,17 @@ function gotoPage(page,size) {
                     $(cell).data('oy',-1);
                     $(cell).width(iw);
                     $(cell).find('div.spacer').height(ih+10);
-                    ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
+                    var ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
                         .find('canvas.image')[0].getContext('2d');
                     ctx.drawImage(this, 0, 0, iw, ih);
                     $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
                     showExistingAnnotations(cell);
-                    $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
-                        .find('canvas.new').mousedown(function(event) {
-                            var mx = event.pageX - $(this).offset().left;
-                            var my = event.pageY - $(this).offset().top;
-                            $(cell).data('ox',mx); /* FIXME generalize to arbitrary geometries */
-                            $(cell).data('oy',my);
-                        }).mousemove(function(event) {
-                            var ox = $(cell).data('ox');
-                            var oy = $(cell).data('oy');
-                            if(ox >= 0 && oy >= 0) {
-                                var mx = event.pageX - $(this).offset().left;
-                                var my = event.pageY - $(this).offset().top;
-                                ctx = $(this)[0].getContext('2d');
-                                ctx.clearRect(0,0,iw,ih);
-                                ctx.strokeStyle = geometryColor;
-                                var left = Math.min(ox,mx);
-                                var top = Math.min(oy,my);
-                                var w = Math.max(ox,mx) - left;
-                                var h = Math.max(oy,my) - top;
-                                /* compute a rectangle in original scale pixel space */
-                                var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
-                                $(cell).data('rect',rect);
-                                $('#coords').html('drawing rect at '+rect);
-                                ctx.strokeRect(left, top, w, h);
-                            }
-                        }).bind('mouseup', {
-                            cell: cell
-                        }, function(event) {
-                            queueAnnotation({
-                                image: $(cell).data('image_pid'),
-                                category: categoryPidForLabel($('#label').val()),
-                                geometry: { boundingBox: $(cell).data('rect') }
-                            });
-                            $(cell).data('ox',-1);
-                            $(cell).data('oy',-1);
-                            toggleSelected(cell,$('#label').val());
-                        }); // bindings for new annotation canvas layer supporting rubberbanding
+                    //bindSelectedTool(cell);
+                    var newCanvas = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
+                        .find('canvas.new');
+                    ctx = newCanvas[0].getContext('2d');
+                    var env = { cell: cell, ctx: ctx, iw: iw, ih: ih };
+                    boundingBoxTool.bindTo(newCanvas, env);
                 }); // binding for load on cell
         } // paging condition in loop over images
     }); // loop over images
