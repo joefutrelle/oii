@@ -1,6 +1,4 @@
-// globals (FIXME: make preferences)
-var scalingFactor = 1;
-var geometryColor = '#f00';
+
 function gotoPage(page,size) {
     if(page < 1) page = 1;
     clog('going to page '+page);
@@ -47,27 +45,26 @@ function gotoPage(page,size) {
                     ctx.drawImage(this, 0, 0, iw, ih);
                     $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
                     showExistingAnnotations(cell);
-                    //bindSelectedTool(cell);
                     var newCanvas = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
                         .find('canvas.new');
                     ctx = newCanvas[0].getContext('2d');
                     var env = { cell: cell, ctx: ctx, iw: iw, ih: ih };
-                    boundingBoxTool.bindTo(newCanvas, env);
+                    bindMeasurementTools(newCanvas, env);
                 }); // binding for load on cell
         } // paging condition in loop over images
     }); // loop over images
 }
 // cell - div with image in it
 // ann - annotation
-function showBoundingBox(cell,ctx,ann) {
-    clog('showing bounding box ...' + JSON.stringify(ann));
-    if('boundingBox' in ann.geometry && ann.geometry.boundingBox != undefined) {
-        var ox = ann.geometry.boundingBox[0][0] * scalingFactor;
-        var oy = ann.geometry.boundingBox[0][1] * scalingFactor;
-        var w = (ann.geometry.boundingBox[1][0] * scalingFactor) - ox;
-        var h = (ann.geometry.boundingBox[1][1] * scalingFactor) - oy;
-        ctx.strokeStyle = geometryColor;
-        ctx.strokeRect(ox,oy,w,h);
+function showAnnotationGeometry(ctx,ann) {
+    // use the appropriate drawing method to draw any geometry found
+    clog('drawing existing for '+JSON.stringify(ann));
+    if('geometry' in ann) {
+        var g = ann.geometry;
+        for(key in ann.geometry) {
+            clog('attempting to draw a '+key+' for '+JSON.stringify(ann.geometry[key]));
+            geometry[key].draw(ctx, ann.geometry[key]);
+        }
     }
 }
 function showPendingAnnotations(cell) {
@@ -76,7 +73,7 @@ function showPendingAnnotations(cell) {
     if(p != undefined) {
         var cat = categoryLabelForPid(p.category);
         var ctx = $(cell).find('canvas.new')[0].getContext('2d');
-        showBoundingBox(cell,ctx,p);
+        showAnnotationGeometry(ctx,p);
         clog('selecting '+cat+' for '+image_pid);
         select(cell, cat);
     }
@@ -92,7 +89,7 @@ function showExistingAnnotations(cell) {
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
             var anns = {};
             $(r).each(function(ix,ann) {
-                showBoundingBox(cell,ctx,ann);
+                showAnnotationGeometry(ctx,ann);
                 if(!(ann.category in anns)) {
                     anns[ann.category] = 1;
                 } else {
@@ -114,10 +111,10 @@ function showExistingAnnotations(cell) {
                     ex += '&nbsp;x' + anns[cat];
                 }
             }
-	    if(theLabel != '') {
-		setLabel(cell,theLabel);
-		$(cell).find('.subcaption').html(ex);
-	    }
+            if(theLabel != '') {
+                setLabel(cell,theLabel);
+                $(cell).find('.subcaption').html(ex);
+            }
         }
     });
 }
@@ -298,6 +295,13 @@ $(document).ready(function() {
     });
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val());
+    });
+    $.each(geometry, function(key,g) {
+        $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
+    });
+    selectedTool('boundingBox');
+    $('#tool').change(function() {
+        selectedTool($('#tool').val());
     });
     listAssignments();
     gotoPage(page,size);

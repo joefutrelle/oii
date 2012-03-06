@@ -8,7 +8,7 @@ MVCO_CATEGORY_NAMESPACE = 'http://ifcb-data.whoi.edu/categories/mvco/'
 # demonstration feed that uses the most recent n bins as the set of assignments
 class IfcbFeedAssignmentStore(AssignmentStore):
     def fetch_header(self,pid):
-        bin = client.fetch_object(pid)
+        bin = client.fetch_object(pid+'/head')
         return {
             'pid': pid,
             'label': bin['time'],

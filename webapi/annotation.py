@@ -58,7 +58,7 @@ class DummyAssignmentStore(AssignmentStore):
                  "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
                 }]
           },{
-            "pid": "http://foo.bar/assignments/fnord",
+            "pid": "http://foo.bar/assignments/fnordy",
             "label": "Look for sand dollars",
             "status": "new",
             "mode": "sanddollars",
