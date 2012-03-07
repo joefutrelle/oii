@@ -7,11 +7,7 @@
 function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
     // handle defaults that we can handle
     if(scale == undefined) { scale = 1.0; }
-    // create the cell
-    var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
-        .find('div.thumbnail:last');
     // populate its data
-    $(cell).data('imagePid',imagePid);
     $(cell).data('imageUrl',imageUrl);
     $(cell).data('scale',scale);
     $(cell).data('zoomScale',zoomScale);
@@ -26,10 +22,12 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             var height = $(this).height();
             var scaledWidth = width * scale;
             var scaledHeight = height * scale;
+            $(cell).width(scaledWidth);
             $(cell).data('width',scaledWidth);
             $(cell).data('height',scaledHeight);
             $(cell).data('scaledWidth',scaledWidth);
             $(cell).data('scaledHeight',scaledHeight);
+            $(cell).data('image',this);
             // create layers for
             // - the image
             // - the existing annotations
@@ -37,7 +35,7 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             // - the new annotations (during geometry selection, prior to pending)
             addImageLayer(cell,'image');
             addImageLayer(cell,'existing');
-            //addImageLayer(cell,'pending');
+            addImageLayer(cell,'pending');
             addImageLayer(cell,'new');
             // now:
             // - display the zoomed image
@@ -46,17 +44,34 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             drawImage(cell);
             drawPendingAnnotations(cell);
             drawExistingAnnotations(cell);
+            // adjust layout
+            $(cell).find('div.spacer').height(scaledHeight+10);
+            // bind measurement tools
+            var newCanvas = getImageLayer(cell,'new');
+            var ctx = getImageLayerContext(cell,'new');
+            var env = { cell: cell, canvas: newCanvas, ctx: ctx, scaledWidth: scaledWidth, scaledHeight: scaledHeight }
+            bindMeasurementTools(cell, env);
         });
 }
 function addImageLayer(cell,claz) {
-    $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="'+claz+' atorigin"></canvas>');
+    var scaledWidth = $(cell).data('scaledWidth');
+    var scaledHeight = $(cell).data('scaledHeight');
+    clog('adding canvas '+scaledWidth+','+scaledHeight);
+    $(cell).append('<canvas width="'+scaledWidth+'px" height="'+scaledHeight+'px" class="'+claz+' atorigin"></canvas>');
+}
+function getImageLayer(cell,claz) {
+    return $(cell).find('canvas.'+claz);
 }
 function getImageLayerContext(cell,claz) {
-    return $(cell).find('canvas.'+claz)[0].getContext('2d');
+    return getImageLayer(cell,claz)[0].getContext('2d');
 }
 function clearImageLayer(cell,claz) {
     var ctx = getImageLayerContext(cell,'existing');
     ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
+}
+function drawImage(cell) {
+    var ctx = getImageLayerContext(cell,'image')
+    ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
 function drawExistingAnnotations(cell) {
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
@@ -84,6 +99,12 @@ function showAnnotationGeometry(ctx,ann) {
         }
     }
 }
+function addCell(imagePid) {
+    return $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
+        .find('div.thumbnail:last')
+        .data('imagePid',imagePid)
+        .disableSelection();
+}
 function gotoPage(page,size) {
     if(page < 1) page = 1;
     clog('going to page '+page);
@@ -108,58 +129,32 @@ function gotoPage(page,size) {
             // ox: x origin of (new, not existing) bounding box
             // oy: y origin of (new, not existing) bounding box
             // rect: the bounding box rectangle (in *non-scaled* pixel coordinates)
-            var cell = $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
-                .find('div.thumbnail:last')
-                .data('imagePid',imagePid)
-                .disableSelection();
-            $(cell).prepend('<img style="display:none" src="'+imageUrl+'">')
-                .find('img')
-                .bind('load', {
-                    cell: cell
-                }, function() {
-                    var iw = $(this).width();
-                    var ih = $(this).height();
-                    ih *= scalingFactor; /* we can apply arbitrary scaling factors here. */
-                    iw *= scalingFactor;
-                    $(cell).data('scaledWidth',iw);
-                    $(cell).data('scaledHeight',ih);
-                    $(cell).data('ox',-1);
-                    $(cell).data('oy',-1);
-                    $(cell).width(iw);
-                    $(cell).find('div.spacer').height(ih+10);
-                    var ctx = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="image atorigin"></canvas>')
-                    .find('canvas.image')[0].getContext('2d');
-                   ctx.drawImage(this, 0, 0, iw, ih);
-                    $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="existing atorigin"></canvas>');
-                    showExistingAnnotations(cell);
-                    var newCanvas = $(cell).append('<canvas width="'+iw+'px" height="'+ih+'px" class="new atorigin"></canvas>')
-                        .find('canvas.new');
-                    ctx = newCanvas[0].getContext('2d');
-                    var env = { cell: cell, ctx: ctx, iw: iw, ih: ih };
-                    bindMeasurementTools(newCanvas, env);
-                }); // binding for load on cell
+            clog('adding cell for '+imagePid);
+            cell = addCell(imagePid);
+            clog('adding image for '+imageUrl);
+            addImage(cell,imageUrl,scalingFactor);
         } // paging condition in loop over images
     }); // loop over images
 }
-function showPendingAnnotations(cell) {
+function drawPendingAnnotations(cell) {
     var imagePid = $(cell).data('imagePid');
     var p = pending()[imagePid];
     if(p != undefined) {
         var cat = categoryLabelForPid(p.category);
-        var ctx = $(cell).find('canvas.new')[0].getContext('2d');
+        var ctx = getImageLayerContext(cell,'pending');
         showAnnotationGeometry(ctx,p);
         clog('selecting '+cat+' for '+imagePid);
         select(cell, cat);
     }
 }
-function showExistingAnnotations(cell) {
+/*
+function drawExistingAnnotations(cell) {
     var imagePid = $(cell).data('imagePid');
-    var ctx = $(cell).find('canvas.existing')[0].getContext('2d');
+    var ctx = getImageLayerContext(cell,'existing');
     $.ajax({
         url: '/list_annotations/image/' + imagePid,
         dataType: 'json',
         success: function(r) {
-	    showPendingAnnotations(cell);
             ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
             var anns = {};
             $(r).each(function(ix,ann) {
@@ -192,6 +187,7 @@ function showExistingAnnotations(cell) {
         }
     });
 }
+*/
 function clearPage() {
     $('#images').empty();
 }
@@ -283,7 +279,7 @@ function commit() {
         success: function() {
             $('div.thumbnail.selected').each(function(ix,cell) {
                 commitCell(cell);
-                showExistingAnnotations(cell);
+                drawExistingAnnotations(cell);
             });
             postCommit();
         }

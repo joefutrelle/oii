@@ -1,5 +1,5 @@
 // globals (FIXME: make preferences)
-var scalingFactor = 1;
+var scalingFactor = 2;
 var geometryColor = '#f00';
 // geometric tool support
 var geometry = {};
@@ -58,15 +58,17 @@ function MeasurementTool(eventHandlers) {
 function bindMeasurementTools(selector, env) {
     // env must include the following to be passed as event.data:
     // - cell: the div containing the image and carrying annotation data
-    // - ctx: the canvas context for the "new annotation" canvas $(cell).find('canvas.new')
-    // - iw: the scaled image width
-    // - ih: the scaled image height
+    // - canvas: the canvas
+    // - ctx: a context on the canvas
+    // - scaledWidth: the scaled image width
+    // - scaledHeight: the scaled image height
     selector.bind('mousedown', env, function(event) {
         var cell = event.data.cell;
+        var canvas = event.data.canvas;
         var tool = selectedTool();
         if('mousedown' in tool.eventHandlers) {
-            var mx = event.pageX - $(this).offset().left;
-            var my = event.pageY - $(this).offset().top;
+            var mx = event.pageX - canvas.offset().left;
+            var my = event.pageY - canvas.offset().top;
             event.data.mx = mx;
             event.data.my = my;
             event.data.ix = (mx/scalingFactor)|0;
@@ -76,9 +78,10 @@ function bindMeasurementTools(selector, env) {
         }
     }).bind('mousemove', env, function(event) {
         var tool = selectedTool();
+        var canvas = event.data.canvas;
         if('mousemove' in tool.eventHandlers) {
-            var mx = event.pageX - $(this).offset().left;
-            var my = event.pageY - $(this).offset().top;
+            var mx = event.pageX - canvas.offset().left;
+            var my = event.pageY - canvas.offset().top;
             event.data.mx = mx;
             event.data.my = my;
             event.data.ix = (mx/scalingFactor)|0;
@@ -106,8 +109,8 @@ geometry.boundingBox.tool = new MeasurementTool({
         var oy = $(cell).data('oy');
         if(ox >= 0 && oy >= 0) {
             var ctx = event.data.ctx;
-            var iw = event.data.iw;
-            var ih = event.data.ih;
+            var scaledWidth = event.data.scaledWidth;
+            var scaledHeight = event.data.scaledHeight;
             var mx = event.data.mx;
             var my = event.data.my;
             var left = Math.min(ox,mx);
@@ -117,7 +120,7 @@ geometry.boundingBox.tool = new MeasurementTool({
             /* compute a rectangle in original scale pixel space */
             var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
             $(cell).data('boundingBox',rect);
-            ctx.clearRect(0, 0, iw, ih);
+            ctx.clearRect(0, 0, scaledWidth, scaledHeight);
             geometry.boundingBox.draw(ctx,rect);
         }
     },
@@ -153,7 +156,7 @@ geometry.line.tool = new MeasurementTool({
             /* compute a rectangle in original scale pixel space */
             var line = [[(ox/scalingFactor)|0, (oy/scalingFactor)|0], [(mx/scalingFactor)|0, (my/scalingFactor)|0]]
             $(cell).data('line',line);
-            ctx.clearRect(0,0,event.data.iw,event.data.ih);
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.line.draw(ctx,line);
         }
     },
@@ -179,7 +182,7 @@ geometry.point.tool = new MeasurementTool({
         /* compute a rectangle in original scale pixel space */
         var line = [(mx/scalingFactor)|0, (my/scalingFactor)|0]
         $(cell).data('point',line);
-        ctx.clearRect(0,0,event.data.iw,event.data.ih);
+        ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
         geometry.point.draw(ctx,line);
         $(cell).data('inpoint',1);
     },
@@ -193,7 +196,7 @@ geometry.point.tool = new MeasurementTool({
             /* compute a rectangle in original scale pixel space */
             var line = [(mx/scalingFactor)|0, (my/scalingFactor)|0]
             $(cell).data('point',line);
-            ctx.clearRect(0,0,event.data.iw,event.data.ih);
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.point.draw(ctx,line);
         }
     },
