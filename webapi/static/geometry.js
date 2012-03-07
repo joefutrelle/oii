@@ -126,7 +126,7 @@ geometry.boundingBox.tool = new MeasurementTool({
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
         queueAnnotation({
-            image: $(cell).data('image_pid'),
+            image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { boundingBox: $(cell).data('boundingBox') }
         });
@@ -162,7 +162,7 @@ geometry.line.tool = new MeasurementTool({
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
         queueAnnotation({
-            image: $(cell).data('image_pid'),
+            image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { line: $(cell).data('line') }
         });
@@ -200,7 +200,7 @@ geometry.point.tool = new MeasurementTool({
     mouseup: function(event) {
         var cell = event.data.cell;
         queueAnnotation({
-            image: $(cell).data('image_pid'),
+            image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { point: $(cell).data('point') }
         });
