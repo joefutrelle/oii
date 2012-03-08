@@ -80,8 +80,8 @@ function bindMeasurementTools(selector, env) {
         var tool = selectedTool();
         var canvas = event.data.canvas;
         if('mousemove' in tool.eventHandlers) {
-            var mx = event.pageX - canvas.offset().left;
-            var my = event.pageY - canvas.offset().top;
+            var mx = mouseX(event, canvas);
+            var my = mouseY(event, canvas);
             event.data.mx = mx;
             event.data.my = my;
             event.data.ix = (mx/scalingFactor)|0;
