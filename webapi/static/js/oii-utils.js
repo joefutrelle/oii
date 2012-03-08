@@ -36,7 +36,7 @@ function clog(s) {
 }
 /* get local coordinates of an event relative to some element */
 function mouseX(event, element) {
-    return event.pageY - $(element).offset().left;
+    return event.pageX - $(element).offset().left;
 }
 function mouseY(event, element) {
     return event.pageY - $(element).offset().top;
