@@ -30,8 +30,17 @@ function with_json_request(url, fn) {
         success : fn
     });
 }
-
 /* console log */
 function clog(s) {
     if (window.console) console.log(s);
+}
+/* get local coordinates of an event relative to some element */
+function mouseX(event, element) {
+    return event.pageY - $(element).offset().left;
+}
+function mouseY(event, element) {
+    return event.pageY - $(element).offset().top;
+}
+function mouseXY(event, element) {
+    return [ mouseX(event, element), mouseY(event, element) ];
 }
