@@ -1,6 +1,8 @@
 import pika
+from pika.adapters import SelectConnection
 import sys
 import re
+import os
 
 # statuses
 PASS='pass' # non-fatal, requeue (queue browsing)
@@ -42,6 +44,8 @@ def enqueue(message,qname,host='localhost'):
     ch, cn = declare_work_queue(qname,host)
     ch.basic_publish(exchange='', routing_key=qname, body=message, properties=PERSISTENT)
     cn.close()
+        
+# channel operations
 
 def ack(channel,method):
     """Send a ack on the given channel.
@@ -84,28 +88,40 @@ class Job(object):
             qname = self.qname
         debug('enqueue %s to %s' % (message,qname))
         enqueue(message,qname,self.host)
-    def work(self):
-        """Start doing work. Will not return as it blocks for messages"""
-        def amqp_run_callback(channel, method, properties, message):
-            debug('callback %s' % message)
-            try:
-                ret = self.run_callback(message)
-                debug('callback %s returned %s' % (message,ret))
-                if ret == PASS:
-                    reject(channel,method,requeue=False)
-                    self.enqueue(message)
-                elif ret == WIN or ret is None:
-                    ack(channel,method)
-                    self.enqueue(message,self.qname+'_win')
-                elif ret == FAIL:
-                    raise
-            except:
-                reject(channel,method)
-                self.enqueue(message,self.qname+'_fail')
-                raise
-        ch,_ = declare_work_queue(self.qname, self.host)
-        ch.basic_consume(amqp_run_callback, queue=self.qname)
-        ch.start_consuming()
+    def work(self,fork=False):
+        """Start doing work. Will not return as it blocks for messages.
+        If fork is true, will start in a separate process, wait for that process
+        to terminate, and restart it when it does"""
+        while True:
+            if fork:
+                pid = os.fork()
+            if not fork or pid == 0:
+                def amqp_run_callback(channel, method, properties, message):
+                    debug('callback %s' % message)
+                    try:
+                        ret = self.run_callback(message)
+                        debug('callback %s returned %s' % (message,ret))
+                        if ret == PASS:
+                            reject(channel,method,requeue=False)
+                            self.enqueue(message)
+                        elif ret == WIN or ret is None:
+                            ack(channel,method)
+                            self.enqueue(message,self.qname+'_win')
+                        elif ret == FAIL:
+                            raise
+                    except KeyboardInterrupt:
+                        reject(channel,method,requeue=True)
+                        raise
+                    except:
+                        reject(channel,method)
+                        self.enqueue(message,self.qname+'_fail')
+                        raise
+                ch,_ = declare_work_queue(self.qname, self.host)
+                ch.basic_consume(amqp_run_callback, queue=self.qname)
+                ch.start_consuming()
+                sys.exit()
+            elif fork and pid != 0:
+                os.waitpid(pid,0)
     def retry_failed(self):
         """Push failed tasks back into the work queue"""
         def requeue_callback(channel, method, properties, message):
@@ -118,7 +134,7 @@ class Job(object):
         """Consume the log and send it to the given output stream.
         Will not return as it blocks for incoming log messages"""
         ename = self.qname + '_log'
-        ch, cn = declare_log_exchange(ename,self.host)
+        ch, _ = declare_log_exchange(ename,self.host)
         result = ch.queue_declare(exclusive=True)
         qname = result.method.queue
         ch.queue_bind(exchange=ename,queue=qname)
@@ -157,9 +173,9 @@ if __name__=='__main__':
     elif command == 'r':
         ptFoo.retry_failed()
     elif command == 'foo':
-        ptFoo.work()
+        ptFoo.work(True)
     elif command == 'bar':
-        ptBar.work()
+        ptBar.work(True)
     elif command == 'log':
         ptFoo.consume_log()
 
