@@ -1,5 +1,9 @@
 import subprocess
 import re
+from oii.times import iso8601
+
+def reset_tty():
+    subprocess.call(['stty','echo'])
 
 class Matlab:
     def __init__(self,exec_path,matlab_path=['.'],fail_fast=True):
@@ -11,11 +15,12 @@ class Matlab:
         env = dict(MATLABPATH=':'.join(self.matlab_path))
         p = None
         try:
+            script = 'try, disp(\'%s\'), %s, catch err, disp(err.identifier), exit(1), end, exit(0)' % (self.output_separator, command)
             cmd = [
                 self.exec_path,
                 '-nodisplay',
                 '-r',
-                'try, disp(\'%s\'), %s, catch, exit(1), end, exit(0)' % (self.output_separator, command)
+                script
                 ]
             p = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
             seen_separator = False
@@ -32,8 +37,10 @@ class Matlab:
             if p.returncode != 0 and self.fail_fast:
                 print 'return code is %d' % p.returncode
                 raise RuntimeError('nonzero return code from subprocess: %d' % p.returncode)
+            reset_tty()
         except KeyboardInterrupt:
             p.kill()
         except:
+            reset_tty()
             if self.fail_fast:
                 raise
