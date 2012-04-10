@@ -92,30 +92,32 @@ class Job(object):
         """Start doing work. Will not return as it blocks for messages.
         If fork is true, will start in a separate process, wait for that process
         to terminate, and restart it when it does"""
+        # callback handling WIN/PASS/FAIL queueing behavior
+        def amqp_run_callback(channel, method, properties, message):
+            debug('callback %s' % message)
+            try:
+                ret = self.run_callback(message)
+                debug('callback %s returned %s' % (message,ret))
+                if ret == PASS:
+                    reject(channel,method,requeue=False)
+                    self.enqueue(message)
+                elif ret == WIN or ret is None:
+                    ack(channel,method)
+                    self.enqueue(message,self.qname+'_win')
+                elif ret == FAIL:
+                    raise
+            except KeyboardInterrupt:
+                reject(channel,method,requeue=True)
+                raise
+            except:
+                reject(channel,method)
+                self.enqueue(message,self.qname+'_fail')
+                raise
+        # main loop
         while True:
             if fork:
                 pid = os.fork()
             if not fork or pid == 0:
-                def amqp_run_callback(channel, method, properties, message):
-                    debug('callback %s' % message)
-                    try:
-                        ret = self.run_callback(message)
-                        debug('callback %s returned %s' % (message,ret))
-                        if ret == PASS:
-                            reject(channel,method,requeue=False)
-                            self.enqueue(message)
-                        elif ret == WIN or ret is None:
-                            ack(channel,method)
-                            self.enqueue(message,self.qname+'_win')
-                        elif ret == FAIL:
-                            raise
-                    except KeyboardInterrupt:
-                        reject(channel,method,requeue=True)
-                        raise
-                    except:
-                        reject(channel,method)
-                        self.enqueue(message,self.qname+'_fail')
-                        raise
                 ch,_ = declare_work_queue(self.qname, self.host)
                 ch.basic_consume(amqp_run_callback, queue=self.qname)
                 ch.start_consuming()
