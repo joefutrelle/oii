@@ -8,6 +8,7 @@ import os
 PASS='pass' # non-fatal, requeue (queue browsing)
 WIN='win' # success, put in win queue
 FAIL='fail' # fatal, dead-letter
+SKIP='skip' # non-fatal, drop message without any requeing. use for deduping queues
 
 # handy properties
 PERSISTENT=pika.BasicProperties(delivery_mode=2)
@@ -111,6 +112,8 @@ class Job(object):
                 elif ret == WIN or ret is None:
                     ack(channel,method)
                     self.enqueue(message,self.qname+'_win')
+                elif ret == SKIP:
+                    ack(channel,method)
                 elif ret == FAIL:
                     raise
             except KeyboardInterrupt:
@@ -121,8 +124,10 @@ class Job(object):
                 self.enqueue(message,self.qname+'_fail')
                 raise
         # main loop
+        pid = None
         while True:
-            if fork:
+            debug('waiting for jobs from %s' % self.qname)
+            if fork and pid is None:
                 pid = os.fork()
             if not fork or pid == 0:
                 ch,_ = declare_work_queue(self.qname, self.host)
@@ -135,6 +140,7 @@ class Job(object):
                     sys.exit(0)
                 except:
                     print 'WARNING exception while waiting for subprocess to terminate'
+                pid = None
     def retry_failed(self):
         """Push failed tasks back into the work queue"""
         def requeue_callback(channel, method, properties, message):
