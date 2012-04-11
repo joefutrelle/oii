@@ -13,9 +13,11 @@ SKIP='skip' # non-fatal, drop message without any requeing. use for deduping que
 # handy properties
 PERSISTENT=pika.BasicProperties(delivery_mode=2)
 
+DEBUG=False
+
 def debug(message):
-    print message
-    #pass
+    if debug:
+        print message
 
 def declare_work_queue(qname,host='localhost'):
     """Declare a "work queue"
