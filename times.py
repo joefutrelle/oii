@@ -28,6 +28,10 @@ def rfc822(t=None):
     if t is None: t=time.gmtime()
     return time.strftime(RFC_822_FORMAT,t)
 
+def timestamp(message,t=None,format=ISO_8601_FORMAT,separator=' '):
+    if t is None: t=time.gmtime()
+    return separator.join([time.strftime(format,t),message])
+
 class test_formats(TestCase):
     def runTest(self):
         assert iso8601(time.gmtime(0)) == '1970-01-01T00:00:00Z'
