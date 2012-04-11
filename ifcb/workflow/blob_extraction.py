@@ -54,10 +54,19 @@ class BlobExtraction(Job):
         except:
             pass
         shutil.move(tmp_file,dest_file)
-    def enqueue_feed(self,namespace):
-        feed = client.list_bins(namespace=namespace)
+    def enqueue_feed(self,namespace,n=4):
+        feed = client.list_bins(namespace=namespace,n=n)
         for bin in feed:
-            self.enqueue(bin['pid'])
+            bin_pid = bin['pid']
+            dest_file = dest(bin_pid)
+            work_dir = os.path.join(tmp_dir, lid(bin_pid))
+            if os.path.exists(work_dir):
+                print 'SKIPPING %s - found temporary files at %s' % (bin_pid, work_dir)
+            elif os.path.exists(dest_file):
+                print 'SKIPPING %s - found completed blob zip at %s' % (bin_pid, dest_file)
+            else:
+                print 'queueing %s' % bin_pid
+                self.enqueue(bin_pid)
 
 if __name__=='__main__':
     job = BlobExtraction('blob_extraction',host='demi.whoi.edu')
