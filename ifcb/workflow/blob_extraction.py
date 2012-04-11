@@ -1,7 +1,8 @@
 import sys
 import re
 import os
-from oii.workflow.rabbit import Job, WIN, PASS, FAIL
+from oii.ifcb import client
+from oii.workflow.rabbit import Job, WIN, PASS, FAIL, SKIP
 from oii.matlab import Matlab
 import shutil
 
@@ -42,7 +43,7 @@ class BlobExtraction(Job):
         dest_file = dest(bin_pid)
         if os.path.exists(dest_file):
             self.log('SKIPPING %s - already present in destination directory' % bin_pid)
-            return WIN
+            return SKIP
         tmp_file = os.path.join(tmp_dir, zipname(bin_pid))
         matlab = Matlab('/usr/bin/matlab',MATLAB_PATH,output_callback=selflog)
         cmd = 'bin_blobs(\'%s\',\'%s\')' % (bin_pid, tmp_dir)
@@ -53,6 +54,10 @@ class BlobExtraction(Job):
         except:
             pass
         shutil.move(tmp_file,dest_file)
+    def enqueue_feed(self,namespace):
+        feed = client.list_bins(namespace=namespace)
+        for bin in feed:
+            self.enqueue(bin['pid'])
 
 if __name__=='__main__':
     job = BlobExtraction('blob_extraction',host='demi.whoi.edu')
@@ -66,4 +71,5 @@ if __name__=='__main__':
         job.work(True)
     elif command == 'r':
         job.retry_failed()
-        
+    elif command == 'cron':
+        job.enqueue_feed(namespace='http://ifcb-data.whoi.edu/mvco/')
