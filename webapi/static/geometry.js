@@ -43,6 +43,37 @@ geometry.point = {
         ctx.stroke();
     }
 }
+geometry.circle = {
+    label: 'Circle',
+    draw: function(ctx, line) {
+    	// ox, oy is the foci of the circle
+        var ox = scalingFactor * line[0][0];
+        var oy = scalingFactor * line[0][1];
+        // mx, my is the edge of the circle
+        var mx = scalingFactor * line[1][0]; 
+        var my = scalingFactor * line[1][1];
+        //radius is the distance of the line
+        var dx = mx-ox;
+        var dy = my-oy;
+        var radius = Math.sqrt( dx*dx + dy*dy );
+        
+        ctx.strokeStyle = geometryColor;
+        ctx.beginPath();  
+        //arc(x, y, radius, startAngle, endAngle, anticlockwise)
+        /*
+         * The first three parameters, x and y and radius, describe a circle, the arc drawn will be part of that circle. 
+         * startAngle and endAngle are where along the circle to start and stop drawing. 
+         * 	0 is east, 
+         * 	Math.PI/2 is south, 
+         * 	Math.PI is west, 
+         *  Math.PI*3/2 is north. 
+         *  
+         * If anticlockwise is 1 then the direction of the arc, along with the Angles for north and south, are reversed.
+         */
+        ctx.arc(ox,oy,radius,0,Math.PI*2,true); // Outer circle  
+        ctx.stroke();
+    }
+}
 //
 function selectedTool(value) {
     if(value == undefined) {
@@ -209,5 +240,41 @@ geometry.point.tool = new MeasurementTool({
         });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
+    }
+});
+//allow the user to draw a circle on a cell's "new annotation" canvas
+geometry.circle.tool = new MeasurementTool({
+	mousedown: function(event) {
+        var cell = event.data.cell;
+        var mx = event.data.mx;
+        var my = event.data.my;
+        $(cell).data('ox',mx);
+        $(cell).data('oy',my);
+    },
+    mousemove: function(event) {
+        var cell = event.data.cell;
+        var ox = $(cell).data('ox');
+        var oy = $(cell).data('oy');
+        if(ox >= 0 && oy >= 0) {
+        	var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+            /* compute a rectangle in original scale pixel space */
+            var line = [[(ox/scalingFactor)|0, (oy/scalingFactor)|0], [(mx/scalingFactor)|0, (my/scalingFactor)|0]]
+            $(cell).data('circle',line);
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.circle.draw(ctx,line);
+        }
+    },
+    mouseup: function(event) {
+        var cell = event.data.cell;
+        $(cell).data('ox',-1);
+        $(cell).data('oy',-1);
+        queueAnnotation({
+            image: $(cell).data('imagePid'),
+            category: categoryPidForLabel($('#label').val()),
+            geometry: { circle: $(cell).data('circle') }
+        });
+        toggleSelected(cell,$('#label').val());
     }
 });
