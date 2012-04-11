@@ -13,8 +13,8 @@ FAIL='fail' # fatal, dead-letter
 PERSISTENT=pika.BasicProperties(delivery_mode=2)
 
 def debug(message):
-    #print message
-    pass
+    print message
+    #pass
 
 def declare_work_queue(qname,host='localhost'):
     """Declare a "work queue"
@@ -33,11 +33,14 @@ def declare_log_exchange(ename,host='localhost'):
     channel.exchange_declare(exchange=ename,type='fanout')
     return channel, connection
 
-def log(message,ename,host='localhost'):
+def log(message,ename,host='localhost',channel=None):
     """Log a message to a log exchange"""
-    ch, cn = declare_log_exchange(ename,host)
-    ch.basic_publish(exchange=ename,routing_key='',body=message)
-    cn.close()
+    if channel is None:
+        ch, cn = declare_log_exchange(ename,host)
+        ch.basic_publish(exchange=ename,routing_key='',body=message)
+        cn.close()
+    else:
+        channel.basic_publish(exchange=ename,routing_key='',body=message)
 
 def enqueue(message,qname,host='localhost'):
     """Push a message into a work queue"""
@@ -69,6 +72,7 @@ class Job(object):
     def __init__(self,qname,host='localhost'):
         self.host = host
         self.qname = qname
+        self.log_channel = None
     def run_callback(self,message):
         """Override this method to do some work. Message is the queue entry received.
         Call log in this method to send messages to the log exchange.
@@ -81,7 +85,10 @@ class Job(object):
     def log(self,message):
         """Call this in run_callback to send messages to the log exchange"""
         debug('log %s' % message)
-        log(message,self.qname+'_log',self.host)
+        ename = self.qname+'_log'
+        if self.log_channel is None:
+            self.log_channel, self.log_connection = declare_log_exchange(ename,self.host)
+        log(message,ename,channel=self.log_channel)
     def enqueue(self,message,qname=None):
         """Put a message in this worker's queue"""
         if qname is None:
@@ -121,9 +128,13 @@ class Job(object):
                 ch,_ = declare_work_queue(self.qname, self.host)
                 ch.basic_consume(amqp_run_callback, queue=self.qname)
                 ch.start_consuming()
-                sys.exit()
             elif fork and pid != 0:
-                os.waitpid(pid,0)
+                try:
+                    os.waitpid(pid,0)
+                except KeyboardInterrupt:
+                    sys.exit(0)
+                except:
+                    print 'WARNING exception while waiting for subprocess to terminate'
     def retry_failed(self):
         """Push failed tasks back into the work queue"""
         def requeue_callback(channel, method, properties, message):
