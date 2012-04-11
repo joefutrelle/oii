@@ -70,7 +70,7 @@ geometry.circle = {
          *  
          * If anticlockwise is 1 then the direction of the arc, along with the Angles for north and south, are reversed.
          */
-        ctx.arc(ox,oy,radius,0,Math.PI*2,true); // Outer circle  
+        ctx.arc(ox,oy,radius,0,Math.PI*2,true);
         ctx.stroke();
     }
 }
