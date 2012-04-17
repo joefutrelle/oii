@@ -16,7 +16,7 @@ class AssignmentStore(object):
         }]
     def list_assignments(self):
         for ass in self.assignments:
-            yield dict_slice(ass,'pid,label,annotator,status,mode')
+            yield dict_slice(ass,'pid,label,annotator,status,mode,images')
     def fetch_assignment(self,pid):
         for a in self.list_assignments():
             if a['pid'] == pid:
