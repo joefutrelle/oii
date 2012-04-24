@@ -12,12 +12,53 @@ var zoomButtonText = 'ZOOM (ctrl+f)';
 var imgName = 'image';
 var img = '#'+imgName;
 
+$(document).ready(function(){
+    
+    setupZoom();
+
+});
+
+function setupZoom(){
+    //console.log("setting up zoom...");
+    //var images = $('#images').find('div.thumbnail');
+    //if( images.length() == 1 ){
+
+        console.log("zoom enabled...");
+        
+        //ZOOM Modal
+        $("<a>").attr("id", zoomModalButtonName).attr("href", '#')
+                .text(zoomButtonText)
+                .addClass('ui-state-default')
+                .addClass('button').button()
+                .click(function() {
+                    setMode();
+
+                })
+                .mouseup(function(){
+                    if($(this).is('.ui-state-active') ){
+                        $(this).removeClass("ui-state-active");
+                    } else {
+                        $(this).addClass("ui-state-active");
+                    }
+                })
+                .appendTo(toolsPanel);
+
+        $(document).bind('keydown', 'ctrl+f', function() {
+            setMode(); 
+        });
+        //end of ZOOM Modal
+    /*   
+    } else {
+        console.log("zoom disabled...");
+        $(zoomModalButton).remove();
+    }
+    */
+}
 
 function buildCanvasStore(){
         
     canvasStore = {};
-    
-    var cell = $('#images').find('div.thumbnail:last');
+
     $(cell).data('nav-coordinates', { x: 0, y: 0});
 
     //detect mouse scroll
@@ -40,7 +81,7 @@ function buildCanvasStore(){
     $(cell).data('translatePos', {x: 0, y: 0});
     $(cell).data('startDragOffset', {x: 0, y: 0});
     $(cell).data('mouseDown',false);
-    
+
     var canvii = $(cell).find('canvas');
     for(var c = 0; c < canvii.length; c++){
         var original = new Image();
@@ -52,7 +93,7 @@ function buildCanvasStore(){
             origin: original
         };
     }
-   
+
     canvasStore[imgName].canvas.parentElement.addEventListener("mousedown", function(evt){
         //console.log("mousedown...");
         $(img).data('mouseDown', true);
@@ -94,34 +135,10 @@ function buildCanvasStore(){
             }
         }
     });
+    
 }
 
-$(document).ready(function(){
- 
-    //ZOOM Modal
-    $("<a>").attr("id", zoomModalButtonName).attr("href", '#')
-            .text(zoomButtonText)
-            .addClass('ui-state-default')
-            .addClass('button').button()
-            .click(function() {
-                setMode();
 
-            })
-            .mouseup(function(){
-                if($(this).is('.ui-state-active') ){
-                    $(this).removeClass("ui-state-active");
-                } else {
-                    $(this).addClass("ui-state-active");
-                }
-            })
-            .appendTo(toolsPanel);
-            
-    $(document).bind('keydown', 'ctrl+f', function() {
-        setMode(); 
-    });
-    //end of ZOOM Modal
-
-});
 
 /** SCALING FUNCTIONS **/
 
@@ -251,11 +268,21 @@ var handHandler = function() {
 }
 
 function setMode(){
+    var was_zooming = is_zooming;
+    
     is_zooming = !is_zooming;
 
+    console.log("Images: "+$('#images').find('div.thumbnail').size());
+    if( $('#images').find('div.thumbnail').size() != 1 ){
+        is_zooming = false;
+    }
+    
     //console.log("ZOOMING: "+is_zooming);
     
     if(is_zooming){
+        
+        buildCanvasStore();
+        
         $(zoomModalButton).css({'border': '2px dotted black'});
         $(img).removeClass("pointer")
                   .addClass("hand");
@@ -264,12 +291,14 @@ function setMode(){
           mousedown: grabHandler,
           mouseup: handHandler
         });        
-    } else {
+    } else if(was_zooming){
         $(zoomModalButton).css({'border': ''});
         $(img).unbind('mousedown', grabHandler)
                   .unbind('mouseup',handHandler)
                   .addClass("pointer");    
         resetZoom();
-    }  
+    }  else {
+        alert("ZOOM can't be used right now");
+    }
 }
 /** END OF ZOOM MODE FUNCTIONS **/
