@@ -1,40 +1,28 @@
 var startScale = 1;
 var scale = startScale;
 var scaleFactor = 0.20;
-
 var is_zooming = false;
-
 var canvasStore = {};
-var layerCount = 0;
-var img = new Image();
-img.src = 'http://localhost:5000/static/images/zoom/test.jpg';
 
-var width = img.width; //600;
-var height = img.height; //600;
+var toolsPanel = '#rightPanel';
+var zoomModalButtonName = 'zoomModalButton';
+var zoomModalButton = '#'+zoomModalButtonName;
+var zoomButtonText = 'ZOOM (ctrl+f)';
 
-var navEdge = 100;
-var navFactor = 27;
+var imgName = 'image';
+var img = '#'+imgName;
 
-var controls = $("#controls");
-controls.css({'margin-top': '-20px'});
 
-$(document).ready(function(){
-
-    $("#cell").width(width);
-    $("#cell").height(height);
-    $("#cell").css({'border':'1px solid blue'});
-    $("#cell").addClass("pointer");
-    $("#cell").data('nav-coordinates', { x: 0, y: 0});
-
-    addLayer($("#cell"),'image', width, height);
-    //addLayer($("#cell"), 'circle', width, height);
-    addLayer($("#cell"), 'line', width, height);
-    addLayer($("#cell"), 'line2', width, height);
-    addLayer($("#cell"), 'line3', width, height);
+function buildCanvasStore(){
+        
+    canvasStore = {};
+    
+    var cell = $('#images').find('div.thumbnail:last');
+    $(cell).data('nav-coordinates', { x: 0, y: 0});
 
     //detect mouse scroll
     //Firefox
-     $('#cell').bind('DOMMouseScroll', function(e){
+     $(cell).bind('DOMMouseScroll', function(e){
          var scroll = e;
          console.log("Firefox scrolling...");
          while(!scroll.detail && scroll.originalEvent){
@@ -45,128 +33,98 @@ $(document).ready(function(){
      });
 
      //IE, Opera, Safari
-     $('#cell').bind('mousewheel', function(e){
+     $(img).bind('mousewheel', function(e){
          console.log("Browser scrolling...");
          return executeScroll(e.delta);
      });
+    $(cell).data('translatePos', {x: 0, y: 0});
+    $(cell).data('startDragOffset', {x: 0, y: 0});
+    $(cell).data('mouseDown',false);
+    
+    var canvii = $(cell).find('canvas');
+    for(var c = 0; c < canvii.length; c++){
+        var original = new Image();
+        original.src = canvii[c].toDataURL();
 
-    $('#zoom').click(function() {
-        setMode();
+        canvasStore[canvii[c].className] = {
+            canvas: canvii[c],
+            context: canvii[c].getContext("2d"),
+            origin: original
+        };
+    }
+   
+    canvasStore[imgName].canvas.parentElement.addEventListener("mousedown", function(evt){
+        //console.log("mousedown...");
+        $(img).data('mouseDown', true);
+        $(img).data('startDragOffset', {x: evt.clientX, y: evt.clientY});
+    });
 
-    }).css({'padding':'5px'});
+    canvasStore[imgName].canvas.parentElement.addEventListener("mouseup", function(evt){
+        //console.log("mouseup...");
+        $(img).data('mouseDown', false);
+    });
 
-    $('#reset').click(function() {
-        resetZoom();
-    }).css({'padding':'5px'});
+    canvasStore[imgName].canvas.parentElement.addEventListener("mouseover", function(evt){
+        //console.log("mouseover...");
+        $(img).data('mouseDown', false);
+    });
+
+    canvasStore[imgName].canvas.parentElement.addEventListener("mouseout", function(evt){
+        //console.log("mouseout...");
+        $(img).data('mouseDown', false);
+    });
+
+    canvasStore[imgName].canvas.parentElement.addEventListener("mousemove", function(evt){
+        if( $(img).data('mouseDown') && is_zooming ){
+            //console.log("mousemove...");
+            var dragging = ( scale > startScale );
+
+            if (dragging) {
+
+                var startDragOffset = $(img).data('startDragOffset');
+
+                var moveX = evt.clientX - startDragOffset.x
+                var moveY = evt.clientY - startDragOffset.y;
+                //console.log("move: "+moveX+","+moveY);
+
+                navigate(moveX, moveY);
+
+            } else {
+                console.log("drag not allowed");    
+            }
+        }
+    });
+}
+
+$(document).ready(function(){
+ 
+    //ZOOM Modal
+    $("<a>").attr("id", zoomModalButtonName).attr("href", '#')
+            .text(zoomButtonText)
+            .addClass('ui-state-default')
+            .addClass('button').button()
+            .click(function() {
+                setMode();
+
+            })
+            .mouseup(function(){
+                if($(this).is('.ui-state-active') ){
+                    $(this).removeClass("ui-state-active");
+                } else {
+                    $(this).addClass("ui-state-active");
+                }
+            })
+            .appendTo(toolsPanel);
+            
+    $(document).bind('keydown', 'ctrl+f', function() {
+        setMode(); 
+    });
+    //end of ZOOM Modal
 
 });
 
-/** PAGE INIT FUNCTIONS **/
-function addLayer(parent, name, cWidth, cHeight){
-    var id = '#'+name;
-    var className = name+'-canvas';
-    var canvas = $("<canvas>")
-                    .attr("id", id)
-                    .attr("width", cWidth)
-                    .attr("height", cHeight)
-                    .addClass(className)
-                    .css({ position: 'absolute',
-                      'z-index': layerCount,
-                      left: '1',
-                      top: '1'})
-                    .appendTo("#cell");
-        
-    canvasStore[name] = {
-        canvas: canvas[0],
-        context: canvas[0].getContext("2d")
-    };
-
-    layerCount++;
-
-    drawLayer(name);
-
-    if( name == 'image' ){
-
-        $('#cell').data('translatePos', {x: 0, y: 0});
-        $('#cell').data('startDragOffset', {x: 0, y: 0});
-        $('#cell').data('mouseDown',false);
-                
-        canvasStore[name].canvas.parentElement.addEventListener("mousedown", function(evt){
-            //console.log("mousedown...");
-            $('#cell').data('mouseDown', true);
-            $('#cell').data('startDragOffset', {x: evt.clientX, y: evt.clientY});
-        });
-
-        canvasStore[name].canvas.parentElement.addEventListener("mouseup", function(evt){
-            //console.log("mouseup...");
-            $('#cell').data('mouseDown', false);
-        });
-
-        canvasStore[name].canvas.parentElement.addEventListener("mouseover", function(evt){
-            //console.log("mouseover...");
-            $('#cell').data('mouseDown', false);
-        });
-
-        canvasStore[name].canvas.parentElement.addEventListener("mouseout", function(evt){
-            //console.log("mouseout...");
-            $('#cell').data('mouseDown', false);
-        });
-
-        canvasStore[name].canvas.parentElement.addEventListener("mousemove", function(evt){
-            if( $('#cell').data('mouseDown') && is_zooming ){
-                //console.log("mousemove...");
-                var dragging = ( scale > startScale );
-
-                if (dragging) {
-
-                    var startDragOffset = $('#cell').data('startDragOffset');
-
-                    var moveX = evt.clientX - startDragOffset.x
-                    var moveY = evt.clientY - startDragOffset.y;
-                    //console.log("move: "+moveX+","+moveY);
-
-                    navigate(moveX, moveY);
-
-                } else {
-                    console.log("drag not allowed");    
-                }
-            }
-        });   
-    }
-    
-    //store the default canvas data in its orginal scale
-    var origin = $("<canvas>").attr("width", width).attr("height", height)[0];
-    origin.getContext("2d").drawImage(canvasStore[name].canvas, 0, 0);
-    canvasStore[name].origin = origin;
-}
-
-function drawLayer(type) {
-    if( 'image' == type ) {
-        buildImage(canvasStore[type].context, img);
-    } else if( 'circle' == type ) {
-        buildCircle(canvasStore[type].context, width, height);
-    } else if( 'line' == type ) {
-        var start = width * .4;
-        var end = width * .6;
-        buildLine(canvasStore[type].context, start, start, end, end, '#f00');
-    } else if( 'line2' == type ) {
-        var startX = width * .6;
-        var startY = width * .4;
-        var endX = width * .4;
-        var endY = width * .6;
-        buildLine(canvasStore[type].context, startX, startY, endX, endY, '#00f');
-    } else if( 'line3' == type ) {
-        var startX = width * .5;
-        var startY = width * .65;
-        var endX = width * .5;
-        var endY = width * .35;
-        buildLine(canvasStore[type].context, startX, startY, endX, endY, '#0f0');
-    }
-
-}
-/** END OF PAGE INIT FUNCTIONS **/
-
 /** SCALING FUNCTIONS **/
+
 function scaleAllLayers(){
     if( validateScale() ){
         var newWidth = width * scale;
@@ -178,36 +136,37 @@ function scaleAllLayers(){
     }
 }
 
-function resetZoom(){
-    scale = startScale;
-    $("#cell").data('nav-coordinates', {x: 0, y: 0});
-    scaleAllLayers();
-}
+function redraw(ctx, newWidth, newHeight, original){
 
-function zoom(){
-    scale = scale + scaleFactor;
-    scaleAllLayers();
-}
+    var is_image_canvas = true; //canvasStore['image'].context == ctx;
+    var is_log = is_image_canvas && false;
 
-function shrink(){
-    scale = scale - scaleFactor;
-    if( scale == startScale ){
-       console.log("fix image draw....");
-       $("#cell").data('nav-coordinates', {x: 0, y: 0});            
+    if(is_log){
+        console.log('dimensions at: '+newWidth+','+newHeight);
+
     }
-    scaleAllLayers();
-}
+    ctx.save();
+    var x = -((newWidth-width)/2);
+    var y= -((newHeight-height)/2);
 
-function executeScroll(direction){
-    if( is_zooming ){
-        if(direction > 0){
-            shrink();
-        } else {
-            zoom();
-        }
-    }
-    //make sure the page doesn't scroll
-    return !is_zooming;
+    if(is_image_canvas)
+        $(img).data('translatePos',{x: x, y: y});
+
+    if(is_log)
+        console.log('translate: '+x+','+y);
+
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    var navX = $(img).data('nav-coordinates').x;
+    var navY = $(img).data('nav-coordinates').y;
+
+    if(is_log)
+        console.log('draw at: '+navX+','+navY);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(original, navX, navY);
+    ctx.restore();
 }
 
 function navigate(x,y){
@@ -238,45 +197,40 @@ function navigate(x,y){
 
     console.log('fixed nav: '+x+','+y);
 
-    $("#cell").data('nav-coordinates', {x: x, y: y});
+    $(img).data('nav-coordinates', {x: x, y: y});
     scaleAllLayers();
-
 }
 
-/** END OF SCALING FUNCTIONS **/
+function resetZoom(){
+    scale = startScale;
+    $(img).data('nav-coordinates', {x: 0, y: 0});
+    scaleAllLayers();
+}
 
-/** HELPER FUNCTIONS **/
-function redraw(ctx, newWidth, newHeight, original){
+function zoom(){
+    scale = scale + scaleFactor;
+    scaleAllLayers();
+}
 
-    var is_image_canvas = true; //canvasStore['image'].context == ctx;
-    var is_log = is_image_canvas && false;
-
-    if(is_log){
-        console.log('dimensions at: '+newWidth+','+newHeight);
-
+function shrink(){
+    scale = scale - scaleFactor;
+    if( scale == startScale ){
+       console.log("fix image draw....");
+       $(img).data('nav-coordinates', {x: 0, y: 0});            
     }
-    ctx.save();
-    var x = -((newWidth-width)/2);
-    var y= -((newHeight-height)/2);
+    scaleAllLayers();
+}
 
-    if(is_image_canvas)
-        $('#image').data('translatePos',{x: x, y: y});
-
-    if(is_log)
-        console.log('translate: '+x+','+y);
-
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
-
-    var navX = $("#cell").data('nav-coordinates').x;
-    var navY = $("#cell").data('nav-coordinates').y;
-
-    if(is_log)
-        console.log('draw at: '+navX+','+navY);
-
-    ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(original, navX, navY);
-    ctx.restore();
+function executeScroll(direction){
+    if( is_zooming ){
+        if(direction > 0){
+            shrink();
+        } else {
+            zoom();
+        }
+    }
+    //make sure the page doesn't scroll
+    return !is_zooming;
 }
 
 function validateScale(){
@@ -285,31 +239,9 @@ function validateScale(){
     return bool;
 }
 
-function buildImage(ctx, img){
-    ctx.drawImage(img,0,0);
-}
+/** END OF SACLING FUNCTIONS **/
 
-function buildCircle(ctx, width, height){
-    var radius = width/8;
-    ctx.arc(width/2, height/2, radius, 0, Math.PI*2, true);
-    ctx.fill();
-}
-
-function buildLine(ctx, startX, startY, endX, endY, style){
-    ctx.strokeStyle = style;
-    ctx.beginPath();
-    ctx.moveTo(startX,startY);
-    ctx.lineTo(endX,endY);
-    ctx.stroke();
-}
-/** END OF HELPER FUNCTIONS **/
-
-
-
-//
-$(document).bind('keydown', 'ctrl+f', function() {
-    setMode(); 
-});
+/** ZOOM MODE FUNCTIONS **/
 
 var grabHandler = function() {
     $(this).removeClass("hand").addClass("grabbing");
@@ -324,19 +256,20 @@ function setMode(){
     //console.log("ZOOMING: "+is_zooming);
     
     if(is_zooming){
-        $('#zoom').css({'border': '2px dotted black'});
-        $("#cell").removeClass("pointer")
+        $(zoomModalButton).css({'border': '2px dotted black'});
+        $(img).removeClass("pointer")
                   .addClass("hand");
          //set the cursor
-        $("#cell").bind({
+        $(img).bind({
           mousedown: grabHandler,
           mouseup: handHandler
         });        
     } else {
-        $('#zoom').css({'border': ''});
-        $("#cell").unbind('mousedown', grabHandler)
+        $(zoomModalButton).css({'border': ''});
+        $(img).unbind('mousedown', grabHandler)
                   .unbind('mouseup',handHandler)
                   .addClass("pointer");    
         resetZoom();
     }  
 }
+/** END OF ZOOM MODE FUNCTIONS **/
