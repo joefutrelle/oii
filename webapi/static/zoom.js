@@ -56,10 +56,7 @@ $(document).ready(function(){
     }).css({'padding':'5px'});
 
     $('#reset').click(function() {
-        scale = startScale;
-        $("#cell").data('nav-coordinates', {x: 0, y: 0});
-        scaleAllLayers();
-
+        resetZoom();
     }).css({'padding':'5px'});
 
 });
@@ -179,6 +176,12 @@ function scaleAllLayers(){
             redraw(canvasStore[canvas].context, newWidth, newHeight, canvasStore[canvas].origin);
         }
     }
+}
+
+function resetZoom(){
+    scale = startScale;
+    $("#cell").data('nav-coordinates', {x: 0, y: 0});
+    scaleAllLayers();
 }
 
 function zoom(){
@@ -334,5 +337,6 @@ function setMode(){
         $("#cell").unbind('mousedown', grabHandler)
                   .unbind('mouseup',handHandler)
                   .addClass("pointer");    
+        resetZoom();
     }  
 }
