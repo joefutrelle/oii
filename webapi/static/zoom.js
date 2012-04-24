@@ -59,6 +59,7 @@ function buildCanvasStore(){
         
     canvasStore = {};
 
+    var cell = $('#images').find('div.thumbnail:last');
     $(cell).data('nav-coordinates', { x: 0, y: 0});
 
     //detect mouse scroll
@@ -78,6 +79,7 @@ function buildCanvasStore(){
          console.log("Browser scrolling...");
          return executeScroll(e.delta);
      });
+     
     $(cell).data('translatePos', {x: 0, y: 0});
     $(cell).data('startDragOffset', {x: 0, y: 0});
     $(cell).data('mouseDown',false);
@@ -85,6 +87,7 @@ function buildCanvasStore(){
     var canvii = $(cell).find('canvas');
     for(var c = 0; c < canvii.length; c++){
         var original = new Image();
+        console.log(canvii[c]);
         original.src = canvii[c].toDataURL();
 
         canvasStore[canvii[c].className] = {
@@ -144,6 +147,12 @@ function buildCanvasStore(){
 
 function scaleAllLayers(){
     if( validateScale() ){
+        
+        var cell = $('#images').find('div.thumbnail:last');
+        var width = $(cell).data('width');
+        var height= $(cell).data('height');
+        console.log(width+":"+height);
+        
         var newWidth = width * scale;
         var newHeight = height * scale;
 

@@ -73,13 +73,35 @@ class DummyAssignmentStore(AssignmentStore):
                  "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
                 }]
           }]
+          
+class ZoomAssignmentStore(AssignmentStore):
+    def __init__(self):
+        self.assignments = [{
+            "pid": "http://foo.bar/assignments/baz",
+            "label": "Look for trash",
+            "status": "new",
+            "mode": "trash",
+            "images": [{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
+                }]
+          },{
+            "pid": "http://foo.bar/assignments/fnordy",
+            "label": "Look for sand dollars",
+            "status": "new",
+            "mode": "sanddollars",
+            "images": [{
+                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
+                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
+                }]
+          }]
         
 DEFAULT_CONFIG = {
     ANNOTATION_STORE: DebugAnnotationStore(),
-    #CATEGORIES: DummyCategories(),
-    #ASSIGNMENT_STORE: DummyAssignmentStore()
-    CATEGORIES: IfcbCategories(),
-    ASSIGNMENT_STORE: IfcbFeedAssignmentStore()
+    CATEGORIES: DummyCategories(),
+    ASSIGNMENT_STORE: ZoomAssignmentStore()
+    #CATEGORIES: IfcbCategories(),
+    #ASSIGNMENT_STORE: IfcbFeedAssignmentStore()
 }
 
 # get a configured component, or use a default one for testing
