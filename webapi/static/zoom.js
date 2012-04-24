@@ -196,13 +196,15 @@ function shrink(){
 }
 
 function executeScroll(direction){
-    if(direction > 0){
-        shrink();
-    } else {
-        zoom();
+    if( is_zooming ){
+        if(direction > 0){
+            shrink();
+        } else {
+            zoom();
+        }
     }
     //make sure the page doesn't scroll
-    return false;
+    return !is_zooming;
 }
 
 function navigate(x,y){
