@@ -144,12 +144,15 @@ function addLayer(parent, name, cWidth, cHeight){
     }
     
     //store the default canvas data in its orginal scale
-    //console.log(canvasStore[name].canvas.toDataURL());
-    //var origin = $("<canvas>").attr("width", width).attr("height", height)[0];
-    //origin.getContext("2d").drawImage(canvasStore[name].canvas, 0, 0);
-    //canvasStore[name].origin = origin;
-    var ci = new Image();
-    ci.src = canvasStore[name].canvas.toDataURL();
+    var origin = $("<canvas>").attr("width", width).attr("height", height)[0];
+    origin.getContext("2d").drawImage(canvasStore[name].canvas, 0, 0);
+    canvasStore[name].origin = origin;
+    //
+    // **** BUG: This throws a security error when images come from different server *****
+    // http://stackoverflow.com/questions/2390232/why-does-canvas-todataurl-throw-a-security-exception
+    // 
+    //var ci = new Image();
+    //ci.src = canvasStore[name].canvas.toDataURL();
     canvasStore[name].origin = ci;
 }
 

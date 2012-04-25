@@ -33,10 +33,10 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             // - the existing annotations
             // - the pending annotations
             // - the new annotations (during geometry selection, prior to pending)
-            addImageLayer(cell,'image');
-            addImageLayer(cell,'existing');
-            addImageLayer(cell,'pending');
-            addImageLayer(cell,'new');
+            addImageLayer(cell,'image',imageUrl);
+            addImageLayer(cell,'existing',imageUrl);
+            addImageLayer(cell,'pending',imageUrl);
+            addImageLayer(cell,'new',imageUrl);
             // now:
             // - display the zoomed image
             // - display the zoomed existing annotations
@@ -53,11 +53,11 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             bindMeasurementTools(cell, env);
         });
 }
-function addImageLayer(cell,claz) {
+function addImageLayer(cell,claz,imageUrl) {
     var scaledWidth = $(cell).data('scaledWidth');
     var scaledHeight = $(cell).data('scaledHeight');
     clog('adding canvas '+scaledWidth+','+scaledHeight);
-    $(cell).append('<canvas width="'+scaledWidth+'px" height="'+scaledHeight+'px" class="'+claz+' atorigin"></canvas>');
+    $(cell).append('<canvas id="'+claz+'_'+imageUrl+'" width="'+scaledWidth+'px" height="'+scaledHeight+'px" class="'+claz+' atorigin"></canvas>');
 }
 function getImageLayer(cell,claz) {
     return $(cell).find('canvas.'+claz);
