@@ -48,7 +48,11 @@ def log(message,ename,host='localhost',channel=None):
 def enqueue(message,qname,host='localhost'):
     """Push a message into a work queue"""
     ch, cn = declare_work_queue(qname,host)
-    ch.basic_publish(exchange='', routing_key=qname, body=message, properties=PERSISTENT)
+    if type(message) is str:
+        ch.basic_publish(exchange='', routing_key=qname, body=message, properties=PERSISTENT)
+    else:
+        for m in message:
+            ch.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
     cn.close()
         
 # channel operations
