@@ -3,6 +3,7 @@ import subprocess
 import re
 from oii.times import iso8601
 from traceback import print_exc
+import os
 
 def reset_tty():
     subprocess.call(['stty','echo'])
@@ -57,6 +58,7 @@ class Matlab:
             raise
         except:
             reset_tty()
+            p.kill()
             print_exc()
             if self.fail_fast:
                 raise

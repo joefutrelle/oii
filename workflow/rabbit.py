@@ -3,12 +3,14 @@ from pika.adapters import SelectConnection
 import sys
 import re
 import os
+import traceback
 
 # statuses
 PASS='pass' # non-fatal, requeue (queue browsing)
 WIN='win' # success, put in win queue
 FAIL='fail' # fatal, dead-letter
 SKIP='skip' # non-fatal, drop message without any requeing. use for deduping queues
+DIE='die' # worker cannot work, should requeue and terminate
 
 # handy properties
 PERSISTENT=pika.BasicProperties(delivery_mode=2)
@@ -120,11 +122,16 @@ class Job(object):
                     self.enqueue(message,self.qname+'_win')
                 elif ret == SKIP:
                     ack(channel,method)
+                elif ret == DIE:
+                    sys.exit(0)
                 elif ret == FAIL:
                     raise
             except KeyboardInterrupt:
                 reject(channel,method,requeue=True)
                 raise
+            except SystemExit:
+                reject(channel,method,requeue=True)
+                sys.exit(0)
             except:
                 reject(channel,method)
                 self.enqueue(message,self.qname+'_fail')
