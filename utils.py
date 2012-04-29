@@ -119,7 +119,7 @@ class Struct():
     def __repr__(self):
         return self.json
     
-    def __init__(self, d):
+    def __init__(self, d={}):
         for k,v in d.items():
             self.__dict__[k] = structs(v)
 
