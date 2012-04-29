@@ -50,9 +50,9 @@ def log(message,ename,host='localhost',channel=None):
 def enqueue(message,qname,host='localhost'):
     """Push a message into a work queue"""
     ch, cn = declare_work_queue(qname,host)
-    if type(message) is str:
-        ch.basic_publish(exchange='', routing_key=qname, body=message, properties=PERSISTENT)
-    else:
+    try:
+        ch.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
+    except:
         for m in message:
             ch.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
     cn.close()
@@ -74,6 +74,13 @@ def reject(channel,method,requeue=False):
     "method" is the method param passed to the RabbitMQ callback.
     requeue controls whether the message is pushed back to the queue it came from, in order"""
     channel.basic_reject(delivery_tag=method.delivery_tag, requeue=requeue)
+
+class JobExit(Exception):
+    def __init__(self, message, ret):
+        self.message = message
+        self.ret = ret
+    def __str__(self):
+        return '%s - %s' % (message, ret)
 
 class Job(object):
     """A RabbitMQ worker class
@@ -114,6 +121,10 @@ class Job(object):
             try:
                 ret = self.run_callback(message)
                 debug('callback %s returned %s' % (message,ret))
+                raise JobExit(message, ret)
+            except JobExit as e:
+                message = e.message
+                ret = e.ret
                 if ret == PASS:
                     reject(channel,method,requeue=False)
                     self.enqueue(message)
@@ -125,7 +136,8 @@ class Job(object):
                 elif ret == DIE:
                     sys.exit(0)
                 elif ret == FAIL:
-                    raise
+                    reject(channel,method)
+                    self.enqueue(message,self.qname+'_fail')
             except KeyboardInterrupt:
                 reject(channel,method,requeue=True)
                 raise
@@ -154,10 +166,11 @@ class Job(object):
                 except:
                     print 'WARNING exception while waiting for subprocess to terminate'
                 pid = None
-    def retry_failed(self):
+    def retry_failed(self, filter=lambda: True):
         """Push failed tasks back into the work queue"""
         def requeue_callback(channel, method, properties, message):
-            self.enqueue(message)
+            if filter(message):
+                self.enqueue(message)
             ack(channel,method)
         ch,_ = declare_work_queue(self.qname, self.host)
         ch.basic_consume(requeue_callback, queue=self.qname+'_fail')
