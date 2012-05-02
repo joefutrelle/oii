@@ -80,7 +80,7 @@ class JobExit(Exception):
         self.message = message
         self.ret = ret
     def __str__(self):
-        return '%s - %s' % (message, ret)
+        return '%s - %s' % (self.message, self.ret)
 
 class Job(object):
     """A RabbitMQ worker class
