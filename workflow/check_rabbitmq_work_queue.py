@@ -51,31 +51,37 @@ if __name__ == '__main__':
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"
         sys.exit(2)
-    opts = dict(optlist)
-    warning = int(opts['-w'])
-    crit = int(opts['-c'])
-    (username, password) = opts['-u'].split(':')
-    hostport = opts['-h']
-    vhost = opts['-v']
-    queue = opts['-q']
-    url = 'http://%s/api/queues/%s/%s' % (hostport, urllib.quote(vhost, ''), queue)
-    request = urllib.Request(url)
-    base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
-    request.add_header('Authorization', 'Basic %s' % base64string)
-    result = json.loads(urllib.urlopen(request).read())
-    consumers = result['consumers']
-    messages_ready = result['messages_ready']
-    if consumers == 0 and messages_ready == 0:
-        warn('Queue %s has no consumers and no pending jobs' % queue)
-    elif consumers == 0 and messages_ready > 0:
-        critical('Queue %s has %d pending jobs, but no consumers' % (queue, messages_ready))
-    else:
-        mpc = float(messages_ready) / consumers
-        message = 'Queue %s has %d messages ready, %d consumers (%f msgs/consumer)' % (queue, messages_ready, consumers, mpc)
-        if mpc >= crit:
-            critical(message)
-        elif mpc >= warning:
-            warn(message)
+    try:
+        opts = dict(optlist)
+        warning = int(opts['-w'])
+        crit = int(opts['-c'])
+        (username, password) = opts['-u'].split(':')
+        hostport = opts['-h']
+        vhost = opts['-v']
+        queue = opts['-q']
+        url = 'http://%s/api/queues/%s/%s' % (hostport, urllib.quote(vhost, ''), queue)
+        request = urllib.Request(url)
+        base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+        request.add_header('Authorization', 'Basic %s' % base64string)
+        result = json.loads(urllib.urlopen(request).read())
+        consumers = result['consumers']
+        messages_ready = result['messages_ready']
+        if consumers == 0 and messages_ready == 0:
+            warn('Queue %s has no consumers and no pending jobs' % queue)
+        elif consumers == 0 and messages_ready > 0:
+            critical('Queue %s has %d pending jobs, but no consumers' % (queue, messages_ready))
         else:
-            ok(message)
+            mpc = float(messages_ready) / consumers
+            message = 'Queue %s has %d messages ready, %d consumers (%f msgs/consumer)' % (queue, messages_ready, consumers, mpc)
+            if mpc >= crit:
+                critical(message)
+            elif mpc >= warning:
+                warn(message)
+            else:
+                ok(message)
+    except SystemExit:
+        pass
+    except:
+        print 'UNKNOWN - check failed'
+        sys.exit(3)
 
