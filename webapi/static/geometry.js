@@ -1,5 +1,5 @@
 // globals (FIXME: make preferences)
-var scalingFactor = 2;
+var scalingFactor = 1;
 var geometryColor = '#f00';
 // geometric tool support
 var geometry = {};
@@ -12,7 +12,10 @@ geometry.boundingBox = {
         var bottom = scalingFactor * boundingBox[1][1];
         ctx.strokeStyle = geometryColor;
         ctx.strokeRect(left, top, right-left, bottom-top);
-    }
+    },
+    prepare: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
 };
 geometry.line = {
     label: 'Line',
@@ -26,7 +29,10 @@ geometry.line = {
         ctx.moveTo(ox,oy);
         ctx.lineTo(mx,my);
         ctx.stroke();
-    }
+    },
+    prepare: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
 };
 geometry.point = {
     label: 'Point',
@@ -41,7 +47,10 @@ geometry.point = {
         ctx.moveTo(x,y-size);
         ctx.lineTo(x,y+size);
         ctx.stroke();
-    }
+    },
+    prepare: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
 }
 geometry.circle = {
     label: 'Circle',
@@ -72,11 +81,52 @@ geometry.circle = {
          */
         ctx.arc(ox,oy,radius,0,Math.PI*2,true);
         ctx.stroke();
-    }
+    },
+    prepare: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    }   
 }
 //
+function scaleAnnotation(tool, annotation) {
+    console.log("Tool: "+tool['label']);
+    console.log("Annotation: "+annotation);
+    
+    var precision = getZoomMathPrecision();
+    var offsetX = 0;
+    var offsetY = 0;
+    //fix zoom
+    if( getZoomCoordinates() != null ){
+        var transX = getZoomCoordinates().x;
+        var transY = getZoomCoordinates().y;
+        console.log("trans offset: "+transX+","+transY);
+        
+        if( transX != 0 || transY != 0 ){
+            offsetX = Math.abs(transX);
+            offsetY = Math.abs(transY);
+        }
+    }
+    
+    if( getZoomNavCoordinates() != null ){
+        var dragX = getZoomNavCoordinates().x;
+        var dragY = getZoomNavCoordinates().y;
+        console.log("drag offset: "+dragX+","+dragY);
+        if( dragX != 0 || dragY != 0 ){
+            offsetX = doZoomMath(offsetX,dragX,precision);
+            offsetY = doZoomMath(offsetY,dragY,precision);
+        }
+    }
+    
+    for(var item in annotation){
+        for(var elem in annotation[item]){
+            var offset = elem == 0 ? offsetX : offsetY;
+            annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision) / getZoomScale();
+        }
+    }
+     
+    return annotation;
+}
 function selectedTool(value) {
-    if(value == undefined) {
+    if(value == undefined || value.length < 1) {
         return $('#workspace').data('tool');
     } else {
         clog('setting tool to '+JSON.stringify(value));
@@ -85,6 +135,9 @@ function selectedTool(value) {
 }
 function MeasurementTool(eventHandlers) {
     this.eventHandlers = eventHandlers;
+}
+function isGeometryToolEnabled(cell){
+    return $(cell).data('toolsDisabled') == null;
 }
 function bindMeasurementTools(selector, env) {
     // env must include the following to be passed as event.data:
@@ -95,34 +148,42 @@ function bindMeasurementTools(selector, env) {
     // - scaledHeight: the scaled image height
     selector.bind('mousedown', env, function(event) {
         var cell = event.data.cell;
-        var canvas = event.data.canvas;
-        var tool = selectedTool();
-        if('mousedown' in tool.eventHandlers) {
-            var mx = event.pageX - canvas.offset().left;
-            var my = event.pageY - canvas.offset().top;
-            event.data.mx = mx;
-            event.data.my = my;
-            event.data.ix = (mx/scalingFactor)|0;
-            event.data.iy = (mx/scalingFactor)|0;
-            // call the currently selected tool
-            tool.eventHandlers.mousedown(event);
-        }
+        if( isGeometryToolEnabled(cell) ){
+            var canvas = event.data.canvas;
+            var tool = selectedTool();
+            if('mousedown' in tool.eventHandlers) {
+                var mx = event.pageX - canvas.offset().left;
+                var my = event.pageY - canvas.offset().top;
+                event.data.mx = mx;
+                event.data.my = my;
+                event.data.ix = (mx/scalingFactor)|0;
+                event.data.iy = (mx/scalingFactor)|0;
+                // call the currently selected tool
+                tool.eventHandlers.mousedown(event);
+            }
+        } 
     }).bind('mousemove', env, function(event) {
-        var tool = selectedTool();
-        var canvas = event.data.canvas;
-        if('mousemove' in tool.eventHandlers) {
-            var mx = mouseX(event, canvas);
-            var my = mouseY(event, canvas);
-            event.data.mx = mx;
-            event.data.my = my;
-            event.data.ix = (mx/scalingFactor)|0;
-            event.data.iy = (mx/scalingFactor)|0;
-            tool.eventHandlers.mousemove(event);
+        var cell = event.data.cell;
+        if( isGeometryToolEnabled(cell) ){
+            var tool = selectedTool();
+            var canvas = event.data.canvas;
+            if('mousemove' in tool.eventHandlers) {
+                var mx = mouseX(event, canvas);
+                var my = mouseY(event, canvas);
+                event.data.mx = mx;
+                event.data.my = my;
+                event.data.ix = (mx/scalingFactor)|0;
+                event.data.iy = (mx/scalingFactor)|0;
+                tool.eventHandlers.mousemove(event);
+            }
         }
     }).bind('mouseup', env, function(event) {
-        var tool = selectedTool();
-        if('mouseup' in tool.eventHandlers) {
-            tool.eventHandlers.mouseup(event);
+        var cell = event.data.cell;
+        if( isGeometryToolEnabled(cell) ){
+            var tool = selectedTool();
+            if('mouseup' in tool.eventHandlers) {
+                tool.eventHandlers.mouseup(event);
+            }
         }
     });
 }
@@ -159,10 +220,13 @@ geometry.boundingBox.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
+        console.log($(cell).data('boundingBox'));
+        var preppedBox = geometry.boundingBox.prepare($(cell).data('boundingBox'));
+        console.log(preppedBox);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
-            geometry: { boundingBox: $(cell).data('boundingBox') }
+            geometry: { boundingBox: preppedBox }
         });
         toggleSelected(cell,$('#label').val());
     }
@@ -195,10 +259,13 @@ geometry.line.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
+        console.log($(cell).data('line'));
+        var preppedLine = geometry.line.prepare($(cell).data('line'));
+        console.log(preppedLine);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
-            geometry: { line: $(cell).data('line') }
+            geometry: { line: preppedLine }
         });
         toggleSelected(cell,$('#label').val());
     }
@@ -233,10 +300,13 @@ geometry.point.tool = new MeasurementTool({
     },
     mouseup: function(event) {
         var cell = event.data.cell;
+        console.log($(cell).data('point'));
+        var preppedPoint = geometry.point.prepare($(cell).data('point'));
+        console.log(preppedPoint);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
-            geometry: { point: $(cell).data('point') }
+            geometry: { point: preppedPoint }
         });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
@@ -244,7 +314,7 @@ geometry.point.tool = new MeasurementTool({
 });
 //allow the user to draw a circle on a cell's "new annotation" canvas
 geometry.circle.tool = new MeasurementTool({
-	mousedown: function(event) {
+    mousedown: function(event) {
         var cell = event.data.cell;
         var mx = event.data.mx;
         var my = event.data.my;
@@ -268,12 +338,17 @@ geometry.circle.tool = new MeasurementTool({
     },
     mouseup: function(event) {
         var cell = event.data.cell;
+        
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
+        
+        console.log($(cell).data('circle'));
+        var preppedCircle = geometry.circle.prepare($(cell).data('circle'));
+        console.log(preppedCircle);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
-            geometry: { circle: $(cell).data('circle') }
+            geometry: { circle: preppedCircle }
         });
         toggleSelected(cell,$('#label').val());
     }

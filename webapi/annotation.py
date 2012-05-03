@@ -78,21 +78,12 @@ class ZoomAssignmentStore(AssignmentStore):
     def __init__(self):
         self.assignments = [{
             "pid": "http://foo.bar/assignments/baz",
-            "label": "Look for trash",
+            "label": "Zoom Testing",
             "status": "new",
             "mode": "trash",
             "images": [{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
-                }]
-          },{
-            "pid": "http://foo.bar/assignments/fnordy",
-            "label": "Look for sand dollars",
-            "status": "new",
-            "mode": "sanddollars",
-            "images": [{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
+                 "pid": "http://localhost:5000/static/images/zoom/zoom-test.jpg",
+                 "image": "http://localhost:5000/static/images/zoom/zoom-test.jpg"
                 }]
           }]
         

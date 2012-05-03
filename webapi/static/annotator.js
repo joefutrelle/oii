@@ -287,6 +287,8 @@ function commit() {
 }
 function postCommit() {
     $('#workspace').data('pending',{});
+    $(document).trigger('commit','Notify any listeners of a commit');
+
 }
 function deselectAll() {
     $('#workspace').data('pending',{});
@@ -295,6 +297,7 @@ function deselectAll() {
     });
 }
 function listAssignments() {
+    $('#assignment').append('<option value="">Select an Assignment</option>')
     with_json_request('/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
             clog(a);
@@ -306,16 +309,19 @@ function changeAssignment(ass_pid) {
     $('#label').val('');
     var ass_pid = $('#assignment').val();
     clog('user selected assignment '+ass_pid);
-    with_json_request('/fetch_assignment/'+ass_pid, function(r) {
-      clog('fetched assignment '+ass_pid);
-        $('#workspace').data('assignment',r);
-        $('#workspace').data('images',r.images);
-        with_json_request('/list_categories/'+r.mode, function(c) {
-            clog('fetched categories for mode '+r.mode);
-            $('#workspace').data('categories',c);
-            gotoPage(1,25);
+    if( ass_pid.length > 0 ){
+        with_json_request('/fetch_assignment/'+ass_pid, function(r) {
+          clog('fetched assignment '+ass_pid);
+            $('#workspace').data('assignment',r);
+            $('#workspace').data('images',r.images);
+            with_json_request('/list_categories/'+r.mode, function(c) {
+                clog('fetched categories for mode '+r.mode);
+                $('#workspace').data('categories',c);
+                gotoPage(1,25);
+            });
         });
-    });
+    }
+    $(document).trigger('changeAssignment','Notify any listeners of an assignment change');
 }
 function categoryPidForLabel(label) {
     var cats = $('#workspace').data('categories');
@@ -366,6 +372,7 @@ $(document).ready(function() {
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val());
     });
+    //$('#tool').append('<option value="">Select a Tool</option>')
     $.each(geometry, function(key,g) {
         $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
     });
