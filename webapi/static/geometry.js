@@ -13,9 +13,12 @@ geometry.boundingBox = {
         ctx.strokeStyle = geometryColor;
         ctx.strokeRect(left, top, right-left, bottom-top);
     },
-    prepare: function(annotation) {
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
         return scaleAnnotation(this, annotation);
-    } 
+    }
 };
 geometry.line = {
     label: 'Line',
@@ -30,7 +33,10 @@ geometry.line = {
         ctx.lineTo(mx,my);
         ctx.stroke();
     },
-    prepare: function(annotation) {
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
         return scaleAnnotation(this, annotation);
     } 
 };
@@ -48,7 +54,10 @@ geometry.point = {
         ctx.lineTo(x,y+size);
         ctx.stroke();
     },
-    prepare: function(annotation) {
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
         return scaleAnnotation(this, annotation);
     } 
 }
@@ -82,14 +91,17 @@ geometry.circle = {
         ctx.arc(ox,oy,radius,0,Math.PI*2,true);
         ctx.stroke();
     },
-    prepare: function(annotation) {
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
         return scaleAnnotation(this, annotation);
     }   
 }
 //
-function scaleAnnotation(tool, annotation) {
-    console.log("Tool: "+tool['label']);
-    console.log("Annotation: "+annotation);
+function unscaleAnnotation(tool, annotation) {
+    //console.log("Tool: "+tool['label']);
+    //console.log("Annotation: "+annotation);
     
     var precision = getZoomMathPrecision();
     var offsetX = 0;
@@ -98,7 +110,7 @@ function scaleAnnotation(tool, annotation) {
     if( getZoomCoordinates() != null ){
         var transX = getZoomCoordinates().x;
         var transY = getZoomCoordinates().y;
-        console.log("trans offset: "+transX+","+transY);
+        //console.log("trans offset: "+transX+","+transY);
         
         if( transX != 0 || transY != 0 ){
             offsetX = Math.abs(transX);
@@ -109,7 +121,7 @@ function scaleAnnotation(tool, annotation) {
     if( getZoomNavCoordinates() != null ){
         var dragX = getZoomNavCoordinates().x;
         var dragY = getZoomNavCoordinates().y;
-        console.log("drag offset: "+dragX+","+dragY);
+        //console.log("drag offset: "+dragX+","+dragY);
         if( dragX != 0 || dragY != 0 ){
             offsetX = doZoomMath(offsetX,dragX,precision);
             offsetY = doZoomMath(offsetY,dragY,precision);
@@ -125,6 +137,46 @@ function scaleAnnotation(tool, annotation) {
      
     return annotation;
 }
+
+function scaleAnnotation(tool, annotation) {
+    //console.log("Tool: "+tool['label']);
+    //console.log("Annotation: "+annotation);
+    
+    var precision = getZoomMathPrecision();
+    var offsetX = 0;
+    var offsetY = 0;
+    //fix zoom
+    if( getZoomCoordinates() != null ){
+        var transX = getZoomCoordinates().x;
+        var transY = getZoomCoordinates().y;
+        //console.log("trans offset: "+transX+","+transY);
+        
+        if( transX != 0 || transY != 0 ){
+            offsetX = transX;
+            offsetY = transY;
+        }
+    }
+    
+    if( getZoomNavCoordinates() != null ){
+        var dragX = getZoomNavCoordinates().x;
+        var dragY = getZoomNavCoordinates().y;
+        //console.log("drag offset: "+dragX+","+dragY);
+        if( dragX != 0 || dragY != 0 ){
+            offsetX = doZoomMath(offsetX,dragX,precision);
+            offsetY = doZoomMath(offsetY,dragY,precision);
+        }
+    }
+    
+    for(var item in annotation){
+        for(var elem in annotation[item]){
+            var offset = elem == 0 ? offsetX : offsetY;
+            annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision) * getZoomScale();
+        }
+    }
+     
+    return annotation;
+}
+
 function selectedTool(value) {
     if(value == undefined || value.length < 1) {
         return $('#workspace').data('tool');
@@ -137,8 +189,9 @@ function MeasurementTool(eventHandlers) {
     this.eventHandlers = eventHandlers;
 }
 function isGeometryToolEnabled(cell){
-    return $(cell).data('toolsDisabled') == null;
+    return $(cell).data('toolsDisabled') == null && hasLabel();
 }
+
 function bindMeasurementTools(selector, env) {
     // env must include the following to be passed as event.data:
     // - cell: the div containing the image and carrying annotation data
@@ -146,7 +199,7 @@ function bindMeasurementTools(selector, env) {
     // - ctx: a context on the canvas
     // - scaledWidth: the scaled image width
     // - scaledHeight: the scaled image height
-    selector.bind('mousedown', env, function(event) {
+    selector.bind('mousedown', env, function(event) {        
         var cell = event.data.cell;
         if( isGeometryToolEnabled(cell) ){
             var canvas = event.data.canvas;
@@ -161,7 +214,7 @@ function bindMeasurementTools(selector, env) {
                 // call the currently selected tool
                 tool.eventHandlers.mousedown(event);
             }
-        } 
+        }
     }).bind('mousemove', env, function(event) {
         var cell = event.data.cell;
         if( isGeometryToolEnabled(cell) ){
@@ -220,9 +273,10 @@ geometry.boundingBox.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
-        console.log($(cell).data('boundingBox'));
-        var preppedBox = geometry.boundingBox.prepare($(cell).data('boundingBox'));
-        console.log(preppedBox);
+        //console.log($(cell).data('boundingBox'));
+        var preppedBox = geometry.boundingBox.prepareForStorage($(cell).data('boundingBox'));
+        //console.log(preppedBox);
+        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
@@ -259,9 +313,10 @@ geometry.line.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
-        console.log($(cell).data('line'));
-        var preppedLine = geometry.line.prepare($(cell).data('line'));
-        console.log(preppedLine);
+        //console.log($(cell).data('line'));
+        var preppedLine = geometry.line.prepareForStorage($(cell).data('line'));
+        //console.log(preppedLine);
+        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
@@ -300,9 +355,10 @@ geometry.point.tool = new MeasurementTool({
     },
     mouseup: function(event) {
         var cell = event.data.cell;
-        console.log($(cell).data('point'));
-        var preppedPoint = geometry.point.prepare($(cell).data('point'));
-        console.log(preppedPoint);
+        //console.log($(cell).data('point'));
+        var preppedPoint = geometry.point.prepareForStorage($(cell).data('point'));
+        //console.log(preppedPoint);
+        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
@@ -326,7 +382,7 @@ geometry.circle.tool = new MeasurementTool({
         var ox = $(cell).data('ox');
         var oy = $(cell).data('oy');
         if(ox >= 0 && oy >= 0) {
-        	var ctx = event.data.ctx;
+            var ctx = event.data.ctx;
             var mx = event.data.mx;
             var my = event.data.my;
             /* compute a rectangle in original scale pixel space */
@@ -342,9 +398,10 @@ geometry.circle.tool = new MeasurementTool({
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
         
-        console.log($(cell).data('circle'));
-        var preppedCircle = geometry.circle.prepare($(cell).data('circle'));
-        console.log(preppedCircle);
+        //console.log($(cell).data('circle'));
+        var preppedCircle = geometry.circle.prepareForStorage($(cell).data('circle'));
+        //console.log(preppedCircle);
+        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),

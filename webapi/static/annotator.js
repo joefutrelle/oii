@@ -68,6 +68,7 @@ function getImageLayerContext(cell,claz) {
 function clearImageLayer(cell,claz) {
     var ctx = getImageLayerContext(cell,'existing');
     ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
+    $(document).trigger('canvasChange',claz);
 }
 function drawImage(cell) {
     var ctx = getImageLayerContext(cell,'image')
@@ -94,7 +95,7 @@ function showAnnotationGeometry(ctx,ann) {
             var g = ann.geometry[key];
             if(g != undefined) {
                 clog('attempting to draw a '+key+' for '+JSON.stringify(ann.geometry[key]));
-                geometry[key].draw(ctx, ann.geometry[key]);
+                geometry[key].draw(ctx, geometry[key].prepareForCanvas(ann.geometry[key]));
             }
         }
     }
@@ -262,6 +263,7 @@ function queueAnnotation(ann) {
     ann.timestamp = iso8601(new Date());
     clog('enqueing '+JSON.stringify(ann));
     pending()[ann.image] = ann;
+    $(document).trigger('queuedAnnotation', ann);
 }
 function commit() {
     clog('committing...');
@@ -415,4 +417,8 @@ function resizeAll() {
     if(rp.is(':visible')) {
         rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
     }
+}
+
+function hasLabel(){
+    return $('#label').val() != null && $('#label').val().length > 0;
 }
