@@ -41,7 +41,7 @@ class OpenFileSource(Source):
         return self.file
     def close(self):
         pass
-    
+
 class ByteSource(Source):
     """Input comes from a byte array"""
     def __init__(self,bytes):
@@ -73,6 +73,22 @@ class LineSource(Source):
             bs = ByteSource(o.getvalue())
             o.close()
             return bs.open()
+
+class PartSource(Source):
+    """Wraps another source, and reads a byte range of it"""
+    def __init__(self,source,offset,length):
+        self.source = source
+        self.offset = offset
+        self.length = length
+    def open(self):
+        try:
+            with open(self.source.pathname,'rb') as raf:
+                raf.seek(self.offset)
+                return StringIO(raf.read(self.length))
+        except:
+            with self.source as source:
+                source.read(self.offset)
+                return StringIO(source.read(self.length))
 
 """Sinks"""
 
@@ -201,5 +217,3 @@ class ZipStore(ReadonlyZipStore):
             return super(ZipStore,self).open()
     def put(self, lid, data):
         self.opened.writestr(lid, data)
-
-        
