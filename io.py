@@ -1,4 +1,3 @@
-"""Source/sink model of I/O"""
 from StringIO import StringIO
 import urllib2
 from zipfile import ZipFile
@@ -6,9 +5,30 @@ import shutil
 import sys
 import os
 
-class SourceSink(object):
+"""Source/sink model of I/O
+
+Sources and Sinks provide io open/close and the with statement.
+
+For instance LocalFileSource provides read access to local file content:
+foo = LocalFileSource('/tmp/foo.txt')
+ins = foo.open()
+contents = ins.read()
+ins.close()
+
+or
+
+with LocalFileSource('/tmp/foo.txt') as ins:
+    contents = ins.read()
+
+"""
+
+class Pipe(object):
     """Abstract parent class of Sinks and Sources providing with statement support
     and semantics of opening and closing"""
+    def __init__(self, filelike):
+        self.filelike = filelike
+    def open(self):
+        return self.filelike # assume it's already open
     def __enter__(self):
         self.opened = self.open()
         return self.opened
@@ -19,11 +39,8 @@ class SourceSink(object):
         
 """Sources"""
     
-class Source(SourceSink):
-    """Abstract parent class of sources providing read method"""
-    def read(self):
-        with self as input:
-            return input.read()
+class Source(Pipe):
+    pass
 
 class LocalFileSource(Source):
     """Input comes from a local file, given a pathname"""
@@ -32,15 +49,6 @@ class LocalFileSource(Source):
         self.mode = mode
     def open(self):
         return open(self.pathname, self.mode)
-
-class OpenFileSource(Source):
-    """Input comes from an open file-like object. Note that __exit__ will not close this object"""
-    def __init__(self,file):
-        self.file = file
-    def open(self):
-        return self.file
-    def close(self):
-        pass
 
 class ByteSource(Source):
     """Input comes from a byte array"""
@@ -92,7 +100,7 @@ class PartSource(Source):
 
 """Sinks"""
 
-class Sink(SourceSink):
+class Sink(Pipe):
     pass
     
 class LocalFileSink(Sink):
@@ -179,41 +187,27 @@ class WebStore(Store):
     def source(self, lid):
         return UrlSource(lid)
 
-class ReadonlyZipStore(Store):
-    """A store providing store read operations on a zip source."""
-    def __init__(self,source,mode=None):
-        self.source = source
+class ZipStore(Store):
+    """A store that provides read or write access to a zip archive."""
+    def __init__(self,pipe,mode=None,compression=None):
+        self.pipe = pipe
         self.mode = mode
+        self.compression = compression
     def open(self):
         if self.mode is None:
-            self.opened = ZipFile(self.source.open())
+            self.zip = ZipFile(self.pipe.open())
+        elif self.compression is None:
+            self.zip = ZipFile(self.pipe.open(), self.mode)
         else:
-            self.opened = ZipFile(self.source.open(), self.mode)
-        return self
-    def close(self):
-        self.opened.close()
+            self.zip = ZipFile(self.pipe.open(), self.mode, self.compression)
     def __enter__(self):
-        return self.open()
+        self.open()
+        return self
     def __exit__(self, type, value, traceback):
-        self.close()
-    def list(self):
-        return self.opened.namelist()
+        self.zip.close()
     def get(self, lid):
-        self.opened.read(lid)
-
-class ZipStore(ReadonlyZipStore):
-    """A store that provides read or write access to a zip archive. Note that write access
-    requires that the source be a LocalFileSink, and mode to be 'w'"""
-    def __init__(self,source,mode=None):
-        super(ZipStore,self).__init__(source,mode)
-    def open(self):
-        try:
-            if self.mode is None:
-                self.opened = ZipFile(self.source.pathname)
-            else:
-                self.opened = ZipFile(self.source.pathname, self.mode)
-            return self
-        except KeyError:
-            return super(ZipStore,self).open()
+        self.zip.read(lid)
     def put(self, lid, data):
-        self.opened.writestr(lid, data)
+        self.zip.writestr(lid, data)
+    def list(self):
+        return self.zip.namelist()
