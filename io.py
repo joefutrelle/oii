@@ -48,6 +48,7 @@ class LocalFileSource(Source):
         self.pathname = pathname
         self.mode = mode
     def open(self):
+        print 'opening local file %s for reading' % self.pathname
         return open(self.pathname, self.mode)
 
 class ByteSource(Source):
@@ -145,6 +146,9 @@ class Store(object):
         return self
     def __exit__(self, type, value, traceback):
         pass
+    def __iter__(self):
+        for lid in self.list():
+            yield lid
     def put(self, lid, data):
         with self.sink(lid) as output:
             output.write(data)
@@ -152,6 +156,11 @@ class Store(object):
     def get(self, lid):
         with self.source(lid) as input:
             return input.read()
+    def copy(self, lid, copy_lid):
+        self.put(copy_lid, self.get(lid))
+    def include(self, other_store):
+        for lid in other_store:
+            self.put(lid, other_store.get(lid))
         
 class MemoryStore(Store):
     """Local ID's are arbitrary keys; values are stored in a dictionary"""
@@ -206,8 +215,10 @@ class ZipStore(Store):
     def __exit__(self, type, value, traceback):
         self.zip.close()
     def get(self, lid):
-        self.zip.read(lid)
+        return self.zip.read(lid)
     def put(self, lid, data):
         self.zip.writestr(lid, data)
     def list(self):
         return self.zip.namelist()
+
+"""Store utilities"""
