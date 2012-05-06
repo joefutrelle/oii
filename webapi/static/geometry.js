@@ -101,40 +101,49 @@ geometry.circle = {
 //
 function unscaleAnnotation(tool, annotation) {
     //console.log("Tool: "+tool['label']);
-    //console.log("Annotation: "+annotation);
+    console.log("Annotation: "+annotation);
+    console.log("zoom scale: "+getZoomScale());
     
     var precision = getZoomMathPrecision();
-    var offsetX = 0;
-    var offsetY = 0;
-    //fix zoom
-    if( getZoomCoordinates() != null ){
-        var transX = getZoomCoordinates().x;
-        var transY = getZoomCoordinates().y;
-        //console.log("trans offset: "+transX+","+transY);
-        
-        if( transX != 0 || transY != 0 ){
-            offsetX = Math.abs(transX);
-            offsetY = Math.abs(transY);
-        }
-    }
+    var scale = getZoomScale();
     
     if( getZoomNavCoordinates() != null ){
         var dragX = getZoomNavCoordinates().x;
         var dragY = getZoomNavCoordinates().y;
-        //console.log("drag offset: "+dragX+","+dragY);
-        if( dragX != 0 || dragY != 0 ){
-            offsetX = doZoomMath(offsetX,dragX,precision);
-            offsetY = doZoomMath(offsetY,dragY,precision);
+        console.log("drag offset: "+dragX+","+dragY);
+        for(var item in annotation){
+            console.log("point:");
+            for(var elem in annotation[item]){
+                var offset = elem == 0 ? dragX : dragY;
+                offset = -1*offset*scale;
+                var coordinate = doZoomMath(annotation[item][elem],offset,precision);
+                console.log(" - "+elem+":"+coordinate);
+                annotation[item][elem] = coordinate;
+            }
         }
     }
     
+    var offsetX = 0;
+    var offsetY = 0;
+    
+    //fix zoom
+    if( getZoomCoordinates() != null ){
+        offsetX = getZoomCoordinates().x;
+        offsetY = getZoomCoordinates().y;
+        console.log("trans offset: "+offsetX+","+offsetY);
+    }
+    
     for(var item in annotation){
+        console.log("point:");
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision) / getZoomScale();
+            var coordinate = doZoomMath(annotation[item][elem],-offset,precision);
+            console.log(" - "+elem+":"+coordinate);
+            annotation[item][elem] = coordinate / getZoomScale();
         }
     }
-     
+    
+    console.log("Fixed Annotation: "+annotation);
     return annotation;
 }
 
