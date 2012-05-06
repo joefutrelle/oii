@@ -5,6 +5,10 @@ import re
 import os
 import traceback
 
+from oii.utils import gen_id
+from oii.times import iso8601
+import platform
+
 # statuses
 PASS='pass' # non-fatal, requeue (queue browsing)
 WIN='win' # success, put in win queue
@@ -89,6 +93,7 @@ class Job(object):
         self.host = host
         self.qname = qname
         self.log_channel = None
+        self.workerid = ('%s_%s' % (gen_id()[:4], platform.node()))
     def run_callback(self,message):
         """Override this method to do some work. Message is the queue entry received.
         Call log in this method to send messages to the log exchange.
@@ -104,7 +109,8 @@ class Job(object):
         ename = self.qname+'_log'
         if self.log_channel is None:
             self.log_channel, self.log_connection = declare_log_exchange(ename,self.host)
-        log(message,ename,channel=self.log_channel)
+        prefix = '%s %s ' % (iso8601(), self.workerid)
+        log(prefix + message,ename,channel=self.log_channel)
     def enqueue(self,message,qname=None):
         """Put a message in this worker's queue"""
         if qname is None:
@@ -119,33 +125,46 @@ class Job(object):
         def amqp_run_callback(channel, method, properties, message):
             debug('callback %s' % message)
             try:
+                self.log('START %s' % message)
                 ret = self.run_callback(message)
-                debug('callback %s returned %s' % (message,ret))
+                self.log('CALLBACK %s returned %s' % (message,ret))
                 raise JobExit(message, ret)
             except JobExit as e:
                 message = e.message
                 ret = e.ret
                 if ret == PASS:
+                    self.log('PASS - rejecting %s' % message)
                     reject(channel,method,requeue=False)
+                    self.log('PASS - requeueing %s' % message)
                     self.enqueue(message)
                 elif ret == WIN or ret is None:
+                    self.log('WIN - acking %s' % message)
                     ack(channel,method)
+                    self.log('WIN - recording win for %s' % message)
                     self.enqueue(message,self.qname+'_win')
                 elif ret == SKIP:
+                    self.log('SKIP - acking %s' % message)
                     ack(channel,method)
                 elif ret == DIE:
+                    self.log('DIE on %s - exiting' % message)
                     sys.exit(0)
                 elif ret == FAIL:
+                    self.log('FAIL - rejecting %s' % message)
                     reject(channel,method)
+                    self.log('FAIL - recording fail for %s' % message)
                     self.enqueue(message,self.qname+'_fail')
             except KeyboardInterrupt:
+                self.log('KEYBOARD INTERRUPT - rejecting %s' % message)
                 reject(channel,method,requeue=True)
                 raise
             except SystemExit:
+                self.log('SYSTEM EXIT - rejecting %s' % message)
                 reject(channel,method,requeue=True)
                 sys.exit(0)
             except:
+                self.log('EXCEPTION - rejecting %s' % message)
                 reject(channel,method)
+                self.log('EXCEPTION - recording fail for %s' % message)
                 self.enqueue(message,self.qname+'_fail')
                 raise
         # main loop
