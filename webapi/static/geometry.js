@@ -100,9 +100,8 @@ geometry.circle = {
 }
 //
 function unscaleAnnotation(tool, annotation) {
-    //console.log("Tool: "+tool['label']);
-    console.log("Annotation: "+annotation);
-    console.log("zoom scale: "+getZoomScale());
+    console.log("Tool: "+tool['label']);
+    console.log("Annotation (orginal): "+annotation);
     
     var precision = getZoomMathPrecision();
     var scale = getZoomScale();
@@ -110,14 +109,11 @@ function unscaleAnnotation(tool, annotation) {
     if( getZoomNavCoordinates() != null ){
         var dragX = getZoomNavCoordinates().x;
         var dragY = getZoomNavCoordinates().y;
-        console.log("drag offset: "+dragX+","+dragY);
         for(var item in annotation){
-            console.log("point:");
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
                 offset = -1*offset*scale;
                 var coordinate = doZoomMath(annotation[item][elem],offset,precision);
-                console.log(" - "+elem+":"+coordinate);
                 annotation[item][elem] = coordinate;
             }
         }
@@ -130,16 +126,12 @@ function unscaleAnnotation(tool, annotation) {
     if( getZoomCoordinates() != null ){
         offsetX = getZoomCoordinates().x;
         offsetY = getZoomCoordinates().y;
-        console.log("trans offset: "+offsetX+","+offsetY);
     }
     
     for(var item in annotation){
-        console.log("point:");
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
-            var coordinate = doZoomMath(annotation[item][elem],-offset,precision);
-            console.log(" - "+elem+":"+coordinate);
-            annotation[item][elem] = coordinate / getZoomScale();
+            annotation[item][elem] = doZoomMath(annotation[item][elem],-offset,precision) / scale;
         }
     }
     
@@ -152,34 +144,34 @@ function scaleAnnotation(tool, annotation) {
     //console.log("Annotation: "+annotation);
     
     var precision = getZoomMathPrecision();
+    var scale = getZoomScale();
+    
     var offsetX = 0;
     var offsetY = 0;
+    
     //fix zoom
     if( getZoomCoordinates() != null ){
-        var transX = getZoomCoordinates().x;
-        var transY = getZoomCoordinates().y;
-        //console.log("trans offset: "+transX+","+transY);
-        
-        if( transX != 0 || transY != 0 ){
-            offsetX = transX;
-            offsetY = transY;
+        offsetX = getZoomCoordinates().x;
+        offsetY = getZoomCoordinates().y;
+    }
+    
+    for(var item in annotation){
+        console.log("point:");
+        for(var elem in annotation[item]){
+            var offset = elem == 0 ? offsetX : offsetY;
+            annotation[item][elem] = doZoomMath(annotation[item][elem] * scale, offset, precision);
         }
     }
     
     if( getZoomNavCoordinates() != null ){
         var dragX = getZoomNavCoordinates().x;
         var dragY = getZoomNavCoordinates().y;
-        //console.log("drag offset: "+dragX+","+dragY);
-        if( dragX != 0 || dragY != 0 ){
-            offsetX = doZoomMath(offsetX,dragX,precision);
-            offsetY = doZoomMath(offsetY,dragY,precision);
-        }
-    }
-    
-    for(var item in annotation){
-        for(var elem in annotation[item]){
-            var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision) * getZoomScale();
+        for(var item in annotation){
+            for(var elem in annotation[item]){
+                var offset = elem == 0 ? dragX : dragY;
+                offset = offset*scale;
+                annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision);
+            }
         }
     }
      
@@ -285,13 +277,15 @@ geometry.boundingBox.tool = new MeasurementTool({
         //console.log($(cell).data('boundingBox'));
         var preppedBox = geometry.boundingBox.prepareForStorage($(cell).data('boundingBox'));
         //console.log(preppedBox);
-        updateZoom(event.data.ctx.canvas);
+        
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { boundingBox: preppedBox }
         });
         toggleSelected(cell,$('#label').val());
+        
+        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.boundingBox, preppedBox]);
     }
 });
 // allow the user to draw a line on a cell's "new annotation" canvas
@@ -325,13 +319,14 @@ geometry.line.tool = new MeasurementTool({
         //console.log($(cell).data('line'));
         var preppedLine = geometry.line.prepareForStorage($(cell).data('line'));
         //console.log(preppedLine);
-        updateZoom(event.data.ctx.canvas);
+        
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { line: preppedLine }
         });
         toggleSelected(cell,$('#label').val());
+        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.line]);
     }
 });
 //allow the user to draw a line on a cell's "new annotation" canvas
@@ -367,7 +362,6 @@ geometry.point.tool = new MeasurementTool({
         //console.log($(cell).data('point'));
         var preppedPoint = geometry.point.prepareForStorage($(cell).data('point'));
         //console.log(preppedPoint);
-        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
@@ -375,6 +369,7 @@ geometry.point.tool = new MeasurementTool({
         });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
+        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.point]);
     }
 });
 //allow the user to draw a circle on a cell's "new annotation" canvas
@@ -410,12 +405,12 @@ geometry.circle.tool = new MeasurementTool({
         //console.log($(cell).data('circle'));
         var preppedCircle = geometry.circle.prepareForStorage($(cell).data('circle'));
         //console.log(preppedCircle);
-        updateZoom(event.data.ctx.canvas);
         queueAnnotation({
             image: $(cell).data('imagePid'),
             category: categoryPidForLabel($('#label').val()),
             geometry: { circle: preppedCircle }
         });
         toggleSelected(cell,$('#label').val());
+        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.circle]);
     }
 });

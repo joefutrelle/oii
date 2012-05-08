@@ -56,15 +56,21 @@ $(document).ready(function(){
         zoomScale = startScale;
         resetCanvasStore();
     });
-    //listen for new annotations
-    $(document).bind('queuedAnnotation', function(event,message){
-       console.log("Queued Annotation: "+message); 
-    });
+
     //listen for canvasChange
-    $(document).bind('canvasChange', function(event,canvasName){
+    $(document).bind('canvasChange', function(event,canvasName,tool,annotation){
        console.log("Changed Canvas: "+canvasName); 
+       if( tool != undefined ) console.log(" - w/ Tool: "+tool.label);
+       if( annotation != undefined ) console.log(" - w/ Annotation: "+annotation);
+       
        if( hasZoomCanvasStore() ){
-           updateZoom(getCanvasForName(canvasName));
+           var canvas;
+           if( canvasName instanceof HTMLCanvasElement ) canvas = canvasName;
+           else {
+               console.log("looking up canvas name: "+canvasName);
+               canvas = getCanvasForName(canvasName);
+           }
+           updateZoom(canvas,tool,annotation);
        }       
     });
     
@@ -120,6 +126,8 @@ zoomEvents['DOMMouseScroll'] = function(e){
 zoomEvents['mousewheel'] = function(e){
     return executeScroll(e.delta);
 }
+
+
 zoomEvents['mousedown'] = function(evt){
     var cell = getZoomImage();
     $(cell).data('mouseDown', true);
@@ -207,7 +215,7 @@ function setMode(){
 }
 
 function buildCanvasStore(){
-    console.log("*** BUILDING CANVAS STORE ***");
+    //console.log("*** BUILDING CANVAS STORE ***");
     var time = new Date();
     resetCanvasStore();
 
@@ -221,10 +229,19 @@ function buildCanvasStore(){
     if( canvases.length > 0 ){
         for(var c = 0; c < canvases.length; c++){
             //var time = new Date();
-            console.log("Canvas for store: "+canvases[c]);
+            //console.log("Canvas for store: "+canvases[c]);
             var cid = $(canvases[c]).attr('id');
             var storeName = getZoomCanvasName(cid);
-            var original = getZoomOriginCanvas(storeName,canvases[c],true);
+            var original;
+            if( imgName == storeName ){
+                original = getZoomImage().data('image');
+            } else { 
+                var cell = getZoomImage();
+                var width = $(cell).data('width');
+                var height= $(cell).data('height');
+                original = $("<canvas>").attr("width", width).attr("height", height)[0];
+                original.getContext("2d").drawImage(canvases[c], 0, 0);
+            }
 
             canvasStore[storeName] = {
                     canvas: canvases[c],
@@ -249,39 +266,24 @@ function buildCanvasStore(){
     }
     if( profile ) console.log("build canvas store: "+(new Date()-time));
 }
-function getCanvasForName(canvasName){
-    return getImageLayer(getZoomImage(),canvasName)[0];
-}
 
-function updateZoom(canvas){
-    console.log("updateZoom: "+canvas);
-    
+function updateZoom(canvas,tool,annotation){
     var canvasName = getZoomCanvasName(canvas.id);
+    console.log("updateZoom: "+canvasName);
+    console.log("tool: "+tool);
     if( canvasStore[canvasName] == undefined ) return;
-
-    canvasStore[canvasName].origin = getZoomOriginCanvas(canvasName,canvas,false);
-    //scaleAllLayers();
-}
-function getZoomOriginCanvas(canvasName,src,create){
-    var original;
-    console.log("*** GET A ZOOM ORIGIN CANVAS :: "+canvasName+" ***");
-    if( imgName == canvasName ){
-        original = getZoomImage().data('image');
-    } else { 
-        if(create){
-            var cell = getZoomImage();
-            var width = $(cell).data('width');
-            var height= $(cell).data('height');
-            original = $("<canvas>").attr("width", width).attr("height", height)[0];
-        } else {
-            original = canvasStore[canvasName].origin;
-        }
-        original.getContext("2d").drawImage(src, 0, 0);
+    
+    var cell = getZoomImage();
+    var width = $(cell).data('width');
+    var height= $(cell).data('height');
+    var original = $("<canvas>").attr("width", width).attr("height", height)[0];
+    
+    if( tool != undefined && annotation != undefined ){
+        tool.draw(original.getContext("2d"),annotation);
+        console.log("drew annotation on original canvas: "+annotation);
+        canvasStore[canvasName].origin = original;
+        scaleAllLayers();
     }
-    
-    
-    
-    return original;
 }
 
 function resetZoom(){
@@ -338,7 +340,7 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
     var width = $(cell).data('width');
     var height= $(cell).data('height');
     var x = -((newWidth-width)/2);
-    var y= -((newHeight-height)/2);
+    var y = -((newHeight-height)/2);
 
     if(is_image_canvas){
         $(cell).data('translatePos',{x: x, y: y});
@@ -358,6 +360,7 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
         console.log("scale["+canvasID+"]: "+(new Date()-time));
         time = new Date();
     }
+
     ctx.clearRect(0, 0, width, height);
     if(profile){
         console.log("clear["+canvasID+"]: "+(new Date()-time));
@@ -376,9 +379,10 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
     } else {
         ctx.drawImage(original, navX, navY);
     }
-    
+
     ctx.restore();
     if(profile) console.log("draw and restore["+canvasID+"]: "+(new Date()-time));
+    
 }
 
 function navigate(x,y){
@@ -429,7 +433,8 @@ function executeScroll(direction){
         } else {
             zoom();
         }
-        if(debug) console.log("zooming: "+zoomScale);
+        //if(debug) 
+            console.log("zooming: "+zoomScale);
     }
     //make sure the page doesn't scroll
     return !is_zooming;
@@ -453,7 +458,7 @@ function hasZoomCanvasStore(){
 /** HELPER FUNCTIONS **/
 
 function getZoomImage(){
-    return $('#images').find('div.thumbnail:last');
+    return getImageCanvii();
 }
 function getZoomImageSize(){
     return $('#images').find('div.thumbnail').size();

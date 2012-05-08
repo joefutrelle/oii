@@ -68,7 +68,7 @@ function getImageLayerContext(cell,claz) {
 function clearImageLayer(cell,claz) {
     var ctx = getImageLayerContext(cell,'existing');
     ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
-    $(document).trigger('canvasChange',claz);
+    $(document).trigger('canvasChange',getImageLayer(cell,claz));
 }
 function drawImage(cell) {
     var ctx = getImageLayerContext(cell,'image')
@@ -263,7 +263,6 @@ function queueAnnotation(ann) {
     ann.timestamp = iso8601(new Date());
     clog('enqueing '+JSON.stringify(ann));
     pending()[ann.image] = ann;
-    $(document).trigger('queuedAnnotation', ann);
 }
 function commit() {
     clog('committing...');
@@ -297,6 +296,7 @@ function deselectAll() {
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
+    $(document).trigger('canvasChange',getCanvasForName('pending'));
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
@@ -421,4 +421,11 @@ function resizeAll() {
 
 function hasLabel(){
     return $('#label').val() != null && $('#label').val().length > 0;
+}
+
+function getImageCanvii(){
+    return $('#images').find('div.thumbnail:last');
+}
+function getCanvasForName(canvasName){
+    return getImageLayer(getImageCanvii(),canvasName)[0];
 }
