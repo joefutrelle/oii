@@ -43,14 +43,7 @@ $(document).ready(function(){
         resetZoom();
     });
     
-    //listen for commits
-    $(document).bind('commit', function(event, message){ 
-        /*
-        if( is_zooming ){
-            buildCanvasStore();
-        }
-        */
-    });
+    
     //listen for assignment changes
     $(document).bind('changeAssignment', function(event, message){ 
         zoomScale = startScale;
@@ -58,18 +51,18 @@ $(document).ready(function(){
     });
 
     //listen for canvasChange
-    $(document).bind('canvasChange', function(event,canvasName,tool,annotation){
-       console.log("Changed Canvas: "+canvasName); 
-       if( tool != undefined ) console.log(" - w/ Tool: "+tool.label);
+    $(document).bind('canvasChange', function(event,canvas,tool,annotation){
+       console.log("Changed Canvas: "+getZoomCanvasName(canvas.id)); 
+       if( tool != undefined ) console.log(" - w/ Tool: "+tool);
        if( annotation != undefined ) console.log(" - w/ Annotation: "+annotation);
        
        if( hasZoomCanvasStore() ){
-           var canvas;
-           if( canvasName instanceof HTMLCanvasElement ) canvas = canvasName;
-           else {
-               console.log("looking up canvas name: "+canvasName);
-               canvas = getCanvasForName(canvasName);
-           }
+           //var canvas;
+           //if( canvasName instanceof HTMLCanvasElement ) canvas = canvasName;
+           //else {
+           //    console.log("looking up canvas name: "+canvasName);
+           //    canvas = getCanvasForName(canvasName);
+           //}
            updateZoom(canvas,tool,annotation);
        }       
     });
@@ -271,6 +264,7 @@ function updateZoom(canvas,tool,annotation){
     var canvasName = getZoomCanvasName(canvas.id);
     console.log("updateZoom: "+canvasName);
     console.log("tool: "+tool);
+    console.log("annotation: "+annotation);
     if( canvasStore[canvasName] == undefined ) return;
     
     var cell = getZoomImage();
@@ -280,7 +274,11 @@ function updateZoom(canvas,tool,annotation){
     
     if( tool != undefined && annotation != undefined ){
         tool.draw(original.getContext("2d"),annotation);
-        console.log("drew annotation on original canvas: "+annotation);
+        canvasStore[canvasName].origin = original;
+        scaleAllLayers();
+    } else {
+        //console.log("ignoring canvas change");
+        console.log("clearing canvas: "+canvasName);
         canvasStore[canvasName].origin = original;
         scaleAllLayers();
     }

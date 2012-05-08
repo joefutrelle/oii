@@ -68,7 +68,6 @@ function getImageLayerContext(cell,claz) {
 function clearImageLayer(cell,claz) {
     var ctx = getImageLayerContext(cell,'existing');
     ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
-    $(document).trigger('canvasChange',getImageLayer(cell,claz));
 }
 function drawImage(cell) {
     var ctx = getImageLayerContext(cell,'image')
@@ -94,8 +93,13 @@ function showAnnotationGeometry(ctx,ann) {
         for(key in ann.geometry) {
             var g = ann.geometry[key];
             if(g != undefined) {
+                
+                var tool = geometry[key];
+                var sa = tool.prepareForCanvas(ann.geometry[key]);
+                
                 clog('attempting to draw a '+key+' for '+JSON.stringify(ann.geometry[key]));
-                geometry[key].draw(ctx, geometry[key].prepareForCanvas(ann.geometry[key]));
+                tool.draw(ctx, sa);
+                $(document).trigger('canvasChange',[ctx.canvas, tool, sa] );
             }
         }
     }
@@ -288,15 +292,14 @@ function commit() {
 }
 function postCommit() {
     $('#workspace').data('pending',{});
-    $(document).trigger('commit','Notify any listeners of a commit');
-
+    $(document).trigger('canvasChange',getCanvasForName('new'));
 }
 function deselectAll() {
     $('#workspace').data('pending',{});
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
-    $(document).trigger('canvasChange',getCanvasForName('pending'));
+    $(document).trigger('canvasChange',getCanvasForName('new'));
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')

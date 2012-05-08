@@ -156,7 +156,6 @@ function scaleAnnotation(tool, annotation) {
     }
     
     for(var item in annotation){
-        console.log("point:");
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
             annotation[item][elem] = doZoomMath(annotation[item][elem] * scale, offset, precision);
@@ -326,7 +325,7 @@ geometry.line.tool = new MeasurementTool({
             geometry: { line: preppedLine }
         });
         toggleSelected(cell,$('#label').val());
-        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.line]);
+        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.line, preppedLine]);
     }
 });
 //allow the user to draw a line on a cell's "new annotation" canvas
@@ -369,7 +368,7 @@ geometry.point.tool = new MeasurementTool({
         });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
-        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.point]);
+        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.point, preppedPoint]);
     }
 });
 //allow the user to draw a circle on a cell's "new annotation" canvas
@@ -411,6 +410,6 @@ geometry.circle.tool = new MeasurementTool({
             geometry: { circle: preppedCircle }
         });
         toggleSelected(cell,$('#label').val());
-        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.circle]);
+        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.circle,preppedCircle]);
     }
 });
