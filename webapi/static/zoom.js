@@ -53,16 +53,10 @@ $(document).ready(function(){
     //listen for canvasChange
     $(document).bind('canvasChange', function(event,canvas,tool,annotation){
        console.log("Changed Canvas: "+getZoomCanvasName(canvas.id)); 
-       if( tool != undefined ) console.log(" - w/ Tool: "+tool);
+       if( tool != undefined ) console.log(" - w/ Tool: "+tool.label);
        if( annotation != undefined ) console.log(" - w/ Annotation: "+annotation);
        
        if( hasZoomCanvasStore() ){
-           //var canvas;
-           //if( canvasName instanceof HTMLCanvasElement ) canvas = canvasName;
-           //else {
-           //    console.log("looking up canvas name: "+canvasName);
-           //    canvas = getCanvasForName(canvasName);
-           //}
            updateZoom(canvas,tool,annotation);
        }       
     });
@@ -274,14 +268,13 @@ function updateZoom(canvas,tool,annotation){
     
     if( tool != undefined && annotation != undefined ){
         tool.draw(original.getContext("2d"),annotation);
-        canvasStore[canvasName].origin = original;
-        scaleAllLayers();
+        console.log("drawing annotation on store: "+annotation);
     } else {
-        //console.log("ignoring canvas change");
         console.log("clearing canvas: "+canvasName);
-        canvasStore[canvasName].origin = original;
-        scaleAllLayers();
     }
+    
+    canvasStore[canvasName].origin = original;
+    scaleAllLayers();
 }
 
 function resetZoom(){

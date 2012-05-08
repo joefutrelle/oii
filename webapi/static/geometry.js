@@ -100,11 +100,14 @@ geometry.circle = {
 }
 //
 function unscaleAnnotation(tool, annotation) {
-    console.log("Tool: "+tool['label']);
-    console.log("Annotation (orginal): "+annotation);
+    
     
     var precision = getZoomMathPrecision();
     var scale = getZoomScale();
+    
+    console.log("Tool: "+tool['label']);
+    console.log("Annotation (orginal): "+annotation);
+    console.log("Precision: "+precision);
     
     if( getZoomNavCoordinates() != null ){
         var dragX = getZoomNavCoordinates().x;
