@@ -88,6 +88,10 @@ function showAnnotationGeometry(ctx,ann) {
     // FIXME support zoom
     // use the appropriate drawing method to draw any geometry found
     clog('drawing existing for '+JSON.stringify(ann));
+    
+    //clear the canvas 
+    //$(document).trigger('canvasChange',ctx.canvas);
+    
     if('geometry' in ann) {
         var g = ann.geometry;
         for(key in ann.geometry) {

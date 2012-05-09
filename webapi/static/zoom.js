@@ -7,15 +7,19 @@
 var debug = false;
 var profile = false;
 
-var zoomPrecision = new Number(2);
 var startScale = new Number(1);
 var zoomScale = startScale;
+var zoomPrecision = new Number(1);
+
 var scaleFactor = new Number(0.1);
 var is_zooming = false;
 var canvasStore = {};
 
 var toolsPanel = '#rightPanel';
 var modalSelector = 'ctrl';
+
+var zoomToolName = 'zoomTool';
+var zoomTool = '#'+zoomToolName;
 
 var zoomModalButtonName = 'zoomModalButton';
 var zoomModalButton = '#'+zoomModalButtonName;
@@ -30,12 +34,20 @@ var imgName = 'image';
 
 $(document).ready(function(){
     
+    //set global variables
+    getImageCanvii().data('zoomScale', zoomScale);
+    getImageCanvii().data('zoomPrecision', zoomPrecision);
+    
+    clog("**** PRECISION *****");
+    clog(getImageCanvii().data('zoomPrecision'));
+    clog(getZoomMathPrecision());
     
     //lose focus of selects,inputs as they hinder the hotkeys
-    $("select, input").bind('keydown', modalSelector, function() {
+    $('select, input').bind('keydown', modalSelector, function() {
         $(this).blur();
     });
     
+    //detect zoom button presses
     $(document).bind('keydown', zoomMode, function() {
         setMode(); 
     });
@@ -46,22 +58,27 @@ $(document).ready(function(){
     
     //listen for assignment changes
     $(document).bind('changeAssignment', function(event, message){ 
-        zoomScale = startScale;
+        setZoomScale(startScale);
         resetCanvasStore();
     });
 
     //listen for canvasChange
     $(document).bind('canvasChange', function(event,canvas,tool,annotation){
-       console.log("Changed Canvas: "+getZoomCanvasName(canvas.id)); 
-       if( tool != undefined ) console.log(" - w/ Tool: "+tool.label);
-       if( annotation != undefined ) console.log(" - w/ Annotation: "+annotation);
+       console.log('Changed Canvas: '+getZoomCanvasName(canvas.id)); 
+       if( tool != undefined ) console.log(' - w/ Tool: '+tool.label);
+       if( annotation != undefined ) console.log(' - w/ Annotation: '+annotation);
        
        if( hasZoomCanvasStore() ){
            updateZoom(canvas,tool,annotation);
        }       
     });
     
-    $("<a>").attr("id", zoomModalButtonName).attr("href", '#')
+    $('<BR>').attr('clear','all').appendTo(toolsPanel);
+    $('<BR>').attr('clear','all').appendTo(toolsPanel);
+    $('<FIELDSET>').attr('id',zoomToolName).appendTo(toolsPanel);
+    $('<LEGEND>').html('<span class="toolTitle">Zoom</span>').appendTo(zoomTool);
+
+    $('<A>').attr('id', zoomModalButtonName).attr('href', '#')
             .text(zoomButtonText)
             .addClass('ui-state-default')
             .addClass('button').button()
@@ -70,20 +87,20 @@ $(document).ready(function(){
             })
             .mouseup(function(){
                 if($(this).is('.ui-state-active') ){
-                    $(this).removeClass("ui-state-active");
+                    $(this).removeClass('ui-state-active');
                 } else {
-                    $(this).addClass("ui-state-active");
+                    $(this).addClass('ui-state-active');
                 }
             })
-            .appendTo(toolsPanel);
+            .appendTo(zoomTool);
             
-    $("<a>").attr("id", resetZoomModalButtonName).attr("href", '#')
+    $('<A>').attr('id', resetZoomModalButtonName).attr('href', '#')
             .text(resetZoomButtonText)
             .addClass('button').button()
             .click(function() {
                 resetZoom();
             })
-            .appendTo(toolsPanel);
+            .appendTo(zoomTool);
             
     
 
@@ -92,10 +109,10 @@ $(document).ready(function(){
 /** ZOOM MODE FUNCTIONS **/
 
 var grabHandler = function() {
-    $(this).removeClass("hand").addClass("grabbing");
+    $(this).removeClass('hand').addClass('grabbing');
 }
 var handHandler = function() {
-    $(this).removeClass("grabbing").addClass("hand");
+    $(this).removeClass('grabbing').addClass('hand');
 }
 
 var zoomEvents = {};
@@ -139,7 +156,7 @@ zoomEvents['mouseout'] = function(evt){
 zoomEvents['mousemove'] = function(evt){
     var cell = getZoomImage();
     if( $(cell).data('mouseDown') && is_zooming ){
-        var dragging = ( zoomScale > startScale );
+        var dragging = ( getZoomScale() > startScale );
 
         if (dragging) {
 
@@ -147,12 +164,12 @@ zoomEvents['mousemove'] = function(evt){
 
             var moveX = evt.clientX - startDragOffset.x
             var moveY = evt.clientY - startDragOffset.y;
-            if(debug) console.log("move: "+moveX+","+moveY);
+            if(debug) console.log('move: '+moveX+','+moveY);
 
             navigate(moveX, moveY);
 
         } else {
-            //console.log("drag not allowed");  
+            //console.log('drag not allowed');  
             navigate(0, 0);
         }
     }
@@ -171,15 +188,15 @@ function setMode(){
     
     if(is_zooming){
         
-        //console.log("zooming: "+zoomScale);
+        //console.log('zooming: '+getZoomScale());
         if( !hasZoomCanvasStore() ){
-            console.log("no canvas store...");
+            console.log('no canvas store...');
             buildCanvasStore();
         }
         
         $(zoomModalButton).css({'border': '2px dotted black'});
-        $(cell).removeClass("pointer")
-               .addClass("hand")
+        $(cell).removeClass('pointer')
+               .addClass('hand')
                .data('toolsDisabled',true);
          //set the cursor
         $(cell).bind({
@@ -188,21 +205,21 @@ function setMode(){
         });        
     } else if(was_zooming){
         
-        //console.log("zooming STOPPED...");
+        //console.log('zooming STOPPED...');
                 
         $(zoomModalButton).css({'border': ''});
         $(cell).unbind('mousedown', grabHandler)
                .unbind('mouseup',handHandler)
-               .addClass("pointer")
+               .addClass('pointer')
                .removeData('toolsDisabled');    
         //resetZoom();
     } else {
-        alert("ZOOM can't be used right now");
+        alert('ZOOM cannot be used right now');
     }
 }
 
 function buildCanvasStore(){
-    //console.log("*** BUILDING CANVAS STORE ***");
+    //console.log('*** BUILDING CANVAS STORE ***');
     var time = new Date();
     resetCanvasStore();
 
@@ -216,7 +233,7 @@ function buildCanvasStore(){
     if( canvases.length > 0 ){
         for(var c = 0; c < canvases.length; c++){
             //var time = new Date();
-            //console.log("Canvas for store: "+canvases[c]);
+            //console.log('Canvas for store: '+canvases[c]);
             var cid = $(canvases[c]).attr('id');
             var storeName = getZoomCanvasName(cid);
             var original;
@@ -226,16 +243,16 @@ function buildCanvasStore(){
                 var cell = getZoomImage();
                 var width = $(cell).data('width');
                 var height= $(cell).data('height');
-                original = $("<canvas>").attr("width", width).attr("height", height)[0];
-                original.getContext("2d").drawImage(canvases[c], 0, 0);
+                original = $('<CANVAS>').attr('width', width).attr('height', height)[0];
+                original.getContext('2d').drawImage(canvases[c], 0, 0);
             }
 
             canvasStore[storeName] = {
                     canvas: canvases[c],
-                    context: canvases[c].getContext("2d"),
+                    context: canvases[c].getContext('2d'),
                     origin: original
             };
-            if(profile) console.log(storeName+": "+(new Date()-time));
+            if(profile) console.log(storeName+': '+(new Date()-time));
         }
 
         for(var evt in zoomEvents){
@@ -251,26 +268,27 @@ function buildCanvasStore(){
             }
         }
     }
-    if( profile ) console.log("build canvas store: "+(new Date()-time));
+    if( profile ) console.log('build canvas store: '+(new Date()-time));
 }
 
 function updateZoom(canvas,tool,annotation){
     var canvasName = getZoomCanvasName(canvas.id);
-    console.log("updateZoom: "+canvasName);
-    console.log("tool: "+tool);
-    console.log("annotation: "+annotation);
+    console.log('updateZoom: '+canvasName);
+    console.log('tool: '+tool);
+    console.log('annotation: '+annotation);
     if( canvasStore[canvasName] == undefined ) return;
     
     var cell = getZoomImage();
     var width = $(cell).data('width');
     var height= $(cell).data('height');
-    var original = $("<canvas>").attr("width", width).attr("height", height)[0];
+    var original = canvasStore[canvasName].origin;
     
     if( tool != undefined && annotation != undefined ){
-        tool.draw(original.getContext("2d"),annotation);
-        console.log("drawing annotation on store: "+annotation);
+        tool.draw(original.getContext('2d'),annotation);
+        console.log('drawing annotation on store: '+annotation);
     } else {
-        console.log("clearing canvas: "+canvasName);
+        original = $('<CANVAS>').attr('width', width).attr('height', height)[0];
+        console.log('clearing canvas: '+canvasName);
     }
     
     canvasStore[canvasName].origin = original;
@@ -278,7 +296,7 @@ function updateZoom(canvas,tool,annotation){
 }
 
 function resetZoom(){
-    zoomScale = startScale;
+    setZoomScale(startScale);
     getZoomImage().data('nav-coordinates', {x: 0, y: 0});
     scaleAllLayers();
 }
@@ -290,26 +308,26 @@ function resetZoom(){
 
 function scaleAllLayers(){
     var time = new Date();
-    if( validateScale() ){
+    if( validateScale(getZoomScale()) ){
         
         var cell = getZoomImage();
         var width = $(cell).data('width');
         var height= $(cell).data('height');
-        //console.log(width+":"+height);
-        
-        var newWidth = width * zoomScale;
-        var newHeight = height * zoomScale;
+        //console.log(width+':'+height);
+        var scale = getZoomScale();
+        var newWidth = width * scale;
+        var newHeight = height * scale;
 
         var image_debug = debug;
         
         for(var canvas in canvasStore) {
             var rt = new Date();
             redraw(canvasStore[canvas].context, newWidth, newHeight, canvasStore[canvas].origin, canvas, image_debug);
-            if( profile ) console.log("TOTAL["+canvas+"]: "+(new Date()-rt));
+            if( profile ) console.log('TOTAL['+canvas+']: '+(new Date()-rt));
             image_debug = false;
         }
     }
-    if( profile ) console.log("zoom time: "+(new Date()-time));
+    if( profile ) console.log('zoom time: '+(new Date()-time));
 }
 
 function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
@@ -324,7 +342,7 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
     
     ctx.save();
     if(profile){
-        console.log("save["+canvasID+"]: "+(new Date()-time));
+        console.log('save['+canvasID+']: '+(new Date()-time));
         time = new Date();
     }
     
@@ -343,18 +361,20 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
     
     ctx.translate(x, y);
     if(profile){
-        console.log("translate["+canvasID+"]: "+(new Date()-time));
+        console.log('translate['+canvasID+']: '+(new Date()-time));
         time = new Date();
     }
-    ctx.scale(zoomScale, zoomScale);
+    
+    var scale = getZoomScale();
+    ctx.scale(scale, scale);
     if(profile){
-        console.log("scale["+canvasID+"]: "+(new Date()-time));
+        console.log('scale['+canvasID+']: '+(new Date()-time));
         time = new Date();
     }
 
     ctx.clearRect(0, 0, width, height);
     if(profile){
-        console.log("clear["+canvasID+"]: "+(new Date()-time));
+        console.log('clear['+canvasID+']: '+(new Date()-time));
         time = new Date();
     }
     
@@ -372,30 +392,31 @@ function redraw(ctx, newWidth, newHeight, original, canvasID, log_debug){
     }
 
     ctx.restore();
-    if(profile) console.log("draw and restore["+canvasID+"]: "+(new Date()-time));
+    if(profile) console.log('draw and restore['+canvasID+']: '+(new Date()-time));
     
 }
 
 function navigate(x,y){
 
     var cell = getZoomImage();
-
+    var scale = getZoomScale();
+    
     if(debug){
         console.log('proposed nav: '+x+','+y);
     }
     
     //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
-    var navX = getZoomNumber(($(cell).data('translatePos').x/zoomScale),0);
-    var navY = getZoomNumber(($(cell).data('translatePos').y/zoomScale),0);
-    if(debug) console.log("border: "+navX+","+navY);
+    var navX = getZoomNumber(($(cell).data('translatePos').x/scale),0);
+    var navY = getZoomNumber(($(cell).data('translatePos').y/scale),0);
+    if(debug) console.log('border: '+navX+','+navY);
 
     if( Math.abs(x) >= Math.abs(navX) ){
         x = (x < 0) ? navX : -1*navX;
-        if(debug) console.log("DANGER X: "+navX);
+        if(debug) console.log('DANGER X: '+navX);
     }
     if( Math.abs(y) >= Math.abs(navY) ){
        y = (y < 0) ? navY : -1*navY;
-       if(debug) console.log("DANGER Y: "+navY);
+       if(debug) console.log('DANGER Y: '+navY);
     }
 
     if(debug) console.log('fixed nav: '+x+','+y);
@@ -405,13 +426,13 @@ function navigate(x,y){
 }
 
 function zoom(){
-    setZoomScale(scaleFactor);
+    changeZoomScale(scaleFactor);
     scaleAllLayers();
 }
 
 function shrink(){    
-    setZoomScale(-scaleFactor);
-    if( zoomScale == startScale ){
+    changeZoomScale(-scaleFactor);
+    if( getZoomScale() == startScale ){
        getZoomImage().data('nav-coordinates', {x: 0, y: 0});            
     }
     scaleAllLayers();
@@ -425,15 +446,15 @@ function executeScroll(direction){
             zoom();
         }
         //if(debug) 
-            console.log("zooming: "+zoomScale);
+            console.log('zooming: '+getZoomScale());
     }
     //make sure the page doesn't scroll
     return !is_zooming;
 }
 
-function validateScale(){
-    var bool = zoomScale >= startScale;
-    if( !bool ) zoomScale = startScale;
+function validateScale(newScale){
+    var bool = newScale >= startScale;
+    if( !bool ) scale = startScale;
     return bool;
 }
 
@@ -455,10 +476,20 @@ function getZoomImageSize(){
     return $('#images').find('div.thumbnail').size();
 }
 function getZoomScale(){
-    return zoomScale;
+    var scale = getImageCanvii().data('zoomScale');
+    if( scale != null && scale != undefined ) return scale;
+    scale = startScale;
+    getImageCanvii().data('zoomScale', scale);
+    return scale;
 }
-function setZoomScale(diff){
-    zoomScale = doZoomMath(zoomScale,diff,getZoomMathPrecision());
+function setZoomScale(s){
+    getImageCanvii().data('zoomScale', s);
+}
+function changeZoomScale(diff){
+    var newScale = doZoomMath(getZoomScale(),diff,getZoomMathPrecision());
+    if( validateScale(newScale) ){
+        setZoomScale(newScale);
+    }
 }
 function getZoomIsZooming(){
     return is_zooming;
@@ -470,8 +501,8 @@ function getZoomCoordinates(){
     return getZoomImage().data('translatePos');
 }
 function doZoomMath(a,b,p){
-    if( p == undefined ) p = getZoomPrecision();
-    if(debug) console.log("Add "+b+" to "+a+" with precision: "+p);
+    if( p == undefined ) p = getZoomMathPrecision();
+    if(debug) console.log('Add '+b+' to '+a+' with precision: '+p);
     var num = getZoomNumber( (parseFloat(a)+parseFloat(b)) , p );
     return num;
 }
@@ -480,7 +511,14 @@ function getZoomNumber(n,p){
     return parseFloat(n).toFixed(p);
 }
 function getZoomMathPrecision(){
-    return zoomPrecision;
+    var p = getImageCanvii().data('zoomPrecision');
+    if( p != null && p != undefined ) return p;
+    p = zoomPrecision;
+    setZoomMathPrecision(p);
+    return p;
+}
+function setZoomMathPrecision(p){
+    getImageCanvii().data('zoomPrecision', p);
 }
 function getZoomCanvasName(cid){
     return cid.substring(0,cid.indexOf('_'));

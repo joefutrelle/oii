@@ -101,22 +101,18 @@ geometry.circle = {
 //
 function unscaleAnnotation(tool, annotation) {
     
+    var precision = getGeometryPrecision();
+    var scale = getGeometryScale();
     
-    var precision = getZoomMathPrecision();
-    var scale = getZoomScale();
-    
-    console.log("Tool: "+tool['label']);
-    console.log("Annotation (orginal): "+annotation);
-    console.log("Precision: "+precision);
-    
-    if( getZoomNavCoordinates() != null ){
-        var dragX = getZoomNavCoordinates().x;
-        var dragY = getZoomNavCoordinates().y;
+    var navCoordinates = getImageCanvii().data('nav-coordinates');
+    if( navCoordinates != null ){
+        var dragX = navCoordinates.x;
+        var dragY = navCoordinates.y;
         for(var item in annotation){
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
                 offset = -1*offset*scale;
-                var coordinate = doZoomMath(annotation[item][elem],offset,precision);
+                var coordinate = doGeometryMath(annotation[item][elem],offset,precision);
                 annotation[item][elem] = coordinate;
             }
         }
@@ -126,53 +122,55 @@ function unscaleAnnotation(tool, annotation) {
     var offsetY = 0;
     
     //fix zoom
-    if( getZoomCoordinates() != null ){
-        offsetX = getZoomCoordinates().x;
-        offsetY = getZoomCoordinates().y;
+    var translate = getImageCanvii().data('translatePos');
+    if( translate != null ){
+        offsetX = translate.x;
+        offsetY = translate.y;
     }
     
     for(var item in annotation){
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = doZoomMath(annotation[item][elem],-offset,precision) / scale;
+            annotation[item][elem] = getGeometryNumber(doGeometryMath(annotation[item][elem],-offset,precision) / scale);
         }
     }
     
-    console.log("Fixed Annotation: "+annotation);
     return annotation;
 }
 
 function scaleAnnotation(tool, annotation) {
-    //console.log("Tool: "+tool['label']);
-    //console.log("Annotation: "+annotation);
+    //console.log('Tool: '+tool['label']);
+    //console.log('Annotation: '+annotation);
     
-    var precision = getZoomMathPrecision();
-    var scale = getZoomScale();
+    var precision = getGeometryPrecision();
+    var scale = getGeometryScale();
     
     var offsetX = 0;
     var offsetY = 0;
     
     //fix zoom
-    if( getZoomCoordinates() != null ){
-        offsetX = getZoomCoordinates().x;
-        offsetY = getZoomCoordinates().y;
+    var translate = getImageCanvii().data('translatePos');
+    if( translate != null ){
+        offsetX = translate.x;
+        offsetY = translate.y;
     }
     
     for(var item in annotation){
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = doZoomMath(annotation[item][elem] * scale, offset, precision);
+            annotation[item][elem] = doGeometryMath(annotation[item][elem] * scale, offset, precision);
         }
     }
     
-    if( getZoomNavCoordinates() != null ){
-        var dragX = getZoomNavCoordinates().x;
-        var dragY = getZoomNavCoordinates().y;
+    var navCoordinates = getImageCanvii().data('nav-coordinates');
+    if( navCoordinates != null ){
+        var dragX = navCoordinates.x;
+        var dragY = navCoordinates.y;
         for(var item in annotation){
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
                 offset = offset*scale;
-                annotation[item][elem] = doZoomMath(annotation[item][elem],offset,precision);
+                annotation[item][elem] = doGeometryMath(annotation[item][elem],offset,precision);
             }
         }
     }
@@ -290,7 +288,7 @@ geometry.boundingBox.tool = new MeasurementTool({
         $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.boundingBox, preppedBox]);
     }
 });
-// allow the user to draw a line on a cell's "new annotation" canvas
+// allow the user to draw a line on a cell's 'new annotation' canvas
 geometry.line.tool = new MeasurementTool({
     mousedown: function(event) {
         var cell = event.data.cell;
@@ -331,7 +329,7 @@ geometry.line.tool = new MeasurementTool({
         $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.line, preppedLine]);
     }
 });
-//allow the user to draw a line on a cell's "new annotation" canvas
+//allow the user to draw a line on a cell's 'new annotation' canvas
 geometry.point.tool = new MeasurementTool({
     mousedown: function(event) {
         var cell = event.data.cell;
@@ -374,7 +372,7 @@ geometry.point.tool = new MeasurementTool({
         $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.point, preppedPoint]);
     }
 });
-//allow the user to draw a circle on a cell's "new annotation" canvas
+//allow the user to draw a circle on a cell's 'new annotation' canvas
 geometry.circle.tool = new MeasurementTool({
     mousedown: function(event) {
         var cell = event.data.cell;
@@ -416,3 +414,33 @@ geometry.circle.tool = new MeasurementTool({
         $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.circle,preppedCircle]);
     }
 });
+
+function doGeometryMath(a,b,p){
+    if( p == undefined ) p = getGeometryPrecision();
+    return getGeometryNumber( (parseFloat(a)+parseFloat(b)) , p );
+}
+function getGeometryNumber(n,p){
+    if( p == undefined ) p = getGeometryPrecision();
+    return parseFloat(n).toFixed(p);
+}
+
+function getGeometryPrecision(){
+    var precision = getImageCanvii().data('zoomPrecision');
+    if( precision == null || precision == undefined ){
+        precision = getImageCanvii().data('geometryPrecision');
+        if( precision == null || precision == undefined ){
+            precision = new Number(0);
+            getImageCanvii().data('geometryPrecision', precision);
+        }
+    }
+    return precision;
+}
+
+function getGeometryScale(){
+    var scale = getImageCanvii().data('zoomScale');
+    if( scale == null || scale == undefined ){
+        scale = new Number(1);
+        getImageCanvii().data('zoomScale', scale);
+    } 
+    return scale;
+}
