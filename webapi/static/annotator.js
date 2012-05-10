@@ -44,6 +44,14 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             drawImage(cell);
             drawPendingAnnotations(cell);
             drawExistingAnnotations(cell);
+            
+            /*
+            console.log("Existing: "+existing());
+            for(var p in existing()){
+                console.log(" - "+p);
+            }
+            */
+            
             // adjust layout
             $(cell).find('div.spacer').height(scaledHeight+10);
             // bind measurement tools
@@ -77,7 +85,9 @@ function drawExistingAnnotations(cell) {
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var ctx = getImageLayerContext(cell,'existing');
+        var counter = 0;
         $(r).each(function(ix,ann) {
+            existing()[counter++] = ann;
             showAnnotationGeometry(ctx,ann);
         });
     });
@@ -87,10 +97,7 @@ function drawExistingAnnotations(cell) {
 function showAnnotationGeometry(ctx,ann) {
     // FIXME support zoom
     // use the appropriate drawing method to draw any geometry found
-    clog('drawing existing for '+JSON.stringify(ann));
-    
-    //clear the canvas 
-    //$(document).trigger('canvasChange',ctx.canvas);
+    clog('drawing for '+JSON.stringify(ann));
     
     if('geometry' in ann) {
         var g = ann.geometry;
@@ -101,9 +108,8 @@ function showAnnotationGeometry(ctx,ann) {
                 var tool = geometry[key];
                 var sa = tool.prepareForCanvas(ann.geometry[key]);
                 
-                clog('attempting to draw a '+key+' for '+JSON.stringify(ann.geometry[key]));
+                clog('draw a '+key+' for '+JSON.stringify(sa));
                 tool.draw(ctx, sa);
-                $(document).trigger('canvasChange',[ctx.canvas, tool, sa] );
             }
         }
     }
@@ -112,7 +118,8 @@ function addCell(imagePid) {
     return $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
         .find('div.thumbnail:last')
         .data('imagePid',imagePid)
-        .disableSelection();
+        .disableSelection()
+        .trigger('cellLoaded', this);
 }
 function gotoPage(page,size) {
     if(page < 1) page = 1;
@@ -253,6 +260,9 @@ function commitCell(cell) {
 function pending() {
     return $('#workspace').data('pending');
 }
+function existing(){
+    return $('#workspace').data('existing');
+}
 function preCommit() {
     /* generate an ID for each annotation */
     var n = 0;
@@ -296,14 +306,14 @@ function commit() {
 }
 function postCommit() {
     $('#workspace').data('pending',{});
-    $(document).trigger('canvasChange',getCanvasForName('new'));
+    $(document).trigger('canvasChange');
 }
 function deselectAll() {
     $('#workspace').data('pending',{});
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
-    $(document).trigger('canvasChange',getCanvasForName('new'));
+    $(document).trigger('canvasChange');
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
@@ -319,6 +329,8 @@ function changeAssignment(ass_pid) {
     var ass_pid = $('#assignment').val();
     clog('user selected assignment '+ass_pid);
     if( ass_pid.length > 0 ){
+        clog("clearing exisitng annotation store...");
+        $('#workspace').data('existing',{});
         with_json_request('/fetch_assignment/'+ass_pid, function(r) {
           clog('fetched assignment '+ass_pid);
             $('#workspace').data('assignment',r);
@@ -328,9 +340,11 @@ function changeAssignment(ass_pid) {
                 $('#workspace').data('categories',c);
                 gotoPage(1,25);
             });
+            
+            
         });
     }
-    $(document).trigger('changeAssignment','Notify any listeners of an assignment change');
+    
 }
 function categoryPidForLabel(label) {
     var cats = $('#workspace').data('categories');
@@ -354,6 +368,8 @@ $(document).ready(function() {
     page = 1;
     size = 20;
     $('#workspace').data('pending',{}); // pending annotations by pid
+    clog("setting up existing annotation store");
+    $('#workspace').data('existing',{}); //existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
     // images div is not text-selectable

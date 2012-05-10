@@ -101,7 +101,6 @@ geometry.circle = {
 //
 function unscaleAnnotation(tool, annotation) {
     
-    var precision = getGeometryPrecision();
     var scale = getGeometryScale();
     
     var navCoordinates = getImageCanvii().data('nav-coordinates');
@@ -112,7 +111,7 @@ function unscaleAnnotation(tool, annotation) {
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
                 offset = -1*offset*scale;
-                var coordinate = doGeometryMath(annotation[item][elem],offset,precision);
+                var coordinate = annotation[item][elem]+offset;
                 annotation[item][elem] = coordinate;
             }
         }
@@ -131,7 +130,7 @@ function unscaleAnnotation(tool, annotation) {
     for(var item in annotation){
         for(var elem in annotation[item]){
             var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = getGeometryNumber(doGeometryMath(annotation[item][elem],-offset,precision) / scale);
+            annotation[item][elem] = (annotation[item][elem]-offset) / scale;
         }
     }
     
@@ -141,41 +140,24 @@ function unscaleAnnotation(tool, annotation) {
 function scaleAnnotation(tool, annotation) {
     //console.log('Tool: '+tool['label']);
     //console.log('Annotation: '+annotation);
-    
-    var precision = getGeometryPrecision();
-    var scale = getGeometryScale();
-    
-    var offsetX = 0;
-    var offsetY = 0;
-    
-    //fix zoom
-    var translate = getImageCanvii().data('translatePos');
-    if( translate != null ){
-        offsetX = translate.x;
-        offsetY = translate.y;
-    }
-    
-    for(var item in annotation){
-        for(var elem in annotation[item]){
-            var offset = elem == 0 ? offsetX : offsetY;
-            annotation[item][elem] = doGeometryMath(annotation[item][elem] * scale, offset, precision);
-        }
-    }
-    
+
+    var fixedAnnotation = $.extend(true, {}, annotation);
     var navCoordinates = getImageCanvii().data('nav-coordinates');
     if( navCoordinates != null ){
         var dragX = navCoordinates.x;
         var dragY = navCoordinates.y;
+        //console.log("Drag: "+dragX+","+dragY);
         for(var item in annotation){
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
-                offset = offset*scale;
-                annotation[item][elem] = doGeometryMath(annotation[item][elem],offset,precision);
+                fixedAnnotation[item][elem] = doGeometryMath(fixedAnnotation[item][elem],offset);
             }
         }
     }
-     
-    return annotation;
+    
+    //console.log('Fixed Annotation: '+JSON.stringify(fixedAnnotation));
+    //console.log('Annotation: '+annotation);
+    return fixedAnnotation;
 }
 
 function selectedTool(value) {
@@ -284,8 +266,6 @@ geometry.boundingBox.tool = new MeasurementTool({
             geometry: { boundingBox: preppedBox }
         });
         toggleSelected(cell,$('#label').val());
-        
-        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.boundingBox, preppedBox]);
     }
 });
 // allow the user to draw a line on a cell's 'new annotation' canvas
@@ -326,7 +306,6 @@ geometry.line.tool = new MeasurementTool({
             geometry: { line: preppedLine }
         });
         toggleSelected(cell,$('#label').val());
-        $(document).trigger('canvasChange', [event.data.ctx.canvas, geometry.line, preppedLine]);
     }
 });
 //allow the user to draw a line on a cell's 'new annotation' canvas
@@ -369,7 +348,6 @@ geometry.point.tool = new MeasurementTool({
         });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
-        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.point, preppedPoint]);
     }
 });
 //allow the user to draw a circle on a cell's 'new annotation' canvas
@@ -411,36 +389,18 @@ geometry.circle.tool = new MeasurementTool({
             geometry: { circle: preppedCircle }
         });
         toggleSelected(cell,$('#label').val());
-        $(document).trigger('canvasChange',[event.data.ctx.canvas, geometry.circle,preppedCircle]);
     }
 });
 
-function doGeometryMath(a,b,p){
-    if( p == undefined ) p = getGeometryPrecision();
-    return getGeometryNumber( (parseFloat(a)+parseFloat(b)) , p );
-}
-function getGeometryNumber(n,p){
-    if( p == undefined ) p = getGeometryPrecision();
-    return parseFloat(n).toFixed(p);
-}
-
-function getGeometryPrecision(){
-    var precision = getImageCanvii().data('zoomPrecision');
-    if( precision == null || precision == undefined ){
-        precision = getImageCanvii().data('geometryPrecision');
-        if( precision == null || precision == undefined ){
-            precision = new Number(0);
-            getImageCanvii().data('geometryPrecision', precision);
-        }
-    }
-    return precision;
-}
-
 function getGeometryScale(){
-    var scale = getImageCanvii().data('zoomScale');
+    var scale = $('#workspace').data('zoomScale');
     if( scale == null || scale == undefined ){
         scale = new Number(1);
-        getImageCanvii().data('zoomScale', scale);
+        $.data('zoomScale', scale);
     } 
     return scale;
+}
+
+function doGeometryMath(a,b){
+    return (parseFloat(a)+parseFloat(b));
 }
