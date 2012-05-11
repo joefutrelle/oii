@@ -103,6 +103,7 @@ function unscaleAnnotation(tool, annotation) {
     
     var scale = getGeometryScale();
     
+    //set in zoom
     var navCoordinates = getImageCanvii().data('nav-coordinates');
     if( navCoordinates != null ){
         var dragX = navCoordinates.x;

@@ -45,13 +45,6 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             drawPendingAnnotations(cell);
             drawExistingAnnotations(cell);
             
-            /*
-            console.log("Existing: "+existing());
-            for(var p in existing()){
-                console.log(" - "+p);
-            }
-            */
-            
             // adjust layout
             $(cell).find('div.spacer').height(scaledHeight+10);
             // bind measurement tools
@@ -96,20 +89,15 @@ function drawExistingAnnotations(cell) {
 //ann - annotation
 function showAnnotationGeometry(ctx,ann) {
     // FIXME support zoom
-    // use the appropriate drawing method to draw any geometry found
-    clog('drawing for '+JSON.stringify(ann));
-    
+    // use the appropriate drawing method to draw any geometry found    
     if('geometry' in ann) {
         var g = ann.geometry;
         for(key in ann.geometry) {
             var g = ann.geometry[key];
             if(g != undefined) {
-                
-                var tool = geometry[key];
-                var sa = tool.prepareForCanvas(ann.geometry[key]);
-                
-                clog('draw a '+key+' for '+JSON.stringify(sa));
-                tool.draw(ctx, sa);
+                var sa = geometry[key].prepareForCanvas(ann.geometry[key]);
+                //clog('draw a '+key+' for '+JSON.stringify(sa));
+                geometry[key].draw(ctx, sa);
             }
         }
     }
@@ -283,7 +271,6 @@ function queueAnnotation(ann) {
     pending()[ann.image] = ann;
 }
 function commit() {
-    clog('committing...');
     var as = [];
     $.each(pending(), function(imagePid, ann) {
         as.push(ann)
@@ -368,7 +355,6 @@ $(document).ready(function() {
     page = 1;
     size = 20;
     $('#workspace').data('pending',{}); // pending annotations by pid
-    clog("setting up existing annotation store");
     $('#workspace').data('existing',{}); //existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');

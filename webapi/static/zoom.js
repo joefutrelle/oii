@@ -6,34 +6,33 @@
  * version 0.1
  *
  */
-var debug = false;
-var profile = false;
-
 var startScale = new Number(1);
-
 var scaleFactor = new Number(0.1);
 var is_zooming = false;
 
+//zoom tool
 var toolsPanel = '#rightPanel';
-var modalSelector = 'ctrl';
-
 var zoomToolName = 'zoomTool';
 var zoomTool = '#'+zoomToolName;
-
+var modalSelector = 'ctrl';
+//zoom tool modal button
 var zoomModalButtonName = 'zoomModalButton';
 var zoomModalButton = '#'+zoomModalButtonName;
 var zoomMode = modalSelector+'+f'
 var zoomButtonText = 'ZOOM ('+zoomMode+')';
-
+//zoom tool reset button
 var resetZoomModalButtonName = 'resetZoomModalButton';
 var resetZoomMode = modalSelector+'+g';
 var resetZoomButtonText = 'RESET ('+resetZoomMode+')';
 
+//used to identify the image layer
 var imgName = 'image';
 
 var zoomEvents = {};
-//detect mouse scroll
-//Firefox
+
+/**** ZOOM FUNCTIONS ****/
+
+//detect mouse scroll => Firefox
 zoomEvents['DOMMouseScroll'] = function(e){
     var scroll = e;
     while(!scroll.detail && scroll.originalEvent){
@@ -42,16 +41,27 @@ zoomEvents['DOMMouseScroll'] = function(e){
 
     return executeScroll(scroll.detail);
 }
-//IE, Opera, Safari
+////detect mouse scroll => IE, Opera, Safari
 zoomEvents['mousewheel'] = function(e){
     return executeScroll(e.delta);
 }
+/**** END OF ZOOM FUNCTIONS ****/
 
-
+/**** DRAG FUNCTIONS ****/
 zoomEvents['mousedown'] = function(evt){
     var cell = getZoomImage();
     $(cell).data('mouseDown', true);
-    $(cell).data('startDragOffset', {x: evt.clientX, y: evt.clientY});
+    
+    var ox = evt.clientX;
+    var oy = evt.clientY;
+    
+    if( getZoomNavCoordinates() != null ){
+        var navX = new Number(getZoomNavCoordinates().x);
+        var navY = new Number(getZoomNavCoordinates().y);
+        ox = ox - navX;
+        oy = oy - navY;
+    }
+    setZoomDragOffset(ox,oy);
 }
 
 zoomEvents['mouseup'] = function(evt){
@@ -76,25 +86,24 @@ zoomEvents['mousemove'] = function(evt){
 
         if (dragging) {
 
-            var startDragOffset = $(cell).data('startDragOffset');
-
+            var startDragOffset = getZoomDragOffset();
             var moveX = evt.clientX - startDragOffset.x
             var moveY = evt.clientY - startDragOffset.y;
-            if(debug) console.log('move: '+moveX+','+moveY);
-
             navigate(moveX, moveY);
 
         } else {
-            //console.log('drag not allowed');  
+            //clog('drag not allowed');  
             navigate(0, 0);
         }
     }
 }
+/**** END OF DRAG FUNCTIONS ****/
 
 
 
 $(document).ready(function(){
     
+    //setup the zoom tool in the tool panel
     $('<BR>').attr('clear','all').appendTo(toolsPanel);
     $('<BR>').attr('clear','all').appendTo(toolsPanel);
     $('<FIELDSET>').attr('id',zoomToolName).appendTo(toolsPanel);
@@ -105,7 +114,7 @@ $(document).ready(function(){
             .addClass('ui-state-default')
             .addClass('button').button()
             .click(function() {
-                setMode();
+                toggleZoomMode();
             })
             .mouseup(function(){
                 if($(this).is('.ui-state-active') ){
@@ -132,8 +141,9 @@ $(document).ready(function(){
     
     //detect zoom button presses
     $(document).bind('keydown', zoomMode, function() {
-        setMode(); 
+        toggleZoomMode(); 
     });
+    
     //detect reset zoom button presses
     $(document).bind('keydown', resetZoomMode, function() {
         resetZoom();
@@ -141,10 +151,8 @@ $(document).ready(function(){
     
     //listen for image cell loading
     $(document).bind('cellLoaded', function(event, cell){ 
-        console.log("******** cell ["+cell+"] loaded ***********");
         setZoomScale(startScale);
         for(var evt in zoomEvents){
-            console.log(evt+":"+zoomEvents[evt]);
             getZoomImage().bind(evt, zoomEvents[evt]);
         }
         resetZoom();
@@ -159,6 +167,7 @@ $(document).ready(function(){
 
 /** ZOOM MODE FUNCTIONS **/
 
+//cursor functions
 var grabHandler = function() {
     $(this).removeClass('hand').addClass('grabbing');
 }
@@ -166,7 +175,8 @@ var handHandler = function() {
     $(this).removeClass('grabbing').addClass('hand');
 }
 
-function setMode(){
+//toggle zoom mode
+function toggleZoomMode(){
     
     var was_zooming = is_zooming;
     is_zooming = !is_zooming;
@@ -178,9 +188,7 @@ function setMode(){
     var cell = getZoomImage();
     
     if(is_zooming){
-        
-        if(debug) console.log('zooming: '+getZoomScale());
-        
+                
         $(zoomModalButton).css({'border': '2px dotted black'});
         $(cell).removeClass('pointer')
                .addClass('hand')
@@ -191,9 +199,7 @@ function setMode(){
           mouseup: handHandler
         });        
     } else if(was_zooming){
-        
-        if(debug) console.log('zooming STOPPED...');
-                
+                        
         $(zoomModalButton).css({'border': ''});
         $(cell).unbind('mousedown', grabHandler)
                .unbind('mouseup',handHandler)
@@ -206,7 +212,8 @@ function setMode(){
 
 function resetZoom(){
     setZoomScale(startScale);
-    getZoomImage().data('nav-coordinates', {x: 0, y: 0});
+    setZoomNavCoordinates(0,0);
+    setZoomDragOffset(0,0);
     scaleAllLayers();
 }
 
@@ -215,8 +222,69 @@ function resetZoom(){
 
 /** SCALING FUNCTIONS **/
 
+function navigate(x,y){
+
+    var cell = getZoomImage();
+    var scale = getZoomScale();
+    
+    //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
+    var navX = $(cell).data('translatePos').x/scale;
+    var navY = $(cell).data('translatePos').y/scale;
+
+    if( Math.abs(x) >= Math.abs(navX) ){
+        x = (x < 0) ? navX : -1*navX;
+    }
+    if( Math.abs(y) >= Math.abs(navY) ){
+       y = (y < 0) ? navY : -1*navY;
+    }
+
+    setZoomNavCoordinates( x, y);
+    scaleAllLayers();
+}
+
+function zoom(){
+    changeZoomScale(scaleFactor);
+    scaleAllLayers();
+}
+
+function shrink(){  
+    
+    var x;
+    var y;
+    if( getZoomNavCoordinates() != null ){
+        x = getZoomNavCoordinates().x;
+        y = getZoomNavCoordinates().y;
+    }
+
+    
+    //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
+    var scale = getZoomScale();
+    var navX = $(cell).data('translatePos').x/scale;
+    var navY = $(cell).data('translatePos').y/scale;
+    
+    changeZoomScale(-scaleFactor);
+    if( getZoomScale() == startScale ){
+       setZoomNavCoordinates( x, y);            
+    }
+    
+    scale = getZoomScale();
+    navX = $(cell).data('translatePos').x/scale;
+    navY = $(cell).data('translatePos').y/scale;
+    
+    if( x != undefined && y != undefined ){
+        if( Math.abs(x) >= Math.abs(navX) ){
+            x = (x < 0) ? navX : -1*navX;
+        }
+        if( Math.abs(y) >= Math.abs(navY) ){
+           y = (y < 0) ? navY : -1*navY;
+        }
+    }
+    
+    scaleAllLayers();
+}
+
 function scaleAllLayers(){
-    var time = new Date();
+
     if( validateScale(getZoomScale()) ){
         
         var cell = getZoomImage();
@@ -230,8 +298,8 @@ function scaleAllLayers(){
         var y = -((newHeight-height)/2);
         $(cell).data('translatePos',{x: x, y: y});
         
-        var navX = $(cell).data('nav-coordinates').x;
-        var navY = $(cell).data('nav-coordinates').y;
+        var navX = getZoomNavCoordinates().x;
+        var navY = getZoomNavCoordinates().y;
         
         $.each($(cell).find('canvas'), function(index,canvas){
             var canvasID = getZoomCanvasName($(canvas).attr('id'));  
@@ -251,64 +319,19 @@ function scaleAllLayers(){
 
             } else if( annotations != undefined ){
 
-                console.log(" redrawing "+canvasID+" annotations: "+annotations);
                 $.each(annotations, function(index, ann) { 
                     showAnnotationGeometry(ctx,ann);
                 });
 
             } else {
-                console.log("skipping: "+canvasID);
+                //clog("skipping: "+canvasID);
             }
 
             ctx.restore();
-
-            if( profile ) console.log('TOTAL['+canvas+']: '+(new Date()-rt));
         });
     }
-    if( profile ) console.log('zoom time: '+(new Date()-time));
 }
 
-function navigate(x,y){
-
-    var cell = getZoomImage();
-    var scale = getZoomScale();
-    
-    if(debug){
-        console.log('proposed nav: '+x+','+y);
-    }
-    
-    //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
-    var navX = $(cell).data('translatePos').x/scale;
-    var navY = $(cell).data('translatePos').y/scale;
-    if(debug) console.log('border: '+navX+','+navY);
-
-    if( Math.abs(x) >= Math.abs(navX) ){
-        x = (x < 0) ? navX : -1*navX;
-        if(debug) console.log('DANGER X: '+navX);
-    }
-    if( Math.abs(y) >= Math.abs(navY) ){
-       y = (y < 0) ? navY : -1*navY;
-       if(debug) console.log('DANGER Y: '+navY);
-    }
-
-    if(debug) console.log('fixed nav: '+x+','+y);
-
-    getZoomImage().data('nav-coordinates', {x: x, y: y});
-    scaleAllLayers();
-}
-
-function zoom(){
-    changeZoomScale(scaleFactor);
-    scaleAllLayers();
-}
-
-function shrink(){    
-    changeZoomScale(-scaleFactor);
-    if( getZoomScale() == startScale ){
-       getZoomImage().data('nav-coordinates', {x: 0, y: 0});            
-    }
-    scaleAllLayers();
-}
 
 function executeScroll(direction){
     if( is_zooming ){
@@ -317,8 +340,6 @@ function executeScroll(direction){
         } else {
             zoom();
         }
-        //if(debug) 
-            console.log('zooming: '+getZoomScale());
     }
     //make sure the page doesn't scroll
     return !is_zooming;
@@ -331,8 +352,6 @@ function validateScale(newScale){
 }
 
 /** END OF SCALING FUNCTIONS **/
-
-
 
 
 /** HELPER FUNCTIONS **/
@@ -352,7 +371,6 @@ function getZoomScale(){
 }
 function setZoomScale(s){
     $('#workspace').data('zoomScale', s);
-    console.log("scale set to: "+s);
 }
 function changeZoomScale(diff){
     var newScale = getZoomScale()+diff;
@@ -363,8 +381,18 @@ function changeZoomScale(diff){
 function getZoomIsZooming(){
     return is_zooming;
 }
+
+function getZoomDragOffset(){
+    return getZoomImage().data('startDragOffset');
+}
+function setZoomDragOffset(ox,oy){
+    getZoomImage().data('startDragOffset', {x: ox, y: oy});
+}
 function getZoomNavCoordinates(){
     return getZoomImage().data('nav-coordinates');
+}
+function setZoomNavCoordinates(xc,yc){
+    getZoomImage().data('nav-coordinates', {x: xc, y: yc});
 }
 function getZoomCoordinates(){
     return getZoomImage().data('translatePos');
