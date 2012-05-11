@@ -7,7 +7,7 @@
  *
  */
 var startScale = new Number(1);
-var scaleFactor = new Number(0.1);
+var scaleFactor = new Number(1.1);
 var is_zooming = false;
 
 //zoom tool
@@ -262,7 +262,7 @@ function shrink(){
     var navX = $(cell).data('translatePos').x/scale;
     var navY = $(cell).data('translatePos').y/scale;
     
-    changeZoomScale(-scaleFactor);
+    changeZoomScale(1/scaleFactor);
     if( getZoomScale() == startScale ){
        setZoomNavCoordinates( x, y);            
     }
@@ -373,7 +373,7 @@ function setZoomScale(s){
     $('#workspace').data('zoomScale', s);
 }
 function changeZoomScale(diff){
-    var newScale = getZoomScale()+diff;
+    var newScale = getZoomScale() * diff;
     if( validateScale(newScale) ){
         setZoomScale(newScale);
     }
