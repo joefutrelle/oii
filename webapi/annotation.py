@@ -215,7 +215,7 @@ if __name__=='__main__':
     if len(sys.argv) > 1:
         config = get_config(sys.argv[1])
         try:
-            app.config[ANNOTATION_STORE] = PsqlAnnotationStore(config.psql_connect)
+            app.config[ANNOTATION_STORE] = DebugAnnotationStore()
             app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
             app.config[CATEGORIES] = HabcamCategories(config)
         except KeyError:
