@@ -114,8 +114,12 @@ function gotoPage(page,size) {
     clog('going to page '+page);
     clearPage();
     var offset = (page-1) * size;
-    var limit = offset + size;
+    var limit = size;
     var assignment_pid = $('#workspace').data('assignment').pid;
+    if(assignment_pid == undefined) {
+	clog('no assignment currently selected; changing page will have no effect');
+	return;
+    }
     $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
         $.each(r, function(i,entry) {
             // append image with approprite URL
@@ -316,19 +320,16 @@ function changeAssignment(ass_pid) {
         clog("clearing exisitng annotation store...");
         $('#workspace').data('existing',{});
         $.getJSON('/fetch_assignment/'+ass_pid, function(r) {
-          clog('fetched assignment '+ass_pid);
+            clog('fetched assignment '+ass_pid);
             $('#workspace').data('assignment',r);
             $('#workspace').data('image_list',r.images);
             $.getJSON('/list_categories/'+r.mode, function(c) {
                 clog('fetched categories for mode '+r.mode);
                 $('#workspace').data('categories',c);
-                gotoPage(1,2);
+                gotoPage(1,1); // FIXME keep track of page size globally
             });
-            
-            
         });
     }
-    
 }
 function categoryPidForLabel(label) {
     var cats = $('#workspace').data('categories');
@@ -350,7 +351,7 @@ function categoryLabelForPid(pid) {
 }
 $(document).ready(function() {
     page = 1;
-    size = 20;
+    size = 1;
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('existing',{}); //existing annotations
     // inputs are ui widget styled
@@ -365,11 +366,11 @@ $(document).ready(function() {
     $('#prev').click(function() {
         page--;
         if(page < 1) page = 1;
-        gotoPage(page,25);
+        gotoPage(page,size);
     });
     $('#next').click(function() {
         page++;
-        gotoPage(page,25);
+        gotoPage(page,size);
     });
     $('#commit').click(function() {
         preCommit();
@@ -389,7 +390,6 @@ $(document).ready(function() {
         selectedTool($('#tool').val());
     });
     listAssignments();
-    gotoPage(page,size);
     $('#label').autocomplete({
         source: function(req,resp) {
             var ass = $('#workspace').data('assignment');
@@ -416,6 +416,7 @@ $(document).ready(function() {
         $('#rightPanel').show(100, resizeAll);
     });
     $(window).bind('resize', resizeAll);
+    gotoPage(page,size);
 });
 function resizeAll() {
     // resize the right panel

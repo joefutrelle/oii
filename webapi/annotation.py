@@ -142,6 +142,7 @@ def stem_search(stem,mode):
                 'label': c['label'],
                 'value': c['label']
             }
+
 @app.route('/list_categories/<path:mode>')
 def list_categories(mode):
     return jsonr(list(my(CATEGORIES).list_categories(mode)))
@@ -220,4 +221,8 @@ if __name__=='__main__':
             app.config[CATEGORIES] = HabcamCategories(config)
         except KeyError:
             pass
-    app.run(host='0.0.0.0')
+        try:
+            port = int(config.port)
+        except KeyError:
+            port = 5000
+    app.run(host='0.0.0.0',port=port)

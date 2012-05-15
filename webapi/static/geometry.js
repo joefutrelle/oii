@@ -100,12 +100,17 @@ geometry.circle = {
 }
 //
 function unscaleAnnotation(tool, annotation) {
+
+    console.log('yes indeedy, we are unscaling this darned annotation');
     
     var scale = getGeometryScale();
     
+    console.log('welp, we got the geometry scale');
     //set in zoom
     var navCoordinates = getImageCanvii().data('nav-coordinates');
-    if( navCoordinates != null ){
+
+    console.log('checking nav coords');
+    if( navCoordinates != undefined ){
         var dragX = navCoordinates.x;
         var dragY = navCoordinates.y;
         for(var item in annotation){
@@ -117,24 +122,28 @@ function unscaleAnnotation(tool, annotation) {
             }
         }
     }
+    console.log('survived that. fixing offset');
     
     var offsetX = 0;
     var offsetY = 0;
-    
+
     //fix zoom
     var translate = getImageCanvii().data('translatePos');
     if( translate != null ){
         offsetX = translate.x;
         offsetY = translate.y;
     }
+    console.log('fixed offset');
     
     for(var item in annotation){
         for(var elem in annotation[item]){
+	    console.log('correcting annotation.' + item);
             var offset = elem == 0 ? offsetX : offsetY;
             annotation[item][elem] = (annotation[item][elem]-offset) / scale;
         }
     }
     
+    console.log('that leaves us with ' + annotation);
     return annotation;
 }
 
@@ -297,9 +306,9 @@ geometry.line.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
-        //console.log($(cell).data('line'));
+        console.log('pre-prepped line: '+$(cell).data('line'));
         var preppedLine = geometry.line.prepareForStorage($(cell).data('line'));
-        //console.log(preppedLine);
+        console.log('post-prepped line: '+preppedLine);
         
         queueAnnotation({
             image: $(cell).data('imagePid'),
@@ -394,10 +403,11 @@ geometry.circle.tool = new MeasurementTool({
 });
 
 function getGeometryScale(){
+    console.log('looking for the zoomScale');
     var scale = $('#workspace').data('zoomScale');
-    if( scale == null || scale == undefined ){
+    if( scale == null || scale == undefined ){ // FIXME null??
         scale = new Number(1);
-        $.data('zoomScale', scale);
+        $('#workspace').data('zoomScale', scale);
     } 
     return scale;
 }
