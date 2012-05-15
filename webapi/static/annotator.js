@@ -112,15 +112,12 @@ function addCell(imagePid) {
 function gotoPage(page,size) {
     if(page < 1) page = 1;
     clog('going to page '+page);
-    var images = $('#workspace').data('images')
-    if(images == undefined) {
-        return;
-    }
     clearPage();
     var offset = (page-1) * size;
     var limit = offset + size;
-    $.each(images, function(i,entry) {
-        if(i >= offset && i < limit) {
+    var assignment_pid = $('#workspace').data('assignment').pid;
+    $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
+        $.each(r, function(i,entry) {
             // append image with approprite URL
             var imageUrl = entry.image;
             var imagePid = entry.pid; // for now, pid = url
@@ -137,8 +134,8 @@ function gotoPage(page,size) {
             cell = addCell(imagePid);
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
-        } // paging condition in loop over images
-    }); // loop over images
+        }); // loop over images
+    });
 }
 function drawPendingAnnotations(cell) {
     var imagePid = $(cell).data('imagePid');
@@ -257,7 +254,7 @@ function preCommit() {
     for(var k in pending()) { n++; }
     var i = n-1;
     /* FIXME hardcoded namespace */
-    with_json_request('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
+    $.getJSON('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
         $.each(pending(), function(imagePid, ann) {
             pending()[imagePid].pid = r[i--];
         });
@@ -304,7 +301,7 @@ function deselectAll() {
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
-    with_json_request('/list_assignments', function(r) {
+    $.getJSON('/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
             clog(a);
             $('#assignment').append('<option value="'+a.pid+'">'+a.label+'</option>')
@@ -318,14 +315,14 @@ function changeAssignment(ass_pid) {
     if( ass_pid.length > 0 ){
         clog("clearing exisitng annotation store...");
         $('#workspace').data('existing',{});
-        with_json_request('/fetch_assignment/'+ass_pid, function(r) {
+        $.getJSON('/fetch_assignment/'+ass_pid, function(r) {
           clog('fetched assignment '+ass_pid);
             $('#workspace').data('assignment',r);
-            $('#workspace').data('images',r.images);
-            with_json_request('/list_categories/'+r.mode, function(c) {
+            $('#workspace').data('image_list',r.images);
+            $.getJSON('/list_categories/'+r.mode, function(c) {
                 clog('fetched categories for mode '+r.mode);
                 $('#workspace').data('categories',c);
-                gotoPage(1,25);
+                gotoPage(1,2);
             });
             
             
@@ -399,7 +396,7 @@ $(document).ready(function() {
             if(ass == undefined) {
                 return;
             }
-            with_json_request('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
+            $.getJSON('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
                 resp($.map(r,function(item) {
                     return {
                         'label': item.label,

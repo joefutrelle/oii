@@ -31,7 +31,7 @@ class HabcamAssignmentStore(AssignmentStore):
         except KeyError:
             pass
         d['mode'] = d['idmode']
-        d['label'] = '%s @ %s' % (d['project_name'], d['site_description'])
+        d['label'] = '%s: %s @ %s' % (str(d['assignment_id']), d['project_name'], d['site_description'])
         return d
     def list_assignments(self):
         connection = psql.connect(self.config.psql_connect)
@@ -45,7 +45,7 @@ class HabcamAssignmentStore(AssignmentStore):
         cursor.execute('select '+(','.join(self.assignment_fields))+' from assignments where assignment_id=%s', (self.lid(pid),))
         for row in cursor.fetchall():
             row = self.__row2assignment(row)
-            row['imagelist'] = row['assignment_id']
+            row['images'] = self.pid(row['assignment_id'])
             return row
     def list_images(self,pid,limit=None,offset=0):
         connection = psql.connect(self.config.psql_connect)
@@ -54,10 +54,10 @@ class HabcamAssignmentStore(AssignmentStore):
             limitclause = ''
         else:
             limitclause = 'limit %d ' % limit
-        cursor.execute('select assignment_id,imagename from imagelist where assignment_id=%s order by imagename '+limitclause+'offset %s', (self.lid(pid),offset))
+        cursor.execute('select imagename from imagelist where assignment_id=%s order by imagename '+limitclause+'offset %s', (self.lid(pid),offset))
         for row in cursor.fetchall():
             d = {}
-            d['pid'] = self.pid(row[1], self.config.image_namespace)
+            d['pid'] = self.pid(row[0], self.config.image_namespace)
             d['image'] = d['pid']
             yield d
 
