@@ -4,6 +4,7 @@ import json
 import re
 import sys
 from oii.utils import gen_id, structs, jsons
+from oii.config import get_config
 from oii.webapi.idgen import idgen_api
 from oii.annotation.storage import DebugAnnotationStore
 from oii.annotation.psql import PsqlAnnotationStore
@@ -13,7 +14,11 @@ from oii.times import iso8601
 from utils import jsonr
 
 # test with IFCB
-from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
+#from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
+
+# test with Habcam
+from oii.habcam.assignments import HabcamAssignmentStore
+from oii.habcam.categories import HabcamCategories
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
@@ -89,10 +94,12 @@ class ZoomAssignmentStore(AssignmentStore):
         
 DEFAULT_CONFIG = {
     ANNOTATION_STORE: DebugAnnotationStore(),
-    CATEGORIES: DummyCategories(),
-    ASSIGNMENT_STORE: ZoomAssignmentStore()
+    #CATEGORIES: DummyCategories(),
+    #ASSIGNMENT_STORE: ZoomAssignmentStore()
     #CATEGORIES: IfcbCategories(),
     #ASSIGNMENT_STORE: IfcbFeedAssignmentStore()
+    #CATEGORIES: HabcamCategories(),
+    #ASSIGNMENT_STORE: HabcamAssignmentStore()
 }
 
 # get a configured component, or use a default one for testing
@@ -202,5 +209,11 @@ class TestAnnotation(TestCase):
                          
 if __name__=='__main__':
     if len(sys.argv) > 1:
-        app.config[ANNOTATION_STORE] = PsqlAnnotationStore(sys.argv[1])
+        config = get_config(sys.argv[1])
+        try:
+            app.config[ANNOTATION_STORE] = PsqlAnnotationStore(config.psql_connect)
+            app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
+            app.config[CATEGORIES] = HabcamCategories(config)
+        except KeyError:
+            pass
     app.run(host='0.0.0.0')
