@@ -28,6 +28,16 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             $(cell).data('scaledWidth',scaledWidth);
             $(cell).data('scaledHeight',scaledHeight);
             $(cell).data('image',this);
+	    //
+            $(document).trigger('cellLoaded', cell);
+	    //
+	    var translate = getImageCanvii().data('translatePos');
+	    if( translate != undefined ){
+		console.log('translate is ['+translate.x+', '+translate.y+']');
+		offsetX = translate.x;
+		offsetY = translate.y;
+	    }
+
             // create layers for
             // - the image
             // - the existing annotations
@@ -106,8 +116,8 @@ function addCell(imagePid) {
     return $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
         .find('div.thumbnail:last')
         .data('imagePid',imagePid)
-        .disableSelection()
-        .trigger('cellLoaded', this);
+        .disableSelection();
+        //.trigger('cellLoaded', this);
 }
 function gotoPage(page,size) {
     if(page < 1) page = 1;
@@ -115,11 +125,12 @@ function gotoPage(page,size) {
     clearPage();
     var offset = (page-1) * size;
     var limit = size;
-    var assignment_pid = $('#workspace').data('assignment').pid;
-    if(assignment_pid == undefined) {
+    var assignment = $('#workspace').data('assignment');
+    if(assignment == undefined) {
 	clog('no assignment currently selected; changing page will have no effect');
 	return;
     }
+    var assignment_pid = $('#workspace').data('assignment').pid;
     $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
         $.each(r, function(i,entry) {
             // append image with approprite URL

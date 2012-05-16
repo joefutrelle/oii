@@ -214,6 +214,7 @@ function resetZoom(){
     setZoomScale(startScale);
     setZoomNavCoordinates(0,0);
     setZoomDragOffset(0,0);
+    console.log('resetting zoom');
     scaleAllLayers();
 }
 
@@ -284,12 +285,15 @@ function shrink(){
 }
 
 function scaleAllLayers(){
-
+    console.log('entering scaleAllLayers');
     if( validateScale(getZoomScale()) ){
         
         var cell = getZoomImage();
         var width = $(cell).data('width');
         var height= $(cell).data('height');
+	if(width == undefined) {
+	    console.log('WARNING: width is undefined');
+	}
         var scale = getZoomScale();
         var newWidth = width * scale;
         var newHeight = height * scale;

@@ -129,12 +129,14 @@ function unscaleAnnotation(tool, annotation) {
 
     //fix zoom
     var translate = getImageCanvii().data('translatePos');
-    if( translate != null ){
+    if( translate != undefined ){
+	console.log('translate is ['+translate.x+', '+translate.y+']');
         offsetX = translate.x;
         offsetY = translate.y;
     }
-    console.log('fixed offset');
-    
+    console.log('fixed offset: ['+offsetX+', '+offsetY+']');
+
+    console.log('annotation is currently ' + annotation);
     for(var item in annotation){
         for(var elem in annotation[item]){
 	    console.log('correcting annotation.' + item);
@@ -143,7 +145,7 @@ function unscaleAnnotation(tool, annotation) {
         }
     }
     
-    console.log('that leaves us with ' + annotation);
+    console.log('fixed annotation is ' + annotation);
     return annotation;
 }
 
