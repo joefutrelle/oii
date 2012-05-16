@@ -150,15 +150,15 @@ function unscaleAnnotation(tool, annotation) {
 }
 
 function scaleAnnotation(tool, annotation) {
-    //console.log('Tool: '+tool['label']);
-    //console.log('Annotation: '+annotation);
+    console.log('Tool: '+tool['label']);
+    console.log('Annotation: '+annotation);
 
     var fixedAnnotation = $.extend(true, {}, annotation);
     var navCoordinates = getImageCanvii().data('nav-coordinates');
     if( navCoordinates != null ){
         var dragX = navCoordinates.x;
         var dragY = navCoordinates.y;
-        //console.log("Drag: "+dragX+","+dragY);
+        console.log("Drag: "+dragX+","+dragY);
         for(var item in annotation){
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
@@ -167,8 +167,7 @@ function scaleAnnotation(tool, annotation) {
         }
     }
     
-    //console.log('Fixed Annotation: '+JSON.stringify(fixedAnnotation));
-    //console.log('Annotation: '+annotation);
+    console.log('Fixed Annotation: '+JSON.stringify(fixedAnnotation));
     return fixedAnnotation;
 }
 

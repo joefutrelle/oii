@@ -160,7 +160,8 @@ $(document).ready(function(){
 
     //listen for canvasChange
     $(document).bind('canvasChange', function(event){
-       scaleAllLayers();
+	console.log('receiving canvasChange and calling scaleAllLayers');
+	scaleAllLayers();
     });
     
 });
@@ -310,7 +311,7 @@ function scaleAllLayers(){
             
             var rt = new Date();
             var ctx = canvas.getContext("2d");
-            var annotations = $('#workspace').data(canvasID);
+            var annotations = $(cell).data(canvasID);
             
             ctx.save();
             ctx.translate(x, y);

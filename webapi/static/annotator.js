@@ -90,7 +90,7 @@ function drawExistingAnnotations(cell) {
         var ctx = getImageLayerContext(cell,'existing');
         var counter = 0;
         $(r).each(function(ix,ann) {
-            existing()[counter++] = ann;
+            existing(cell)[counter++] = ann;
             showAnnotationGeometry(ctx,ann);
         });
     });
@@ -116,6 +116,7 @@ function addCell(imagePid) {
     return $('#images').append('<div class="thumbnail"><div class="spacer"></div><div class="caption ui-widget">&nbsp;</div><div class="subcaption ui-widget"></div></div>')
         .find('div.thumbnail:last')
         .data('imagePid',imagePid)
+        .data('existing',{})
         .disableSelection();
         //.trigger('cellLoaded', this);
 }
@@ -163,47 +164,6 @@ function drawPendingAnnotations(cell) {
         select(cell, cat);
     }
 }
-/*
-function drawExistingAnnotations(cell) {
-    var imagePid = $(cell).data('imagePid');
-    var ctx = getImageLayerContext(cell,'existing');
-    $.ajax({
-        url: '/list_annotations/image/' + imagePid,
-        dataType: 'json',
-        success: function(r) {
-            ctx.clearRect(0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
-            var anns = {};
-            $(r).each(function(ix,ann) {
-                showAnnotationGeometry(ctx,ann);
-                if(!(ann.category in anns)) {
-                    anns[ann.category] = 1;
-                } else {
-                    anns[ann.category] += 1;
-                }
-            });
-            // now we show which annotation has the most "votes"
-            var max = 0;
-            var theLabel = '';
-            var ex = '';
-            for(var cat in anns) {
-                var label = categoryLabelForPid(cat);
-                ex += ' ' + label;
-                if(anns[cat] > max) {
-                    max = anns[cat];
-                    theLabel = label;
-                }
-                if(anns[cat] > 1) {
-                    ex += '&nbsp;x' + anns[cat];
-                }
-            }
-            if(theLabel != '') {
-                setLabel(cell,theLabel);
-                $(cell).find('.subcaption').html(ex);
-            }
-        }
-    });
-}
-*/
 function clearPage() {
     $('#images').empty();
 }
@@ -260,8 +220,8 @@ function commitCell(cell) {
 function pending() {
     return $('#workspace').data('pending');
 }
-function existing(){
-    return $('#workspace').data('existing');
+function existing(cell) {
+    return $(cell).data('existing');
 }
 function preCommit() {
     /* generate an ID for each annotation */
@@ -295,17 +255,13 @@ function commit() {
         dataType: 'json',
         data: JSON.stringify(as),
         success: function() {
+	    $('#workspace').data('pending',{});
             $('div.thumbnail.selected').each(function(ix,cell) {
                 commitCell(cell);
                 drawExistingAnnotations(cell);
             });
-            postCommit();
         }
     });
-}
-function postCommit() {
-    $('#workspace').data('pending',{});
-    $(document).trigger('canvasChange');
 }
 function deselectAll() {
     $('#workspace').data('pending',{});
@@ -329,7 +285,6 @@ function changeAssignment(ass_pid) {
     clog('user selected assignment '+ass_pid);
     if( ass_pid.length > 0 ){
         clog("clearing exisitng annotation store...");
-        $('#workspace').data('existing',{});
         $.getJSON('/fetch_assignment/'+ass_pid, function(r) {
             clog('fetched assignment '+ass_pid);
             $('#workspace').data('assignment',r);
@@ -364,7 +319,6 @@ $(document).ready(function() {
     page = 1;
     size = 1;
     $('#workspace').data('pending',{}); // pending annotations by pid
-    $('#workspace').data('existing',{}); //existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
     // images div is not text-selectable
