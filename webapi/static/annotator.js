@@ -89,10 +89,12 @@ function drawExistingAnnotations(cell) {
         clearImageLayer(cell,'existing');
         var ctx = getImageLayerContext(cell,'existing');
         var counter = 0;
+        clog("about to draw existing annotations...");
         $(r).each(function(ix,ann) {
             existing(cell)[counter++] = ann;
             showAnnotationGeometry(ctx,ann);
         });
+        $(document).trigger('canvasChange');
     });
 }
 //cell - div with image in it
@@ -106,7 +108,7 @@ function showAnnotationGeometry(ctx,ann) {
             var g = ann.geometry[key];
             if(g != undefined) {
                 var sa = geometry[key].prepareForCanvas(ann.geometry[key]);
-                //clog('draw a '+key+' for '+JSON.stringify(sa));
+                clog('******* draw a '+key+' for '+JSON.stringify(sa));
                 geometry[key].draw(ctx, sa);
             }
         }
