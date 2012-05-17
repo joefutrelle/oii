@@ -315,11 +315,11 @@ function scaleAllLayers(){
             
             var i = 0;
             if( canvasID == 'pending' ) {
+                if( annotations == undefined ){
+                    annotations = {};
+                }
                 $.each(pending(), function(pid, ann) {
                     if(pid == $(cell).data('imagePid')) {
-                        if( annotations == undefined ){
-                            annotations = {};
-                        }
                         annotations[i++] = ann;
                     }
                 });

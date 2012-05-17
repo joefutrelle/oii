@@ -271,11 +271,7 @@ geometry.boundingBox.tool = new MeasurementTool({
         var preppedBox = geometry.boundingBox.prepareForStorage($(cell).data('boundingBox'));
         //console.log(preppedBox);
         
-        queueAnnotation({
-            image: $(cell).data('imagePid'),
-            category: categoryPidForLabel($('#label').val()),
-            geometry: { boundingBox: preppedBox }
-        });
+        queueAnnotation(cell, { boundingBox: preppedBox });
         toggleSelected(cell,$('#label').val());
     }
 });
@@ -311,11 +307,7 @@ geometry.line.tool = new MeasurementTool({
         var preppedLine = geometry.line.prepareForStorage($(cell).data('line'));
         console.log('post-prepped line: '+preppedLine);
         
-        queueAnnotation({
-            image: $(cell).data('imagePid'),
-            category: categoryPidForLabel($('#label').val()),
-            geometry: { line: preppedLine }
-        });
+        queueAnnotation(cell, { line: preppedLine });
         toggleSelected(cell,$('#label').val());
     }
 });
@@ -352,11 +344,7 @@ geometry.point.tool = new MeasurementTool({
         //console.log($(cell).data('point'));
         var preppedPoint = geometry.point.prepareForStorage($(cell).data('point'));
         //console.log(preppedPoint);
-        queueAnnotation({
-            image: $(cell).data('imagePid'),
-            category: categoryPidForLabel($('#label').val()),
-            geometry: { point: preppedPoint }
-        });
+        queueAnnotation(cell, { point: preppedPoint });
         toggleSelected(cell,$('#label').val());
         $(cell).removeData('inpoint');
     }
@@ -394,11 +382,7 @@ geometry.circle.tool = new MeasurementTool({
         //console.log($(cell).data('circle'));
         var preppedCircle = geometry.circle.prepareForStorage($(cell).data('circle'));
         //console.log(preppedCircle);
-        queueAnnotation({
-            image: $(cell).data('imagePid'),
-            category: categoryPidForLabel($('#label').val()),
-            geometry: { circle: preppedCircle }
-        });
+        queueAnnotation(cell, { circle: preppedCircle });
         toggleSelected(cell,$('#label').val());
     }
 });

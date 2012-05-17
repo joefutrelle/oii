@@ -238,9 +238,15 @@ function preCommit() {
         commit();
     });
 }
-function queueAnnotation(ann) {
-    ann.annotator = 'http://people.net/joeblow';
-    ann.timestamp = iso8601(new Date());
+function queueAnnotation(cell, geometry) {
+    var ann = {
+        image: $(cell).data('imagePid'),
+        category: categoryPidForLabel($('#label').val()),
+        geometry: geometry,
+	annotator: 'http://people.net/joeblow',
+	timestamp: iso8601(new Date()),
+	assignment: $('#workspace').data('assignment').pid
+    };
     clog('enqueing '+JSON.stringify(ann));
     pending()[ann.image] = ann;
 }
