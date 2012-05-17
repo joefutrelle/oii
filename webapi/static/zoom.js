@@ -312,6 +312,9 @@ function scaleAllLayers(){
             var rt = new Date();
             var ctx = canvas.getContext("2d");
             var annotations = $(cell).data(canvasID);
+            if( canvasID == 'pending' ){
+                annotations = pending();
+            }
             
             ctx.save();
             ctx.translate(x, y);
@@ -325,6 +328,7 @@ function scaleAllLayers(){
             } else if( annotations != undefined ){
 
                 $.each(annotations, function(index, ann) { 
+                    clog(canvasID+"::scale => "+ann);
                     showAnnotationGeometry(ctx,ann);
                 });
 
