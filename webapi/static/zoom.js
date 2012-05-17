@@ -312,8 +312,17 @@ function scaleAllLayers(){
             var rt = new Date();
             var ctx = canvas.getContext("2d");
             var annotations = $(cell).data(canvasID);
-            if( canvasID == 'pending' ){
-                annotations = pending();
+            
+            var i = 0;
+            if( canvasID == 'pending' ) {
+                $.each(pending(), function(pid, ann) {
+                    if(pid == $(cell).data('imagePid')) {
+                        if( annotations == undefined ){
+                            annotations = {};
+                        }
+                        annotations[i++] = ann;
+                    }
+                });
             }
             
             ctx.save();
