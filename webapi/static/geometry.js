@@ -40,6 +40,28 @@ geometry.line = {
         return scaleAnnotation(this, annotation);
     } 
 };
+geometry.path = {
+    label: 'Path',
+    draw: function(ctx, line) {
+        var ox = scalingFactor * line[0][0];
+        var oy = scalingFactor * line[0][1];
+        ctx.strokeStyle = geometryColor;
+        ctx.beginPath();
+        ctx.moveTo(ox,oy);
+	$.each(line, function(ix, pt) {
+	    var px = scalingFactor * pt[0];
+	    var py = scalingFactor * pt[1];
+	    ctx.lineTo(px, py);
+	});
+        ctx.stroke();
+    },
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
+};
 geometry.point = {
     label: 'Point',
     draw: function(ctx, point) {
@@ -308,6 +330,42 @@ geometry.line.tool = new MeasurementTool({
         console.log('post-prepped line: '+preppedLine);
         
         queueAnnotation(cell, { line: preppedLine });
+        toggleSelected(cell,$('#label').val());
+    }
+});
+// allow the user to draw a freeform line on a cell's 'new annotation' canvas
+geometry.path.tool = new MeasurementTool({
+    mousedown: function(event) {
+        var cell = event.data.cell;
+        var mx = event.data.mx;
+        var my = event.data.my;
+        $(cell).data('ox',mx);
+        $(cell).data('oy',my);
+	var path = [[mx, my]];
+	$(cell).data('path',path);
+    },
+    mousemove: function(event) {
+        var cell = event.data.cell;
+        var ox = $(cell).data('ox');
+        var oy = $(cell).data('oy');
+        if(ox >= 0 && oy >= 0) {
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+	    var path = $(cell).data('path');
+	    path.push([mx, my]);
+	    $(cell).data('path',path);
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.path.draw(ctx,path);
+        }
+    },
+    mouseup: function(event) {
+        var cell = event.data.cell;
+        $(cell).data('ox',-1);
+        $(cell).data('oy',-1);
+        var preppedPath = geometry.path.prepareForStorage($(cell).data('path'));
+        
+        queueAnnotation(cell, { path: preppedPath });
         toggleSelected(cell,$('#label').val());
     }
 });
