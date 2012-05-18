@@ -1,5 +1,5 @@
 // globals (FIXME: make preferences)
-var scalingFactor = 1;
+var scalingFactor = 0.75;
 var geometryColor = '#f00';
 var poly_simplifyTolerance = 3;
 // geometric tool support
@@ -44,15 +44,17 @@ geometry.line = {
 geometry.path = {
     label: 'Path',
     draw: function(ctx, line) {
-        var ox = scalingFactor * line[0][0];
         var oy = scalingFactor * line[0][1];
         ctx.strokeStyle = geometryColor;
         ctx.beginPath();
-        ctx.moveTo(ox,oy);
 	$.each(line, function(ix, pt) {
 	    var px = scalingFactor * pt[0];
 	    var py = scalingFactor * pt[1];
-	    ctx.lineTo(px, py);
+	    if(ix == 0) {
+		ctx.moveTo(px, py);
+	    } else {
+		ctx.lineTo(px, py);
+	    }
 	});
         ctx.stroke();
     },
@@ -342,7 +344,7 @@ geometry.path.tool = new MeasurementTool({
         var my = event.data.my;
         $(cell).data('ox',mx);
         $(cell).data('oy',my);
-	var path = [[mx, my]];
+	var path = [[mx/scalingFactor, my/scalingFactor]];
 	$(cell).data('path',path);
     },
     mousemove: function(event) {
@@ -354,7 +356,7 @@ geometry.path.tool = new MeasurementTool({
             var mx = event.data.mx;
             var my = event.data.my;
 	    var path = $(cell).data('path');
-	    path.push([mx, my]);
+	    path.push([mx/scalingFactor, my/scalingFactor]);
 	    $(cell).data('path',path);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.path.draw(ctx,path);
