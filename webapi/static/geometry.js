@@ -126,18 +126,15 @@ geometry.circle = {
 //
 function unscaleAnnotation(tool, annotation) {
 
-    console.log('yes indeedy, we are unscaling this darned annotation');
-    
     var scale = getGeometryScale();
     
-    console.log('welp, we got the geometry scale');
     //set in zoom
     var navCoordinates = getImageCanvii().data('nav-coordinates');
 
     console.log('checking nav coords');
     if( navCoordinates != undefined ){
-        var dragX = navCoordinates.x;
-        var dragY = navCoordinates.y;
+        var dragX = navCoordinates.x / scalingFactor;
+        var dragY = navCoordinates.y / scalingFactor;
         for(var item in annotation){
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
@@ -147,7 +144,6 @@ function unscaleAnnotation(tool, annotation) {
             }
         }
     }
-    console.log('survived that. fixing offset');
     
     var offsetX = 0;
     var offsetY = 0;
@@ -155,11 +151,9 @@ function unscaleAnnotation(tool, annotation) {
     //fix zoom
     var translate = getImageCanvii().data('translatePos');
     if( translate != undefined ){
-	console.log('translate is ['+translate.x+', '+translate.y+']');
-        offsetX = translate.x;
-        offsetY = translate.y;
+        offsetX = translate.x / scalingFactor;
+        offsetY = translate.y / scalingFactor;
     }
-    console.log('fixed offset: ['+offsetX+', '+offsetY+']');
 
     console.log('annotation is currently ' + annotation);
     for(var item in annotation){
@@ -175,16 +169,16 @@ function unscaleAnnotation(tool, annotation) {
 }
 
 function scaleAnnotation(tool, annotation) {
-    console.log('Tool: '+tool['label']);
-    console.log('Annotation: '+annotation);
+    //console.log('Tool: '+tool['label']);
+    //console.log('Annotation: '+annotation);
 
     var fixedAnnotation = $.extend(true, {}, annotation);
     var navCoordinates = getImageCanvii().data('nav-coordinates');
     if( navCoordinates != null ){
-        var dragX = navCoordinates.x;
-        var dragY = navCoordinates.y;
-        console.log("Drag: "+dragX+","+dragY);
-        for(var item in annotation){
+        var dragX = navCoordinates.x / scalingFactor;
+        var dragY = navCoordinates.y / scalingFactor;
+        //console.log("Drag: "+dragX+","+dragY);
+        for(var item in annotation) {
             for(var elem in annotation[item]){
                 var offset = elem == 0 ? dragX : dragY;
                 fixedAnnotation[item][elem] = doGeometryMath(fixedAnnotation[item][elem],offset);
@@ -192,7 +186,7 @@ function scaleAnnotation(tool, annotation) {
         }
     }
     
-    console.log('Fixed Annotation: '+JSON.stringify(fixedAnnotation));
+    //console.log('Fixed Annotation: '+JSON.stringify(fixedAnnotation));
     return fixedAnnotation;
 }
 
