@@ -1,4 +1,4 @@
-.grabbing { cursor: url(http://localhost:5000/static/images/zoom/closedhand.cur), default !important; }
-.hand { cursor: url(http://localhost:5000/static/images/zoom/openhand.cur), default !important; }
+.grabbing { cursor: url(/static/images/zoom/closedhand.cur), default !important; }
+.hand { cursor: url(/static/images/zoom/openhand.cur), default !important; }
 .pointer { cursor: default !important; }
 

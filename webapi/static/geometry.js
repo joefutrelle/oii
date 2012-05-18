@@ -1,6 +1,7 @@
 // globals (FIXME: make preferences)
 var scalingFactor = 1;
 var geometryColor = '#f00';
+var poly_simplifyTolerance = 3;
 // geometric tool support
 var geometry = {};
 geometry.boundingBox = {
@@ -361,9 +362,15 @@ geometry.path.tool = new MeasurementTool({
     },
     mouseup: function(event) {
         var cell = event.data.cell;
+	var ctx = event.data.ctx;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
-        var preppedPath = geometry.path.prepareForStorage($(cell).data('path'));
+	var complexPath = $(cell).data('path');
+	// use poly_simplify
+	var simplePath = poly_simplify(complexPath, poly_simplifyTolerance);
+        ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+        geometry.path.draw(ctx,simplePath);
+        var preppedPath = geometry.path.prepareForStorage(simplePath);
         
         queueAnnotation(cell, { path: preppedPath });
         toggleSelected(cell,$('#label').val());
