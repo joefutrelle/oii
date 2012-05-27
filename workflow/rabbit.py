@@ -185,7 +185,7 @@ class Job(object):
                 except:
                     print 'WARNING exception while waiting for subprocess to terminate'
                 pid = None
-    def retry_failed(self, filter=lambda: True):
+    def retry_failed(self, filter=lambda x: True):
         """Push failed tasks back into the work queue"""
         def requeue_callback(channel, method, properties, message):
             if filter(message):
