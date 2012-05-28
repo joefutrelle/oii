@@ -207,6 +207,16 @@ class Job(object):
             out.flush()
         ch.basic_consume(printer,queue=qname,no_ack=True)
         ch.start_consuming()
+    def trigger(self,other_queue,filter=lambda x: True):
+        """Copy messages from win queue to other queue.
+        FIXME: do this right, with exchanges"""
+        def trigger_callback(channel, method, properties, message):
+            if filter(message):
+                enqueue(message,other_queue,self.host)
+            ack(channel,method)
+        ch,_ = declare_work_queue(self.qname, self.host)
+        ch.basic_consume(trigger_callback, queue=self.qname+'_win')
+        ch.start_consuming()
      
 # this class passes on messages that contain a certain string
 class PassTest(Job):
