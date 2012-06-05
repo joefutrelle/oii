@@ -257,8 +257,8 @@ function queueAnnotation(cell, geometry) {
     };
     clog('enqueing '+JSON.stringify(ann));
     HOL.add(pending(), ann.image, ann);
+    $(document).trigger('canvasChange');
     $('#workspace').data('undo').push($(cell).data('imagePid'));
-    drawPendingAnnotations(cell);
 }
 function undo() {
     var imagePid = $('#workspace').data('undo').pop();
