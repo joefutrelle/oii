@@ -44,3 +44,25 @@ function mouseY(event, element) {
 function mouseXY(event, element) {
     return [ mouseX(event, element), mouseY(event, element) ];
 }
+
+/* "hash of lists" */
+var HOL = {};
+HOL.clear = function(dict, key) {
+    dict[key] = [];
+};
+HOL.add = function(dict, key, item) {
+    if(key in dict) {
+	dict[key].push(item);
+    } else {
+	dict[key] = [item];
+    }
+};
+HOL.remove = function(dict, key, item) {
+    if(key in dict) {
+	var ix = dict[key].lastIndexOf(item);
+	if(ix != -1) {
+	    dict[key].splice(ix,1);
+	}
+    }
+    // else nothing
+};

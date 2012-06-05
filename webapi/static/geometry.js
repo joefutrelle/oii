@@ -222,8 +222,8 @@ function bindMeasurementTools(selector, env) {
                 var my = event.pageY - canvas.offset().top;
                 event.data.mx = mx;
                 event.data.my = my;
-                event.data.ix = (mx/scalingFactor)|0;
-                event.data.iy = (mx/scalingFactor)|0;
+                event.data.ix = (mx/scalingFactor);
+                event.data.iy = (mx/scalingFactor);
                 // call the currently selected tool
                 tool.eventHandlers.mousedown(event);
             }
@@ -238,8 +238,8 @@ function bindMeasurementTools(selector, env) {
                 var my = mouseY(event, canvas);
                 event.data.mx = mx;
                 event.data.my = my;
-                event.data.ix = (mx/scalingFactor)|0;
-                event.data.iy = (mx/scalingFactor)|0;
+                event.data.ix = (mx/scalingFactor);
+                event.data.iy = (mx/scalingFactor);
                 tool.eventHandlers.mousemove(event);
             }
         }
@@ -276,7 +276,7 @@ geometry.boundingBox.tool = new MeasurementTool({
             var w = Math.max(ox,mx) - left;
             var h = Math.max(oy,my) - top;
             /* compute a rectangle in original scale pixel space */
-            var rect = [[(left/scalingFactor)|0, (top/scalingFactor)|0], [((left+w)/scalingFactor)|0, ((top+h)/scalingFactor)|0]]
+            var rect = [[(left/scalingFactor), (top/scalingFactor)], [((left+w)/scalingFactor), ((top+h)/scalingFactor)]]
             $(cell).data('boundingBox',rect);
             ctx.clearRect(0, 0, scaledWidth, scaledHeight);
             geometry.boundingBox.draw(ctx,rect);
@@ -291,7 +291,7 @@ geometry.boundingBox.tool = new MeasurementTool({
         //console.log(preppedBox);
         
         queueAnnotation(cell, { boundingBox: preppedBox });
-        toggleSelected(cell,$('#label').val());
+        select(cell,$('#label').val());
     }
 });
 // allow the user to draw a line on a cell's 'new annotation' canvas
@@ -312,7 +312,7 @@ geometry.line.tool = new MeasurementTool({
             var mx = event.data.mx;
             var my = event.data.my;
             /* compute a rectangle in original scale pixel space */
-            var line = [[(ox/scalingFactor)|0, (oy/scalingFactor)|0], [(mx/scalingFactor)|0, (my/scalingFactor)|0]]
+            var line = [[(ox/scalingFactor), (oy/scalingFactor)], [(mx/scalingFactor), (my/scalingFactor)]]
             $(cell).data('line',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.line.draw(ctx,line);
@@ -327,7 +327,7 @@ geometry.line.tool = new MeasurementTool({
         console.log('post-prepped line: '+preppedLine);
         
         queueAnnotation(cell, { line: preppedLine });
-        toggleSelected(cell,$('#label').val());
+        select(cell,$('#label').val());
     }
 });
 // allow the user to draw a freeform line on a cell's 'new annotation' canvas
@@ -369,7 +369,7 @@ geometry.path.tool = new MeasurementTool({
         var preppedPath = geometry.path.prepareForStorage(simplePath);
         
         queueAnnotation(cell, { path: preppedPath });
-        toggleSelected(cell,$('#label').val());
+        select(cell,$('#label').val());
     }
 });
 //allow the user to draw a line on a cell's 'new annotation' canvas
@@ -380,7 +380,7 @@ geometry.point.tool = new MeasurementTool({
         var mx = event.data.mx;
         var my = event.data.my;
         /* compute a rectangle in original scale pixel space */
-        var line = [(mx/scalingFactor)|0, (my/scalingFactor)|0]
+        var line = [(mx/scalingFactor), (my/scalingFactor)]
         $(cell).data('point',line);
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
         geometry.point.draw(ctx,line);
@@ -394,7 +394,7 @@ geometry.point.tool = new MeasurementTool({
             var mx = event.data.mx;
             var my = event.data.my;
             /* compute a rectangle in original scale pixel space */
-            var line = [(mx/scalingFactor)|0, (my/scalingFactor)|0]
+            var line = [(mx/scalingFactor), (my/scalingFactor)]
             $(cell).data('point',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.point.draw(ctx,line);
@@ -406,7 +406,7 @@ geometry.point.tool = new MeasurementTool({
         var preppedPoint = geometry.point.prepareForStorage($(cell).data('point'));
         //console.log(preppedPoint);
         queueAnnotation(cell, { point: preppedPoint });
-        toggleSelected(cell,$('#label').val());
+        select(cell,$('#label').val());
         $(cell).removeData('inpoint');
     }
 });
@@ -428,7 +428,7 @@ geometry.circle.tool = new MeasurementTool({
             var mx = event.data.mx;
             var my = event.data.my;
             /* compute a rectangle in original scale pixel space */
-            var line = [[(ox/scalingFactor)|0, (oy/scalingFactor)|0], [(mx/scalingFactor)|0, (my/scalingFactor)|0]]
+            var line = [[(ox/scalingFactor), (oy/scalingFactor)], [(mx/scalingFactor), (my/scalingFactor)]];
             $(cell).data('circle',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.circle.draw(ctx,line);
@@ -444,7 +444,7 @@ geometry.circle.tool = new MeasurementTool({
         var preppedCircle = geometry.circle.prepareForStorage($(cell).data('circle'));
         //console.log(preppedCircle);
         queueAnnotation(cell, { circle: preppedCircle });
-        toggleSelected(cell,$('#label').val());
+        select(cell,$('#label').val());
     }
 });
 

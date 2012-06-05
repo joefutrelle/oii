@@ -157,13 +157,15 @@ function gotoPage(page,size) {
 }
 function drawPendingAnnotations(cell) {
     var imagePid = $(cell).data('imagePid');
-    var p = pending()[imagePid];
-    if(p != undefined) {
-        var cat = categoryLabelForPid(p.category);
-        var ctx = getImageLayerContext(cell,'pending');
-        showAnnotationGeometry(ctx,p);
-        clog('selecting '+cat+' for '+imagePid);
-        select(cell, cat);
+    var ps = pending()[imagePid];
+    if(ps != undefined) {
+	$.each(ps, function(ix, p) {
+            var cat = categoryLabelForPid(p.category);
+            var ctx = getImageLayerContext(cell,'pending');
+            showAnnotationGeometry(ctx,p);
+            clog('selecting '+cat+' for '+imagePid);
+            select(cell, cat); // FIXME broken; assumes one "category" per image as in IFCB
+	});
     }
 }
 function clearPage() {
@@ -228,12 +230,18 @@ function existing(cell) {
 function preCommit() {
     /* generate an ID for each annotation */
     var n = 0;
-    for(var k in pending()) { n++; }
+    $.each(pending, function(imagePid, ps) {
+	$.each(ps, function(ix, p) {
+	    n++;
+	});
+    });
     var i = n-1;
     /* FIXME hardcoded namespace */
     $.getJSON('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
-        $.each(pending(), function(imagePid, ann) {
-            pending()[imagePid].pid = r[i--];
+        $.each(pending(), function(imagePid, ps) {
+	    $.each(ps, function(ix, p) {
+		pending()[imagePid][ix].pid = r[i--];
+	    });
         });
         commit();
     });
@@ -248,13 +256,16 @@ function queueAnnotation(cell, geometry) {
 	assignment: $('#workspace').data('assignment').pid
     };
     clog('enqueing '+JSON.stringify(ann));
-    pending()[ann.image] = ann;
+    HOL.add(pending(), ann.image, ann);
+    drawPendingAnnotations(cell);
 }
 function commit() {
     var as = [];
-    $.each(pending(), function(imagePid, ann) {
-        as.push(ann)
-        clog(ann.image+' is a '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+    $.each(pending(), function(imagePid, anns) {
+	$.each(anns, function(ix, ann) {
+            as.push(ann);N
+            clog(ann.image+' is a '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	});
     });
     $.ajax({
         url: '/create_annotations',
@@ -354,7 +365,6 @@ $(document).ready(function() {
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val());
     });
-    //$('#tool').append('<option value="">Select a Tool</option>')
     $.each(geometry, function(key,g) {
         $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
     });

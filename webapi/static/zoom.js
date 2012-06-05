@@ -313,15 +313,12 @@ function scaleAllLayers(){
             var ctx = canvas.getContext("2d");
             var annotations = $(cell).data(canvasID);
             
-            var i = 0;
             if( canvasID == 'pending' ) {
                 if( annotations == undefined ){
-                    annotations = {};
+                    annotations = [];
                 }
-                $.each(pending(), function(pid, ann) {
-                    if(pid == $(cell).data('imagePid')) {
-                        annotations[i++] = ann;
-                    }
+                $.each(pending()[$(cell).data('imagePid')], function(ix, ann) {
+                    annotations.push(ann);
                 });
             }
             
