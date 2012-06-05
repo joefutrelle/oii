@@ -287,6 +287,10 @@ function deselectAll() {
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
+    $('div.thumbnail').each(function(ix,cell) {
+	clog('drawing pending annotations for '+$(cell).imagePid);
+	drawPendingAnnotations(cell);
+    });
     $(document).trigger('canvasChange');
 }
 function listAssignments() {

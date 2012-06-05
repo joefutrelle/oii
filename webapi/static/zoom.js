@@ -317,9 +317,12 @@ function scaleAllLayers(){
                 if( annotations == undefined ){
                     annotations = [];
                 }
-                $.each(pending()[$(cell).data('imagePid')], function(ix, ann) {
-                    annotations.push(ann);
-                });
+		var imPid = $(cell).data('imagePid');
+		if(imPid in pending()) {
+                    $.each(pending()[imPid], function(ix, ann) {
+			annotations.push(ann);
+                    });
+		}
             }
             
             ctx.save();
