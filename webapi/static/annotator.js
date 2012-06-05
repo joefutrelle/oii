@@ -375,6 +375,7 @@ $(document).ready(function() {
     $('#undo').click(function() {
         undo();
     });
+    $(document).bind('keydown', 'ctrl+z', undo);
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val());
     });
