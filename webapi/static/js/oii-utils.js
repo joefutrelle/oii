@@ -66,3 +66,8 @@ HOL.remove = function(dict, key, item) {
     }
     // else nothing
 };
+HOL.pop = function(dict, key) {
+    if(key in dict) {
+	return dict[key].pop();
+    }
+};

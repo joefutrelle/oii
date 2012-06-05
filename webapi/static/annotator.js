@@ -257,7 +257,15 @@ function queueAnnotation(cell, geometry) {
     };
     clog('enqueing '+JSON.stringify(ann));
     HOL.add(pending(), ann.image, ann);
+    $('#workspace').data('undo').push($(cell).data('imagePid'));
     drawPendingAnnotations(cell);
+}
+function undo() {
+    var imagePid = $('#workspace').data('undo').pop();
+    if(imagePid != undefined) {
+	HOL.pop(pending(), imagePid);
+	$(document).trigger('canvasChange');
+    }
 }
 function commit() {
     var as = [];
@@ -275,6 +283,7 @@ function commit() {
         data: JSON.stringify(as),
         success: function() {
 	    $('#workspace').data('pending',{});
+	    $('#workspace').data('undo',[]);
             $('div.thumbnail.selected').each(function(ix,cell) {
                 commitCell(cell);
                 drawExistingAnnotations(cell);
@@ -286,10 +295,6 @@ function deselectAll() {
     $('#workspace').data('pending',{});
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
-    });
-    $('div.thumbnail').each(function(ix,cell) {
-	clog('drawing pending annotations for '+$(cell).imagePid);
-	drawPendingAnnotations(cell);
     });
     $(document).trigger('canvasChange');
 }
@@ -342,6 +347,7 @@ $(document).ready(function() {
     page = 1;
     size = 1;
     $('#workspace').data('pending',{}); // pending annotations by pid
+    $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
     // images div is not text-selectable
@@ -365,6 +371,9 @@ $(document).ready(function() {
     });
     $('#cancel').click(function() {
         deselectAll();
+    });
+    $('#undo').click(function() {
+        undo();
     });
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val());
