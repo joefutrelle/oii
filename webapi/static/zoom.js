@@ -51,22 +51,25 @@ zoomEvents['mousewheel'] = function(e){
 zoomEvents['mousedown'] = function(evt){
     var cell = getZoomImage();
     $(cell).data('mouseDown', true);
-    
+
     var ox = evt.clientX;
     var oy = evt.clientY;
-    
+    //console.log('Drag: '+ox+','+oy);
+    /*
     if( getZoomNavCoordinates() != null ){
         var navX = new Number(getZoomNavCoordinates().x);
         var navY = new Number(getZoomNavCoordinates().y);
         ox = ox - navX;
         oy = oy - navY;
-    }
+	}
+    */
     setZoomDragOffset(ox,oy);
 }
 
 zoomEvents['mouseup'] = function(evt){
     var cell = getZoomImage();
     $(cell).data('mouseDown', false);
+    //setZoomDragOffset(0,0);
 }
 
 zoomEvents['mouseover'] = function(evt){
@@ -85,11 +88,31 @@ zoomEvents['mousemove'] = function(evt){
         var dragging = ( getZoomScale() > startScale );
 
         if (dragging) {
-
             var startDragOffset = getZoomDragOffset();
-	    var zs = getZoomScale();
+            console.log('Drag to: '+evt.clientX+','+evt.clientY);
+            console.log('drag offset: '+startDragOffset.x+','+startDragOffset.y);
+
+            var zs = getZoomScale();
             var moveX = evt.clientX - startDragOffset.x;
             var moveY = evt.clientY - startDragOffset.y
+
+            console.log('drag moved: '+moveX,moveY);
+            setZoomDragOffset(new Number(startDragOffset.x) + moveX, new Number(startDragOffset.y) + moveY);
+            console.log('scale: '+zs);
+            //scale the drag
+            moveX = moveX/zs;
+            moveY = moveY/zs;
+            console.log('images moved(scaled): '+moveX+','+moveY);
+            if( getZoomNavCoordinates() != null ){
+                var navX = new Number(getZoomNavCoordinates().x);
+                var navY = new Number(getZoomNavCoordinates().y);
+                console.log('viewfinder at: '+navX+','+navY);
+                moveX += navX;
+                moveY += navY;
+            }
+
+            console.log('set viewfinder to: '+moveX+','+moveY);
+
             navigate(moveX, moveY);
 
         } else {
@@ -99,8 +122,6 @@ zoomEvents['mousemove'] = function(evt){
     }
 }
 /**** END OF DRAG FUNCTIONS ****/
-
-
 
 $(document).ready(function(){
     
