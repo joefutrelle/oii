@@ -230,7 +230,7 @@ function existing(cell) {
 function preCommit() {
     /* generate an ID for each annotation */
     var n = 0;
-    $.each(pending, function(imagePid, ps) {
+    $.each(pending(), function(imagePid, ps) {
 	$.each(ps, function(ix, p) {
 	    n++;
 	});
@@ -271,7 +271,7 @@ function commit() {
     var as = [];
     $.each(pending(), function(imagePid, anns) {
 	$.each(anns, function(ix, ann) {
-            as.push(ann);N
+            as.push(ann);
             clog(ann.image+' is a '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
@@ -288,7 +288,12 @@ function commit() {
                 commitCell(cell);
                 drawExistingAnnotations(cell);
             });
-        }
+        },
+	statusCode: {
+	    401: function() {
+		alert('please login');
+	    }
+	}
     });
 }
 function deselectAll() {
@@ -432,7 +437,7 @@ $(document).ready(function() {
     });
     $(window).bind('resize', resizeAll);
     auth.challenge($('#login'), function(username) {
-	alert('logged in as '+username);
+	// do nothing
     });
     gotoPage(page,size);
 });

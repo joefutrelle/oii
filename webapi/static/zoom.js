@@ -61,15 +61,7 @@ zoomEvents['mousedown'] = function(evt){
 
     var ox = evt.clientX;
     var oy = evt.clientY;
-    //console.log('Drag: '+ox+','+oy);
-    /*
-    if( getZoomNavCoordinates() != null ){
-        var navX = new Number(getZoomNavCoordinates().x);
-        var navY = new Number(getZoomNavCoordinates().y);
-        ox = ox - navX;
-        oy = oy - navY;
-	}
-    */
+
     setZoomDragOffset(ox,oy);
 }
 
@@ -259,8 +251,8 @@ function navigate(x,y){
     var scale = getZoomScale();
     
     //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
-    var navX = $(cell).data('translatePos').x/scale;
-    var navY = $(cell).data('translatePos').y/scale;
+    var navX = getTranslatePos().x/scale;
+    var navY = getTranslatePos().y/scale;
 
     if( Math.abs(x) >= Math.abs(navX) ){
         x = (x < 0) ? navX : -1*navX;
@@ -278,45 +270,13 @@ function zoom(){
     scaleAllLayers();
 }
 
-function shrink(){  
-    
-    var x;
-    var y;
-    if( getZoomNavCoordinates() != null ){
-        x = getZoomNavCoordinates().x;
-        y = getZoomNavCoordinates().y;
-    }
-
-    
-    //ACTUAL IMAGE BORDER = TRANSLATE / SCALE
-    var scale = getZoomScale();
-    var navX = $(cell).data('translatePos').x/scale;
-    var navY = $(cell).data('translatePos').y/scale;
-    
+function shrink(){
     changeZoomScale(1/scaleFactor);
-    if( getZoomScale() == startScale ){
-       setZoomNavCoordinates( x, y);            
-    }
-    
-    scale = getZoomScale();
-    navX = $(cell).data('translatePos').x/scale;
-    navY = $(cell).data('translatePos').y/scale;
-    
-    if( x != undefined && y != undefined ){
-        if( Math.abs(x) >= Math.abs(navX) ){
-            x = (x < 0) ? navX : -1*navX;
-        }
-        if( Math.abs(y) >= Math.abs(navY) ){
-           y = (y < 0) ? navY : -1*navY;
-        }
-    }
-    
     scaleAllLayers();
 }
 
 function scaleAllLayers(){
     console.log('entering scaleAllLayers');
-    if( validateScale(getZoomScale()) ){
         
         var cell = getZoomImage();
         var width = $(cell).data('width');
@@ -325,12 +285,16 @@ function scaleAllLayers(){
 	    console.log('WARNING: width is undefined');
 	}
         var scale = getZoomScale();
+    if(scale < startScale) {
+	resetZoom();
+	return;
+    }
         var newWidth = width * scale;
         var newHeight = height * scale;
 
         var x = -((newWidth-width)/2);
         var y = -((newHeight-height)/2);
-        $(cell).data('translatePos',{x: x, y: y});
+	setTranslatePos(x,y);
         
         var navX = getZoomNavCoordinates().x;
         var navY = getZoomNavCoordinates().y;
@@ -376,7 +340,6 @@ function scaleAllLayers(){
 
             ctx.restore();
         });
-    }
 }
 
 
@@ -391,12 +354,6 @@ function executeScroll(direction){
     }
     //make sure the page doesn't scroll
     return !is_zooming;
-}
-
-function validateScale(newScale){
-    var bool = newScale >= startScale;
-    if( !bool ) scale = startScale;
-    return bool;
 }
 
 /** END OF SCALING FUNCTIONS **/
@@ -419,12 +376,11 @@ function getZoomScale(){
 }
 function setZoomScale(s){
     $('#workspace').data('zoomScale', s);
+    return s;
 }
-function changeZoomScale(diff){
+function changeZoomScale(diff) {
     var newScale = getZoomScale() * diff;
-    if( validateScale(newScale) ){
-        setZoomScale(newScale);
-    }
+    setZoomScale(newScale);
 }
 function getZoomIsZooming(){
     return is_zooming;
@@ -442,9 +398,24 @@ function getZoomNavCoordinates(){
 function setZoomNavCoordinates(xc,yc){
     getZoomImage().data('nav-coordinates', {x: xc, y: yc});
 }
-function getZoomCoordinates(){
+function setTranslatePos(xc,yc) {
+    getZoomImage().data('translatePos',{x:xc,y:yc});
+}
+function getTranslatePos(){
     return getZoomImage().data('translatePos');
 }
 function getZoomCanvasName(cid){
     return cid.substring(0,cid.indexOf('_'));
 }
+// coordinate systems, dimensions and transformations used:
+// image space: the coordinate system of the full-sized image in pixels
+// canvas space: the coordinate system of the displayed canvas, which is scaled by startScale
+// startScale: default scale of the interface; the scale at which the image exactly fits the canvas.
+// zoomScale: the zoomed-in scale. when==startScale, not zoomed. when > startScale, zoomed in. when < startScale, zoomed out.
+// scaleFactor: how much to change the scale factor by when zooming in or out.
+// translatePos: ?
+// zoomNavCoordinates: ?
+// zoomDragOffset: ?
+
+
+

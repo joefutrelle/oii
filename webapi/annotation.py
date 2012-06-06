@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for
+from flask import Flask, request, url_for, abort, session
 from unittest import TestCase
 import json
 import re
@@ -50,7 +50,15 @@ def my(key):
 
 @app.route('/create_annotations',methods=['POST'])
 def create_annotations():
-    my(ANNOTATION_STORE).create_annotations(json.loads(request.data))
+    annotations = json.loads(request.data)
+    # indicate that they're by the session user
+    try:
+        for ann in annotations:
+            ann['annotator'] = session['username']
+    except KeyError:
+        abort(401)
+    # writem
+    my(ANNOTATION_STORE).create_annotations(annotations)
     return '{"status":"OK"}'
     
 @app.route('/fetch/annotation/<path:pid>')
