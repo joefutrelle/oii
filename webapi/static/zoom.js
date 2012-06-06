@@ -38,12 +38,19 @@ zoomEvents['DOMMouseScroll'] = function(e){
     while(!scroll.detail && scroll.originalEvent){
      scroll = scroll.originalEvent;
     }
-
     return executeScroll(scroll.detail);
 }
 ////detect mouse scroll => IE, Opera, Safari
 zoomEvents['mousewheel'] = function(e){
-    return executeScroll(e.delta);
+    var scroll = e;
+    while(!scroll.detail && scroll.originalEvent){
+     scroll = scroll.originalEvent;
+    }
+    if('delta' in scroll) { // IE, Opera, Safari
+	return executeScroll(scroll.delta);
+    } else if('wheelDeltaY' in scroll) { // chrome
+	return executeScroll(0-scroll.wheelDeltaY);
+    }
 }
 /**** END OF ZOOM FUNCTIONS ****/
 
@@ -374,6 +381,7 @@ function scaleAllLayers(){
 
 
 function executeScroll(direction){
+    console.log('executing scroll, direction = '+direction);
     if( is_zooming ){
         if(direction > 0){
             shrink();
