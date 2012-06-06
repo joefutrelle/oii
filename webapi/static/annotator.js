@@ -108,7 +108,6 @@ function showAnnotationGeometry(ctx,ann) {
             var g = ann.geometry[key];
             if(g != undefined) {
                 var sa = geometry[key].prepareForCanvas(ann.geometry[key]);
-                clog('******* draw a '+key+' for '+JSON.stringify(sa));
                 geometry[key].draw(ctx, sa);
             }
         }

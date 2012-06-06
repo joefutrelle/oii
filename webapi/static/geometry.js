@@ -68,8 +68,8 @@ geometry.path = {
 geometry.point = {
     label: 'Point',
     draw: function(ctx, point) {
-        var x = scalingFactor * point[0];
-        var y = scalingFactor * point[1];
+        var x = scalingFactor * point[0][0];
+        var y = scalingFactor * point[0][1];
         var size = 5;
         ctx.strokeStyle = geometryColor;
         ctx.beginPath();
@@ -380,7 +380,7 @@ geometry.point.tool = new MeasurementTool({
         var mx = event.data.mx;
         var my = event.data.my;
         /* compute a rectangle in original scale pixel space */
-        var line = [(mx/scalingFactor), (my/scalingFactor)]
+        var line = [[(mx/scalingFactor), (my/scalingFactor)]];
         $(cell).data('point',line);
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
         geometry.point.draw(ctx,line);
@@ -394,7 +394,7 @@ geometry.point.tool = new MeasurementTool({
             var mx = event.data.mx;
             var my = event.data.my;
             /* compute a rectangle in original scale pixel space */
-            var line = [(mx/scalingFactor), (my/scalingFactor)]
+            var line = [[(mx/scalingFactor), (my/scalingFactor)]];
             $(cell).data('point',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.point.draw(ctx,line);
