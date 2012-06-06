@@ -3,9 +3,11 @@ from unittest import TestCase
 import json
 import re
 import sys
+import os
 from oii.utils import gen_id, structs, jsons
 from oii.config import get_config
 from oii.webapi.idgen import idgen_api
+from oii.webapi.auth import auth_api
 from oii.annotation.storage import DebugAnnotationStore
 from oii.annotation.psql import PsqlAnnotationStore
 from oii.annotation.categories import Categories
@@ -26,6 +28,7 @@ and https://beagle.whoi.edu/redmine/issues/943"""
 
 app = Flask(__name__)
 app.register_blueprint(idgen_api)
+app.register_blueprint(auth_api)
 app.debug = True
 
 # config options
@@ -34,72 +37,8 @@ CATEGORIES = 'categories'
 ASSIGNMENT_STORE = 'assignment_store'
 
 # default config
-
-class DummyCategories(Categories):
-    def list_categories(self,_):
-        return [{
-            'label': 'sand dollar',
-            'pid': 'http://foo.bar/ns/sand_dollar'
-        },{
-            'label': 'trash',
-            'pid': 'http://foo.bar/ns/trash'
-        }]
-
-class DummyAssignmentStore(AssignmentStore):
-    def __init__(self):
-        self.assignments = [{
-            "pid": "http://foo.bar/assignments/baz",
-            "label": "Look for trash",
-            "status": "new",
-            "mode": "trash",
-            "images": [{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
-                },{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg"
-                },{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
-                }]
-          },{
-            "pid": "http://foo.bar/assignments/fnordy",
-            "label": "Look for sand dollars",
-            "status": "new",
-            "mode": "sanddollars",
-            "images": [{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110610.092626156.95900.jpg"
-                },{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110621.174046593.84534.jpg"
-                },{
-                 "pid": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg",
-                 "image": "http://molamola.whoi.edu/data/UNQ.20110627.205454750.84789.jpg"
-                }]
-          }]
-          
-class ZoomAssignmentStore(AssignmentStore):
-    def __init__(self):
-        self.assignments = [{
-            "pid": "http://foo.bar/assignments/baz",
-            "label": "Zoom Testing",
-            "status": "new",
-            "mode": "trash",
-            "images": [{
-                 "pid": "http://localhost:5000/static/images/zoom/zoom-test.jpg",
-                 "image": "http://localhost:5000/static/images/zoom/zoom-test.jpg"
-                }]
-          }]
-        
 DEFAULT_CONFIG = {
     ANNOTATION_STORE: DebugAnnotationStore(),
-    #CATEGORIES: DummyCategories(),
-    #ASSIGNMENT_STORE: ZoomAssignmentStore()
-    #CATEGORIES: IfcbCategories(),
-    #ASSIGNMENT_STORE: IfcbFeedAssignmentStore()
-    #CATEGORIES: HabcamCategories(),
-    #ASSIGNMENT_STORE: HabcamAssignmentStore()
 }
 
 # get a configured component, or use a default one for testing
@@ -225,4 +164,5 @@ if __name__=='__main__':
             port = int(config.port)
         except KeyError:
             port = 5000
+    app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0',port=port)

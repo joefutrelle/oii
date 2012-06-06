@@ -87,8 +87,9 @@ zoomEvents['mousemove'] = function(evt){
         if (dragging) {
 
             var startDragOffset = getZoomDragOffset();
-            var moveX = evt.clientX - startDragOffset.x
-            var moveY = evt.clientY - startDragOffset.y;
+	    var zs = getZoomScale();
+            var moveX = evt.clientX - startDragOffset.x;
+            var moveY = evt.clientY - startDragOffset.y
             navigate(moveX, moveY);
 
         } else {

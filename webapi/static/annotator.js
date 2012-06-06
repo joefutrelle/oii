@@ -343,6 +343,24 @@ function categoryLabelForPid(pid) {
         }
     }
 }
+function resizeAll() {
+    // resize the right panel
+    var rp = $('#rightPanel');
+    if(rp.is(':visible')) {
+        rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
+    }
+}
+
+function hasLabel(){
+    return $('#label').val() != null && $('#label').val().length > 0;
+}
+
+function getImageCanvii(){
+    return $('#images').find('div.thumbnail:last');
+}
+function getCanvasForName(canvasName){
+    return getImageLayer(getImageCanvii(),canvasName)[0];
+}
 $(document).ready(function() {
     page = 1;
     size = 1;
@@ -413,23 +431,8 @@ $(document).ready(function() {
         $('#rightPanel').show(100, resizeAll);
     });
     $(window).bind('resize', resizeAll);
+    auth.challenge($('#login'), function(username) {
+	alert('logged in as '+username);
+    });
     gotoPage(page,size);
 });
-function resizeAll() {
-    // resize the right panel
-    var rp = $('#rightPanel');
-    if(rp.is(':visible')) {
-        rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
-    }
-}
-
-function hasLabel(){
-    return $('#label').val() != null && $('#label').val().length > 0;
-}
-
-function getImageCanvii(){
-    return $('#images').find('div.thumbnail:last');
-}
-function getCanvasForName(canvasName){
-    return getImageLayer(getImageCanvii(),canvasName)[0];
-}
