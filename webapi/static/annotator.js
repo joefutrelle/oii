@@ -365,11 +365,22 @@ function getImageCanvii(){
 function getCanvasForName(canvasName){
     return getImageLayer(getImageCanvii(),canvasName)[0];
 }
+function toggleExisting() {
+    var e = $('#workspace').data('showExisting');
+    if(e) {
+	e = 0;
+    } else {
+	e = 1;
+    }
+    $('#workspace').data('showExisting',e);
+    $(document).trigger('canvasChange');
+}
 $(document).ready(function() {
     page = 1;
     size = 1;
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
+    $('#workspace').data('showExisting',1); // whether to display existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
     // images div is not text-selectable
@@ -396,6 +407,9 @@ $(document).ready(function() {
     });
     $('#undo').click(function() {
         undo();
+    });
+    $('#toggleExisting').click(function() {
+	toggleExisting();
     });
     $(document).bind('keydown', 'ctrl+z', undo);
     $('#assignment').change(function() {

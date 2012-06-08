@@ -304,7 +304,10 @@ function scaleAllLayers(){
             
             var rt = new Date();
             var ctx = canvas.getContext("2d");
-            var annotations = $(cell).data(canvasID);
+	    var annotations = [];
+	    if($('#workspace').data('showExisting')) {
+               annotations = $(cell).data(canvasID);
+	    }
             
             if( canvasID == 'pending' ) {
                 if( annotations == undefined ){
