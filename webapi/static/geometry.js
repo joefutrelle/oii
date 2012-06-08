@@ -65,6 +65,30 @@ geometry.path = {
         return scaleAnnotation(this, annotation);
     } 
 };
+geometry.polyline = { // FIXME this geometry is drawn the same as path
+    label: 'Polyline',
+    draw: function(ctx, line) {
+        var oy = scalingFactor * line[0][1];
+        ctx.strokeStyle = geometryColor;
+        ctx.beginPath();
+	$.each(line, function(ix, pt) {
+	    var px = scalingFactor * pt[0];
+	    var py = scalingFactor * pt[1];
+	    if(ix == 0) {
+		ctx.moveTo(px, py);
+	    } else {
+		ctx.lineTo(px, py);
+	    }
+	});
+        ctx.stroke();
+    },
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
+};
 geometry.point = {
     label: 'Point',
     draw: function(ctx, point) {
@@ -328,6 +352,63 @@ geometry.line.tool = new MeasurementTool({
         
         queueAnnotation(cell, { line: preppedLine });
         select(cell,$('#label').val());
+    }
+});
+geometry.polyline.tool = new MeasurementTool({
+    mousedown: function(event) {
+        var cell = event.data.cell;
+        var mx = event.data.mx;
+        var my = event.data.my;
+        var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
+        var py = $(cell).data('py');
+	console.log('px='+px+', py='+py);
+	if(px==mx && py==my) { // doubleclick: commit
+            $(cell).data('px',-1);
+            $(cell).data('py',-1);
+	    var line = $(cell).data('polyline');
+	    console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
+            console.log('pre-prepped line: '+line);
+            var preppedLine = geometry.polyline.prepareForStorage(line);
+            console.log('post-prepped line: '+preppedLine);
+            queueAnnotation(cell, { polyline: preppedLine });
+            select(cell,$('#label').val());
+        } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+            var line = $(cell).data('polyline');
+	    line.push([mx/scalingFactor, my/scalingFactor]);
+	    $(cell).data('polyline',line);
+	    console.log('click while rubberbanding, line = '+JSON.stringify(line));
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.polyline.draw(ctx,line); // draw the existing line
+	    $(cell).data('px',mx);
+	    $(cell).data('py',my);
+	} else { // start line
+            $(cell).data('px',mx);//previous x,y; the point we're currently rubberbanding from
+            $(cell).data('py',my);
+	    $(cell).data('polyline',[[mx/scalingFactor, my/scalingFactor]]);
+	    console.log('click when not rubberbanding, line = '+JSON.stringify($(cell).data('polyline')));
+	    // no need to draw yet
+	}
+    },
+    mousemove: function(event) {
+        var cell = event.data.cell;
+        var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
+        var py = $(cell).data('py');
+        if(px >= 0 && py >= 0) {
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+            var line = $(cell).data('polyline');
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.polyline.draw(ctx,line); // draw the existing line
+	    ctx.lineTo(mx, my); // now draw the rubberbanded current addition
+	    ctx.stroke();
+        }
+    },
+    mouseup: function(event) {
+	// do nothing
     }
 });
 // allow the user to draw a freeform line on a cell's 'new annotation' canvas
