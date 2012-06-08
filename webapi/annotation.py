@@ -21,6 +21,7 @@ from utils import jsonr
 # test with Habcam
 from oii.habcam.assignments import HabcamAssignmentStore
 from oii.habcam.categories import HabcamCategories
+from oii.habcam.annotation import HabcamAnnotationStore
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
@@ -163,7 +164,7 @@ if __name__=='__main__':
     if len(sys.argv) > 1:
         config = get_config(sys.argv[1])
         try:
-            app.config[ANNOTATION_STORE] = DebugAnnotationStore()
+            app.config[ANNOTATION_STORE] = HabcamAnnotationStore(config)
             app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
             app.config[CATEGORIES] = HabcamCategories(config)
         except KeyError:
