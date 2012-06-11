@@ -28,7 +28,7 @@ class HabcamAnnotationStore(AnnotationStore):
             d = {}
             d['image'] = row[0]
             d['category'] = row[1]
-            d['geometry'] = json.loads(row[2])
+            d['geometry'] = json.loads('{'+row[2]+'}')
             d['annotator'] = row[3]
             d['timestamp'] = row[4]
             d['assignment'] = row[5]
@@ -55,6 +55,8 @@ class HabcamAnnotationStore(AnnotationStore):
     def create_annotations(self,annotations):
         tuples = []
         for d in annotations:
-            tuples.append((d['image'], d['category'], json.dumps(d['geometry']), d['annotator'],d['timestamp'], d['assignment'], d['pid']))
+            tuples.append((d['image'], d['category'], json.dumps(d['geometry']).strip('{}'), d['annotator'],d['timestamp'], d['assignment'], d['pid']))
         (connection, cursor) = self.__db()
+        print 'gonna do it: ' + json.dumps(tuples)
         cursor.executemany("insert into raw_annotations (image_id, category_id, geometry_text, annotator_id, timestamp, assignment_id, annotation_id) values (%s,%s,%s,%s,%s,%s,%s)", tuples)
+        connection.commit()
