@@ -1,0 +1,52 @@
+/*I picked a scheme http://colorschemedesigner.com/#3h11ww0w0w0w04.O-j */
+.assignments{
+	font-size:1em;
+	font-family: Ubuntu, sans-serif;
+}
+.assignmentBox{
+	border: 5px solid #1D7471;
+	background-color: #D4FAF8;
+	padding-left:20px;
+	padding-top:0px;
+	margin: 10px 30px 10px 30px;
+
+	border-radius:25px;
+	-moz-border-radius:25px; /* Firefox 3.6 and earlier */
+}
+
+.assignmentBox h2{
+	margin:10px;
+	margin-bottom:0;
+}
+
+.assignmentBox div
+{
+float:left;
+padding:10px;
+}
+
+div.assignmentButtons{
+float:right;
+}
+.assignmentBox span{
+	font-size:1.3em;
+	color:#006561;
+	font-weight:bold;
+}
+
+
+.assignmentBox li{
+ list-style-type:none; 
+}
+
+
+.assignemntBox textfield{background-color:white}
+
+#assignmentOptions{
+	background-color:#009B95;
+	text-align: left;
+	border: 0 solid #009B95;
+	border-radius:5px;
+	-moz-border-radius:25px; /* Firefox 3.6 and earlier */
+	margin-top:5px;
+}
