@@ -6,16 +6,33 @@
 		var $this = $(this);
 		$this.data('all_categories',[]);
 		$this.data('recent',[]);
+		function compute_selected() {
+		    var selectedCategories = [];
+		    var label = '';
+		    $this.find('select').each(function(ix, elt) {
+			var pid = $(elt).val();
+			$.each($this.data('all_categories'), function(ix, c) {
+			    if(c.pid == pid) {
+				selectedCategories.push(c);
+				label += ' + ' + c.label;
+			    }
+			});
+		    });
+		    callback(selectedCategories);
+		    $this.find('.selected_category').html(label.substring(2));
+		}
 		function add_choice() {
 		    var select = $this.append('<div><select class="category_choice"></select></div>').find('select');
 		    $.each($this.data('all_categories'),function(ix,c) {
 			$(select).append('<option value="'+c.pid+'">'+c.label+'</option>')
 		    });
-		    $this.find('.button').replaceWith('<a href="#" class="button">-</a>').end().find('.button').button().click(function() { $(this).parent().remove(); });
+		    $this.find('.button').replaceWith('<a href="#" class="button">-</a>').end().find('.button').button().click(function() { $(this).parent().remove(); compute_selected(); });
 		    $this.find('div:last').append('<a href="#" class="button">+</a>').find('.button').button().click(add_choice);
+		    $(select).change(compute_selected);
 		}
 		$.getJSON('/list_categories/'+scope, function(c) {
 		    $this.data('all_categories',c);
+		    $this.append('<div class="selected_category"></div>');
 		    add_choice();
 		});
 	    });
@@ -24,10 +41,8 @@
 })(jQuery);
 $(document).ready(function() {
     $('#picker1').categoryPicker('QC_Fish',function(categories) {
-	alert('yall selected '+JSON.stringify(categories));
     });
     $('#picker2').categoryPicker('QC_Fish',function(categories) {
-	alert('talkin bout '+JSON.stringify(categories));
     });
 });
 
