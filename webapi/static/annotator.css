@@ -1,3 +1,12 @@
+body {
+   font-size: .8em !important;
+}
+.button {
+   font-size: .8em !important;
+}
+.ui-button-text {
+   font-size: inherit !important;
+}
 div.thumbnail {
   position: relative;
   display: inline-block;

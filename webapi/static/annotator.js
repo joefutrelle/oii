@@ -307,7 +307,7 @@ function listAssignments() {
     $.getJSON('/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
             clog(a);
-            $('#assignment').append('<option value="'+a.pid+'">'+a.label+'</option>')
+            $('#assignment').append('<option value="'+a.pid+'">'+elide(a.label)+'</option>')
         });
     });
 }
@@ -449,7 +449,7 @@ $(document).ready(function() {
         $('#rightPanel').show(100, resizeAll);
     });
     $(window).bind('resize', resizeAll);
-    auth.challenge($('#login'), function(username) {
+    $('#login').authentication(function(username) {
 	// do nothing
     });
     gotoPage(page,size);

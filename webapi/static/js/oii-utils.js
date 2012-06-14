@@ -71,3 +71,11 @@ HOL.pop = function(dict, key) {
 	return dict[key].pop();
     }
 };
+function elide(string, len) {
+    if(len == undefined) { len = 30; }
+    if(string.length > len) {
+	return string.substring(0,len) + '...';
+    } else {
+	return string;
+    }
+}
