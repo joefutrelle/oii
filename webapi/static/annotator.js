@@ -1,3 +1,9 @@
+function getWorkspace(key) {
+    return $('#workspace').data(key);
+}
+function setWorkspace(key,value) {
+    $('#workspace').data(key, value);
+}
 // add an image to the page
 // - cell: the div to draw it in
 // - imageUrl: the url of the image to draw
@@ -127,12 +133,12 @@ function gotoPage(page,size) {
     clearPage();
     var offset = (page-1) * size;
     var limit = size;
-    var assignment = $('#workspace').data('assignment');
+    var assignment = getWorkspace('assignment');
     if(assignment == undefined) {
 	clog('no assignment currently selected; changing page will have no effect');
 	return;
     }
-    var assignment_pid = $('#workspace').data('assignment').pid;
+    var assignment_pid = assignment.pid;
     $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
         $.each(r, function(i,entry) {
             // append image with approprite URL
@@ -254,10 +260,13 @@ function queueAnnotation(cell, geometry) {
 	timestamp: iso8601(new Date()),
 	assignment: $('#workspace').data('assignment').pid
     };
+    pushAnnotation(ann);
+}
+function pushAnnotation(ann)  {
     clog('enqueing '+JSON.stringify(ann));
     HOL.add(pending(), ann.image, ann);
     $(document).trigger('canvasChange');
-    $('#workspace').data('undo').push($(cell).data('imagePid'));
+    $('#workspace').data('undo').push(ann.image);
 }
 function undo() {
     var imagePid = $('#workspace').data('undo').pop();
@@ -281,8 +290,7 @@ function commit() {
         dataType: 'json',
         data: JSON.stringify(as),
         success: function() {
-	    $('#workspace').data('pending',{});
-	    $('#workspace').data('undo',[]);
+	    resetPending();
             $('div.thumbnail.selected').each(function(ix,cell) {
                 commitCell(cell);
                 drawExistingAnnotations(cell);
@@ -306,7 +314,6 @@ function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
     $.getJSON('/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
-            clog(a);
             $('#assignment').append('<option value="'+a.pid+'">'+elide(a.label)+'</option>')
         });
     });
@@ -375,11 +382,14 @@ function toggleExisting() {
     $('#workspace').data('showExisting',e);
     $(document).trigger('canvasChange');
 }
+function resetPending() {
+    $('#workspace').data('pending',{}); // pending annotations by pid
+    $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
+}
 $(document).ready(function() {
     page = 1;
     size = 1;
-    $('#workspace').data('pending',{}); // pending annotations by pid
-    $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
+    resetPending();
     $('#workspace').data('showExisting',1); // whether to display existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
@@ -451,6 +461,10 @@ $(document).ready(function() {
     $(window).bind('resize', resizeAll);
     $('#login').authentication(function(username) {
 	// do nothing
+    });
+    // substrate
+    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker('QC_Fish', function(foo) {
+	alert(JSON.stringify(foo));
     });
     gotoPage(page,size);
 });

@@ -18,8 +18,12 @@
 			    }
 			});
 		    });
-		    callback(selectedCategories);
-		    $this.find('.selected_category').html(label.substring(2));
+		    $this.find('.selected_category')
+			.html('<a href="#">'+label.substring(2)+'</a>')
+			.find('a').button()
+			.click(function() {
+			    callback(selectedCategories);
+			});
 		}
 		function add_choice() {
 		    var select = $this.append('<div><select class="category_choice"></select></div>').find('select');
