@@ -1,0 +1,16 @@
+<!--
+201203.20120602.204112707.219586.tif
+/mnt/rose5/q/nmfs/201206/20120602/20120602_20/20120602_2040/201203.20120602.204112707.219586.tif
+-->
+<resolver name="habcam-tifs">
+  <match variable="pid">(\d{6}\.((\d{6})\d{2})\.((\d{2})\d)\d+\.\d+)</match>
+  <variable name="filename">${1}.tif</variable>
+  <variable name="day">${2}</variable>
+  <variable name="month">${3}</variable>
+  <variable name="hour">${day}_${5}</variable>
+  <variable name="tenmin">${day}_${4}0</variable>
+  <path variable="tld" match="/mnt/rose5/*">
+    <match variable="tld">.*/[a-h]</match>
+    <path match="nmfs/${month}/${day}/${hour}/${tenmin}/${filename}"/>
+  </path>
+</resolver>
