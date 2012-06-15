@@ -10,6 +10,7 @@ from os import path
 Match = namedtuple('Match', ['variable','regex'])
 Variable = namedtuple('Variable', ['name','values'])
 Path = namedtuple('Path', ['variable', 'match', 'expressions'])
+Any = namedtuple('Any', ['expressions'])
 
 # convert XML format into named tuple representation.
 # a resolver is a sequence of expressions, each of which is
@@ -25,6 +26,8 @@ def sub_parse(node):
             yield Variable(name=child.get('name'), values=values)
         elif child.tag == 'path':
             yield Path(variable=child.get('variable'), match=child.get('match'), expressions=list(sub_parse(child)))
+        elif child.tag == 'any':
+            yield Any(expressions=list(sub_parse(child)))
 
 # parsing entry point
 def parse(pathname):
@@ -48,8 +51,12 @@ def resolve(resolver,bindings,cwd='/'):
     if not resolver: # no more expressions left?
         return
     expr = resolver[0] # work on the first one
-    print expr
-    if isinstance(expr,Match):
+    #print (expr,bindings)
+    if isinstance(expr,Any): # disjunction on sub-resolvers
+        for ex in expr.expressions:
+            for h in resolve([ex] + resolver[1:], bindings, cwd):
+                yield h
+    elif isinstance(expr,Match):
         # "match" means test a variable against a regex, and (optionally) match groups
         # group n will be bound to ${n+1}, so for instance if variable
         # "foo" is "yes,no,123" then
