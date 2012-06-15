@@ -7,10 +7,11 @@ from os import path
 
 # "little language" pattern
 
-Match = namedtuple('Match', ['variable','regex'])
+Match = namedtuple('Match', ['variable','regex', 'expressions'])
 Variable = namedtuple('Variable', ['name','values'])
 Path = namedtuple('Path', ['variable', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
+Hit = namedtuple('Hit', ['value', 'stop'])
 
 # convert XML format into named tuple representation.
 # a resolver is a sequence of expressions, each of which is
@@ -18,7 +19,12 @@ Any = namedtuple('Any', ['expressions'])
 def sub_parse(node):
     for child in node:
         if child.tag == 'match':
-            yield Match(variable=child.get('variable'), regex=child.text)
+            variable = child.get('variable')
+            pattern = child.get('pattern')
+            if pattern is not None:
+                yield Match(variable, regex=pattern, expressions=list(sub_parse(child)))
+            else:
+                yield Match(variable, regex=child.text, expressions=None)
         elif child.tag == 'variable':
             values = [gc.text for gc in child if gc.tag == 'value'];
             if not values:
@@ -28,6 +34,12 @@ def sub_parse(node):
             yield Path(variable=child.get('variable'), match=child.get('match'), expressions=list(sub_parse(child)))
         elif child.tag == 'any':
             yield Any(expressions=list(sub_parse(child)))
+        elif child.tag == 'hit':
+            stop = child.get('stop')
+            if stop is not None:
+                yield Hit(value=child.text, stop=stop in ['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes'])
+            else:
+                yield Hit(value=child.text, stop=False)
 
 # parsing entry point
 def parse(pathname):
@@ -52,10 +64,25 @@ def resolve(resolver,bindings,cwd='/'):
         return
     expr = resolver[0] # work on the first one
     #print (expr,bindings)
-    if isinstance(expr,Any): # disjunction on sub-resolvers
+    if isinstance(expr,Any):
+        # "any" means to accept any matching subexpression instead of terminating
+        # if the first one doesn't match. For example
+        # <any>
+        #   <match variable="pid">.*((D\d{4}\d{4})T\d{6}_\IFCB\d+)</match>
+        #   <match variable="pid">.*((IFCB\d+_\d{4}_\d{3})_\d{6})</match>
+        # </any>
+        # will try both pid syntaxes and any match will bind the groups and
+        # evaluate the rest of the resolver following the </any> tag.
         for ex in expr.expressions:
             for h in resolve([ex] + resolver[1:], bindings, cwd):
                 yield h
+    elif isinstance(expr,Hit):
+        # "hit" immediately yields a solution, then continues
+        print expr
+        yield (substitute(expr.value,bindings), bindings)
+        if not expr.stop:
+            for hit in resolve(resolver[1:],bindings,cwd):
+                yield hit
     elif isinstance(expr,Match):
         # "match" means test a variable against a regex, and (optionally) match groups
         # group n will be bound to ${n+1}, so for instance if variable
@@ -65,7 +92,15 @@ def resolve(resolver,bindings,cwd='/'):
         # ${1} -> "yes"
         # ${2} -> "no"
         # ${3} -> "123"
-        # if there is no match, execution stops
+        # if there is no match, execution stops.
+        # another variant allows sub-expressions to be evaluated conditionally
+        # depending on whether or not there is a match. in this case a match
+        # causes execution to descend into the subexpressions and terminate;
+        # no match causes execution to continue on the remainder of the resolver.
+        # <match variable="foo" pattern="([a-z]+),([a-z]+),(\d+)">
+        #     <variable name="bar">${1}_${2}</variable>
+        #     ...
+        # </match>
         value = bindings[expr.variable]
         m = re.match(substitute(expr.regex,bindings), value)
         if m is not None:
@@ -73,8 +108,16 @@ def resolve(resolver,bindings,cwd='/'):
             local_bindings = bindings.copy()
             for index,group in zip(range(len(groups)), groups):
                 local_bindings[str(index+1)] = group
-            # done, now do the rest of the resolver
-            for hit in resolve(resolver[1:],local_bindings,cwd):
+            if expr.expressions is not None: # descend as a result of the match
+                for hit in resolve(expr.expressions,local_bindings,cwd):
+                    yield hit
+            else:
+                # matched, and no subexpressions, so continue
+                for hit in resolve(resolver[1:],local_bindings,cwd):
+                    yield hit
+        elif expr.expressions is not None:
+            # no match, so skip subexpressions and keep going
+            for hit in resolve(resolver[1:],bindings,cwd):
                 yield hit
     elif isinstance(expr,Variable):
         # "variable" means bind a variable from a template that may optionally
@@ -124,7 +167,7 @@ def resolve(resolver,bindings,cwd='/'):
         variable = expr.variable
         candidate = path.join(cwd, substitute(expr.match,bindings))
         if variable is None and path.exists(candidate) and path.isfile(candidate):
-            yield candidate
+            yield (candidate,bindings)
         else:
             for hit in iglob(candidate):
                 local_bindings = bindings.copy()
