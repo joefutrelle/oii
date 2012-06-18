@@ -82,8 +82,8 @@ def list_images(limit,offset,assignment_pid):
 def list_assignments():
     return jsonr({'assignments': my(ASSIGNMENT_STORE).list_assignments()})
 
-def stem_search(stem,mode):
-    for c in my(CATEGORIES).list_categories(mode):
+def stem_search(stem,mode,scope=None):
+    for c in my(CATEGORIES).list_categories(mode,scope):
         if re.match(stem,c['label'],re.I):
             yield {
                 'pid': c['pid'],
@@ -91,14 +91,17 @@ def stem_search(stem,mode):
                 'value': c['label']
             }
 
-@app.route('/list_categories/<path:mode>')
-def list_categories(mode):
-    return jsonr(list(my(CATEGORIES).list_categories(mode)))
+@app.route('/list_categories/<mode>')
+@app.route('/list_categories/<mode>/<scope>')
+def list_categories(mode,scope=None):
+    print 'listing categories with %s,%s' % (mode,scope)
+    return jsonr(list(my(CATEGORIES).list_categories(mode,scope)))
 
-@app.route('/category_autocomplete/<path:mode>',methods=['GET','POST'])
-def category_autocomplete(mode):
+@app.route('/category_autocomplete/<mode>',methods=['GET','POST'])
+@app.route('/category_autocomplete/<mode>/<scope>',methods=['GET','POST'])
+def category_autocomplete(mode,scope=None):
     stem = '^%s.*' % request.values['term']
-    return jsonr(list(stem_search(stem,mode)))
+    return jsonr(list(stem_search(stem,mode,scope)))
 
 class TestAnnotation(TestCase):
     def setUp(self):

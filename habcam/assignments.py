@@ -6,7 +6,7 @@ from oii.annotation.assignments import AssignmentStore
 class HabcamAssignmentStore(AssignmentStore):
     def __init__(self,config):
         self.config = config
-        self.assignment_fields = ['assignment_id','idmode','site_description','project_name','priority','initials','date']
+        self.assignment_fields = ['assignment_id','idmode_id','site_description','project_name','priority','initials','date']
     def lid(self,pid,namespace=None):
         if namespace is None:
             namespace = self.config.namespace
@@ -30,7 +30,7 @@ class HabcamAssignmentStore(AssignmentStore):
             d['images'] = self.pid(d['imagelist'])
         except KeyError:
             pass
-        d['mode'] = d['idmode']
+        d['mode'] = d['idmode_id']
         d['label'] = '%s: %s @ %s' % (str(d['assignment_id']), d['project_name'], d['site_description'])
         return d
     def list_assignments(self):

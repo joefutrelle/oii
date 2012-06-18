@@ -1,7 +1,7 @@
 // mmm mm some tasty jQuery extensibility
 (function($) {
     $.fn.extend({
-        categoryPicker: function(scope, callback) {
+        categoryPicker: function(mode, scope, callback) {
 	    return this.each(function() {
 		var $this = $(this);
 		$this.data('all_categories',[]);
@@ -34,7 +34,7 @@
 		    $this.find('div:last').append('<a href="#" class="button">+</a>').find('.button').button().click(add_choice);
 		    $(select).change(compute_selected);
 		}
-		$.getJSON('/list_categories/'+scope, function(c) {
+		$.getJSON('/list_categories/'+mode+'/'+scope, function(c) {
 		    $this.data('all_categories',c);
 		    $this.append('<div class="selected_category"></div>');
 		    add_choice();

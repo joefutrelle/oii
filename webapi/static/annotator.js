@@ -463,7 +463,8 @@ $(document).ready(function() {
 	// do nothing
     });
     // substrate
-    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker('QC_Fish', function(foo) {
+    // FIXME should pick the substrate scope for the assignments' mode
+    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker(1, 3, function(foo) {
 	alert(JSON.stringify(foo));
     });
     gotoPage(page,size);

@@ -9,7 +9,7 @@ class Categories(object):
         }]
     def list_modes(self):
         return ['foo']
-    def list_categories(self,mode):
+    def list_categories(self,mode,scope=None):
         for cat in self.categories:
             if mode in cat['modes']:
                 yield cat
