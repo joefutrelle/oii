@@ -42,8 +42,14 @@ def sub_parse(node):
                 yield Hit(value=child.text, stop=False)
 
 # parsing entry point
-def parse(pathname):
-    r = etree.parse(pathname).getroot()
+def parse(pathname,resolver_name=None):
+    if resolver_name is None:
+        r = etree.parse(pathname).getroot()
+    else:
+        for child in etree.parse(pathname).getroot():
+            if child.tag == 'resolver' and child.get('name') == resolver_name:
+                r = child
+                break
     return list(sub_parse(r))
 
 # substitute patterns like ${varname} for their values given
@@ -78,7 +84,6 @@ def resolve(resolver,bindings,cwd='/'):
                 yield h
     elif isinstance(expr,Hit):
         # "hit" immediately yields a solution, then continues
-        print expr
         yield (substitute(expr.value,bindings), bindings)
         if not expr.stop:
             for hit in resolve(resolver[1:],bindings,cwd):
