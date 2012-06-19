@@ -84,7 +84,7 @@ def list_assignments():
 
 def stem_search(stem,mode,scope=None):
     for c in my(CATEGORIES).list_categories(mode,scope):
-        if re.match(stem,c['label'],re.I):
+        if re.match(r'.*\b'+stem,c['label'],re.I):
             yield {
                 'pid': c['pid'],
                 'label': c['label'],
@@ -94,13 +94,12 @@ def stem_search(stem,mode,scope=None):
 @app.route('/list_categories/<mode>')
 @app.route('/list_categories/<mode>/<scope>')
 def list_categories(mode,scope=None):
-    print 'listing categories with %s,%s' % (mode,scope)
     return jsonr(list(my(CATEGORIES).list_categories(mode,scope)))
 
 @app.route('/category_autocomplete/<mode>',methods=['GET','POST'])
 @app.route('/category_autocomplete/<mode>/<scope>',methods=['GET','POST'])
 def category_autocomplete(mode,scope=None):
-    stem = '^%s.*' % request.values['term']
+    stem = request.values['term']
     return jsonr(list(stem_search(stem,mode,scope)))
 
 class TestAnnotation(TestCase):

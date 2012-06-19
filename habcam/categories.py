@@ -40,7 +40,6 @@ ORDER BY facets.facet_id,class_name ;  --order by facet then alphabetical
             scope_clause = ''
             params = (mode,)
         # ok the following looks weird but works because of psycopg2 'overloading' %s
-        print query % (scope_clause,'%s'), params # FIXME debug
         cursor.execute(query % (scope_clause,'%s'), params)
         for row in cursor.fetchall():
             d = {}
