@@ -80,7 +80,7 @@ if __name__ == '__main__':
             else:
                 ok(message)
     except SystemExit:
-        pass
+        raise
     except:
         print 'UNKNOWN - check failed'
         sys.exit(3)
