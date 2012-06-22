@@ -2,6 +2,7 @@ import time
 import calendar
 from unittest import TestCase
 from utils import Struct
+from math import floor
 
 """Utilities for working with timestamps"""
 
@@ -23,6 +24,11 @@ def utc_to_local(t=None):
 def iso8601(t=None):
     if t is None: t=time.gmtime()
     return time.strftime(ISO_8601_FORMAT,t)
+
+def iso8601ms(t=None):
+    if t is None: t = time.time()
+    ms = int(floor((t * 1000) % 1000))
+    return '%s.%03dZ' % (time.strftime(ISO_8601_FORMAT,time.gmtime(t)),ms)
 
 def rfc822(t=None):
     if t is None: t=time.gmtime()

@@ -6,6 +6,7 @@ from hashlib import sha1
 from time import time, clock
 from unittest import TestCase
 import json
+from subprocess import Popen, PIPE
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
