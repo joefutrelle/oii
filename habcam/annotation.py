@@ -6,6 +6,7 @@ import psycopg2 as psql
 # if either change, this needs to be changed ...
 json2db = {
 "image": "image_id",
+"scope": "scope_id",
 "category": "category_id",
 "geometry": "geometry_text",
 "annotator": "annotator_id",
@@ -13,7 +14,7 @@ json2db = {
 "assignment": "assignment_id",
 "pid": "annotation_id"
 }
-SELECT_CLAUSE = "select image_id, category_id, geometry_text, annotator_id, 'timestamp', assignment_id, annotation_id from raw_annotations "
+SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotator_id, 'timestamp', assignment_id, annotation_id from annotations "
 
 # abstract API for storing, querying, and creating annotations
 class HabcamAnnotationStore(AnnotationStore):
@@ -27,12 +28,13 @@ class HabcamAnnotationStore(AnnotationStore):
         for row in cursor.fetchall():
             d = {}
             d['image'] = row[0]
-            d['category'] = row[1]
-            d['geometry'] = json.loads('{'+row[2]+'}')
-            d['annotator'] = row[3]
-            d['timestamp'] = row[4]
-            d['assignment'] = row[5]
-            d['pid'] = row[6]
+            d['scope'] = row[1]
+            d['category'] = row[2]
+            d['geometry'] = json.loads('{'+row[3]+'}')
+            d['annotator'] = row[4]
+            d['timestamp'] = row[5]
+            d['assignment'] = row[6]
+            d['pid'] = row[7]
             yield d
     def list_annotations(self,**template):
         "List annotations which match the given template (flat dictionary, k/v's in template must match k/v's in candidate"
@@ -55,8 +57,8 @@ class HabcamAnnotationStore(AnnotationStore):
     def create_annotations(self,annotations):
         tuples = []
         for d in annotations:
-            tuples.append((d['image'], d['category'], json.dumps(d['geometry']).strip('{}'), d['annotator'],d['timestamp'], d['assignment'], d['pid']))
+            tuples.append((d['image'], d['scope'], d['category'], json.dumps(d['geometry']).strip('{}'), d['annotator'],d['timestamp'], d['assignment'], d['pid']))
         (connection, cursor) = self.__db()
         print 'gonna do it: ' + json.dumps(tuples)
-        cursor.executemany("insert into raw_annotations (image_id, category_id, geometry_text, annotator_id, timestamp, assignment_id, annotation_id) values (%s,%s,%s,%s,%s,%s,%s)", tuples)
+        cursor.executemany("insert into annotations (image_id, scope_id, category_id, geometry_text, annotator_id, timestamp, assignment_id, annotation_id) values (%s,%s,%s,%s,%s,%s,%s,%s)", tuples)
         connection.commit()

@@ -15,6 +15,7 @@ class PsqlAnnotationStore(AnnotationStore,PsqlStore):
         self.SCHEMA = [
           ('pid', 'text', True),
           ('image', 'text', False),
+          ('scope', 'text', False),
           ('category', 'text', False),
           ('annotator', 'text', False),
           ('assignment', 'text', False),

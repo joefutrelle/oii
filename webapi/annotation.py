@@ -130,6 +130,7 @@ class TestAnnotation(TestCase):
             ann_out = structs(raw)
             assert ann_out.pid == ann_in.pid
             assert ann_out.image == ann_in.image
+            assert ann_out.scope == ann_in.scope
             assert ann_out.category == ann_in.category
             assert ann_out.annotator == ann_in.annotator
             assert ann_out.timestamp == ann_in.timestamp 
