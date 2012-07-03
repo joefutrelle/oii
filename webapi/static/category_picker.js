@@ -18,6 +18,7 @@
 			    }
 			});
 		    });
+		    callback(selectedCategories);
 		    $this.find('.selected_category')
 			.html('<a href="#">'+label.substring(2)+'</a>')
 			.find('a').button()

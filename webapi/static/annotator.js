@@ -1,3 +1,6 @@
+var TARGET_SCOPE=1;
+var IMAGE_SCOPE=2;
+var DOMINANT_SUBSTRATE_SCOPE=3;
 function getWorkspace(key) {
     return $('#workspace').data(key);
 }
@@ -232,10 +235,10 @@ function pending() {
 function existing(cell) {
     return $(cell).data('existing');
 }
-function preCommit() {
-    /* generate an ID for each annotation */
+function generateIds(annotations, callback) {
+   /* generate an ID for each annotation */
     var n = 0;
-    $.each(pending(), function(imagePid, ps) {
+    $.each(annotations, function(imagePid, ps) {
 	$.each(ps, function(ix, p) {
 	    n++;
 	});
@@ -243,24 +246,76 @@ function preCommit() {
     var i = n-1;
     /* FIXME hardcoded namespace */
     $.getJSON('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
-        $.each(pending(), function(imagePid, ps) {
+        $.each(annotations, function(imagePid, ps) {
 	    $.each(ps, function(ix, p) {
-		pending()[imagePid][ix].pid = r[i--];
+		annotations[imagePid][ix].pid = r[i--];
 	    });
         });
-        commit();
+	callback();
     });
+}
+function preCommit() {
+    generateIds(pending(), commit);
 }
 function queueAnnotation(cell, geometry) {
     var ann = {
         image: $(cell).data('imagePid'),
         category: categoryPidForLabel($('#label').val()),
         geometry: geometry,
+	scope: TARGET_SCOPE,
 	annotator: 'http://people.net/joeblow',
 	timestamp: iso8601(new Date()),
 	assignment: $('#workspace').data('assignment').pid
     };
     pushAnnotation(ann);
+}
+function queueSubstrateAnnotation(categories) {
+    // FIXME implement
+    // FIXME deal with fact that there can be more than one image per page
+    $('#workspace').data('substrate', {});
+    // FIXME for now queue the substrate ann for all images on the page
+    $('div.thumbnail').each(function(i,cell) {
+	var imagePid = $(cell).data('imagePid');
+	$.each(categories, function(j,cat) {
+	    var ann = {
+		image: imagePid,
+		category: cat.pid,
+		geometry: {},
+		annotator: 'http://foobar',
+		scope: DOMINANT_SUBSTRATE_SCOPE,
+		timestamp: iso8601(new Date()),
+		assignment: $('#workspace').data('assignment').pid
+	    };
+	    HOL.add($('#workspace').data('substrate'), imagePid, ann);
+	});
+    });
+}
+function commitSubstrate() {
+    var as = [];
+    $.each($('#workspace').data('substrate'), function(imagePid, anns) {
+	$.each(anns, function(ix, ann) {
+            as.push(ann);
+            clog(ann.image+' is has substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	});
+    });
+    $.ajax({
+        url: '/create_annotations',
+        type: 'POST',
+        contentType: 'json',
+        dataType: 'json',
+        data: JSON.stringify(as),
+        success: function() {
+	    $('#workspace').data('substrate',{});
+        },
+	statusCode: {
+	    401: function() {
+		alert('please login');
+	    }
+	}
+    });
+}
+function preCommitSubstrate() {
+    generateIds($('#workspace').data('substrate'),commitSubstrate);
 }
 function pushAnnotation(ann)  {
     clog('enqueing '+JSON.stringify(ann));
@@ -385,6 +440,7 @@ function toggleExisting() {
 function resetPending() {
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
+    $('#workspace').data('substrate',{}); // pending substrate annotations by pid
 }
 $(document).ready(function() {
     page = 1;
@@ -407,6 +463,7 @@ $(document).ready(function() {
     });
     $('#next').click(function() {
         page++;
+	preCommitSubstrate();
         gotoPage(page,size);
     });
     $('#commit').click(function() {
@@ -464,8 +521,9 @@ $(document).ready(function() {
     });
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
-    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker(1, 3, function(foo) {
-	alert(JSON.stringify(foo));
+    // right now hardcoded to mode 1, scope 3
+    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, function(categories) {
+	queueSubstrateAnnotation(categories);
     });
     gotoPage(page,size);
 });
