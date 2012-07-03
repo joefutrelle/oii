@@ -275,6 +275,8 @@ function queueSubstrateAnnotation(categories, scope) {
 	qsa(categories,scope,'dominantSubstrate');
     } else if(scope==SUBDOMINANT_SUBSTRATE_SCOPE) {
 	qsa(categories,scope,'subdominantSubstrate');
+    } else if(scope==IMAGE_SCOPE) {
+	qsa(categories,scope,'imageNotes');
     }
 }
 function qsa(categories, scope, dataKey) {
@@ -312,6 +314,12 @@ function commitSubstrate() {
             clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
+    $.each($('#workspace').data('imageNotes'), function(imagePid, anns) {
+	$.each(anns, function(ix, ann) {
+            as.push(ann);
+            clog(ann.image+' is has imagenotes '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	});
+    });
     $.ajax({
         url: '/create_annotations',
         type: 'POST',
@@ -328,9 +336,12 @@ function commitSubstrate() {
     });
 }
 function preCommitSubstrate() {
+    // FIXME do this in one transaction
     generateIds($('#workspace').data('dominantSubstrate'),function() {
 	generateIds($('#workspace').data('subdominantSubstrate'),function() {
-	    commitSubstrate();
+	    generateIds($('#workspace').data('imageNotes'),function() {
+		commitSubstrate();
+	    });
 	});
     });
 }
@@ -459,6 +470,7 @@ function resetPending() {
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
     $('#workspace').data('dominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
+    $('#workspace').data('imageNotes',{});
 }
 $(document).ready(function() {
     page = 1;
@@ -545,5 +557,8 @@ $(document).ready(function() {
     $('#rightPanel').append('<br><fieldset><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
+    $('#rightPanel').append('<br><fieldset><legend>Image Notes</legend><div>&nbsp;</div></fieldset>')
+	.find('div:last')
+	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
     gotoPage(page,size);
 });

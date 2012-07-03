@@ -28,6 +28,7 @@
 		}
 		function add_choice() {
 		    var select = $this.append('<div><select class="category_choice"></select></div>').find('select');
+		    $(select).append('<option value="NONE">(None)</option>');
 		    $.each($this.data('all_categories'),function(ix,c) {
 			$(select).append('<option value="'+c.pid+'">'+c.label+'</option>')
 		    });
