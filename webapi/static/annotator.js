@@ -1,6 +1,7 @@
 var TARGET_SCOPE=1;
 var IMAGE_SCOPE=2;
 var DOMINANT_SUBSTRATE_SCOPE=3;
+var SUBDOMINANT_SUBSTRATE_SCOPE=4
 function getWorkspace(key) {
     return $('#workspace').data(key);
 }
@@ -269,10 +270,17 @@ function queueAnnotation(cell, geometry) {
     };
     pushAnnotation(ann);
 }
-function queueSubstrateAnnotation(categories) {
+function queueSubstrateAnnotation(categories, scope) {
+    if(scope==DOMINANT_SUBSTRATE_SCOPE) {
+	qsa(categories,scope,'dominantSubstrate');
+    } else if(scope==SUBDOMINANT_SUBSTRATE_SCOPE) {
+	qsa(categories,scope,'subdominantSubstrate');
+    }
+}
+function qsa(categories, scope, dataKey) {
     // FIXME implement
     // FIXME deal with fact that there can be more than one image per page
-    $('#workspace').data('substrate', {});
+    $('#workspace').data(dataKey, {});
     // FIXME for now queue the substrate ann for all images on the page
     $('div.thumbnail').each(function(i,cell) {
 	var imagePid = $(cell).data('imagePid');
@@ -282,20 +290,26 @@ function queueSubstrateAnnotation(categories) {
 		category: cat.pid,
 		geometry: {},
 		annotator: 'http://foobar',
-		scope: DOMINANT_SUBSTRATE_SCOPE,
+		scope: scope,
 		timestamp: iso8601(new Date()),
 		assignment: $('#workspace').data('assignment').pid
 	    };
-	    HOL.add($('#workspace').data('substrate'), imagePid, ann);
+	    HOL.add($('#workspace').data(dataKey), imagePid, ann);
 	});
     });
 }
 function commitSubstrate() {
     var as = [];
-    $.each($('#workspace').data('substrate'), function(imagePid, anns) {
+    $.each($('#workspace').data('dominantSubstrate'), function(imagePid, anns) {
 	$.each(anns, function(ix, ann) {
             as.push(ann);
-            clog(ann.image+' is has substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+            clog(ann.image+' is has dominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	});
+    });
+    $.each($('#workspace').data('subdominantSubstrate'), function(imagePid, anns) {
+	$.each(anns, function(ix, ann) {
+            as.push(ann);
+            clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
     $.ajax({
@@ -305,7 +319,6 @@ function commitSubstrate() {
         dataType: 'json',
         data: JSON.stringify(as),
         success: function() {
-	    $('#workspace').data('substrate',{});
         },
 	statusCode: {
 	    401: function() {
@@ -315,7 +328,11 @@ function commitSubstrate() {
     });
 }
 function preCommitSubstrate() {
-    generateIds($('#workspace').data('substrate'),commitSubstrate);
+    generateIds($('#workspace').data('dominantSubstrate'),function() {
+	generateIds($('#workspace').data('subdominantSubstrate'),function() {
+	    commitSubstrate();
+	});
+    });
 }
 function pushAnnotation(ann)  {
     clog('enqueing '+JSON.stringify(ann));
@@ -440,7 +457,8 @@ function toggleExisting() {
 function resetPending() {
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
-    $('#workspace').data('substrate',{}); // pending substrate annotations by pid
+    $('#workspace').data('dominantSubstrate',{}); // pending substrate annotations by pid
+    $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
 }
 $(document).ready(function() {
     page = 1;
@@ -521,9 +539,11 @@ $(document).ready(function() {
     });
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
-    // right now hardcoded to mode 1, scope 3
-    $('#rightPanel').append('<br><fieldset><legend>Substrate</legend><div>&nbsp;</div></fieldset>').find('div').categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, function(categories) {
-	queueSubstrateAnnotation(categories);
-    });
+    $('#rightPanel').append('<br><fieldset><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
+	.find('div:last')
+	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
+    $('#rightPanel').append('<br><fieldset><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
+	.find('div:last')
+	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
     gotoPage(page,size);
 });

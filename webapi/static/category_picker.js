@@ -18,12 +18,12 @@
 			    }
 			});
 		    });
-		    callback(selectedCategories);
+		    callback(selectedCategories, scope);
 		    $this.find('.selected_category')
 			.html('<a href="#">'+label.substring(2)+'</a>')
 			.find('a').button()
 			.click(function() {
-			    callback(selectedCategories);
+			    callback(selectedCategories, scope);
 			});
 		}
 		function add_choice() {
