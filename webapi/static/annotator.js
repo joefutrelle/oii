@@ -468,6 +468,8 @@ function toggleExisting() {
 function resetPending() {
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
+}
+function resetImageLevelPending() {
     $('#workspace').data('dominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('imageNotes',{});
@@ -476,6 +478,7 @@ $(document).ready(function() {
     page = 1;
     size = 1;
     resetPending();
+    resetImageLevelPending();
     $('#workspace').data('showExisting',1); // whether to display existing annotations
     // inputs are ui widget styled
     $('input').addClass('ui-widget');
