@@ -12,6 +12,7 @@ class HabcamLightfield(Job):
     queue_name - RabbitMQ queue basename
     amqp_host - RabbitMQ host
     imagestack_exec_path - path to imagestack executable
+    in_prefix - prefix regex to strip off of output paths
     out_dir - top-level dir to deposit output"""
     def __init__(self,config):
         super(HabcamLightfield,self).__init__(config.queue_name, config.amqp_host)
@@ -25,7 +26,10 @@ class HabcamLightfield(Job):
     def run_callback(self,message):
         try:
             img_in = message
-            img_out = os.path.join(self.config.out_dir,re.sub(r'\.tif','.png',img_in.lstrip('/')))
+            img_out_file = re.sub(self.config.in_prefix,'',re.sub(r'\.tif','.png',img_in)).lstrip('/')
+            print 'img_out_file = %s' % img_out_file
+            img_out = os.path.join(self.config.out_dir,img_out_file)
+            print 'img_out = %s' % img_out
             if os.path.exists(img_out):
                 print 'already exists: %s %s %s' % (self.config.out_dir, img_in, img_out)
                 return SKIP
