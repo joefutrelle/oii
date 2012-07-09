@@ -21,5 +21,5 @@ class AssignmentStore(object):
         for a in self.list_assignments():
             if a['pid'] == pid:
                 return a
-    def list_images(self,pid,limit=None,offset=0):
+    def list_images(self,pid,limit=None,offset=0,status=None):
         return self.fetch_assignment(pid)['images']

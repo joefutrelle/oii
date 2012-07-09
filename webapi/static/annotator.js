@@ -144,6 +144,7 @@ function gotoPage(page,size) {
     }
     var assignment_pid = assignment.pid;
     $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
+	$('#offset').val(offset);
         $.each(r, function(i,entry) {
             // append image with approprite URL
             var imageUrl = entry.image;
@@ -493,6 +494,10 @@ $(document).ready(function() {
         page--;
         if(page < 1) page = 1;
         gotoPage(page,size);
+    });
+    $('#offset').change(function() {
+	page = parseInt($('#offset').val())+1;
+	gotoPage(page,size);
     });
     $('#next').click(function() {
         page++;

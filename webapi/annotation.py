@@ -75,8 +75,9 @@ def fetch_assignment(assignment_pid):
     return jsonr(my(ASSIGNMENT_STORE).fetch_assignment(assignment_pid))
 
 @app.route('/list_images/limit/<int:limit>/offset/<int:offset>/assignment/<path:assignment_pid>')
-def list_images(limit,offset,assignment_pid):
-    return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset)))
+@app.route('/list_images/limit/<int:limit>/offset/<int:offset>/status/<status>/assignment/<path:assignment_pid>')
+def list_images(limit,offset,assignment_pid,status=None):
+    return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset,status)))
 
 @app.route('/list_assignments')
 def list_assignments():

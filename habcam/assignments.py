@@ -47,14 +47,22 @@ class HabcamAssignmentStore(AssignmentStore):
             row = self.__row2assignment(row)
             row['images'] = self.pid(row['assignment_id'])
             return row
-    def list_images(self,pid,limit=None,offset=0):
+    def list_images(self,pid,limit=None,offset=0,status=None):
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()
+        params = [self.lid(pid)]
+        if status is None:
+            status_clause = ''
+        else:
+            status_clause = 'and status = %s'
+            params += [status]
         if limit is None:
             limitclause = ''
         else:
-            limitclause = 'limit %d ' % limit
-        cursor.execute('select imagename from imagelist where assignment_id=%s order by imagename '+limitclause+'offset %s', (self.lid(pid),offset))
+            limitclause = 'limit %s '
+            params += [limit]
+        params += [offset]
+        cursor.execute('select imagename from imagelist where assignment_id=%s '+status_clause+' order by imagename '+limitclause+'offset %s', tuple(params))
         for row in cursor.fetchall():
             d = {}
             d['pid'] = self.pid(row[0], self.config.image_namespace)
