@@ -31,7 +31,7 @@ class HabcamLightfield(Job):
             img_out = os.path.join(self.config.out_dir,img_out_file)
             print 'img_out = %s' % img_out
             if os.path.exists(img_out):
-                print 'already exists: %s %s %s' % (self.config.out_dir, img_in, img_out)
+                self.log('SKIP already exists: %s %s %s' % (self.config.out_dir, img_in, img_out))
                 return SKIP
             od = os.path.dirname(img_out)
             if not os.path.exists(od):
@@ -79,11 +79,41 @@ class HabcamLightfieldJoe(HabcamLightfield):
     def get_parameters(self):
         return dict(filter_size=501)
 
+def enqueue_from_stdin(hl):
+    batch = []
+    while True:
+        line = sys.stdin.readline()
+        if line == '':
+            break
+        line = line.strip()
+        batch = batch + [line]
+        if len(batch) > 1000:
+            print batch
+            hl.enqueue(batch)
+            batch = []
+    hl.enqueue(batch)
+
+# usage:
+# python lightfield.py {config file} {command} {arguments}
+# commands:
+# q (file1, file2, file3, ... filen)
+#   enqueue files for processing
+# q -
+#   read a list of files to process from stdin
+# r
+#   requeue failed processing jobs
+# w
+#   run as a worker
+# log
+#   show logging messages as they come in
 if __name__=='__main__':
     hl = HabcamLightfieldNhv(get_config(sys.argv[1]))
     cmd = sys.argv[2]
     if cmd == 'q':
-        hl.enqueue(sys.argv[3:])
+        if sys.argv[3] == '-':
+            enqueue_from_stdin(hl)
+        else:
+            hl.enqueue(sys.argv[3:])
     elif cmd == 'r':
         hl.retry_failed()
     elif cmd == 'w':
