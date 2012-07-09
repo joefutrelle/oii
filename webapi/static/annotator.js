@@ -162,8 +162,11 @@ function gotoPage(page,size) {
             cell = addCell(imagePid);
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
+		$("#quickImagename").html(imagePid);
         }); // loop over images
     });
+	
+	$("#quickOffset").html(offset);
 }
 function drawPendingAnnotations(cell) {
     var imagePid = $(cell).data('imagePid');
@@ -568,5 +571,7 @@ $(document).ready(function() {
     $('#rightPanel').append('<br><fieldset><legend>Image Notes</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
+    $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
+	.find('div:last')
     gotoPage(page,size);
 });
