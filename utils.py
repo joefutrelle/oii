@@ -7,6 +7,8 @@ from time import time, clock
 from unittest import TestCase
 import json
 from subprocess import Popen, PIPE
+import platform
+import ctypes
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -191,6 +193,19 @@ class SimpleStore(object):
         for s in self.db.itervalues():
             if template_match(s,template):
                 yield s
+
+def freespace(pth):
+    """
+    Return folder/drive free space (in bytes)
+    from http://stackoverflow.com/questions/51658/cross-platform-space-remaining-on-volume-using-python
+    """
+    if platform.system() == 'Windows':
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path), None, None, ctypes.pointer(free_bytes))
+        return free_bytes.value
+    else:
+        s = os.statvfs(pth)
+        return s.f_frsize * s.f_bavail
 
 ### tests
 
