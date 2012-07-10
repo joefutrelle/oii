@@ -80,6 +80,10 @@ def fetch_assignment(assignment_pid):
 def list_images(limit,offset,assignment_pid,status=None):
     return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset,status)))
 
+@app.route('/find_image/offset/<int:offset>/status/<status>/assignment/<path:assignment_pid>')
+def find_image(offset,status,assignment_pid):
+    return jsonr(dict(offset=my(ASSIGNMENT_STORE).find_image(assignment_pid,offset,status)))
+
 @app.route('/set_status/image/<path:image_id>/status/<status>/assignment/<path:assignment_id>')
 def set_status(assignment_id,image_id,status):
     assignment_id = urllib.unquote(assignment_id)

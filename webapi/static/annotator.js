@@ -308,7 +308,7 @@ function qsa(categories, scope, dataKey) {
 	});
     });
 }
-function commitSubstrate() {
+function commitSubstrate(continuation) {
     var as = [];
     var gi = {};
     $.each($('#workspace').data('dominantSubstrate'), function(imagePid, anns) {
@@ -342,6 +342,7 @@ function commitSubstrate() {
 		dataType: 'json',
 		data: JSON.stringify(as),
 		success: function() {
+		    continuation();
 		},
 		statusCode: {
 		    401: function() {
@@ -350,6 +351,8 @@ function commitSubstrate() {
 		}
 	    });
 	});
+    } else {
+	continuation();
     }
 }
 function preCommitSubstrate() {
@@ -401,6 +404,13 @@ function commit() {
 		alert('please login');
 	    }
 	}
+    });
+}
+function findNewImage(callback) {
+    var ass_pid = getWorkspace('assignment').pid;
+    $.getJSON('/find_image/offset/'+page+'/status/new/assignment/'+ass_pid, function(r) {
+	var newPage = r.offset;
+	callback(newPage);
     });
 }
 function deselectAll() {
@@ -516,9 +526,16 @@ $(document).ready(function() {
 	gotoPage(page,size);
     });
     $('#next').click(function() {
-        page++;
-	commitSubstrate();
-        gotoPage(page,size);
+	page++;
+	gotoPage(page,size);
+    });
+    $('#nextNew').click(function() {
+	commitSubstrate(function() {
+	    findNewImage(function(pp) {
+		page = pp;
+		gotoPage(page,size);
+	    });
+	});
     });
     $('#commit').click(function() {
         preCommit();

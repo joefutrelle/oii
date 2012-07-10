@@ -64,6 +64,16 @@ class HabcamAssignmentStore(AssignmentStore):
             d['pid'] = self.pid(row[0], self.config.image_namespace)
             d['image'] = d['pid']
             yield d
+    def find_image(self,pid,offset,status):
+        connection = psql.connect(self.config.psql_connect)
+        cursor = connection.cursor()
+        cursor.execute('select imagename,status from imagelist where assignment_id=%s order by imagename offset %s',(self.lid(pid),offset))
+        i = offset
+        for row in cursor.fetchall():
+            if row[1]==status:
+                return i+1
+            i += 1
+        return offset
     def set_status(self,assignment_id,image_id,status):
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()
