@@ -23,3 +23,5 @@ class AssignmentStore(object):
                 return a
     def list_images(self,pid,limit=None,offset=0,status=None):
         return self.fetch_assignment(pid)['images']
+    def set_status(self,assignment_id,image_id,status):
+        pass

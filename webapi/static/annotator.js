@@ -143,6 +143,7 @@ function gotoPage(page,size) {
 	return;
     }
     var assignment_pid = assignment.pid;
+    // FIXME include status flag after offset, incorporate upcoming fixes to GUI and #1445
     $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
 	$('#offset').val(offset);
         $.each(r, function(i,entry) {
@@ -162,7 +163,10 @@ function gotoPage(page,size) {
             cell = addCell(imagePid);
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
-		$("#quickImagename").html(imagePid);
+	    $("#quickImagename").html(imagePid);
+	    $.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
+		clog('status changed to in progress for '+imagePid);
+	    });
         }); // loop over images
     });
 	
@@ -306,38 +310,47 @@ function qsa(categories, scope, dataKey) {
 }
 function commitSubstrate() {
     var as = [];
+    var gi = {};
     $.each($('#workspace').data('dominantSubstrate'), function(imagePid, anns) {
 	$.each(anns, function(ix, ann) {
+	    HOL.add(gi, imagePid, ann);
             as.push(ann);
             clog(ann.image+' is has dominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
     $.each($('#workspace').data('subdominantSubstrate'), function(imagePid, anns) {
 	$.each(anns, function(ix, ann) {
+	    HOL.add(gi, imagePid, ann);
             as.push(ann);
             clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
     $.each($('#workspace').data('imageNotes'), function(imagePid, anns) {
 	$.each(anns, function(ix, ann) {
+	    HOL.add(gi, imagePid, ann);
             as.push(ann);
             clog(ann.image+' is has imagenotes '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
 	});
     });
-    $.ajax({
-        url: '/create_annotations',
-        type: 'POST',
-        contentType: 'json',
-        dataType: 'json',
-        data: JSON.stringify(as),
-        success: function() {
-        },
-	statusCode: {
-	    401: function() {
-		alert('please login');
-	    }
-	}
-    });
+    clog('there are '+as.length+' substrate annotations');
+    if(as.length > 0) {
+	generateIds(gi, function() {
+	    $.ajax({
+		url: '/create_annotations',
+		type: 'POST',
+		contentType: 'json',
+		dataType: 'json',
+		data: JSON.stringify(as),
+		success: function() {
+		},
+		statusCode: {
+		    401: function() {
+			alert('please login');
+		    }
+		}
+	    });
+	});
+    }
 }
 function preCommitSubstrate() {
     // FIXME do this in one transaction
@@ -504,7 +517,7 @@ $(document).ready(function() {
     });
     $('#next').click(function() {
         page++;
-	preCommitSubstrate();
+	commitSubstrate();
         gotoPage(page,size);
     });
     $('#commit').click(function() {

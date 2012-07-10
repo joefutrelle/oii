@@ -8,11 +8,7 @@ class HabcamAssignmentStore(AssignmentStore):
         self.config = config
         self.assignment_fields = ['assignment_id','idmode_id','site_description','project_name','priority','initials','date']
     def lid(self,pid,namespace=None):
-        if namespace is None:
-            namespace = self.config.namespace
-        if namespace is None:
-            return pid
-        return re.sub(namespace,'',pid)
+        return re.sub('.*/','',pid)
     def pid(self,lid,namespace=None):
         if namespace is None:
             namespace = self.config.namespace
@@ -68,6 +64,12 @@ class HabcamAssignmentStore(AssignmentStore):
             d['pid'] = self.pid(row[0], self.config.image_namespace)
             d['image'] = d['pid']
             yield d
+    def set_status(self,assignment_id,image_id,status):
+        connection = psql.connect(self.config.psql_connect)
+        cursor = connection.cursor()
+        print 'gonna set status to %s for assignment %s image %s' % (status,self.lid(assignment_id),self.lid(image_id))
+        cursor.execute('update imagelist set status=%s where assignment_id=%s and imagename=%s',(status,int(self.lid(assignment_id)),self.lid(image_id)))
+        connection.commit()
 
 if __name__=='__main__':
     config = get_config('habcam_annotation.conf')

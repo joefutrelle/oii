@@ -14,6 +14,7 @@ from oii.annotation.categories import Categories
 from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
 from utils import jsonr
+import urllib
 
 # test with IFCB
 #from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
@@ -78,6 +79,13 @@ def fetch_assignment(assignment_pid):
 @app.route('/list_images/limit/<int:limit>/offset/<int:offset>/status/<status>/assignment/<path:assignment_pid>')
 def list_images(limit,offset,assignment_pid,status=None):
     return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset,status)))
+
+@app.route('/set_status/image/<path:image_id>/status/<status>/assignment/<path:assignment_id>')
+def set_status(assignment_id,image_id,status):
+    assignment_id = urllib.unquote(assignment_id)
+    status = urllib.unquote_plus(status)
+    my(ASSIGNMENT_STORE).set_status(assignment_id,image_id,status)
+    return jsonr(dict(status='OK',new_image_status=status))
 
 @app.route('/list_assignments')
 def list_assignments():
