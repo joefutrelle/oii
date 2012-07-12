@@ -20,17 +20,17 @@ class Matlab:
         self.output_callback = output_callback
         self.log_callback = lambda x: log_callback(message(x))
     def run(self,command):
-        env = dict(MATLABPATH=':'.join(self.matlab_path))
+        pathcmds = '; '.join(['path(path,\'%s\')' % d for d in self.matlab_path])
         p = None
         try:
-            script = 'try, disp(\'%s\'), %s, catch err, disp(err.message), disp(err.stack), disp(err.identifier), exit(1), end, exit(0)' % (self.output_separator, command)
+            script = '%s; try, disp(\'%s\'), %s, catch err, disp(err.message), disp(err.stack), disp(err.identifier), exit(1), end, exit(0)' % (pathcmds, self.output_separator, command)
             cmd = [
                 self.exec_path,
                 '-nodisplay',
                 '-r',
                 script
                 ]
-            p = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+            p = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)#,env=env)
             seen_separator = False
             while p.poll() is None:
                 while True:
