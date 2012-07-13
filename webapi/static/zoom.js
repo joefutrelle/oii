@@ -304,9 +304,24 @@ function scaleAllLayers(){
             
             var rt = new Date();
             var ctx = canvas.getContext("2d");
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.clearRect(0, 0, width, height);
+
+            
+            if( canvasID == imgName){
+
+                ctx.drawImage(getZoomImage().data('image'), navX, navY, width, height);
+
+            } else {
 	    var annotations = [];
-	    if($('#workspace').data('showExisting')) {
-               annotations = $(cell).data(canvasID);
+	    if($('#workspace').data('showExisting') && canvasID == 'existing') {
+		$.each($(cell).data(canvasID), function(ix,ann) {
+                    showAnnotationGeometry(ctx,ann,EXISTING_COLOR);
+		});
+		annotations = $(cell).data(canvasID);
 	    }
             
             if( canvasID == 'pending' ) {
@@ -316,29 +331,17 @@ function scaleAllLayers(){
 		var imPid = $(cell).data('imagePid');
 		if(imPid in pending()) {
                     $.each(pending()[imPid], function(ix, ann) {
-			annotations.push(ann);
+			showAnnotationGeometry(ctx,ann,PENDING_COLOR);
                     });
 		}
             }
-            
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.scale(scale, scale);
-            ctx.clearRect(0, 0, width, height);
-            
-            if( canvasID == imgName){
 
-                ctx.drawImage(getZoomImage().data('image'), navX, navY, width, height);
-
-            } else if( annotations != undefined ){
-
+		if(annotations != undefined) {
                 $.each(annotations, function(index, ann) { 
-                    clog(canvasID+"::scale => "+ann);
                     showAnnotationGeometry(ctx,ann);
                 });
+		}
 
-            } else {
-                //clog("skipping: "+canvasID);
             }
 
             ctx.restore();

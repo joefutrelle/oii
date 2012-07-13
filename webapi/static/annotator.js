@@ -2,6 +2,8 @@ var TARGET_SCOPE=1;
 var IMAGE_SCOPE=2;
 var DOMINANT_SUBSTRATE_SCOPE=3;
 var SUBDOMINANT_SUBSTRATE_SCOPE=4
+var PENDING_COLOR='#0f0'
+var EXISTING_COLOR='#f00'
 function getWorkspace(key) {
     return $('#workspace').data(key);
 }
@@ -61,9 +63,10 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
             // - display the zoomed image
             // - display the zoomed existing annotations
             // - fetch the existing annotations and display them zoomed
-            drawImage(cell);
-            drawPendingAnnotations(cell);
-            drawExistingAnnotations(cell);
+	    $(document).trigger('canvasChange');
+            getExistingAnnotations(cell, function() {
+		$(document).trigger('canvasChange');
+	    });
             
             // adjust layout
             $(cell).find('div.spacer').height(scaledHeight+10);
@@ -94,31 +97,30 @@ function drawImage(cell) {
     var ctx = getImageLayerContext(cell,'image')
     ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
-function drawExistingAnnotations(cell) {
+function getExistingAnnotations(cell, callback) {
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var ctx = getImageLayerContext(cell,'existing');
         var counter = 0;
         clog("about to draw existing annotations...");
+	$(cell).data('existing',[]);
         $(r).each(function(ix,ann) {
             existing(cell)[counter++] = ann;
-            showAnnotationGeometry(ctx,ann);
         });
-        $(document).trigger('canvasChange');
+	callback();
     });
 }
 //cell - div with image in it
 //ann - annotation
-function showAnnotationGeometry(ctx,ann) {
-    // FIXME support zoom
+function showAnnotationGeometry(ctx,ann,color) {
     // use the appropriate drawing method to draw any geometry found    
     if('geometry' in ann) {
         var g = ann.geometry;
-        for(key in ann.geometry) {
+        for(key in ann.geometry) { // this probably should not be a loop
             var g = ann.geometry[key];
             if(g != undefined) {
                 var sa = geometry[key].prepareForCanvas(ann.geometry[key]);
-                geometry[key].draw(ctx, sa);
+                geometry[key].draw(ctx, sa, color);
             }
         }
     }
@@ -150,7 +152,7 @@ function gotoPage(page,size) {
             // append image with approprite URL
             var imageUrl = entry.image;
             var imagePid = entry.pid; // for now, pid = url
-            // each cell has the following data associted with it:
+            // each cell has the following data associated with it:
             // imagePid: the pid of the image
             // width: unscaled width of image
             // height: unscaled height of image
@@ -164,26 +166,14 @@ function gotoPage(page,size) {
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
-	    $.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
-		clog('status changed to in progress for '+imagePid);
-	    });
+	    if($('#workspace').data('login') != undefined) {
+		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
+		    clog('status changed to in progress for '+imagePid);
+		});
+	    }
         }); // loop over images
     });
-	
-	$("#quickOffset").html(offset);
-}
-function drawPendingAnnotations(cell) {
-    var imagePid = $(cell).data('imagePid');
-    var ps = pending()[imagePid];
-    if(ps != undefined) {
-	$.each(ps, function(ix, p) {
-            var cat = categoryLabelForPid(p.category);
-            var ctx = getImageLayerContext(cell,'pending');
-            showAnnotationGeometry(ctx,p);
-            clog('selecting '+cat+' for '+imagePid);
-            select(cell, cat); // FIXME broken; assumes one "category" per image as in IFCB
-	});
-    }
+    $("#quickOffset").html(offset);
 }
 function clearPage() {
     $('#images').empty();
@@ -396,7 +386,9 @@ function commit() {
 	    resetPending();
             $('div.thumbnail.selected').each(function(ix,cell) {
                 commitCell(cell);
-                drawExistingAnnotations(cell);
+		getExistingAnnotations(cell, function() {
+		    $(document).trigger('canvasChange');
+		});
             });
         },
 	statusCode: {
@@ -588,7 +580,15 @@ $(document).ready(function() {
     });
     $(window).bind('resize', resizeAll);
     $('#login').authentication(function(username) {
-	// do nothing
+	clog('logged in as '+username);
+	$('#workspace').data('login',username);
+	$('#next').addClass('hidden');
+	$('#prev').addClass('hidden');
+    }, function(username) {
+	clog('logged out as '+username);
+	$('#workspace').removeData('login');
+	$('#next').removeClass('hidden');
+	$('#prev').removeClass('hidden');
     });
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode

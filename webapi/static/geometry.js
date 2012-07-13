@@ -1,17 +1,18 @@
-// globals (FIXME: make preferences)
+  // globals (FIXME: make preferences)
 var scalingFactor = 0.75;
-var geometryColor = '#f00';
 var poly_simplifyTolerance = 3;
+// assumes PENDING_COLOR is set globally (FIXME make preference)
 // geometric tool support
 var geometry = {};
 geometry.boundingBox = {
     label: 'Bounding box',
-    draw: function(ctx, boundingBox) {
+    draw: function(ctx, boundingBox, color) {
         var left = scalingFactor * boundingBox[0][0];
         var top = scalingFactor * boundingBox[0][1];
         var right = scalingFactor * boundingBox[1][0]; 
         var bottom = scalingFactor * boundingBox[1][1];
-        ctx.strokeStyle = geometryColor;
+        ctx.strokeStyle = color;
+	clog('bounding box color is '+color);
         ctx.strokeRect(left, top, right-left, bottom-top);
     },
     prepareForStorage: function(annotation) {
@@ -23,12 +24,13 @@ geometry.boundingBox = {
 };
 geometry.line = {
     label: 'Line',
-    draw: function(ctx, line) {
+    draw: function(ctx, line, color) {
         var ox = scalingFactor * line[0][0];
         var oy = scalingFactor * line[0][1];
         var mx = scalingFactor * line[1][0]; 
         var my = scalingFactor * line[1][1];
-        ctx.strokeStyle = geometryColor;
+	clog('line color is '+color);
+        ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(ox,oy);
         ctx.lineTo(mx,my);
@@ -43,9 +45,10 @@ geometry.line = {
 };
 geometry.path = {
     label: 'Path',
-    draw: function(ctx, line) {
+    draw: function(ctx, line, color) {
         var oy = scalingFactor * line[0][1];
-        ctx.strokeStyle = geometryColor;
+        ctx.strokeStyle = color;
+	clog('path color is '+color);
         ctx.beginPath();
 	$.each(line, function(ix, pt) {
 	    var px = scalingFactor * pt[0];
@@ -65,23 +68,29 @@ geometry.path = {
         return scaleAnnotation(this, annotation);
     } 
 };
-geometry.polyline = { // FIXME this geometry is drawn the same as path
-    label: 'Polyline',
-    draw: function(ctx, line) {
-        var oy = scalingFactor * line[0][1];
-        ctx.strokeStyle = geometryColor;
-        ctx.beginPath();
-	$.each(line, function(ix, pt) {
-	    var px = scalingFactor * pt[0];
-	    var py = scalingFactor * pt[1];
-	    if(ix == 0) {
-		ctx.moveTo(px, py);
-	    } else {
-		ctx.lineTo(px, py);
-	    }
-	});
-        ctx.stroke();
+geometry.closedPath = {
+    label: 'Closed path',
+    draw: geometry.path.draw,
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
     },
+    prepareForCanvas: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
+};
+geometry.polyline = { 
+    label: 'Polyline',
+    draw: geometry.path.draw,
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    } 
+};
+geometry.closedPolyline = { 
+    label: 'Closed polyline',
+    draw: geometry.path.draw,
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -91,11 +100,12 @@ geometry.polyline = { // FIXME this geometry is drawn the same as path
 };
 geometry.point = {
     label: 'Point',
-    draw: function(ctx, point) {
+    draw: function(ctx, point, color) {
         var x = scalingFactor * point[0][0];
         var y = scalingFactor * point[0][1];
         var size = 5;
-        ctx.strokeStyle = geometryColor;
+	clog('point stroke color ='+color);
+        ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(x-size,y);
         ctx.lineTo(x+size,y);
@@ -112,7 +122,7 @@ geometry.point = {
 }
 geometry.circle = {
     label: 'Circle',
-    draw: function(ctx, line) {
+    draw: function(ctx, line, color) {
     	// ox, oy is the foci of the circle
         var ox = scalingFactor * line[0][0];
         var oy = scalingFactor * line[0][1];
@@ -124,7 +134,8 @@ geometry.circle = {
         var dy = my-oy;
         var radius = Math.sqrt( dx*dx + dy*dy );
         
-        ctx.strokeStyle = geometryColor;
+	clog('circle stroke color ='+color);
+        ctx.strokeStyle = color;
         ctx.beginPath();  
         //arc(x, y, radius, startAngle, endAngle, anticlockwise)
         /*
@@ -303,7 +314,7 @@ geometry.boundingBox.tool = new MeasurementTool({
             var rect = [[(left/scalingFactor), (top/scalingFactor)], [((left+w)/scalingFactor), ((top+h)/scalingFactor)]]
             $(cell).data('boundingBox',rect);
             ctx.clearRect(0, 0, scaledWidth, scaledHeight);
-            geometry.boundingBox.draw(ctx,rect);
+            geometry.boundingBox.draw(ctx,rect,PENDING_COLOR);
         }
     },
     mouseup: function(event) {
@@ -339,7 +350,7 @@ geometry.line.tool = new MeasurementTool({
             var line = [[(ox/scalingFactor), (oy/scalingFactor)], [(mx/scalingFactor), (my/scalingFactor)]]
             $(cell).data('line',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.line.draw(ctx,line);
+            geometry.line.draw(ctx,line,PENDING_COLOR);
         }
     },
     mouseup: function(event) {
@@ -381,7 +392,7 @@ geometry.polyline.tool = new MeasurementTool({
 	    $(cell).data('polyline',line);
 	    console.log('click while rubberbanding, line = '+JSON.stringify(line));
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.polyline.draw(ctx,line); // draw the existing line
+            geometry.polyline.draw(ctx,line,PENDING_COLOR); // draw the existing line
 	    $(cell).data('px',mx);
 	    $(cell).data('py',my);
 	} else { // start line
@@ -402,13 +413,70 @@ geometry.polyline.tool = new MeasurementTool({
             var my = event.data.my;
             var line = $(cell).data('polyline');
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.polyline.draw(ctx,line); // draw the existing line
+            geometry.polyline.draw(ctx,line,PENDING_COLOR); // draw the existing line
 	    ctx.lineTo(mx, my); // now draw the rubberbanded current addition
 	    ctx.stroke();
         }
     },
     mouseup: function(event) {
 	// do nothing
+    }
+});
+geometry.closedPolyline.tool = new MeasurementTool({
+    mousedown: function(event) {
+        var cell = event.data.cell;
+        var mx = event.data.mx;
+        var my = event.data.my;
+        var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
+        var py = $(cell).data('py');
+	console.log('px='+px+', py='+py);
+	if(px==mx && py==my) { // doubleclick: commit
+            $(cell).data('px',-1);
+            $(cell).data('py',-1);
+	    var line = $(cell).data('polyline');
+	    line.push([line[0][0], line[0][1]]);
+	    console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
+            console.log('pre-prepped line: '+line);
+            var preppedLine = geometry.polyline.prepareForStorage(line);
+            console.log('post-prepped line: '+preppedLine);
+            queueAnnotation(cell, { polyline: preppedLine });
+            select(cell,$('#label').val());
+        } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+            var line = $(cell).data('polyline');
+	    line.push([mx/scalingFactor, my/scalingFactor]);
+	    $(cell).data('polyline',line);
+	    console.log('click while rubberbanding, line = '+JSON.stringify(line));
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.polyline.draw(ctx,line,PENDING_COLOR); // draw the existing line
+	    $(cell).data('px',mx);
+	    $(cell).data('py',my);
+	} else { // start line
+            $(cell).data('px',mx);//previous x,y; the point we're currently rubberbanding from
+            $(cell).data('py',my);
+	    $(cell).data('polyline',[[mx/scalingFactor, my/scalingFactor]]);
+	    console.log('click when not rubberbanding, line = '+JSON.stringify($(cell).data('polyline')));
+	    // no need to draw yet
+	}
+    },
+    mousemove: function(event) {
+        var cell = event.data.cell;
+        var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
+        var py = $(cell).data('py');
+        if(px >= 0 && py >= 0) {
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+            var line = $(cell).data('polyline');
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.polyline.draw(ctx,line,PENDING_COLOR); // draw the existing line
+	    ctx.lineTo(mx, my); // now draw the rubberbanded current addition
+	    ctx.stroke();
+        }
+    },
+    mouseup: function(event) {
     }
 });
 // allow the user to draw a freeform line on a cell's 'new annotation' canvas
@@ -434,7 +502,7 @@ geometry.path.tool = new MeasurementTool({
 	    path.push([mx/scalingFactor, my/scalingFactor]);
 	    $(cell).data('path',path);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.path.draw(ctx,path);
+            geometry.path.draw(ctx,path,PENDING_COLOR);
         }
     },
     mouseup: function(event) {
@@ -446,9 +514,50 @@ geometry.path.tool = new MeasurementTool({
 	// use poly_simplify
 	var simplePath = poly_simplify(complexPath, poly_simplifyTolerance);
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-        geometry.path.draw(ctx,simplePath);
+        geometry.path.draw(ctx,simplePath,PENDING_COLOR);
         var preppedPath = geometry.path.prepareForStorage(simplePath);
-        
+        queueAnnotation(cell, { path: preppedPath });
+        select(cell,$('#label').val());
+    }
+});
+// closed path tool
+geometry.closedPath.tool = new MeasurementTool({
+    mousedown: function(event) {
+        var cell = event.data.cell;
+        var mx = event.data.mx;
+        var my = event.data.my;
+        $(cell).data('ox',mx);
+        $(cell).data('oy',my);
+	var path = [[mx/scalingFactor, my/scalingFactor]];
+	$(cell).data('path',path);
+    },
+    mousemove: function(event) {
+        var cell = event.data.cell;
+        var ox = $(cell).data('ox');
+        var oy = $(cell).data('oy');
+        if(ox >= 0 && oy >= 0) {
+            var ctx = event.data.ctx;
+            var mx = event.data.mx;
+            var my = event.data.my;
+	    var path = $(cell).data('path');
+	    path.push([mx/scalingFactor, my/scalingFactor]);
+	    $(cell).data('path',path);
+            ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+            geometry.path.draw(ctx,path,PENDING_COLOR);
+        }
+    },
+    mouseup: function(event) {
+        var cell = event.data.cell;
+	var ctx = event.data.ctx;
+        $(cell).data('ox',-1);
+        $(cell).data('oy',-1);
+	var complexPath = $(cell).data('path');
+	complexPath.push([complexPath[0][0], complexPath[0][1]]);
+	// use poly_simplify
+	var simplePath = poly_simplify(complexPath, poly_simplifyTolerance);
+        ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
+        geometry.path.draw(ctx,simplePath,PENDING_COLOR);
+        var preppedPath = geometry.path.prepareForStorage(simplePath);
         queueAnnotation(cell, { path: preppedPath });
         select(cell,$('#label').val());
     }
@@ -464,7 +573,7 @@ geometry.point.tool = new MeasurementTool({
         var line = [[(mx/scalingFactor), (my/scalingFactor)]];
         $(cell).data('point',line);
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-        geometry.point.draw(ctx,line);
+        geometry.point.draw(ctx,line,PENDING_COLOR);
         $(cell).data('inpoint',1);
     },
     mousemove: function(event) {
@@ -478,7 +587,7 @@ geometry.point.tool = new MeasurementTool({
             var line = [[(mx/scalingFactor), (my/scalingFactor)]];
             $(cell).data('point',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.point.draw(ctx,line);
+            geometry.point.draw(ctx,line,PENDING_COLOR);
         }
     },
     mouseup: function(event) {
@@ -512,7 +621,7 @@ geometry.circle.tool = new MeasurementTool({
             var line = [[(ox/scalingFactor), (oy/scalingFactor)], [(mx/scalingFactor), (my/scalingFactor)]];
             $(cell).data('circle',line);
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
-            geometry.circle.draw(ctx,line);
+            geometry.circle.draw(ctx,line,PENDING_COLOR);
         }
     },
     mouseup: function(event) {

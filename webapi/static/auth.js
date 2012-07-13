@@ -1,6 +1,6 @@
 (function($) {
     $.fn.extend({
-	authentication: function(callback) {
+	authentication: function(login_callback, logout_callback) {
 	    return this.each(function() {
 		var $this = $(this);
 		$this.empty()
@@ -18,14 +18,15 @@
 				'password': $this.find('.auth_password').val()
 			    },
 			    success: function(data) {
-				callback(data.username);
+				login_callback(data.username);
 				$this.empty()
 				    .append('Logged in as '+data.username+' <a href="#" class="auth_logout button">Logout</a>')
 				    .find('.button').button()
 				    .end()
 				    .find('.auth_logout').click(function () {
+					logout_callback(data.username);
 					$.getJSON('/logout');
-					$this.authentication(callback);
+					$this.authentication(login_callback, logout_callback);
 				    });
 			    },
 			    failure: function() {
