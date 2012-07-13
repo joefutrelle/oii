@@ -33,7 +33,7 @@ img.thumbnail {
 .selected { background: #9999ff; }
 #rightPanel {
     float: right;
-    width: 500px;
+    width: 350px;
     margin: auto;
     border: 1px solid;
     padding: 5px;
