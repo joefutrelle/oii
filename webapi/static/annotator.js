@@ -2,8 +2,8 @@ var TARGET_SCOPE=1;
 var IMAGE_SCOPE=2;
 var DOMINANT_SUBSTRATE_SCOPE=3;
 var SUBDOMINANT_SUBSTRATE_SCOPE=4
-var PENDING_COLOR='#0f0'
-var EXISTING_COLOR='#f00'
+var PENDING_COLOR='#00ff33'
+var EXISTING_COLOR='#ffff99'
 function getWorkspace(key) {
     return $('#workspace').data(key);
 }
