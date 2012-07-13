@@ -402,6 +402,14 @@ function findNewImage(callback) {
     var ass_pid = getWorkspace('assignment').pid;
     var find_status = "new";
 
+	//very bad hardcoding but eventually the find status might need to be part of the assignment 
+        // (for this hack to work in the assignment all 283 and 284 images start as status "in progress"
+	if( ass_pid == "http://habcam-data.whoi.edu/data/283" || ass_pid == "http://habcam-data.whoi.edu/data/284" ){
+	   find_status = "in progress";
+	} else {
+	   find_status = "new";
+	}
+
 clog('user is on assignment '+ass_pid + ' find status: ' + find_status);
 
     $.getJSON('/find_image/offset/'+page+'/status/'+find_status+'/assignment/'+ass_pid, function(r) {
