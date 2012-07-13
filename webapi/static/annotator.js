@@ -400,7 +400,12 @@ function commit() {
 }
 function findNewImage(callback) {
     var ass_pid = getWorkspace('assignment').pid;
-    $.getJSON('/find_image/offset/'+page+'/status/new/assignment/'+ass_pid, function(r) {
+    var find_status = "new";
+
+
+clog('user selected assignment '+ass_pid + ' find status: ' + find_status);
+
+    $.getJSON('/find_image/offset/'+page+'/status/'+find_status+'/assignment/'+ass_pid, function(r) {
 	var newPage = r.offset;
 	callback(newPage);
     });
