@@ -166,6 +166,9 @@ function gotoPage(page,size) {
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
+            $("#imageNotes").empty();
+	    $('#imageNotes').categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
+
 	    if($('#workspace').data('login') != undefined) {
 		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
 		    clog('status changed to in progress for '+imagePid);
@@ -610,9 +613,10 @@ $(document).ready(function() {
     $('#rightPanel').append('<br><fieldset><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
-    $('#rightPanel').append('<br><fieldset><legend>Image Notes</legend><div>&nbsp;</div></fieldset>')
-	.find('div:last')
-	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
+
+    $('#rightPanel').append('<br><fieldset ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>');
+
+
     $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
 	.find('div:last')
     gotoPage(page,size);
