@@ -6,7 +6,7 @@ from oii.annotation.assignments import AssignmentStore
 class HabcamAssignmentStore(AssignmentStore):
     def __init__(self,config):
         self.config = config
-        self.assignment_fields = ['assignment_id','idmode_id','site_description','project_name','priority','initials','date']
+        self.assignment_fields = ['assignment_id','idmode_id','site_description','project_name','priority','initials','date','num_images','comment']
     def lid(self,pid,namespace=None):
         return re.sub('.*/','',pid)
     def pid(self,lid,namespace=None):

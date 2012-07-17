@@ -176,7 +176,18 @@ function gotoPage(page,size) {
 	    }
         }); // loop over images
     });
+
+    var num_images = $('#workspace').data('assignment').num_images;
+    var percent_done = 100*offset/num_images;
     $("#quickOffset").html(offset);
+    $("#quickNumImages").html(num_images);
+    $("#quickProgress").html(Math.round(percent_done,1) + '%');
+    $("#quickAssignment").html(
+		"</br>"  + $('#workspace').data('assignment').project_name 
+		+ "</br>" + $('#workspace').data('assignment').site_description
+		+ "</br>" + $('#workspace').data('assignment').comment
+    ) 
+
 }
 function clearPage() {
     $('#images').empty();
