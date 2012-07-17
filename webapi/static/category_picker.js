@@ -27,7 +27,7 @@
 		// add a new class selector and its associated "-" button for if/when the user wants to remove it
 		function add_choice() {
 		    // add all categories to the select
-		    var select = $this.append('<div><select class="category_choice"></select></div>').find('select');
+		    var select = $this.append('<div><select class="category_choice"></select></div>').find('select:last');
 		    $(select).append('<option value="NONE">(None)</option>');
 		    $.each($this.data('all_categories'),function(ix,c) {
 			$(select).append('<option value="'+c.pid+'">'+c.label+'</option>')
