@@ -548,6 +548,7 @@ $(document).ready(function() {
 	gotoPage(page,size);
     });
     $('#nextNew').click(function() {
+	preCommit();
 	commitSubstrate(function() {
 	    findNewImage(function(pp) {
 		page = pp;
