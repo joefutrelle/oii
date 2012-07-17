@@ -23,6 +23,7 @@
 		    });
 		    // we have the list of selected categories; call the callback
 		    callback(selectedCategories, scope);
+		    $this.find('.selected_category').html(label.substring(2));
 		}
 		// add a new class selector and its associated "-" button for if/when the user wants to remove it
 		function add_choice() {
@@ -44,12 +45,17 @@
 		    // the change handler for the select is compute_selected
 		    $(select).change(compute_selected);
 		}
+		function reset() {
+		    $.getJSON('/list_categories/'+mode+'/'+scope, function(c) {
+			$this.data('all_categories',c);
+			$this.empty();
+			$this.append('<div class="selected_category"></div>');
+			$this.append('<a href="#" class="resetButton hidden">reset</a>').find('.resetButton').button().click(reset)
+			add_choice();
+		    });
+		}
 		// now actually do something: call list_categories, save the result, and add the first selector
-		$.getJSON('/list_categories/'+mode+'/'+scope, function(c) {
-		    $this.data('all_categories',c);
-		    $this.append('<div class="selected_category"></div>');
-		    add_choice();
-		});
+		reset();
 	    });
 	}
     });
