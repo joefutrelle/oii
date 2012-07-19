@@ -166,9 +166,7 @@ function gotoPage(page,size) {
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
-            $("#imageNotes").empty();
-	    $('#imageNotes').categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
-
+	    $('#imageNotes').find('.resetButton').click();
 	    if($('#workspace').data('login') != undefined) {
 		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
 		    clog('status changed to in progress for '+imagePid);
@@ -271,16 +269,22 @@ function preCommit() {
     generateIds(pending(), commit);
 }
 function queueAnnotation(cell, geometry) {
-    var ann = {
-        image: $(cell).data('imagePid'),
-        category: categoryPidForLabel($('#label').val()),
-        geometry: geometry,
-	scope: TARGET_SCOPE,
-	annotator: 'http://people.net/joeblow',
-	timestamp: iso8601(new Date()),
-	assignment: $('#workspace').data('assignment').pid
-    };
-    pushAnnotation(ann);
+    var lv = $('#label').val();
+    var c = categoryPidForLabel(lv);
+    if(c == undefined) {
+	alert(lv+' is not a known category');
+    } else {
+	var ann = {
+            image: $(cell).data('imagePid'),
+            category: c,
+            geometry: geometry,
+	    scope: TARGET_SCOPE,
+	    annotator: 'http://people.net/joeblow',
+	    timestamp: iso8601(new Date()),
+	    assignment: $('#workspace').data('assignment').pid
+	};
+	pushAnnotation(ann);
+    }
 }
 function queueSubstrateAnnotation(categories, scope) {
     if(scope==DOMINANT_SUBSTRATE_SCOPE) {
@@ -626,8 +630,9 @@ $(document).ready(function() {
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
 
-    $('#rightPanel').append('<br><fieldset ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>');
-
+    $('#rightPanel').append('<br><fieldset ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
+        .find('div:last')
+	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
 
     $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
 	.find('div:last')
