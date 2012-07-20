@@ -523,6 +523,15 @@ function resetImageLevelPending() {
     $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('imageNotes',{});
 }
+// FIXME make class selection a plugin
+function validateLabel() {
+    c = categoryPidForLabel($('#label').val());
+    if(c == undefined) {
+	$('#label').addClass('invalid');
+    } else {
+	$('#label').removeClass('invalid');
+    }
+}
 $(document).ready(function() {
     page = 1;
     size = 1;
@@ -592,6 +601,7 @@ $(document).ready(function() {
             }
             $.getJSON('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
                 resp($.map(r,function(item) {
+		    validateLabel(); // it's valid, of course,  but this updates the GUI accordingly
                     return {
                         'label': item.label,
                         'value': item.value
@@ -601,6 +611,8 @@ $(document).ready(function() {
         },
         minLength: 2
     });
+    $('#label').keyup(validateLabel);
+    $('#label').change(validateLabel);
     $('#closeRight').bind('click', function() {
         $('#openRight').show();
         $('#rightPanel').hide(100);
