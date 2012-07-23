@@ -287,6 +287,9 @@ function scaleAllLayers(){
         var scale = getZoomScale();
     if(scale < startScale) {
 	resetZoom();
+	if(is_zooming) {
+	    toggleZoomMode();
+	}
 	return;
     }
         var newWidth = width * scale;
@@ -351,6 +354,9 @@ function scaleAllLayers(){
 
 function executeScroll(direction){
     console.log('executing scroll, direction = '+direction);
+    if(direction < 0 && !is_zooming) {
+	toggleZoomMode();
+    }
     if( is_zooming ){
         if(direction > 0){
             shrink();
