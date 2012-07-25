@@ -98,6 +98,7 @@ function drawImage(cell) {
     ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
 function getExistingAnnotations(cell, callback) {
+	emptyExistingTable();
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var ctx = getImageLayerContext(cell,'existing');
@@ -106,6 +107,7 @@ function getExistingAnnotations(cell, callback) {
 	$(cell).data('existing',[]);
         $(r).each(function(ix,ann) {
             existing(cell)[counter++] = ann;
+	    addExistingRow(ann.scope,categoryLabelForPid(ann.category),ann.annotator,ann.timestamp);
         });
 	callback();
     });
