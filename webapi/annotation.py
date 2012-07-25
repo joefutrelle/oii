@@ -33,6 +33,9 @@ app.register_blueprint(idgen_api)
 app.register_blueprint(auth_api)
 app.debug = True
 
+# importantly, set max-age on static files (e.g., javascript) to something really short
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
+
 # config options
 ANNOTATION_STORE = 'annotation_store'
 CATEGORIES = 'categories'
