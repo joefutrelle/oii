@@ -38,7 +38,7 @@ zoomEvents['DOMMouseScroll'] = function(e){
     while(!scroll.detail && scroll.originalEvent){
      scroll = scroll.originalEvent;
     }
-    return executeScroll(scroll.detail);
+    return executeScroll(scroll.detail,scroll);
 }
 ////detect mouse scroll => IE, Opera, Safari
 zoomEvents['mousewheel'] = function(e){
@@ -47,9 +47,9 @@ zoomEvents['mousewheel'] = function(e){
      scroll = scroll.originalEvent;
     }
     if('delta' in scroll) { // IE, Opera, Safari
-	return executeScroll(scroll.delta);
+	return executeScroll(scroll.delta,scroll);
     } else if('wheelDeltaY' in scroll) { // chrome
-	return executeScroll(0-scroll.wheelDeltaY);
+	return executeScroll(0-scroll.wheelDeltaY,scroll);
     }
 }
 /**** END OF ZOOM FUNCTIONS ****/
@@ -84,8 +84,7 @@ zoomEvents['mouseout'] = function(evt){
 zoomEvents['mousemove'] = function(evt){
     var cell = getZoomImage();
     if( $(cell).data('mouseDown') && is_zooming ){
-        var dragging = ( getZoomScale() > startScale );
-
+	var dragging = ( getZoomScale() > startScale )
         if (dragging) {
             var startDragOffset = getZoomDragOffset();
             console.log('Drag to: '+evt.clientX+','+evt.clientY);
@@ -113,10 +112,12 @@ zoomEvents['mousemove'] = function(evt){
             console.log('set viewfinder to: '+moveX+','+moveY);
 
             navigate(moveX, moveY);
+	    scaleAllLayers();
 
         } else {
             //clog('drag not allowed');  
             navigate(0, 0);
+	    scaleAllLayers();
         }
     }
 }
@@ -262,7 +263,6 @@ function navigate(x,y){
     }
 
     setZoomNavCoordinates( x, y);
-    scaleAllLayers();
 }
 
 function zoom(){
@@ -295,13 +295,19 @@ function scaleAllLayers(){
         var newWidth = width * scale;
         var newHeight = height * scale;
 
-        var x = -((newWidth-width)/2);
-        var y = -((newHeight-height)/2);
-	setTranslatePos(x,y);
+    var x = -((newWidth-width)/2); 
+    var y = -((newHeight-height)/2);
+        setTranslatePos(x,y);
+
+    if(getClientCoordinates() != undefined) {
+	var cx = getClientCoordinates().x;
+	var cy = getClientCoordinates().y;
+	// FIXME compute new ZoomNavCoordinate based on client x y
+    }
         
         var navX = getZoomNavCoordinates().x;
         var navY = getZoomNavCoordinates().y;
-        
+
         $.each($(cell).find('canvas'), function(index,canvas){
             var canvasID = getZoomCanvasName($(canvas).attr('id'));  
             
@@ -352,7 +358,16 @@ function scaleAllLayers(){
 }
 
 
-function executeScroll(direction){
+function executeScroll(direction,evt){
+    // capture mouse coordinates in image space to center zoom
+    var ox = evt.clientX;
+    var oy = evt.clientY;
+    setClientCoordinates(evt.clientX, evt.clientY);
+
+    clog('dragoffset = '+(getZoomDragOffset().x)+','+(getZoomDragOffset().y));
+    clog('nav = '+(getZoomNavCoordinates().x)+','+(getZoomNavCoordinates().y));
+    clog('xltpos = '+(getTranslatePos().x)+','+(getTranslatePos().y));
+
     console.log('executing scroll, direction = '+direction);
     if(direction < 0 && !is_zooming) {
 	toggleZoomMode();
@@ -404,12 +419,14 @@ function getZoomDragOffset(){
 function setZoomDragOffset(ox,oy){
     getZoomImage().data('startDragOffset', {x: ox, y: oy});
 }
+// coordinates of top-left corner of visible part of image (in image space?)
 function getZoomNavCoordinates(){
     return getZoomImage().data('nav-coordinates');
 }
 function setZoomNavCoordinates(xc,yc){
     getZoomImage().data('nav-coordinates', {x: xc, y: yc});
 }
+// origin of canvas context when drawing image
 function setTranslatePos(xc,yc) {
     getZoomImage().data('translatePos',{x:xc,y:yc});
 }
@@ -419,15 +436,19 @@ function getTranslatePos(){
 function getZoomCanvasName(cid){
     return cid.substring(0,cid.indexOf('_'));
 }
+// coordinates of mouse in image space
+function setClientCoordinates(xc,yc) {
+    getZoomImage().data('clientCoordinates',{x:xc,y:yc});
+}
+function getClientCoordinates() {
+    return getZoomImage().data('clientCoordinates');
+}
 // coordinate systems, dimensions and transformations used:
 // image space: the coordinate system of the full-sized image in pixels
 // canvas space: the coordinate system of the displayed canvas, which is scaled by startScale
 // startScale: default scale of the interface; the scale at which the image exactly fits the canvas.
 // zoomScale: the zoomed-in scale. when==startScale, not zoomed. when > startScale, zoomed in. when < startScale, zoomed out.
 // scaleFactor: how much to change the scale factor by when zooming in or out.
-// translatePos: ?
-// zoomNavCoordinates: ?
+// translatePos: canvas context translation when image is drawn
+// zoomNavCoordinates: top left corner of "viewfinder" (in image space?)
 // zoomDragOffset: ?
-
-
-

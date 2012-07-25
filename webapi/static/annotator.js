@@ -319,25 +319,31 @@ function qsa(categories, scope, dataKey) {
 function commitSubstrate(continuation) {
     var as = [];
     var gi = {};
-    $.each($('#workspace').data('dominantSubstrate'), function(imagePid, anns) {
-	$.each(anns, function(ix, ann) {
-	    HOL.add(gi, imagePid, ann);
-            as.push(ann);
-            clog(ann.image+' is has dominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+    $('div.thumbnail').each(function(i, cell) {
+	var imagePid = $(cell).data('imagePid');
+	$.each($('#workspace').data('dominantSubstrate'), function(ignore, anns) {
+	    $.each(anns, function(ix, ann) {
+		ann.image = imagePid;
+		HOL.add(gi, imagePid, ann);
+		as.push(ann);
+		clog(ann.image+' is has dominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	    });
 	});
-    });
-    $.each($('#workspace').data('subdominantSubstrate'), function(imagePid, anns) {
-	$.each(anns, function(ix, ann) {
-	    HOL.add(gi, imagePid, ann);
-            as.push(ann);
-            clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	$.each($('#workspace').data('subdominantSubstrate'), function(ignore, anns) {
+	    $.each(anns, function(ix, ann) {
+		ann.image = imagePid;
+		HOL.add(gi, imagePid, ann);
+		as.push(ann);
+		clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	    });
 	});
-    });
-    $.each($('#workspace').data('imageNotes'), function(imagePid, anns) {
-	$.each(anns, function(ix, ann) {
-	    HOL.add(gi, imagePid, ann);
-            as.push(ann);
-            clog(ann.image+' is has imagenotes '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	$.each($('#workspace').data('imageNotes'), function(ignore, anns) {
+	    $.each(anns, function(ix, ann) {
+		ann.image = imagePid;
+		HOL.add(gi, imagePid, ann);
+		as.push(ann);
+		clog(ann.image+' is has imagenotes '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+	    });
 	});
     });
     clog('there are '+as.length+' substrate annotations');
@@ -362,16 +368,6 @@ function commitSubstrate(continuation) {
     } else {
 	continuation();
     }
-}
-function preCommitSubstrate() {
-    // FIXME do this in one transaction
-    generateIds($('#workspace').data('dominantSubstrate'),function() {
-	generateIds($('#workspace').data('subdominantSubstrate'),function() {
-	    generateIds($('#workspace').data('imageNotes'),function() {
-		commitSubstrate();
-	    });
-	});
-    });
 }
 function pushAnnotation(ann)  {
     clog('enqueing '+JSON.stringify(ann));

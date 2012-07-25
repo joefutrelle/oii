@@ -12,7 +12,7 @@ geometry.boundingBox = {
         var right = scalingFactor * boundingBox[1][0]; 
         var bottom = scalingFactor * boundingBox[1][1];
         ctx.strokeStyle = color;
-	clog('bounding box color is '+color);
+	//clog('bounding box color is '+color);
         ctx.strokeRect(left, top, right-left, bottom-top);
     },
     prepareForStorage: function(annotation) {
@@ -29,7 +29,7 @@ geometry.line = {
         var oy = scalingFactor * line[0][1];
         var mx = scalingFactor * line[1][0]; 
         var my = scalingFactor * line[1][1];
-	clog('line color is '+color);
+	//clog('line color is '+color);
         ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(ox,oy);
@@ -48,7 +48,7 @@ geometry.path = {
     draw: function(ctx, line, color) {
         var oy = scalingFactor * line[0][1];
         ctx.strokeStyle = color;
-	clog('path color is '+color);
+	//clog('path color is '+color);
         ctx.beginPath();
 	$.each(line, function(ix, pt) {
 	    var px = scalingFactor * pt[0];
@@ -104,7 +104,7 @@ geometry.point = {
         var x = scalingFactor * point[0][0];
         var y = scalingFactor * point[0][1];
         var size = 5;
-	clog('point stroke color ='+color);
+	//clog('point stroke color ='+color);
         ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(x-size,y);
@@ -134,7 +134,7 @@ geometry.circle = {
         var dy = my-oy;
         var radius = Math.sqrt( dx*dx + dy*dy );
         
-	clog('circle stroke color ='+color);
+	//clog('circle stroke color ='+color);
         ctx.strokeStyle = color;
         ctx.beginPath();  
         //arc(x, y, radius, startAngle, endAngle, anticlockwise)
