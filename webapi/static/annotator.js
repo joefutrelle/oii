@@ -168,13 +168,17 @@ function gotoPage(page,size) {
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
-	    $('#imageNotes').find('.resetButton').click();
+
 	    if($('#workspace').data('login') != undefined) {
 		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
 		    clog('status changed to in progress for '+imagePid);
 		});
 	    }
+
         }); // loop over images
+
+	    $('#imageNotes').find('.resetButton').click();
+	    $('#workspace').data('imageNotes',{});
     });
 
     var num_images = $('#workspace').data('assignment').num_images;
