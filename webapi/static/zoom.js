@@ -199,8 +199,33 @@ var handHandler = function() {
 }
 
 //toggle zoom mode
+function setZoomMode(bool) {
+    if(bool == is_zooming) {
+	return;
+    }
+    var cell = getZoomImage();
+    if(bool) {
+        $(zoomModalButton).css({'border': '2px dotted black'});
+        $(cell).removeClass('pointer')
+               .addClass('hand')
+               .data('toolsDisabled',true);
+         //set the cursor
+        $(cell).bind({
+          mousedown: grabHandler,
+          mouseup: handHandler
+        });        
+    } else {
+        $(zoomModalButton).css({'border': ''});
+        $(cell).unbind('mousedown', grabHandler)
+               .unbind('mouseup',handHandler)
+               .addClass('pointer')
+               .removeData('toolsDisabled');    
+    }
+    is_zooming = bool;
+}
 function toggleZoomMode(){
-    
+    setZoomMode(!is_zooming);
+/*
     var was_zooming = is_zooming;
     is_zooming = !is_zooming;
     
@@ -231,12 +256,14 @@ function toggleZoomMode(){
     } else {
         alert('ZOOM cannot be used right now');
     }
+*/
 }
 
 function resetZoom(){
     setZoomScale(startScale);
     setZoomNavCoordinates(0,0);
     setZoomDragOffset(0,0);
+    setZoomMode(false);
     console.log('resetting zoom');
     scaleAllLayers();
 }
@@ -300,9 +327,14 @@ function scaleAllLayers(){
         setTranslatePos(x,y);
 
     if(getClientCoordinates() != undefined) {
-	var cx = getClientCoordinates().x;
-	var cy = getClientCoordinates().y;
+	var xi = getImageMouseCoordinates().x;
+	var yi = getImageMouseCoordinates().y;
 	// FIXME compute new ZoomNavCoordinate based on client x y
+	//setZoomNavCoordinates(width / 2 - xi, height / 2 - yi);
+	//setZoomNavCoordinates(-100,0); // FIXME
+	var cx = (width/scalingFactor) / 2;
+	var cy = (height/scalingFactor) / 2;
+	clog('offset='+(cx-xi)+','+(cy-yi));
     }
         
         var navX = getZoomNavCoordinates().x;
@@ -360,9 +392,10 @@ function scaleAllLayers(){
 
 function executeScroll(direction,evt){
     // capture mouse coordinates in image space to center zoom
-    var ox = evt.clientX;
-    var oy = evt.clientY;
-    setClientCoordinates(evt.clientX, evt.clientY);
+    var cell = getZoomImage();
+    var ox = (evt.pageX - cell.offset().left) / scalingFactor;
+    var oy = (evt.pageY - cell.offset().top) / scalingFactor;
+    setClientCoordinates(ox, oy);
 
     clog('dragoffset = '+(getZoomDragOffset().x)+','+(getZoomDragOffset().y));
     clog('nav = '+(getZoomNavCoordinates().x)+','+(getZoomNavCoordinates().y));
@@ -442,6 +475,35 @@ function setClientCoordinates(xc,yc) {
 }
 function getClientCoordinates() {
     return getZoomImage().data('clientCoordinates');
+}
+function getImageMouseCoordinates() {
+    var xc = getClientCoordinates().x;
+    var yc = getClientCoordinates().y;
+    var scale = getZoomScale();
+    var navCoordinates = getZoomNavCoordinates();
+
+    if( navCoordinates != undefined ){
+        var dragX = navCoordinates.x / scalingFactor;
+        var dragY = navCoordinates.y / scalingFactor;
+	xi = xc + (-1 * dragX * scale);
+	yi = yc + (-1 * dragY * scale);
+    }
+    
+    var offsetX = 0;
+    var offsetY = 0;
+
+    //fix zoom
+    var translate = getTranslatePos();
+    if( translate != undefined ){
+        offsetX = translate.x / scalingFactor;
+        offsetY = translate.y / scalingFactor;
+    }
+
+    xi = (xi - offsetX) / scale;
+    yi = (yi - offsetY) / scale;
+    //
+    //clog('screen -> image = '+xc+','+yc+' -> '+xi+','+yi);
+    return {x:xi, y:yi};
 }
 // coordinate systems, dimensions and transformations used:
 // image space: the coordinate system of the full-sized image in pixels

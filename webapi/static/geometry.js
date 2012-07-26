@@ -237,7 +237,7 @@ function MeasurementTool(eventHandlers) {
     this.eventHandlers = eventHandlers;
 }
 function isGeometryToolEnabled(cell){
-    return $(cell).data('toolsDisabled') == null && hasLabel();
+    return $(cell).data('toolsDisabled') == null && hasLabel() && !getZoomIsZooming();
 }
 
 function bindMeasurementTools(selector, env) {
@@ -321,12 +321,13 @@ geometry.boundingBox.tool = new MeasurementTool({
         var cell = event.data.cell;
         $(cell).data('ox',-1);
         $(cell).data('oy',-1);
-        //console.log($(cell).data('boundingBox'));
+        console.log($(cell).data('boundingBox'));
         var preppedBox = geometry.boundingBox.prepareForStorage($(cell).data('boundingBox'));
-        //console.log(preppedBox);
+        console.log(preppedBox);
         
         queueAnnotation(cell, { boundingBox: preppedBox });
         select(cell,$('#label').val());
+	$(cell).removeData('boundingBox');
     }
 });
 // allow the user to draw a line on a cell's 'new annotation' canvas
@@ -363,6 +364,7 @@ geometry.line.tool = new MeasurementTool({
         
         queueAnnotation(cell, { line: preppedLine });
         select(cell,$('#label').val());
+	$(cell).removeData('line');
     }
 });
 geometry.polyline.tool = new MeasurementTool({
@@ -377,12 +379,10 @@ geometry.polyline.tool = new MeasurementTool({
             $(cell).data('px',-1);
             $(cell).data('py',-1);
 	    var line = $(cell).data('polyline');
-	    console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
-            console.log('pre-prepped line: '+line);
             var preppedLine = geometry.polyline.prepareForStorage(line);
-            console.log('post-prepped line: '+preppedLine);
             queueAnnotation(cell, { polyline: preppedLine });
             select(cell,$('#label').val());
+	    $(cell).removeData('polyline');
         } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
             var ctx = event.data.ctx;
             var mx = event.data.mx;
@@ -390,7 +390,6 @@ geometry.polyline.tool = new MeasurementTool({
             var line = $(cell).data('polyline');
 	    line.push([mx/scalingFactor, my/scalingFactor]);
 	    $(cell).data('polyline',line);
-	    console.log('click while rubberbanding, line = '+JSON.stringify(line));
             ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
             geometry.polyline.draw(ctx,line,PENDING_COLOR); // draw the existing line
 	    $(cell).data('px',mx);
@@ -399,7 +398,6 @@ geometry.polyline.tool = new MeasurementTool({
             $(cell).data('px',mx);//previous x,y; the point we're currently rubberbanding from
             $(cell).data('py',my);
 	    $(cell).data('polyline',[[mx/scalingFactor, my/scalingFactor]]);
-	    console.log('click when not rubberbanding, line = '+JSON.stringify($(cell).data('polyline')));
 	    // no need to draw yet
 	}
     },
@@ -441,6 +439,7 @@ geometry.closedPolyline.tool = new MeasurementTool({
             console.log('post-prepped line: '+preppedLine);
             queueAnnotation(cell, { polyline: preppedLine });
             select(cell,$('#label').val());
+	    $(cell).removeData('polyline');
         } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
             var ctx = event.data.ctx;
             var mx = event.data.mx;
@@ -518,6 +517,7 @@ geometry.path.tool = new MeasurementTool({
         var preppedPath = geometry.path.prepareForStorage(simplePath);
         queueAnnotation(cell, { path: preppedPath });
         select(cell,$('#label').val());
+	$(cell).removeData('path');
     }
 });
 // closed path tool
@@ -560,6 +560,7 @@ geometry.closedPath.tool = new MeasurementTool({
         var preppedPath = geometry.path.prepareForStorage(simplePath);
         queueAnnotation(cell, { path: preppedPath });
         select(cell,$('#label').val());
+	$(cell).removeData('path');
     }
 });
 //allow the user to draw a line on a cell's 'new annotation' canvas
@@ -635,6 +636,7 @@ geometry.circle.tool = new MeasurementTool({
         //console.log(preppedCircle);
         queueAnnotation(cell, { circle: preppedCircle });
         select(cell,$('#label').val());
+	$(cell).removeData('circle');
     }
 });
 
