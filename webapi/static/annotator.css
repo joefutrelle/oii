@@ -44,5 +44,5 @@ img.thumbnail {
 .right { float: right; }
 .hidden { display: none; }
 .invalid {
-    color: red;
+    color: black;
 }
