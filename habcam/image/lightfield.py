@@ -3,10 +3,11 @@ import sys
 from oii.utils import Struct
 import os
 import re
-from oii.workflow.rabbit import Job, WIN, FAIL, SKIP
+from oii.workflow.rabbit import Job, JobExit, WIN, FAIL, SKIP
+from oii.workflow.workers import ProcessWorker
 from oii.config import get_config
 
-class HabcamLightfield(Job):
+class HabcamLightfield(ProcessWorker):
     """messages should be absolute paths to image names.
     expects the following in config:
     queue_name - RabbitMQ queue basename
@@ -15,33 +16,24 @@ class HabcamLightfield(Job):
     in_prefix - prefix regex to strip off of output paths
     out_dir - top-level dir to deposit output"""
     def __init__(self,config):
-        super(HabcamLightfield,self).__init__(config.queue_name, config.amqp_host)
-        self.config = config
+        super(HabcamLightfield,self).__init__(config)
         script = self.get_script()
         self.imagestack = Process(script)
     def get_script(self):
         return ''
-    def get_parameters(self):
-        return {}
-    def run_callback(self,message):
-        try:
-            img_in = message
-            img_out_file = re.sub(self.config.in_prefix,'',re.sub(r'\.tif','.png',img_in)).lstrip('/')
-            print 'img_out_file = %s' % img_out_file
-            img_out = os.path.join(self.config.out_dir,img_out_file)
-            print 'img_out = %s' % img_out
-            if os.path.exists(img_out):
-                self.log('SKIP already exists: %s %s %s' % (self.config.out_dir, img_in, img_out))
-                return SKIP
-            od = os.path.dirname(img_out)
-            if not os.path.exists(od):
-                os.makedirs(od)
-            params = dict(dict(img_in=img_in,img_out=img_out).items() + self.get_parameters().items())
-            for msg in self.imagestack.run(params):
-                self.log(msg['message'])
-            return WIN
-        except:
-            raise
+    def get_parameters(self,message):
+        img_in = message
+        img_out_file = re.sub(self.config.in_prefix,'',re.sub(r'\.tif','.png',img_in)).lstrip('/')
+        print 'img_out_file = %s' % img_out_file
+        img_out = os.path.join(self.config.out_dir,img_out_file)
+        print 'img_out = %s' % img_out
+        if os.path.exists(img_out):
+            self.log('SKIP already exists: %s %s %s' % (self.config.out_dir, img_in, img_out))
+            raise JobExit('Output file already exists: %s' % img_out, SKIP)
+        od = os.path.dirname(img_out)
+        if not os.path.exists(od):
+            os.makedirs(od)
+        return dict(img_in=img_in,img_out=img_out)
 
 class HabcamLightfieldNhv(HabcamLightfield):
     """Note that this impl uses NHV's modded version of ImageStack containing wls2 and histoadapt operators"""
@@ -61,8 +53,6 @@ class HabcamLightfieldNhv(HabcamLightfield):
                          '-clamp',
                          '-save %(img_out)s'
                          ])
-    def get_parameters(self):
-        return {}
 
 class HabcamLightfieldJoe(HabcamLightfield):
     def get_script(self):
@@ -77,7 +67,9 @@ class HabcamLightfieldJoe(HabcamLightfield):
                          '-save %(img_out)s'
                          ])
     def get_parameters(self):
-        return dict(filter_size=501)
+        p = super(HabcamLighfieldJoe,self).get_parameters()
+        p['filter_size'] = 501
+        return p
 
 def enqueue_from_stdin(hl):
     batch = []
