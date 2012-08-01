@@ -24,9 +24,12 @@ class ProcessWorker(Job):
     def run_callback(self,message):
         try:
             params = self.get_parameters(message)
-            for msg in self.process.run(params):
-                self.log(msg['message'])
-            return WIN
+            try:
+                for msg in self.process.run(params):
+                    self.log(msg['message'])
+                return WIN
+            except RuntimeError:
+                return FAIL
         except:
             raise
 
