@@ -23,8 +23,8 @@ DEBUG = True
 
 
 # attempt to load resolver config from local dir
-configpath = path.join(path.split(path.abspath(__file__))[0]
-    ,RESOLVER_CONFIG)
+configpath = path.join(path.split(path.abspath(__file__))[0],
+    RESOLVER_CONFIG)
 try:
     r = resolver.parse(configpath,"seabed_cruises")
 except:
