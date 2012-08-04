@@ -1,0 +1,29 @@
+<!-- 
+
+Prototype Seabed resolver configuration.
+Returns images from 201012_PalmerOden, 200406_Titanic,
+200908_Alaska, and 200407_CH0804.
+
+Written by Mark Nye, Aug 4, 2012
+
+-->
+
+<resolvers>
+
+  <resolver name="seabed_cruises">
+    <variable name="root">
+      <value>/mnt/falkland</value>
+    </variable>
+    <variable name="cruise">
+      <value>201012_PalmerOden/cruises/*/*/images/corrected/cam*</value>
+      <value>200406_Titanic/ColorProcessedJPG</value>
+      <value>200908_Alaska/corrected_images/*/*</value>
+      <value>200407_CH0804/Images_*/CH0804-*/ColorCorrected</value>
+      <value>200407_CH0804/Images_*/i20040*/CH0804-*/ColorCorrected</value>
+    </variable>
+    <path match="${root}/${cruise}">
+      <path match="${pid}.jpg"/>
+    </path>
+  </resolver>
+
+</resolvers>
