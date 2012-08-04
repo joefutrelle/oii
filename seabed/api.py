@@ -1,5 +1,5 @@
 
-from sys import stdout, stderr, exit
+from sys import stderr
 from os import path
 from flask import Flask, abort, send_file, Response
 from lxml import etree
