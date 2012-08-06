@@ -51,10 +51,10 @@ def log(message,ename,host='localhost',channel=None):
     else:
         channel.basic_publish(exchange=ename,routing_key='',body=message)
 
-def publish(message,channel):
-    if type(message) is str:
+def publish(qname,message,channel):
+    try:
         channel.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
-    else:
+    except AttributeError:
         for m in message:
             channel.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
 
@@ -63,14 +63,7 @@ def enqueue(message,qname,host='localhost',channel=None):
     connection = None
     if channel is None:
         channel, connection = declare_work_queue(qname,host)
-    try:
-        if type(message) is str:
-            channel.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
-        else:
-            for m in message:
-                channel.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
-    except:
-        pass
+    publish(qname,message,channel)
     if connection is not None:
         connection.close()
         
@@ -140,7 +133,7 @@ class Job(object):
         if qname is None:
             qname = self.qname
         if qname not in self.work_channels:
-            _, self.work_channels[qname] = declare_work_queue(qname, self.host)
+            self.work_channels[qname], _ = declare_work_queue(qname, self.host)
         debug('enqueue %s to %s' % (message,qname))
         enqueue(message,qname,self.host,self.work_channels[qname])
     def work(self,fork=False):
