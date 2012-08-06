@@ -51,15 +51,28 @@ def log(message,ename,host='localhost',channel=None):
     else:
         channel.basic_publish(exchange=ename,routing_key='',body=message)
 
-def enqueue(message,qname,host='localhost'):
-    """Push a message into a work queue"""
-    ch, cn = declare_work_queue(qname,host)
-    try:
-        ch.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
-    except:
+def publish(message,channel):
+    if type(message) is str:
+        channel.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
+    else:
         for m in message:
-            ch.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
-    cn.close()
+            channel.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
+
+def enqueue(message,qname,host='localhost',channel=None):
+    """Push a message into a work queue"""
+    connection = None
+    if channel is None:
+        channel, connection = declare_work_queue(qname,host)
+    try:
+        if type(message) is str:
+            channel.basic_publish(exchange='', routing_key=qname, body=message.strip(), properties=PERSISTENT)
+        else:
+            for m in message:
+                channel.basic_publish(exchange='', routing_key=qname, body=m, properties=PERSISTENT)
+    except:
+        pass
+    if connection is not None:
+        connection.close()
         
 # channel operations
 
@@ -93,15 +106,19 @@ class Job(object):
         self.host = host
         self.qname = qname
         self.log_channel = None
+        self.work_channels = {}
         self.workerid = ('%s_%s' % (gen_id()[:4], platform.node()))
     def run_callback(self,message):
         """Override this method to do some work. Message is the queue entry received.
         Call log in this method to send messages to the log exchange.
         Return one of the following statuses:
-        WIN - success
-        PASS - this worker is unable to attempt this task
-        FAIL - the worker failed to do the task
-        You can also raise exceptions to indiciate failure"""
+        PASS - return to queue undone, for processing by other workers
+        WIN - success, put in win queue
+        FAIL - failure, put in fail queue
+        SKIP - drop from all queues
+        DIE - worker unable to continue, exit
+        or raise JobExit with one of these statuses
+        other exceptions will be treated as FAIL"""
         return WIN
     def log(self,message):
         """Call this in run_callback to send messages to the log exchange"""
@@ -111,18 +128,28 @@ class Job(object):
             self.log_channel, self.log_connection = declare_log_exchange(ename,self.host)
         prefix = '%s %s ' % (iso8601(), self.workerid)
         log(prefix + message,ename,channel=self.log_channel)
+    def release_log_channel(self):
+        if self.log_channel is not None:
+            try:
+                self.log_connection.close()
+            except:
+                pass
+            self.log_channel = None
     def enqueue(self,message,qname=None):
         """Put a message in this worker's queue"""
         if qname is None:
             qname = self.qname
+        if qname not in self.work_channels:
+            _, self.work_channels[qname] = declare_work_queue(qname, self.host)
         debug('enqueue %s to %s' % (message,qname))
-        enqueue(message,qname,self.host)
+        enqueue(message,qname,self.host,self.work_channels[qname])
     def work(self,fork=False):
         """Start doing work. Will not return as it blocks for messages.
         If fork is true, will start in a separate process, wait for that process
         to terminate, and restart it when it does"""
         # callback handling WIN/PASS/FAIL queueing behavior
         def amqp_run_callback(channel, method, properties, message):
+            #self.release_log_channel()
             debug('callback %s' % message)
             try:
                 self.log('START %s' % message)
