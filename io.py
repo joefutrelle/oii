@@ -48,7 +48,6 @@ class LocalFileSource(Source):
         self.pathname = pathname
         self.mode = mode
     def open(self):
-        print 'opening local file %s for reading' % self.pathname
         return open(self.pathname, self.mode)
 
 class ByteSource(Source):
