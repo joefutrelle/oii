@@ -1,4 +1,5 @@
 from oii.annotation.storage import AnnotationStore
+from oii.psql import xa
 import json
 import psycopg2 as psql
 
@@ -43,13 +44,13 @@ class HabcamAnnotationStore(AnnotationStore):
         for k,v in template.items():
             where_clauses.append(json2db[k]+'=%s')
             where_values.append(v)
-        (connection, cursor) = self.__db()
-        if(len(where_clauses) > 0):
-            cursor.execute(SELECT_CLAUSE +  'where ' + 'and '.join(where_clauses), tuple(where_values))
-        else:
-            cursor.execute(SELECT_CLAUSE)
-        for ann in self.__consume(cursor):
-            yield ann
+        with xa(self.config.psql_connect) as (connection,cursor):
+            if(len(where_clauses) > 0):
+                cursor.execute(SELECT_CLAUSE +  'where ' + 'and '.join(where_clauses), tuple(where_values))
+            else:
+                cursor.execute(SELECT_CLAUSE)
+            for ann in self.__consume(cursor):
+                yield ann
     def fetch_annotation(self,pid):
         "Fetch an annotation by its PID"
         for ann in list_annotations(dict(pid=pid)):
@@ -58,7 +59,6 @@ class HabcamAnnotationStore(AnnotationStore):
         tuples = []
         for d in annotations:
             tuples.append((d['image'], d['scope'], d['category'], json.dumps(d['geometry']).strip('{}'), d['annotator'],d['timestamp'], d['assignment'], d['pid']))
-        (connection, cursor) = self.__db()
-        print 'gonna do it: ' + json.dumps(tuples)
-        cursor.executemany("insert into annotations (image_id, scope_id, category_id, geometry_text, annotator_id, timestamp, assignment_id, annotation_id) values (%s,%s,%s,%s,%s,%s,%s,%s)", tuples)
-        connection.commit()
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor.executemany("insert into annotations (image_id, scope_id, category_id, geometry_text, annotator_id, timestamp, assignment_id, annotation_id) values (%s,%s,%s,%s,%s,%s,%s,%s)", tuples)
+            connection.commit()

@@ -527,10 +527,13 @@ function resetImageLevelPending() {
 }
 // FIXME make class selection a plugin
 function validateLabel() {
-    c = categoryPidForLabel($('#label').val());
+    var label = $('#label').val();
+    var c = categoryPidForLabel(label);
     if(c == undefined) {
+	console.log(label+' invalid');
 	$('#label').addClass('invalid');
     } else {
+	console.log(label+' valid');
 	$('#label').removeClass('invalid');
     }
 }
@@ -603,7 +606,6 @@ $(document).ready(function() {
             }
             $.getJSON('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
                 resp($.map(r,function(item) {
-		    validateLabel(); // it's valid, of course,  but this updates the GUI accordingly
                     return {
                         'label': item.label,
                         'value': item.value
@@ -611,9 +613,13 @@ $(document).ready(function() {
                 }));
             });
         },
+	/*
+	select: function(event,ui) {
+	    $('#label').change();
+	},
+	*/
         minLength: 2
     });
-    $('#label').keyup(validateLabel);
     $('#label').change(validateLabel);
     $('#closeRight').bind('click', function() {
         $('#openRight').show();

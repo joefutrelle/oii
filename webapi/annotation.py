@@ -71,8 +71,12 @@ def fetch_annotation(pid):
     return jsonr(my(ANNOTATION_STORE).fetch_annotation(pid))
 
 @app.route('/list_annotations/image/<path:image_pid>')
-def list_annotations(image_pid):
-    return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid)))
+@app.route('/list_annotations/image/<path:image_pid>/assignment/<path:assignment_pid>')
+def list_annotations(image_pid,assignment_pid=None):
+    if assignment_pid is not None:
+        return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid,assignment=assignment_pid)))
+    else:
+        return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid)))
 
 @app.route('/fetch_assignment/<path:assignment_pid>')
 def fetch_assignment(assignment_pid):
