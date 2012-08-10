@@ -3,7 +3,7 @@ from sys import stderr
 from os import path
 from flask import Flask, abort, send_file, Response
 from lxml import etree
-from oii import resolver
+from oii.resolver import Resolver
 
 """
 ---- Simple Seabed Resolver API Prototype ----
@@ -26,7 +26,7 @@ DEBUG = True
 configpath = path.join(path.split(path.abspath(__file__))[0],
     RESOLVER_CONFIG)
 try:
-    r = resolver.parse(configpath,"seabed_cruises")
+    r = Resolver(configpath,"seabed_cruises")
 except:
     stderr.write("error loading resolver config from %s\n" % configpath)
 
@@ -86,8 +86,9 @@ def api_image(pid):
     "Validate, then return image or 404 response"
     if not validate_pid(pid):
         abort(400)
-    for (hit,bindings) in resolver.resolve(r, dict(pid=pid)):
-        # assume unique names, return first image hit 
+    # assume unique filenames. r.resolve will only return the first hit
+    hit = r.resolve(pid=pid)
+    if hit:
         try:
             return send_file(hit,mimetype="image/jpeg",cache_timeout=60)
         except IOError:
