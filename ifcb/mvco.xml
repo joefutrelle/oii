@@ -1,5 +1,5 @@
 <resolvers>
-  <resolver name="mvco_bin">
+  <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
     <match variable="pid">.*((IFCB\d+_\d{4}_\d{3})_\d{6})</match>
     <variable name="filename">${1}.${format}</variable>
@@ -21,5 +21,12 @@
       <value>/data/vol4/blobs</value>
     </variable>
     <path match="${root}/${year}/${day}/${filename}"/>
+  </resolver>
+  <resolver name="lid2pid">
+    <hit>http://ifcb-data.whoi.edu/mvco/${lid}</hit>
+  </resolver>
+  <resolver name="pid2lid">
+    <match variable="pid">.*(IFCB\d+_.*)</match>
+    <hit>${1}</hit>
   </resolver>
 </resolvers>
