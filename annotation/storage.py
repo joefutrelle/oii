@@ -12,6 +12,9 @@ class AnnotationStore(object):
     def create_annotations(self,annotations):
         "Create annotations"
         pass
+    def deprecate_annotation(self,annotation_pid):
+        "Deprecate annotation"
+        pass
 
 # stores annotations in temporary in-memory data structure
 class DebugAnnotationStore(AnnotationStore):

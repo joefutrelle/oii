@@ -98,7 +98,7 @@ function drawImage(cell) {
     ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
 function getExistingAnnotations(cell, callback) {
-	emptyExistingTable();
+	emptyExistingLi();
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var ctx = getImageLayerContext(cell,'existing');
@@ -107,7 +107,7 @@ function getExistingAnnotations(cell, callback) {
 	$(cell).data('existing',[]);
         $(r).each(function(ix,ann) {
             existing(cell)[counter++] = ann;
-	    addExistingRow(ann.scope,categoryLabelForPid(ann.category),ann.annotator,ann.timestamp);
+	    addExistingLi(ann);
         });
 	callback();
     });
@@ -169,16 +169,18 @@ function gotoPage(page,size) {
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
 
-	    if($('#workspace').data('login') != undefined) {
-		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)+'/status/in+progress/assignment/'+assignment_pid, function(r) {
-		    clog('status changed to in progress for '+imagePid);
-		});
-	    }
+	    changeImageStatus('in+progress');
 
         }); // loop over images
 
-	    $('#imageNotes').find('.resetButton').click();
-	    $('#workspace').data('imageNotes',{});
+	//if user has the lock button selected don't reset image notes
+	if( $('fieldset:has(div#imageNotes) button.lock ').hasClass('selected')){
+		//do nothing	
+	} else{
+		$('#imageNotes').find('.resetButton').click();
+		$('#workspace').data('imageNotes',{});
+	}
+	
     });
 
     var num_images = $('#workspace').data('assignment').num_images;
@@ -448,7 +450,7 @@ function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
     $.getJSON('/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
-            $('#assignment').append('<option value="'+a.pid+'">'+elide(a.label)+'</option>')
+            $('#assignment').append('<option value="'+a.pid+'">'+elide(a.label,40)+'</option>')
         });
     });
 }
@@ -537,6 +539,20 @@ function validateLabel() {
 	$('#label').removeClass('invalid');
     }
 }
+
+function changeImageStatus(status){
+	    //set status of image to waiting for review on next new
+	    if($('#workspace').data('login') != undefined) {
+		var imagePid = $(cell).data('imagePid');
+		var assignment = getWorkspace('assignment');
+		var assignment_pid = assignment.pid;
+		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)
+			+'/status/' + status + '/assignment/'+assignment_pid,function(r) {
+		   clog('status changed to ' + status + ' for '+imagePid);
+		});
+	    }
+}
+
 $(document).ready(function() {
     page = 1;
     size = 1;
@@ -566,7 +582,10 @@ $(document).ready(function() {
 	gotoPage(page,size);
     });
     $('#nextNew').click(function() {
-	preCommit();
+
+	changeImageStatus('waiting+for+review');
+
+	preCommit();//generates ids then commits in this function
 	commitSubstrate(function() {
 	    findNewImage(function(pp) {
 		page = pp;
@@ -574,6 +593,7 @@ $(document).ready(function() {
 	    });
 	});
     });
+
     $('#commit').click(function() {
         preCommit();
     });
@@ -583,13 +603,9 @@ $(document).ready(function() {
     $('#undo').click(function() {
         undo();
     });
-    $('#toggleExisting').click(function() {
-	toggleExisting();
-    });
+
     $(document).bind('keydown', 'ctrl+z', undo);
-    $('#assignment').change(function() {
-        changeAssignment($('#assignment').val());
-    });
+
     $.each(geometry, function(key,g) {
         $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
     });
@@ -641,20 +657,85 @@ $(document).ready(function() {
 	$('#next').removeClass('hidden');
 	$('#prev').removeClass('hidden');
     });
+
+
+       
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
-    $('#rightPanel').append('<br><fieldset><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
+    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
-    $('#rightPanel').append('<br><fieldset><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
+    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
 
-    $('#rightPanel').append('<br><fieldset ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
+    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
         .find('div:last')
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
+ $('#rightPanel').append('<br><fieldset ><legend>Assignment</legend> <select id="assignment"></select></fieldset>')
+        .find('div:last');
 
     $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
-	.find('div:last')
+	.find('div:last');
+
+    $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="quickinfo" ></div></fieldset>')
+	.find('div:last');
+
+    $('#assignment').change(function() {
+        changeAssignment($('#assignment').val());
+    });
+
+$('#controls').append('<button href="#" id="toggleExisting" class="button toggle">Hide Existing</a>');
+    $('#toggleExisting').click(function() {
+	toggleExisting();
+    });
+
+
+//adding toggle buttons to right panel fieldsets
+	$('#rightPanel :not(.categoryPicker) legend')
+		.append(' <button class="button showhide toggle">show/hide</button>');
+
+	//applies to all category pickers
+	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
+
+	$('fieldset:has(div#imageNotes) legend ').append(' <button  class="button lock toggle">lock</button>');
+
+	$('.showhide').click(function(){
+		 $(this).parent().siblings().slideToggle("fast");		
+	});
+
+	$('.toggle').click(function(){
+	 $(this).toggleClass('selected');
+	});	
+
+	    $('#rightPanel fieldset:contains("Existing Annotations")').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>')
+        .find('div:last');
+
+	$('#rightPanel fieldset:contains("Existing Annotations") legend').append('<button  class="button lock toggle" id="deprecate-button">Deprecate</button>');
+
+
+	$('#deprecate-button').bind('click', function() {		
+	 	$("li.ui-selected ").each(function() {		
+			var pid = $(this).attr('id');
+			clog('DEPRECATING:' +pid);
+			
+		    $.getJSON('/deprecate/annotation/'+pid, function(r) {
+			clog('Deprecated - Response: ' + r );
+		    });
+		});
+	});
+
+$( ".selectable" ).selectable({
+			stop: function() {
+				var result = $( "#select-result" ).empty();
+				$( ".ui-selected", this ).each(function() {
+					var pid = $(this).attr('id');
+					result.append( pid + '<br/>' );
+				});
+			}
+		});
+
     gotoPage(page,size);
+
+
 });

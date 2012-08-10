@@ -32,7 +32,7 @@ class HabcamAssignmentStore(AssignmentStore):
     def list_assignments(self):
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()
-        cursor.execute('select %s from assignments' % (','.join(self.assignment_fields)))
+        cursor.execute('select %s from assignments ORDER BY assignment_id desc' % (','.join(self.assignment_fields)))
         for row in cursor.fetchall():
             yield self.__row2assignment(row)
     def fetch_assignment(self,pid):

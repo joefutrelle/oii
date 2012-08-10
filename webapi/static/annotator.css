@@ -31,9 +31,11 @@ img.thumbnail {
     font-size: 8px;
 }
 .selected { background: #9999ff; }
+
 #rightPanel {
     float: right;
-    width: 350px;
+   // width: 320px;
+    width:420px;
     margin: auto;
     border: 1px solid;
     padding: 5px;
@@ -46,3 +48,64 @@ img.thumbnail {
 .invalid {
     color: black;
 }
+
+#rightPanel fieldset{
+padding:5px;
+margin:5px;
+// width:300px;
+width:400px;
+}
+
+#assignment{
+// width:300px;
+width:400px;
+}
+
+.button {
+	//outline: none;
+	text-align: center;
+	text-decoration: none;
+	-webkit-border-radius: .5em; 
+	border-radius: .5em;
+}
+.button:hover {
+	text-decoration: none;
+}
+.button:active {
+	position: relative;
+	top: 1px;
+}
+
+.button .toggle {
+	border-top: solid 2px #eaeaea;
+	border-left: solid 2px #eaeaea;
+	border-bottom: solid 2px #777;
+	border-right: solid 2px #777;  
+ -webkit-border-radius: .5em; 
+	border-radius: .5em;
+    }
+
+.button.toggle.selected {
+	background: #FF6600;
+	color:white;
+	border-top: solid 2px #803300;
+	border-left: solid 2px #803300;
+	border-bottom:solid 2px  #FFA366;
+	border-right: solid 2px #FFA366;	
+
+    }
+
+legend .button{
+font-size:0.8em;
+padding:0;
+margin:0;
+}
+
+.selectable .ui-selecting { background: #FECA40; }
+.selectable .ui-selected { background: #F39814; color: white; }
+.selectable { list-style-type: none; margin: 0; padding: 0; width: auto; }
+.selectable li {
+ margin: 2px; padding: 0.2em; font-size: 1em; height: 2em; 
+
+}
+.selectable li div {float:left; padding-right:3px; text-wrap:normal; };

@@ -13,9 +13,10 @@ json2db = {
 "annotator": "annotator_id",
 "timestamp": "timestamp",
 "assignment": "assignment_id",
-"pid": "annotation_id"
+"pid": "annotation_id",
+"deprecated" : "deprecated"
 }
-SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotator_id, 'timestamp', assignment_id, annotation_id from annotations "
+SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotator_id, 'timestamp', assignment_id, annotation_id, deprecated from annotations "
 
 # abstract API for storing, querying, and creating annotations
 class HabcamAnnotationStore(AnnotationStore):
@@ -36,6 +37,7 @@ class HabcamAnnotationStore(AnnotationStore):
             d['timestamp'] = row[5]
             d['assignment'] = row[6]
             d['pid'] = row[7]
+	    d['deprecated'] = row[8]
             yield d
     def list_annotations(self,**template):
         "List annotations which match the given template (flat dictionary, k/v's in template must match k/v's in candidate"
@@ -55,6 +57,13 @@ class HabcamAnnotationStore(AnnotationStore):
         "Fetch an annotation by its PID"
         for ann in list_annotations(dict(pid=pid)):
             return ann
+
+    def deprecate_annotation(self,pid):
+	"Deprecate an annotation given the pid"
+	(connection, cursor) = self.__db()
+	cursor.execute("UPDATE annotations SET deprecated = true WHERE annotation_id = '{0}'".format(pid) )
+	connection.commit()
+
     def create_annotations(self,annotations):
         tuples = []
         for d in annotations:
