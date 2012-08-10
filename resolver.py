@@ -182,6 +182,21 @@ def resolve(resolver,bindings,cwd='/'):
                 for h in resolve(expr.expressions, local_bindings, hit):
                     yield h
 
+class Resolver(object):
+    def __init__(self,xml_source,resolver_name=None,cwd='/'):
+        """xml_source is anything you can pass to etree.parse"""
+        self.engine = parse(xml_source,resolver_name)
+        self.cwd = '/'
+    def resolve_full(self,**bindings):
+        for hit in resolve(self.engine, bindings, cwd=self.cwd):
+            yield hit
+    def resolve_all(self,**bindings):
+        for hit in self.resolve_full(**bindings):
+            yield hit[0]
+    def resolve(self,**bindings):
+        for hit in self.resolve_all(**bindings):
+            return hit
+
 # example configuration
 # this takes pids like
 #   UNQ.20110621.153252431.1423
