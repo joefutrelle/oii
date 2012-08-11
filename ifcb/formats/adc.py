@@ -89,10 +89,13 @@ BIN_ID = 'binID' # bin ID
 TARGET_ID = 'targetID' # target ID
 PID = 'pid'
 
-def read_adc(source, schema_version='v1', skip=0):
+def read_adc(source, schema_version='v1', offset=0, limit=-1):
     """Convert ADC data in its native format to dictionaries representing each target"""
-    target_number = skip
-    for row in read_csv(source, ADC_SCHEMA[schema_version], skip):
+    target_number = offset
+    for row in read_csv(source, ADC_SCHEMA[schema_version], offset):
+        if limit == 0:
+            return
+        limit -= 1
         target_number += 1
         # add target number
         row[TARGET_NUMBER] = target_number
