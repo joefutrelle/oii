@@ -8,11 +8,14 @@ def parse_csv_row(row, schema=None):
     else:
         return dict([(colname,cast(value)) for (colname,cast),value in zip(schema,row)])
 
-def read_csv(source, schema=None, skip=0):
+def read_csv(source, schema=None, offset=0, limit=-1):
     with source as csvdata:
         for row in csv.reader(csvdata):
-            if skip <= 0:
+            if offset <= 0:
+                if limit == 0:
+                    return
+                limit -= 1
                 yield parse_csv_row(row,schema)
             else:
-                skip -= 1
+                offset -= 1
             
