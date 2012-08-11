@@ -15,7 +15,8 @@ Hit = namedtuple('Hit', ['value', 'stop'])
 
 # convert XML format into named tuple representation.
 # a resolver is a sequence of expressions, each of which is
-# either a Match, Variable, or Path expression.
+# either a Match, Variable, Path, Any, or Hit expression.
+# for details on the syntax see the resolve function
 def sub_parse(node):
     for child in node:
         if child.tag == 'match':
@@ -38,10 +39,12 @@ def sub_parse(node):
             stop = child.get('stop')
             if stop is not None:
                 yield Hit(value=child.text, stop=stop in ['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes'])
+            elif child.text is None:
+                yield Hit('', stop=False)
             else:
                 yield Hit(value=child.text, stop=False)
 
-# parsing entry point
+# parsing entry point. use parse_stream instead
 def parse(pathname,resolver_name=None):
     if resolver_name is None:
         r = etree.parse(pathname).getroot()
@@ -53,7 +56,8 @@ def parse(pathname,resolver_name=None):
     return list(sub_parse(r))
 
 # substitute patterns like ${varname} for their values given
-# a dict of varname->value
+# bindings = a dict of varname->value
+# e.g., substitute('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 def substitute(template,bindings):
     result = template
     for key,value in bindings.items():
@@ -64,7 +68,10 @@ def substitute(template,bindings):
 # resolver - parsed resolution script
 # bindings - variable name -> value mappings
 # cwd - current working directory (recursively descends)
-# yields hits, that is, files that the pid resolves to
+# yields hits. each hit is a tuple consiting of
+# 1. the value (i.e., the pathname that matched, or the contents of a <hit> tag
+# 2. the bindings of all variables at the time the solution was yielding
+# note that during recursive descent bindings act like a stack
 def resolve(resolver,bindings,cwd='/'):
     if not resolver: # no more expressions left?
         return
@@ -83,7 +90,8 @@ def resolve(resolver,bindings,cwd='/'):
             for h in resolve([ex] + resolver[1:], bindings, cwd):
                 yield h
     elif isinstance(expr,Hit):
-        # "hit" immediately yields a solution, then continues
+        # "hit" immediately yields a solution, then continues, unless "stop" is true.
+        # so <hit>foo</hit> yields a hit on 'foo'
         yield (substitute(expr.value,bindings), bindings)
         if not expr.stop:
             for hit in resolve(resolver[1:],bindings,cwd):
@@ -102,6 +110,7 @@ def resolve(resolver,bindings,cwd='/'):
         # depending on whether or not there is a match. in this case a match
         # causes execution to descend into the subexpressions and terminate;
         # no match causes execution to continue on the remainder of the resolver.
+        # to avoid termination use <any>
         # <match variable="foo" pattern="([a-z]+),([a-z]+),(\d+)">
         #     <variable name="bar">${1}_${2}</variable>
         #     ...
@@ -139,6 +148,11 @@ def resolve(resolver,bindings,cwd='/'):
         # </variable>
         # will evaluate the rest of the resolver, first with ${fb} bound to "foobar",
         # and then with ${fb} bound to "foo fighters"
+        # Note that this is simply a convenience as it is equivalent to
+        # <any>
+        #   <variable name="fb">${3}bar</variable>
+        #   <variable name="fb">${3} fighters</variable>
+        # </any>
         name = expr.name
         for template in expr.values:
             local_bindings = bindings.copy()
@@ -183,19 +197,44 @@ def resolve(resolver,bindings,cwd='/'):
                     yield h
 
 class Resolver(object):
-    def __init__(self,xml_source,resolver_name=None,cwd='/'):
-        """xml_source is anything you can pass to etree.parse"""
-        self.engine = parse(xml_source,resolver_name)
-        self.cwd = '/'
-    def resolve_full(self,**bindings):
-        for hit in resolve(self.engine, bindings, cwd=self.cwd):
+    """Class handling resolution"""
+    def __init__(self,expressions,name):
+        """Internal use only. Use parse_stream as a resolver factory"""
+        self.engine = expressions
+        self.name = name
+    def resolve_all_full(self,cwd='/',**bindings):
+        """Iterate over all solutions, and include bindings with each solution"""
+        for hit in resolve(self.engine, bindings, cwd=cwd):
             yield hit
     def resolve_all(self,**bindings):
-        for hit in self.resolve_full(**bindings):
+        """Iterate over all solutions, and do not include bindings with each solution"""
+        for hit in self.resolve_all_full(**bindings):
             yield hit[0]
-    def resolve(self,**bindings):
-        for hit in self.resolve_all(**bindings):
+    def resolve_full(self,**bindings):
+        """Return the first hit, and include bindings with the solution.
+        Returns None if there are no hits"""
+        for hit in self.resolve_all_full(**bindings):
             return hit
+    def resolve(self,**bindings):
+        """Return the first hit, and do not include bindings with the solution.
+        Returns None if there are no hits"""
+        for hit in self.resolve_all_full(**bindings):
+            return hit[0]
+
+def parse_node(node):
+    """Parse an etree XML node and return a dictionary of all named
+    resolvers immediately below it"""
+    r = {}
+    for child in node:
+        if child.tag == 'resolver':
+            name = child.get('name')
+            r[name] = Resolver(list(sub_parse(child)), name)
+    return r
+
+def parse_stream(stream):
+    """Parse an XML document and return a dictionary of all named
+    resolvers immediately below the root node"""
+    return parse_node(etree.parse(stream).getroot())
 
 # example configuration
 # this takes pids like
@@ -215,7 +254,7 @@ class Resolver(object):
 #         <path match="Images/Full/${img_dir}/${filename}"/>
 #     </path>
 # </resolver>
-
+#
 # note that the computation of the name of the ten minute directory in
 # this case can be done as a text substitution.  if arithmetic is
 # required, this class doesn't currently support any such operations.
