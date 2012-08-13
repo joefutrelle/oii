@@ -63,6 +63,7 @@ class Solution(object):
     def __init__(self,value,bindings):
         self.value = value
         self.bindings = bindings
+        self.bindings['value'] = value
         for k,v in bindings.items():
             setattr(self,k,v)
     def __repr__(self):
@@ -76,7 +77,8 @@ RESERVED_NAMES = ['value', 'bindings']
 def substitute(template,bindings):
     result = template
     for key,value in bindings.items():
-        result = re.sub('\$\{'+key+'\}',value,result)
+        if value is not None:
+            result = re.sub('\$\{'+key+'\}',value,result)
     return result
 
 # recursive resolution engine that handles one expression

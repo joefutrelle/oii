@@ -1,17 +1,18 @@
 <resolvers>
-  <resolver name="binpid">
-    <match var="pid">.*((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))</match>
+  <resolver name="pid">
+    <match var="pid">.*(((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))(_(\d{5}))?)</match>
     <var name="lid">${1}</var>
-    <var name="instrument">${2}</var>
-    <var name="year">${3}</var>
-    <var name="jday">${4}</var>
-    <var name="time">${4}</var>
-    <var name="ins_year_day">${instrument}_${year}_${jday}</var>
+    <var name="bin">${2}</var>
+    <var name="instrument">${3}</var>
+    <var name="year">${4}</var>
+    <var name="day">${5}</var>
+    <var name="time">${6}</var>
+    <var name="target">${8}</var>
     <hit/>
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
-    <import name="binpid"/>
+    <import name="pid"/>
     <var name="filename">${lid}.${format}</var>
     <var name="root">
       <value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
@@ -19,27 +20,14 @@
       <value>/data/vol1</value>
       <value>/data/vol2</value>
     </var>
-    <path match="${root}/${ins_year_day}/${filename}"/>
+    <path match="${root}/${instrument}_${year}_${day}/${filename}"/>
   </resolver>
   <resolver name="mvco_blob">
-    <import name="binpid"/>
+    <import name="pid"/>
     <var name="filename">${lid}_blobs_v2.zip</var>
     <var name="root">
       <value>/data/vol4/blobs</value>
     </var>
-    <path match="${root}/${year}/${year}_${jday}/${filename}"/>
-  </resolver>
-  <resolver name="lid2pid">
-    <hit>http://ifcb-data.whoi.edu/mvco/${lid}</hit>
-  </resolver>
-  <resolver name="pid2lid">
-    <match var="pid">.*(IFCB\d+_.*)</match>
-    <hit>${1}</hit>
-  </resolver>
-  <resolver name="roipid2no">
-    <match var="pid">(.*IFCB\d+_\d{4}_\d{3}_\d{6})_(\d+)</match>
-    <var name="bin_pid">${1}</var>
-    <var name="no">${2}</var>
-    <hit/>
+    <path match="${root}/${year}/${year}_${day}/${filename}"/>
   </resolver>
 </resolvers>
