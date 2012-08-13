@@ -7,34 +7,37 @@ from os import path
 
 # "little language" pattern
 
-Match = namedtuple('Match', ['variable','regex', 'expressions'])
-Variable = namedtuple('Variable', ['name','values'])
-Path = namedtuple('Path', ['variable', 'match', 'expressions'])
+Match = namedtuple('Match', ['var','regex', 'expressions'])
+Var = namedtuple('Var', ['name','values'])
+Path = namedtuple('Path', ['var', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
-Hit = namedtuple('Hit', ['value', 'stop'])
+Hit  = namedtuple('Hit', ['value', 'stop'])
+Import = namedtuple('Import', ['name'])
 
 # convert XML format into named tuple representation.
 # a resolver is a sequence of expressions, each of which is
-# either a Match, Variable, Path, Any, or Hit expression.
+# either a Match, Var, Path, Any, or Hit expression.
 # for details on the syntax see the resolve function
 def sub_parse(node):
     for child in node:
         if child.tag == 'match':
-            variable = child.get('variable')
+            var = child.get('var')
             pattern = child.get('pattern')
             if pattern is not None:
-                yield Match(variable, regex=pattern, expressions=list(sub_parse(child)))
+                yield Match(var, regex=pattern, expressions=list(sub_parse(child)))
             else:
-                yield Match(variable, regex=child.text, expressions=None)
-        elif child.tag == 'variable':
+                yield Match(var, regex=child.text, expressions=None)
+        elif child.tag == 'var':
             values = [gc.text for gc in child if gc.tag == 'value'];
             if not values:
                 values = [child.text]
-            yield Variable(name=child.get('name'), values=values)
+            yield Var(name=child.get('name'), values=values)
         elif child.tag == 'path':
-            yield Path(variable=child.get('variable'), match=child.get('match'), expressions=list(sub_parse(child)))
+            yield Path(var=child.get('var'), match=child.get('match'), expressions=list(sub_parse(child)))
         elif child.tag == 'any':
             yield Any(expressions=list(sub_parse(child)))
+        elif child.tag == 'import':
+            yield Import(name=child.get('name'))
         elif child.tag == 'hit':
             stop = child.get('stop')
             if stop is not None:
@@ -55,6 +58,18 @@ def parse(pathname,resolver_name=None):
                 break
     return list(sub_parse(r))
 
+class Solution(object):
+    """Internal use only"""
+    def __init__(self,value,bindings):
+        self.value = value
+        self.bindings = bindings
+        for k,v in bindings.items():
+            setattr(self,k,v)
+    def __repr__(self):
+        return '<Solution: %s %s>' % (self.value, self.bindings)
+
+RESERVED_NAMES = ['value', 'bindings']
+
 # substitute patterns like ${varname} for their values given
 # bindings = a dict of varname->value
 # e.g., substitute('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
@@ -66,13 +81,13 @@ def substitute(template,bindings):
 
 # recursive resolution engine that handles one expression
 # resolver - parsed resolution script
-# bindings - variable name -> value mappings
+# bindings - var name -> value mappings
 # cwd - current working directory (recursively descends)
 # yields hits. each hit is a tuple consiting of
 # 1. the value (i.e., the pathname that matched, or the contents of a <hit> tag
-# 2. the bindings of all variables at the time the solution was yielding
+# 2. the bindings of all vars at the time the solution was yielding
 # note that during recursive descent bindings act like a stack
-def resolve(resolver,bindings,cwd='/'):
+def resolve(resolver,bindings,cwd='/',namespace={}):
     if not resolver: # no more expressions left?
         return
     expr = resolver[0] # work on the first one
@@ -81,26 +96,26 @@ def resolve(resolver,bindings,cwd='/'):
         # "any" means to accept any matching subexpression instead of terminating
         # if the first one doesn't match. For example
         # <any>
-        #   <match variable="pid">.*((D\d{4}\d{4})T\d{6}_\IFCB\d+)</match>
-        #   <match variable="pid">.*((IFCB\d+_\d{4}_\d{3})_\d{6})</match>
+        #   <match var="pid">.*((D\d{4}\d{4})T\d{6}_\IFCB\d+)</match>
+        #   <match var="pid">.*((IFCB\d+_\d{4}_\d{3})_\d{6})</match>
         # </any>
         # will try both pid syntaxes and any match will bind the groups and
         # evaluate the rest of the resolver following the </any> tag.
         for ex in expr.expressions:
-            for h in resolve([ex] + resolver[1:], bindings, cwd):
-                yield h
+            for solution in resolve([ex] + resolver[1:], bindings, cwd, namespace):
+                yield solution
     elif isinstance(expr,Hit):
         # "hit" immediately yields a solution, then continues, unless "stop" is true.
         # so <hit>foo</hit> yields a hit on 'foo'
-        yield (substitute(expr.value,bindings), bindings)
+        yield Solution(substitute(expr.value,bindings), bindings)
         if not expr.stop:
-            for hit in resolve(resolver[1:],bindings,cwd):
-                yield hit
+            for solution in resolve(resolver[1:],bindings,cwd,namespace):
+                yield solution
     elif isinstance(expr,Match):
         # "match" means test a variable against a regex, and (optionally) match groups
         # group n will be bound to ${n+1}, so for instance if variable
         # "foo" is "yes,no,123" then
-        # <match variable="foo">([a-z]+),([a-z]+),(\d+)</match>
+        # <match var="foo">([a-z]+),([a-z]+),(\d+)</match>
         # will add the following bindings
         # ${1} -> "yes"
         # ${2} -> "no"
@@ -111,11 +126,11 @@ def resolve(resolver,bindings,cwd='/'):
         # causes execution to descend into the subexpressions and terminate;
         # no match causes execution to continue on the remainder of the resolver.
         # to avoid termination use <any>
-        # <match variable="foo" pattern="([a-z]+),([a-z]+),(\d+)">
-        #     <variable name="bar">${1}_${2}</variable>
+        # <match var="foo" pattern="([a-z]+),([a-z]+),(\d+)">
+        #     <var name="bar">${1}_${2}</var>
         #     ...
         # </match>
-        value = bindings[expr.variable]
+        value = bindings[expr.var]
         m = re.match(substitute(expr.regex,bindings), value)
         if m is not None:
             groups = m.groups()
@@ -123,43 +138,53 @@ def resolve(resolver,bindings,cwd='/'):
             for index,group in zip(range(len(groups)), groups):
                 local_bindings[str(index+1)] = group
             if expr.expressions is not None: # descend as a result of the match
-                for hit in resolve(expr.expressions,local_bindings,cwd):
-                    yield hit
+                for solution in resolve(expr.expressions,local_bindings,cwd,namespace):
+                    yield solution
             else:
                 # matched, and no subexpressions, so continue
-                for hit in resolve(resolver[1:],local_bindings,cwd):
-                    yield hit
+                for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
+                    yield solution
         elif expr.expressions is not None:
             # no match, so skip subexpressions and keep going
-            for hit in resolve(resolver[1:],bindings,cwd):
-                yield hit
-    elif isinstance(expr,Variable):
-        # "variable" means bind a variable from a template that may optionally
+            for solution in resolve(resolver[1:],bindings,cwd,namespace):
+                yield solution
+    elif isinstance(expr,Var):
+        # "var" means bind a variable from a template that may optionally
         # include variable references. So if ${3} is bound to "foo",
-        # <variable name="fb">${3}bar</variable>
+        # <var name="fb">${3}bar</var>
         # will add the binding
         # ${fb} -> "foobar"
-        # if the variable has multiple "value" sub-elements, those will be
+        # if the var has multiple "value" sub-elements, those will be
         # bound one at a time, and the rest of the resolver will be evaluated
         # for each binding. So for example
-        # <variable name="fb">
+        # <var name="fb">
         #   <value>${3}bar</value>
         #   <value>${3} fighters</value>
-        # </variable>
+        # </var>
         # will evaluate the rest of the resolver, first with ${fb} bound to "foobar",
         # and then with ${fb} bound to "foo fighters"
         # Note that this is simply a convenience as it is equivalent to
         # <any>
-        #   <variable name="fb">${3}bar</variable>
-        #   <variable name="fb">${3} fighters</variable>
+        #   <var name="fb">${3}bar</var>
+        #   <var name="fb">${3} fighters</var>
         # </any>
         name = expr.name
+        if name in RESERVED_NAMES:
+            raise KeyError('"%s" is not permitted as a variable name in resolvers' % name)
         for template in expr.values:
             local_bindings = bindings.copy()
             local_bindings[name] = substitute(template,bindings)
             # done, now do the rest of the resolver
-            for hit in resolve(resolver[1:],local_bindings,cwd):
-                yield hit
+            for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
+                yield solution
+    elif isinstance(expr,Import):
+        imported = namespace[expr.name] # import the named resolver
+        for solution in resolve(imported,bindings,cwd,namespace):
+            # for each of its solutions, use its bindings
+            local_bindings = solution.bindings.copy()
+            # and do the rest of this resolver
+            for subs in resolve(resolver[1:],local_bindings,cwd,namespace):
+                yield subs
     elif isinstance(expr,Path):
         # "path" is where the filesystem is searched for a matching file.
         # there are two variants of this expression. one looks for a file
@@ -177,59 +202,54 @@ def resolve(resolver,bindings,cwd='/'):
         # (if it's not a directory, that's OK, it just means further descent is
         # not possible).
         # for example, if ${pid} is "apache2",
-        # <path variable="service" match="/etc/rc*.d/*">
-        #   <match variable="service">/etc/rc\d.d/([A-Z]\d+)${pid}</match>
+        # <path var="service" match="/etc/rc*.d/*">
+        #   <match var="service">/etc/rc\d.d/([A-Z]\d+)${pid}</match>
         #   <path match="${service}"/>
         # </path>
         # will resolve to paths like /etc/rc0.d/K02apache2, but not paths like
         # /etc/rc0.d/README or /etc/rcS.d/K99apache2
-        variable = expr.variable
+        var = expr.var
         candidate = path.join(cwd, substitute(expr.match,bindings))
-        if variable is None and path.exists(candidate) and path.isfile(candidate):
-            yield (candidate,bindings)
+        if var is None and path.exists(candidate) and path.isfile(candidate):
+            yield Solution(candidate,bindings)
         else:
             for hit in iglob(candidate):
                 local_bindings = bindings.copy()
-                if variable is not None:
-                    local_bindings[variable] = hit
+                if var is not None:
+                    local_bindings[var] = hit
                 # done, now evaluate the inner resolver if any
-                for h in resolve(expr.expressions, local_bindings, hit):
-                    yield h
+                for solution in resolve(expr.expressions, local_bindings, hit, namespace):
+                    yield solution
 
 class Resolver(object):
     """Class handling resolution"""
-    def __init__(self,expressions,name):
+    def __init__(self,expressions,name,namespace={}):
         """Internal use only. Use parse_stream as a resolver factory"""
         self.engine = expressions
         self.name = name
-    def resolve_all_full(self,cwd='/',**bindings):
-        """Iterate over all solutions, and include bindings with each solution"""
-        for hit in resolve(self.engine, bindings, cwd=cwd):
-            yield hit
+        self.namespace = namespace
     def resolve_all(self,**bindings):
-        """Iterate over all solutions, and do not include bindings with each solution"""
-        for hit in self.resolve_all_full(**bindings):
-            yield hit[0]
-    def resolve_full(self,**bindings):
-        """Return the first hit, and include bindings with the solution.
-        Returns None if there are no hits"""
-        for hit in self.resolve_all_full(**bindings):
-            return hit
+        """Iterate over all solutions, and include bindings with each solution"""
+        for solution in resolve(self.engine, bindings, namespace=self.namespace):
+            yield solution
     def resolve(self,**bindings):
         """Return the first hit, and do not include bindings with the solution.
         Returns None if there are no hits"""
-        for hit in self.resolve_all_full(**bindings):
-            return hit[0]
+        for solution in self.resolve_all(**bindings):
+            return solution
 
 def parse_node(node):
     """Parse an etree XML node and return a dictionary of all named
     resolvers immediately below it"""
-    r = {}
+    namespace = {}
     for child in node:
         if child.tag == 'resolver':
             name = child.get('name')
-            r[name] = Resolver(list(sub_parse(child)), name)
-    return r
+            namespace[name] = list(sub_parse(child))
+    result = {}
+    for n,e in namespace.items():
+        result[n] = Resolver(e,n,namespace)
+    return result
 
 def parse_stream(stream):
     """Parse an XML document and return a dictionary of all named
@@ -243,14 +263,14 @@ def parse_stream(stream):
 #   /mnt/nmfs-2/webdata/HabCam/data/Cruises/HS_20110621/Images/Full/20110621_1530/UNQ.20110621.153252431.1423.jpg
 #
 # <resolver name="habcam-jpg">
-#     <match variable="pid">([A-Z]+\.((\d{4})\d{4})\.(\d{3}).*)</match>
-#     <variable name="filename">${1}.jpg</variable>
-#     <variable name="day">${2}</variable>
-#     <variable name="year">${3}</variable>
-#     <variable name="img_dir">${day}_${4}0</variable>
-#     <variable name="root">/mnt/nmfs-2/webdata/HabCam/data/Cruises</variable>
-#     <path variable="cruise_dir" match="${root}/*">
-#         <match variable="cruise_dir">.*/[A-Z]{2}_\d+</match>
+#     <match var="pid">([A-Z]+\.((\d{4})\d{4})\.(\d{3}).*)</match>
+#     <var name="filename">${1}.jpg</var>
+#     <var name="day">${2}</var>
+#     <var name="year">${3}</var>
+#     <var name="img_dir">${day}_${4}0</var>
+#     <var name="root">/mnt/nmfs-2/webdata/HabCam/data/Cruises</var>
+#     <path var="cruise_dir" match="${root}/*">
+#         <match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
 #         <path match="Images/Full/${img_dir}/${filename}"/>
 #     </path>
 # </resolver>

@@ -1,38 +1,45 @@
 <resolvers>
+  <resolver name="binpid">
+    <match var="pid">.*((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))</match>
+    <var name="lid">${1}</var>
+    <var name="instrument">${2}</var>
+    <var name="year">${3}</var>
+    <var name="jday">${4}</var>
+    <var name="time">${4}</var>
+    <var name="ins_year_day">${instrument}_${year}_${jday}</var>
+    <hit/>
+  </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
-    <match variable="pid">.*((IFCB\d+_\d{4}_\d{3})_\d{6})</match>
-    <variable name="filename">${1}.${format}</variable>
-    <variable name="day">${2}</variable>
-    <variable name="root">
+    <import name="binpid"/>
+    <var name="filename">${lid}.${format}</var>
+    <var name="root">
       <value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
       <value>/data/vol3</value>
       <value>/data/vol1</value>
       <value>/data/vol2</value>
-    </variable>
-    <path match="${root}/${day}/${filename}"/>
+    </var>
+    <path match="${root}/${ins_year_day}/${filename}"/>
   </resolver>
   <resolver name="mvco_blob">
-    <match variable="pid">.*(IFCB\d+_((\d{4})_\d{3})_\d{6})</match>
-    <variable name="filename">${1}_blobs_v2.zip</variable>
-    <variable name="year">${2}</variable>
-    <variable name="day">${3}</variable>
-    <variable name="root">
+    <import name="binpid"/>
+    <var name="filename">${lid}_blobs_v2.zip</var>
+    <var name="root">
       <value>/data/vol4/blobs</value>
-    </variable>
-    <path match="${root}/${year}/${day}/${filename}"/>
+    </var>
+    <path match="${root}/${year}/${year}_${jday}/${filename}"/>
   </resolver>
   <resolver name="lid2pid">
     <hit>http://ifcb-data.whoi.edu/mvco/${lid}</hit>
   </resolver>
   <resolver name="pid2lid">
-    <match variable="pid">.*(IFCB\d+_.*)</match>
+    <match var="pid">.*(IFCB\d+_.*)</match>
     <hit>${1}</hit>
   </resolver>
   <resolver name="roipid2no">
-    <match variable="pid">(.*IFCB\d+_\d{4}_\d{3}_\d{6})_(\d+)</match>
-    <variable name="bin_pid">${1}</variable>
-    <variable name="no">${2}</variable>
+    <match var="pid">(.*IFCB\d+_\d{4}_\d{3}_\d{6})_(\d+)</match>
+    <var name="bin_pid">${1}</var>
+    <var name="no">${2}</var>
     <hit/>
   </resolver>
 </resolvers>
