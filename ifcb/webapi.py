@@ -48,9 +48,9 @@ def foo(bar):
     d = dict(a='foo', b=bar)
     return Response(render_template('foo.xml',d=d), mimetype='text/xml')
 
-@app.route('/<time_series>/<path:pid>')
-def resolve(time_series,pid):
-    s = roipid2no.resolve(pid=pid)
+@app.route('/<time_series>/<path:lid>')
+def resolve(time_series,lid):
+    s = roipid2no.resolve(pid=lid)
     extension = s.extension
     if extension is None:
         extension = 'rdf'
@@ -58,16 +58,18 @@ def resolve(time_series,pid):
     filename = '%s.%s' % (s.lid, s.extension)
     (mimetype, _) = mimetypes.guess_type(filename)
     if re.match(r'image/',mimetype):
-        return serve_stitched_roi(s)
-    elif s.target is not None and re.match(r'.*/xml',mimetype):
+        return serve_stitched_roi(lid,s)
+    elif s.target is not None:
         tn = int(s.target)
         target = get_target(s.bin, tn)
-        sample_pid = s.namespace + s.bin
-        print 'sample_pid = %s' % sample_pid
-        return Response(render_template('target.xml',pid=sample_pid,target=target), mimetype='text/xml')
+        target_pid = s.namespace + s.lid
+        bin_pid = s.namespace + s.bin
+        if re.match(r'.*/xml',mimetype):
+            return Response(render_template('target.xml',pid=target_pid,target=target), mimetype='text/xml')
+        elif re.match(r'.*/rdf',mimetype):
+            return Response(render_template('target.rdf',pid=target_pid,target=target,bin=bin_pid), mimetype='text/xml')
 
-def serve_stitched_roi(s):
-    s = roipid2no.resolve(pid=pid)
+def serve_stitched_roi(lid,s):
     bin = s.bin
     target_no = int(s.target)
     extension = s.extension
