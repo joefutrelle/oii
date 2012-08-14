@@ -44,8 +44,11 @@ COMPARATOR_OUT = 'comparatorOut'
 START_POINT = 'startPoint'
 SIGNAL_STRENGTH = 'signalStrength'
 
+SCHEMA_VERSION_1 = 'v1'
+SCHEMA_VERSION_2 = 'v2'
+
 ADC_SCHEMA = {
-'v1': [(TRIGGER, int),
+SCHEMA_VERSION_1: [(TRIGGER, int),
           (PROCESSING_END_TIME, float),
           (FLUORESENCE_HIGH, float),
           (FLUORESCENCE_LOW, float),
@@ -60,7 +63,7 @@ ADC_SCHEMA = {
           (WIDTH, int),
           (BYTE_OFFSET, int),
           (VALVE_STATUS, float)],
-'v2': [(TRIGGER, int),
+SCHEMA_VERSION_2: [(TRIGGER, int),
               (PROCESSING_END_TIME, float),
               (PMTA, float),
               (PMTB, float),
@@ -89,7 +92,7 @@ BIN_ID = 'binID' # bin ID
 TARGET_ID = 'targetID' # target ID
 PID = 'pid'
 
-def read_adc(source, offset=0, limit=-1, schema_version='v1'):
+def read_adc(source, offset=0, limit=-1, schema_version=SCHEMA_VERSION_1):
     """Convert ADC data in its native format to dictionaries representing each target"""
     target_number = offset
     for row in read_csv(source, ADC_SCHEMA[schema_version], offset, limit):

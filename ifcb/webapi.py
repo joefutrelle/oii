@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for, abort, session, Response
+from flask import Flask, request, url_for, abort, session, Response, render_template
 from unittest import TestCase
 import json
 import re
@@ -14,6 +14,8 @@ from oii.ifcb.formats.roi import read_roi, read_rois
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
+import mimetypes
+from oii.image.pil.utils import filename2format
 
 app = Flask(__name__)
 app.debug = True
@@ -38,6 +40,7 @@ def serve_stitched_roi(pid):
     s = roipid2no.resolve(pid=pid)
     bin = s.bin
     target_no = int(s.target)
+    extension = s.extension
     adc_path = binpid2path.resolve(pid=bin,format='adc').value
     roi_path = binpid2path.resolve(pid=bin,format='roi').value
     targets = list(read_adc(LocalFileSource(adc_path),offset=target_no-1,limit=5))
@@ -59,7 +62,14 @@ def serve_stitched_roi(pid):
                 abort(404)
             images = list(read_rois([target],roi_file=roi_file))
             roi_image = images[0]
-        return image_response(roi_image,'jpeg','image/jpeg')
+        filename = '%s.%s' % (s.lid, s.extension)
+        pil_format = filename2format(filename)
+        (mimetype, _) = mimetypes.guess_type(filename)
+        return image_response(roi_image,pil_format,mimetype)
+
+@app.route('/api/foo/<bar>')
+def foo(bar):
+    return Response(render_template('foo.xml',bar=bar), mimetype='text/xml')
 
 if __name__=='__main__':
     port = 5061
