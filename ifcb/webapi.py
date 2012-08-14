@@ -40,7 +40,7 @@ def serve_stitched_roi(pid):
     target_no = int(s.target)
     adc_path = binpid2path.resolve(pid=bin,format='adc').value
     roi_path = binpid2path.resolve(pid=bin,format='roi').value
-    targets = list(read_adc(LocalFileSource(adc_path),offset=target_no-1,limit=2))
+    targets = list(read_adc(LocalFileSource(adc_path),offset=target_no-1,limit=5))
     if len(targets) == 0:
         abort(404)
     with open(roi_path,'rb') as roi_file:

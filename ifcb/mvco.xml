@@ -1,14 +1,9 @@
 <resolvers>
   <resolver name="pid">
-    <match var="pid">.*(((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))(_(\d{5}))?)</match>
-    <var name="lid">${1}</var>
-    <var name="bin">${2}</var>
-    <var name="instrument">${3}</var>
-    <var name="year">${4}</var>
-    <var name="day">${5}</var>
-    <var name="time">${6}</var>
-    <var name="target">${8}</var>
-    <hit/>
+    <match var="pid" groups="lid bin instrument year day time - target - extension"
+	   pattern=".*(((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))(_(\d{5}))?)(\.([a-z][a-z0-9]*))?">
+      <hit/>
+    </match>
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->

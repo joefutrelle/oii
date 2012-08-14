@@ -7,7 +7,7 @@ from os import path
 
 # "little language" pattern
 
-Match = namedtuple('Match', ['var','regex', 'expressions'])
+Match = namedtuple('Match', ['var','regex', 'expressions', 'groups'])
 Var = namedtuple('Var', ['name','values'])
 Path = namedtuple('Path', ['var', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
@@ -23,10 +23,13 @@ def sub_parse(node):
         if child.tag == 'match':
             var = child.get('var')
             pattern = child.get('pattern')
+            groups = child.get('groups')
+            if groups is not None:
+                groups = re.compile(r'\s+').split(groups)
             if pattern is not None:
-                yield Match(var, regex=pattern, expressions=list(sub_parse(child)))
+                yield Match(var, regex=pattern, expressions=list(sub_parse(child)), groups=groups)
             else:
-                yield Match(var, regex=child.text, expressions=None)
+                yield Match(var, regex=child.text, expressions=None, groups=groups)
         elif child.tag == 'var':
             values = [gc.text for gc in child if gc.tag == 'value'];
             if not values:
@@ -123,7 +126,18 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         # ${2} -> "no"
         # ${3} -> "123"
         # if there is no match, execution stops.
-        # another variant allows sub-expressions to be evaluated conditionally
+        # optionally, "groups" can be provided to assign groups to variables without
+        # needing <var> statements, as such:
+        # <match var="foo" groups="w1 w2 num">([a-z]+),([a-z]+),(\d+)</match>
+        # will add the following bindings:
+        # ${w1} -> "yes"
+        # ${w2} -> "no"
+        # ${num} -> "123"
+        # numbered bindings will also be added for each group in this case. Importantly,
+        # this variant also means that any non-matching subexpression will result in a binding
+        # of None rather than an unmodified variable reference such as "${3}" and so it's
+        # a good way to test for the presence of a group.
+        # A syntax variant allows sub-expressions to be evaluated conditionally
         # depending on whether or not there is a match. in this case a match
         # causes execution to descend into the subexpressions and terminate;
         # no match causes execution to continue on the remainder of the resolver.
@@ -132,18 +146,22 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         #     <var name="bar">${1}_${2}</var>
         #     ...
         # </match>
-        value = bindings[expr.var]
-        m = re.match(substitute(expr.regex,bindings), value)
-        if m is not None:
-            groups = m.groups()
-            local_bindings = bindings.copy()
-            for index,group in zip(range(len(groups)), groups):
+        value = bindings[expr.var] # look up the variable's value
+        m = None
+        if value is not None: # if the variable has no value, then don't attempt a regex match
+            m = re.match(substitute(expr.regex,bindings), value) # perform a regex match
+        if m is not None: # is there a match?
+            groups = m.groups() # get the matching groups
+            local_bindings = bindings.copy() # create a new bindings stack frame
+            for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
                 local_bindings[str(index+1)] = group
-            if expr.expressions is not None: # descend as a result of the match
+            if expr.groups is not None: # bind names in "groups" attribute to groups
+                for var,group in zip(expr.groups, groups):
+                    local_bindings[var] = group
+            if expr.expressions is not None: # there are subexpressions, so descend as a result of the match
                 for solution in resolve(expr.expressions,local_bindings,cwd,namespace):
                     yield solution
-            else:
-                # matched, and no subexpressions, so continue
+            else: # matched, and no subexpressions, so continue with the rest of the resolver
                 for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
                     yield solution
         elif expr.expressions is not None:
