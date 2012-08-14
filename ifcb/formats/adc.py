@@ -100,4 +100,8 @@ def read_adc(source, offset=0, limit=-1, schema_version=SCHEMA_VERSION_1):
         # add target number
         row[TARGET_NUMBER] = target_number
         yield row
-        
+
+def read_target(source, target_no, schema_version=SCHEMA_VERSION_1):
+    for target in read_adc(source, target_no-1, limit=1, schema_version=schema_version):
+        return target
+    raise KeyError('ADC data not found')

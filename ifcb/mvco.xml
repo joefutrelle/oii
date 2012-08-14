@@ -1,7 +1,7 @@
 <resolvers>
   <resolver name="pid">
-    <match var="pid" groups="lid bin instrument year day time - target - extension"
-	   pattern=".*(((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))(_(\d{5}))?)(\.([a-z][a-z0-9]*))?">
+    <match var="pid" groups="namespace lid bin instrument year day time - target - extension"
+	   pattern="(.*)(((IFCB\d+)_(\d{4})_(\d{3})_(\d{6}))(_(\d{5}))?)(\.([a-z][a-z0-9]*))?">
       <var name="version">v1</var>
       <hit/>
     </match>

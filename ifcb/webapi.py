@@ -9,13 +9,13 @@ from oii.config import get_config
 from oii.times import iso8601
 from oii.webapi.utils import jsonr
 import urllib
-from oii.ifcb.formats.adc import read_adc, TARGET_NUMBER, WIDTH, HEIGHT
+from oii.ifcb.formats.adc import read_adc, read_target, TARGET_NUMBER, WIDTH, HEIGHT
 from oii.ifcb.formats.roi import read_roi, read_rois
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
-import mimetypes
 from oii.image.pil.utils import filename2format
+import mimetypes
 
 app = Flask(__name__)
 app.debug = True
@@ -30,13 +30,43 @@ def configure(config):
     # FIXME populate app.config dict
     pass
 
+app.config['NAMESPACE'] = 'http://demi.whoi.edu:5061/'
+
+# utilities
+
+def get_target(bin,target_no):
+    adc_path = binpid2path.resolve(pid=bin,format='adc').value
+    return read_target(LocalFileSource(adc_path), target_no)
+
 def image_response(image,format,mimetype):
     buf = StringIO()
     im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
-@app.route('/mvco/<path:pid>')
-def serve_stitched_roi(pid):
+@app.route('/api/foo/<bar>')
+def foo(bar):
+    d = dict(a='foo', b=bar)
+    return Response(render_template('foo.xml',d=d), mimetype='text/xml')
+
+@app.route('/<time_series>/<path:pid>')
+def resolve(time_series,pid):
+    s = roipid2no.resolve(pid=pid)
+    extension = s.extension
+    if extension is None:
+        extension = 'rdf'
+    s.namespace = '%s%s/' % (app.config['NAMESPACE'], time_series)
+    filename = '%s.%s' % (s.lid, s.extension)
+    (mimetype, _) = mimetypes.guess_type(filename)
+    if re.match(r'image/',mimetype):
+        return serve_stitched_roi(s)
+    elif s.target is not None and re.match(r'.*/xml',mimetype):
+        tn = int(s.target)
+        target = get_target(s.bin, tn)
+        sample_pid = s.namespace + s.bin
+        print 'sample_pid = %s' % sample_pid
+        return Response(render_template('target.xml',pid=sample_pid,target=target), mimetype='text/xml')
+
+def serve_stitched_roi(s):
     s = roipid2no.resolve(pid=pid)
     bin = s.bin
     target_no = int(s.target)
@@ -66,10 +96,6 @@ def serve_stitched_roi(pid):
         pil_format = filename2format(filename)
         (mimetype, _) = mimetypes.guess_type(filename)
         return image_response(roi_image,pil_format,mimetype)
-
-@app.route('/api/foo/<bar>')
-def foo(bar):
-    return Response(render_template('foo.xml',bar=bar), mimetype='text/xml')
 
 if __name__=='__main__':
     port = 5061
