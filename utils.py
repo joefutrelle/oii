@@ -9,6 +9,7 @@ import json
 from subprocess import Popen, PIPE
 import platform
 import ctypes
+import hashlib
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -24,6 +25,40 @@ def gen_id(namespace=''):
             prev = sha1(prev + entropy).hexdigest()
         genid_prev_id = prev
     return namespace + prev
+
+# order the keys of a dict according to a sequence
+# any keys in the sequence that are not present in the dict will not be listed
+# any keys in the dict that are not in the sequence will be listed in alpha order
+def order_keys(d,s):
+    sk = [key for key in s if key in d.keys()]
+    dk = sorted([key for key in d.keys() if key not in s])
+    return sk + dk
+
+# convert camelCase to Title Case
+def decamel(s):
+    return string.capwords(re.sub(r'([a-z])([A-Z]+)',r'\1 \2',s))
+
+def sha1_string(data):
+    """Compute the SHA-1 hash of a string"""
+    m = hashlib.sha1()
+    m.update(data)
+    return m.hexdigest()
+
+def sha1_filelike(filelike):
+    """Compute the SHA-1 hash of a file-like object"""
+    m = hashlib.sha1()
+    while True:
+        s = filelike.read()
+        if len(s) == 0:
+            break
+        else:
+            m.update(s)
+    return m.hexdigest()
+
+def sha1_file(pathname):
+    """Compute the SHA-1 hash of a file at a pathname"""
+    with open(pathname,'rb') as fl:
+        return sha1_filelike(fl)
 
 # recursively map a function onto an item. if the item is a sequence,
 # descend into each item; if it's a dict, descend into each value.
