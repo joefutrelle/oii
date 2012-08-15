@@ -10,7 +10,8 @@ from oii.config import get_config
 from oii.times import iso8601
 from oii.webapi.utils import jsonr
 import urllib
-from oii.ifcb.formats.adc import read_adc, read_target, TARGET_NUMBER, WIDTH, HEIGHT
+from oii.utils import order_keys
+from oii.ifcb.formats.adc import read_adc, read_target, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois
 from oii.ifcb.formats.hdr import read_hdr, CONTEXT, HDR_SCHEMA
 from oii.resolver import parse_stream
@@ -39,12 +40,29 @@ def configure(config):
 app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
 app.config[STITCH] = True
 
+def major_type(mimetype):
+    return re.sub(r'/.*','',mimetype)
+
+def minor_type(mimetype):
+    return re.sub(r'.*/','',mimetype)
+
 # utilities
 
 def get_target(bin,target_no):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
     adc_path = binpid2path.resolve(pid=bin,format='adc').value
-    return read_target(LocalFileSource(adc_path), target_no)
+    if not app.config[STITCH]: # no stitching, read one target
+        return read_target(LocalFileSource(adc_path), target_no)
+    else:
+        # in the stitching case we need to read two targets and see if they overlap,
+        # so we can set the STITCHED flag
+        targets = list(read_adc(LocalFileSource(adc_path), target_no, limit=2))
+        target = targets[0]
+        if len(list(find_pairs(targets))) > 1:
+            target[STITCHED] = 1
+        else:
+            target[STITCHED] = 0
+        return target
 
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
@@ -74,7 +92,7 @@ def resolve(time_series,lid):
     filename = '%s.%s' % (hit.lid, hit.extension)
     (mimetype, _) = mimetypes.guess_type(filename)
     # is the user requesting an image?
-    if re.match(r'image/',mimetype):
+    if major_type(mimetype) == 'image':
         return serve_roi(hit)
     else:
         if hit.target is not None: # is this a target endpoint (rather than a bin endpoint?)
@@ -88,7 +106,17 @@ def resolve(time_series,lid):
 def list_targets(hit):
     adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
     targets = list(read_adc(LocalFileSource(adc_path)))
-    # FIXME find pairs
+    if app.config[STITCH]:
+        # in the stitching case we need to compute "stitched" flags based on pairs
+        pairs = find_pairs(targets)
+        As = [a for (a,_) in pairs]
+        for target in targets:
+            if target in As:
+                target[STITCHED] = 1
+            else:
+                target[STITCHED] = 0
+        Bs = [b for (_,b) in pairs]
+        targets = filter(lambda target: target not in Bs, targets)
     return targets
     
 def serve_bin(hit,mimetype):
@@ -100,23 +128,27 @@ def serve_bin(hit,mimetype):
     props = [(k,props[k]) for k,_ in HDR_SCHEMA]
     # get a list of all targets, taking into account stitching
     targets = list_targets(hit)
-    if app.config[STITCH]:
-        toast = [b['targetNumber'] for (a,b) in find_pairs(targets)]
-        targets = filter(lambda target: target['targetNumber'] not in toast, targets)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
-    if re.match(r'.*/xml',mimetype):
-        return Response(render_template('bin.xml',hit=hit,context=context,properties=props,target_pids=target_pids), mimetype='text/xml')
+    template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
+    if minor_type(mimetype) == 'xml':
+        return Response(render_template('bin.xml',**template), mimetype='text/xml')
+    if minor_type(mimetype) == 'rdf+xml':
+        return Response(render_template('bin.rdf',**template), mimetype='text/xml')
     else:
         abort(404)
 
 def serve_target(hit,mimetype):
     tn = int(hit.target)
     target = get_target(hit.bin_lid, tn) # read the target from the ADC file
+    schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
+    target = [(k,target[k]) for k in order_keys(target, schema_keys)]
     # now populate the template appropriate for the MIME type
-    if re.match(r'.*/xml',mimetype):
-        return Response(render_template('target.xml',pid=hit.target_pid,target=target), mimetype='text/xml')
-    elif re.match(r'.*/rdf',mimetype):
-        return Response(render_template('target.rdf',pid=hit.target_pid,target=target,bin=hit.bin_pid), mimetype='text/xml')
+    template = dict(hit=hit,target=target)
+    if minor_type(mimetype) == 'xml':
+        return Response(render_template('target.xml',**template), mimetype='text/xml')
+    elif minor_type(mimetype) == 'rdf+xml':
+        return Response(render_template('target.rdf',**template), mimetype='text/xml')
+    print minor_type(mimetype)
 
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""

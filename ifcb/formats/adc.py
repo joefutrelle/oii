@@ -91,6 +91,7 @@ TARGET_NUMBER = 'targetNumber' # 1-based index of ROI in bins
 BIN_ID = 'binID' # bin ID
 TARGET_ID = 'targetID' # target ID
 PID = 'pid'
+STITCHED = 'stitched'
 
 def read_adc(source, offset=0, limit=-1, schema_version=SCHEMA_VERSION_1):
     """Convert ADC data in its native format to dictionaries representing each target"""
