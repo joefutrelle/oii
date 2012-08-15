@@ -92,11 +92,13 @@ def resolve(time_series,lid):
     filename = '%s.%s' % (hit.lid, hit.extension)
     (mimetype, _) = mimetypes.guess_type(filename)
     # is the user requesting an image?
+    if hit.target is not None:
+        hit.target_no = int(hit.target) # parse target number
     if major_type(mimetype) == 'image':
         return serve_roi(hit)
     else:
         if hit.target is not None: # is this a target endpoint (rather than a bin endpoint?)
-            hit.target_pid = hit.namespace + hit.lid
+            hit.target_pid = hit.namespace + hit.lid # construct target pid
             return serve_target(hit,mimetype)
         else:
             return serve_bin(hit,mimetype)
@@ -115,10 +117,31 @@ def list_targets(hit):
                 target[STITCHED] = 1
             else:
                 target[STITCHED] = 0
+        # and we have to exclude the second of each pair from the list of targets
         Bs = [b for (_,b) in pairs]
         targets = filter(lambda target: target not in Bs, targets)
     return targets
     
+def bin2csv(hit,targets):
+    # get the ADC keys for this version of the ADC format
+    schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
+    def csv_iter():
+        first = True
+        for target in targets:
+            # add a binID and pid what are the right keys for these?
+            target['binID'] = '"%s"' % hit.bin_pid
+            target['pid'] = '"%s_%05d"' % (hit.bin_pid, target['targetNumber'])
+            # now order all keys even the ones not in the schema
+            keys = order_keys(target, schema_keys)
+            # fetch all the data for this row as strings
+            row = [str(target[k]) for k in keys]
+            if first: # if this is the first row, emit the keys
+                yield ','.join(keys)
+                first = False
+            # now emit the row
+            yield ','.join(row)
+    return Response(render_template('bin.csv',rows=csv_iter()),mimetype='text/plain')
+
 def serve_bin(hit,mimetype):
     hdr_path = binpid2path.resolve(pid=hit.bin_lid,format='hdr').value
     props = read_hdr(LocalFileSource(hdr_path))
@@ -132,14 +155,16 @@ def serve_bin(hit,mimetype):
     template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
     if minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
-    if minor_type(mimetype) == 'rdf+xml':
+    elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
+    elif minor_type(mimetype) == 'csv':
+        return bin2csv(hit,targets)
     else:
         abort(404)
 
 def serve_target(hit,mimetype):
-    tn = int(hit.target)
-    target = get_target(hit.bin_lid, tn) # read the target from the ADC file
+    target = get_target(hit.bin_lid, hit.target_no) # read the target from the ADC file
+    # sort the target properties according to the order in the schema
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
     target = [(k,target[k]) for k in order_keys(target, schema_keys)]
     # now populate the template appropriate for the MIME type
@@ -152,32 +177,30 @@ def serve_target(hit,mimetype):
 
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
-    target_no = int(hit.target) # parse target number
     # resolve the ADC and ROI files
     adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
     roi_path = binpid2path.resolve(pid=hit.bin_lid,format='roi').value
-    stitch = app.config[STITCH]
-    if stitch:
+    if app.config[STITCH]:
         limit=2 # read two targets, in case we need to stitch
     else:
         limit=1 # just read one
-    targets = list(read_adc(LocalFileSource(adc_path),offset=target_no-1,limit=limit))
+    targets = list(read_adc(LocalFileSource(adc_path),offset=hit.target_no-1,limit=limit))
     if len(targets) == 0: # no targets? return Not Found
         abort(404)
     # open the ROI file as we may need to read more than one
     with open(roi_path,'rb') as roi_file:
-        if stitch:
+        if app.config[STITCH]:
             pairs = list(find_pairs(targets)) # look for stitched pairs
         else:
             pairs = targets
         if len(pairs) >= 1: # found one?
-            (a,b) = pairs[0] # stitch
+            (a,b) = pairs[0] # split pair
             images = list(read_rois((a,b),roi_file=roi_file)) # read the images
             (roi_image, mask) = stitch((a,b), images) # stitch them
         else:
             # now check that the target number is correct
             target = targets[0]
-            if target[TARGET_NUMBER] != target_no:
+            if target[TARGET_NUMBER] != hit.target_no:
                 abort(404)
             images = list(read_rois([target],roi_file=roi_file)) # read the image
             roi_image = images[0]
