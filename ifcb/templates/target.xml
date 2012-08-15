@@ -1,7 +1,8 @@
 <Target xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#" number="{{target.targetNumber}}">
-  <dc:identifier>{{pid}}</dc:identifier>
+  <dc:identifier>{{hit.target_pid}}</dc:identifier>
+  <dc:date>{{hit.date}}</dc:date>
   {% for k,v in target.items() %}
   <{{k}}>{{v}}</{{k}}>
   {% endfor %}
-  <dcterms:hasFormat>{{pid}}.png</dcterms:hasFormat>
+  <dcterms:hasFormat>{{hit.target_pid}}.png</dcterms:hasFormat>
 </Target>
