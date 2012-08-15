@@ -159,6 +159,11 @@ def serve_bin(hit,mimetype):
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'csv':
         return bin2csv(hit,targets)
+    elif mimetype == 'application/json':
+        properties = dict(props)
+        properties['context'] = context
+        properties['targets'] = targets
+        return jsonr(properties)
     else:
         abort(404)
 
@@ -173,6 +178,8 @@ def serve_target(hit,mimetype):
         return Response(render_template('target.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('target.rdf',**template), mimetype='text/xml')
+    elif mimetype == 'application/json':
+        return jsonr(dict(target))
     print minor_type(mimetype)
 
 def serve_roi(hit):
