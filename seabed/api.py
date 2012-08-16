@@ -88,7 +88,6 @@ def api_image(lid):
         abort(400)
     # assume unique filenames. r.resolve will only return the first hit
     hit = jpgresolver.resolve(lid=lid)
-    print hit
     if hit:
         try:
             return send_file(hit,mimetype="image/jpeg",cache_timeout=60)
