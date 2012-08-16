@@ -3,7 +3,7 @@ from sys import stderr
 from os import path
 from flask import Flask, abort, send_file, Response
 from lxml import etree
-from oii.resolver import Resolver
+from oii import resolver 
 
 """
 ---- Simple Seabed Resolver API Prototype ----
@@ -26,7 +26,7 @@ DEBUG = True
 configpath = path.join(path.split(path.abspath(__file__))[0],
     RESOLVER_CONFIG)
 try:
-    r = Resolver(configpath,"seabed_cruises")
+    jpgresolver = resolver.parse_stream(RESOLVER_CONFIG)['jpgresolver']
 except:
     stderr.write("error loading resolver config from %s\n" % configpath)
 
@@ -47,9 +47,9 @@ def xml_error_response(code,msg):
         mimetype='application/xml')
 
 
-def validate_pid(pid):
+def validate_lid(lid):
     "minimal for now. simply checks length of string"
-    if len(pid) <= 255:
+    if len(lid) <= 255:
         return True
     else:
         return False
@@ -81,13 +81,14 @@ def not_found(error=None):
 
 # JPG and XML request routes
 
-@app.route('/<pid>.jpg',methods = ['GET'])
-def api_image(pid):
+@app.route('/<lid>.jpg',methods = ['GET'])
+def api_image(lid):
     "Validate, then return image or 404 response"
-    if not validate_pid(pid):
+    if not validate_lid(lid):
         abort(400)
     # assume unique filenames. r.resolve will only return the first hit
-    hit = r.resolve(pid=pid)
+    hit = jpgresolver.resolve(lid=lid)
+    print hit
     if hit:
         try:
             return send_file(hit,mimetype="image/jpeg",cache_timeout=60)

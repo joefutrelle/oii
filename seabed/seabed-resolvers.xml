@@ -10,7 +10,7 @@ Written by Mark Nye, Aug 4, 2012
 
 <resolvers>
 
-  <resolver name="seabed_cruises">
+  <resolver name="jpgresolver">
     <variable name="root">
       <value>/mnt/falkland</value>
     </variable>
@@ -21,9 +21,7 @@ Written by Mark Nye, Aug 4, 2012
       <value>200407_CH0804/Images_*/CH0804-*/ColorCorrected</value>
       <value>200407_CH0804/Images_*/i20040*/CH0804-*/ColorCorrected</value>
     </variable>
-    <path match="${root}/${cruise}">
-      <path match="${pid}.jpg"/>
-    </path>
+    <path match="${root}/${cruise}/${lid}.jpg"/>
   </resolver>
 
 </resolvers>
