@@ -21,15 +21,18 @@ from oii.image.pil.utils import filename2format
 from oii.image import mosaic
 from oii.image.mosaic import Tile
 import mimetypes
+from zipfile import ZipFile
 
 app = Flask(__name__)
 app.debug = True
 
 # importantly, set max-age on static files (e.g., javascript) to something really short
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
+# FIXME this should be selected by time series somehow
 rs = parse_stream('oii/ifcb/mvco.xml')
 binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
+blob_resolver = rs['mvco_blob']
 
 # config options
 STITCH='stitch'
@@ -72,10 +75,26 @@ def image_response(image,format,mimetype):
     im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
-@app.route('/api/foo/<bar>')
-def foo(bar):
-    d = dict(a='foo', b=bar)
-    return Response(render_template('foo.xml',d=d), mimetype='text/xml')
+def resolve_pid(time_series,pid):
+    # FIXME for now, ignore time_series, but it will be used to configure resolver
+    return pid_resolver.resolve(pid=pid)
+
+def resolve_file(time_series,pid,format):
+    # FIXME for now, ignore time_series, but it will be used to configure resolver
+    return binpid2path.resolve(pid=pid,format=format).value
+
+def resolve_adc(time_series,pid):
+    return resolve_file(time_series,pid,'adc')
+
+def resolve_hdr(time_series,pid):
+    return resolve_file(time_series,pid,'hdr')
+
+def resolve_roi(time_series,pid):
+    return resolve_file(time_series,pid,'roi')
+
+def resolve_files(time_series,pid,formats):
+    # FIXME for now, ignore time_series, but it will be used to configure resolver
+    return [resolve_file(time_series,pid,format) for format in formats]
 
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 @app.route('/<time_series>/api/mosaic/size/<size>/pid/<path:pid>')
@@ -84,14 +103,14 @@ def foo(bar):
 def serve_mosaic(time_series,size='1024x1024',page=1,pid=None):
     hit = pid_resolver.resolve(pid=pid)
     (pil_format, mimetype) = image_types(hit)
-    adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
+    adc_path = resolve_adc(time_series, hit.bin_lid)
     size = tuple(map(int,re.split('x',size)))
     def descending_size(t):
         (w,h) = t.size
         return 0 - (w * h)
     tiles = sorted([Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))], key=descending_size)
     layout = list(mosaic.layout(tiles, size))
-    roi_path = binpid2path.resolve(pid=hit.bin_lid,format='roi').value
+    roi_path = resolve_roi(time_series,hit.bin_lid)
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
             target = tile.image
@@ -100,6 +119,23 @@ def serve_mosaic(time_series,size='1024x1024',page=1,pid=None):
     # for now serve images, but should serve tiles too
     mosaic_image = mosaic.composite(layout, size, mode='L', bgcolor=160)
     return image_response(mosaic_image, pil_format, mimetype)
+
+@app.route('/<time_series>/api/product/<product_type>/pid/<path:pid>')
+def serve_product(time_series,product_type,pid):
+    if product_type != 'blob': # just blobs for now
+        abort(404)
+    hit = blob_resolver.resolve(pid=pid)
+    zip_path = hit.value
+    if hit.target is None:
+        if hit.extension != 'zip':
+            abort(404)
+        return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+    else:
+        blobzip = ZipFile(zip_path)
+        png = blobzip.read(hit.lid+'.png')
+        blobzip.close()
+        return Response(png, mimetype='image/png')
+
 
 @app.route('/<time_series>/api/<path:ignore>')
 def api_error(time_series,ignore):
@@ -110,7 +146,7 @@ def resolve(time_series,lid):
     """Resolve a URL to some data endpoint in a time series, including bin and target metadata endpoints,
     and image endpoints"""
     # use the PID resolver (which also works for LIDs)
-    hit = pid_resolver.resolve(pid=lid)
+    hit = resolve_pid(time_series,lid)
     # construct the namespace from the configuration and time series ID
     hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
     hit.bin_pid = hit.namespace + hit.bin_lid
@@ -121,6 +157,8 @@ def resolve(time_series,lid):
     # determine MIME type
     filename = '%s.%s' % (hit.lid, hit.extension)
     (mimetype, _) = mimetypes.guess_type(filename)
+    if mimetype is None:
+        mimetype = 'application/octet-stream'
     # is the user requesting an image?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
@@ -136,7 +174,7 @@ def resolve(time_series,lid):
     abort(404)
 
 def list_targets(hit):
-    adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
+    adc_path = resolve_adc(hit.time_series, hit.bin_lid)
     targets = list(read_adc(LocalFileSource(adc_path)))
     if app.config[STITCH]:
         # in the stitching case we need to compute "stitched" flags based on pairs
@@ -173,7 +211,7 @@ def bin2csv(hit,targets):
     return Response(render_template('bin.csv',rows=csv_iter()),mimetype='text/plain')
 
 def serve_bin(hit,mimetype):
-    hdr_path = binpid2path.resolve(pid=hit.bin_lid,format='hdr').value
+    hdr_path = resolve_hdr(hit.time_series, hit.bin_lid)
     props = read_hdr(LocalFileSource(hdr_path))
     context = props[CONTEXT]
     del props[CONTEXT]
@@ -183,7 +221,13 @@ def serve_bin(hit,mimetype):
     targets = list_targets(hit)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
     template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
-    if minor_type(mimetype) == 'xml':
+    if hit.extension == 'hdr':
+        return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
+    elif hit.extension == 'adc':
+        return Response(file(resolve_adc(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='text/csv')
+    elif hit.extension == 'roi':
+        return Response(file(resolve_roi(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='application/octet-stream')
+    elif minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
@@ -222,8 +266,7 @@ def image_types(hit):
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
-    adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
-    roi_path = binpid2path.resolve(pid=hit.bin_lid,format='roi').value
+    (adc_path, roi_path) = resolve_files(hit.time_series, hit.bin_lid, ('adc', 'roi'))
     if app.config[STITCH]:
         limit=2 # read two targets, in case we need to stitch
     else:
