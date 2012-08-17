@@ -18,6 +18,8 @@ from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format
+from oii.image import mosaic
+from oii.image.mosaic import Tile
 import mimetypes
 
 app = Flask(__name__)
@@ -74,6 +76,34 @@ def image_response(image,format,mimetype):
 def foo(bar):
     d = dict(a='foo', b=bar)
     return Response(render_template('foo.xml',d=d), mimetype='text/xml')
+
+@app.route('/<time_series>/api/mosaic/pid/<path:pid>')
+@app.route('/<time_series>/api/mosaic/size/<size>/pid/<path:pid>')
+@app.route('/<time_series>/api/mosaic/page/<int:page>/pid/<path:pid>')
+@app.route('/<time_series>/api/mosaic/size/<size>/page/<int:page>/pid/<path:pid>')
+def serve_mosaic(time_series,size='1024x1024',page=1,pid=None):
+    hit = pid_resolver.resolve(pid=pid)
+    (pil_format, mimetype) = image_types(hit)
+    adc_path = binpid2path.resolve(pid=hit.bin_lid,format='adc').value
+    size = tuple(map(int,re.split('x',size)))
+    def descending_size(t):
+        (w,h) = t.size
+        return 0 - (w * h)
+    tiles = sorted([Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))], key=descending_size)
+    layout = list(mosaic.layout(tiles, size))
+    roi_path = binpid2path.resolve(pid=hit.bin_lid,format='roi').value
+    with open(roi_path,'rb') as roi_file:
+        for tile in layout:
+            target = tile.image
+            for roi in read_rois([target], roi_file=roi_file):
+                tile.image = roi # should only iterate once
+    # for now serve images, but should serve tiles too
+    mosaic_image = mosaic.composite(layout, size, mode='L', bgcolor=160)
+    return image_response(mosaic_image, pil_format, mimetype)
+
+@app.route('/<time_series>/api/<path:ignore>')
+def api_error(time_series,ignore):
+    abort(404)
 
 @app.route('/<time_series>/<path:lid>')
 def resolve(time_series,lid):
@@ -182,6 +212,13 @@ def serve_target(hit,mimetype):
         return jsonr(dict(target))
     print minor_type(mimetype)
 
+def image_types(hit):
+    # now determine PIL format and MIME type
+    filename = '%s.%s' % (hit.lid, hit.extension)
+    pil_format = filename2format(filename)
+    (mimetype, _) = mimetypes.guess_type(filename)
+    return (pil_format, mimetype)
+
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
@@ -211,10 +248,9 @@ def serve_roi(hit):
                 abort(404)
             images = list(read_rois([target],roi_file=roi_file)) # read the image
             roi_image = images[0]
+        sdfokjsdf
         # now determine PIL format and MIME type
-        filename = '%s.%s' % (hit.lid, hit.extension)
-        pil_format = filename2format(filename)
-        (mimetype, _) = mimetypes.guess_type(filename)
+        (pil_format, mimetype) = image_types(hit)
         # return the image data
         return image_response(roi_image,pil_format,mimetype)
 

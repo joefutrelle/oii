@@ -24,3 +24,7 @@ def stream_image(image,format,out):
         image.save(flo,format)
         flo.seek(0)
         shutil.copyfileobj(flo,out)
+           
+def thumbnail(image, wh):
+    image.thumbnail(wh, Image.ANTIALIAS)
+    return image
