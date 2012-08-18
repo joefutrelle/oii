@@ -16,7 +16,7 @@ class Tile(object):
         self.size = (w,h)
         self.position = position
 
-def layout(tiles, (width, height)):
+def layout(tiles, (width, height), page=1, threshold=1.0):
     """Fit tiles into a rectangle using a bin packing algorithm. Returns Tiles
     describing the layout.
     
@@ -24,17 +24,36 @@ def layout(tiles, (width, height)):
     tile - iterable of things with a "size" = (w,h) property.
     If you need some construct them with Tile, but you can use PIL images without
     wrapping them in Tile.
-    (width, height) - the pixel dimensions of the desired mosaic"""
-    packer = JimScottRectanglePacker(width, height)
-    for tile in tiles:
-        try: # is the tile carrying an "image" payload?
-            image = tile.image # use it
-        except KeyError:
-            image = tile # otherwise use the tile itself
-        (w,h) = tile.size
-        p = packer.TryPack(w, h) # attempt to fit
-        if p is not None:
-            yield Tile(image, (w,h), (p.x, p.y))
+    (width, height) - the pixel dimensions of the desired mosaic.
+    threshold -
+    Because multi-page layouts are expensive, after enough failures to pack,
+    the rest of the tiles are skipped, according to a threshold expressed
+    as a fraction of the tiles attempted. the default is 1.0, or no skipping.
+    Lower thresholds may mean more, sparser pages, but will greatly increase
+    performance."""
+    while page > 0: # for each page
+        # initialize a packer, and run tracking
+        packer = JimScottRectanglePacker(width, height)
+        (run, max_run) = (0, 0)
+        for tile in tiles: # for each tile
+            (w,h) = tile.size
+            tile.position = packer.TryPack(w,h) # attempt to fit
+            if tile.position is None: # if not
+                run += 1 # track run length of misses
+                if run > len(tiles) * threshold:
+                    break
+            else: # this tile has been positioned, reset miss run
+                if run > 0 and run > max_run:
+                    max_run = run
+                run = 0
+        if page == 1: # on the desired page?
+            # return the tiles that were positioned
+            tiles[:] = [tile for tile in tiles if tile.position is not None]
+            return tiles
+        else:
+            # remove the positioned tiles and recur
+            tiles[:] = [tile for tile in tiles if tile.position is None]
+            page -= 1
     
 def composite(layout, size=None, mode='RGB', bgcolor=0):
     """Construct a composite image from a layout

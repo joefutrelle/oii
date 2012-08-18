@@ -10,6 +10,8 @@ hdr - a header file containing metadata about the sample and instrument
 adc - a CSV file containing metadata for each trigger
 roi - a binary file containing image data for each ROI"""
 
+ADC = 'adc'
+
 # adc columns, 0-based. "x" is horizontal, "y" is vertical, x left to right, y bottom to top
 TRIGGER = 'trigger'
 PROCESSING_END_TIME = 'processingEndTime'
@@ -93,10 +95,11 @@ TARGET_ID = 'targetID' # target ID
 PID = 'pid'
 STITCHED = 'stitched'
 
-def read_adc(source, offset=0, limit=-1, schema_version=SCHEMA_VERSION_1):
-    """Convert ADC data in its native format to dictionaries representing each target"""
-    target_number = offset
-    for row in read_csv(source, ADC_SCHEMA[schema_version], offset, limit):
+def read_adc(source, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
+    """Convert ADC data in its native format to dictionaries representing each target.
+    Read starting at the specified target number (default 1)"""
+    target_number = target_no
+    for row in read_csv(source, ADC_SCHEMA[schema_version], target_no-1, limit):
         target_number += 1
         # skip 0x0 targets
         if row[WIDTH] * row[HEIGHT] > 0:

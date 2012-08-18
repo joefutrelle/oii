@@ -1,6 +1,7 @@
 import tempfile
 import shutil
 import mimetypes
+from PIL import Image
 
 FORMATS_BY_MIME_TYPE = {
 'image/jpeg': 'JPEG',
@@ -28,3 +29,7 @@ def stream_image(image,format,out):
 def thumbnail(image, wh):
     image.thumbnail(wh, Image.ANTIALIAS)
     return image
+
+def scale(image, factor):
+    (w,h) = image.size
+    return thumbnail(image, (w * factor, h * factor))

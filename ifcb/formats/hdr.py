@@ -1,5 +1,7 @@
 import re
 
+HDR='hdr'
+
 # hdr attributes. these are camel-case, mapped to column names below
 TEMPERATURE = 'temperature'
 HUMIDITY = 'humidity'

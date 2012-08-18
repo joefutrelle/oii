@@ -13,17 +13,20 @@ You should have received a copy of the IBM Common Public
 License along with this library
 """
 from bisect import bisect_left
+from collections import namedtuple
  
 class OutOfSpaceError(Exception): pass
- 
-class Point(object):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
- 
-    def __cmp__(self, other):
-        """Compares the starting position of height slices"""
-        return self.x - other.x
+
+Point = namedtuple('Point',('x','y')) 
+
+#class Point(object):
+#    def __init__(self, x, y):
+#        self.x = x
+#        self.y = y
+# 
+#    def __cmp__(self, other):
+#        """Compares the starting position of height slices"""
+#        return self.x - other.x
  
 class RectanglePacker(object):
     """Base class for rectangle packing algorithms

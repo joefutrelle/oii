@@ -11,13 +11,13 @@ from oii.times import iso8601
 from oii.webapi.utils import jsonr
 import urllib
 from oii.utils import order_keys
-from oii.ifcb.formats.adc import read_adc, read_target, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
-from oii.ifcb.formats.roi import read_roi, read_rois
-from oii.ifcb.formats.hdr import read_hdr, CONTEXT, HDR_SCHEMA
+from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
+from oii.ifcb.formats.roi import read_roi, read_rois, ROI
+from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
-from oii.image.pil.utils import filename2format
+from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
 from oii.image.mosaic import Tile
 import mimetypes
@@ -34,9 +34,14 @@ binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
 
-# config options
+# string key constants
 STITCH='stitch'
 NAMESPACE='namespace'
+TIME_SERIES='series'
+SIZE='size'
+SCALE='scale'
+PAGE='page'
+PID='pid'
 
 def configure(config):
     # FIXME populate app.config dict
@@ -55,7 +60,7 @@ def minor_type(mimetype):
 
 def get_target(bin,target_no):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
-    adc_path = binpid2path.resolve(pid=bin,format='adc').value
+    adc_path = binpid2path.resolve(pid=bin,format=ADC).value
     if not app.config[STITCH]: # no stitching, read one target
         return read_target(LocalFileSource(adc_path), target_no)
     else:
@@ -84,42 +89,78 @@ def resolve_file(time_series,pid,format):
     return binpid2path.resolve(pid=pid,format=format).value
 
 def resolve_adc(time_series,pid):
-    return resolve_file(time_series,pid,'adc')
+    return resolve_file(time_series,pid,ADC)
 
 def resolve_hdr(time_series,pid):
-    return resolve_file(time_series,pid,'hdr')
+    return resolve_file(time_series,pid,HDR)
 
 def resolve_roi(time_series,pid):
-    return resolve_file(time_series,pid,'roi')
+    return resolve_file(time_series,pid,ROI)
 
 def resolve_files(time_series,pid,formats):
     # FIXME for now, ignore time_series, but it will be used to configure resolver
     return [resolve_file(time_series,pid,format) for format in formats]
 
-@app.route('/<time_series>/api/mosaic/pid/<path:pid>')
-@app.route('/<time_series>/api/mosaic/size/<size>/pid/<path:pid>')
-@app.route('/<time_series>/api/mosaic/page/<int:page>/pid/<path:pid>')
-@app.route('/<time_series>/api/mosaic/size/<size>/page/<int:page>/pid/<path:pid>')
-def serve_mosaic(time_series,size='1024x1024',page=1,pid=None):
+def parse_params(path, **defaults):
+    """Parse a path fragment and convert to dict.
+    Slashes separate alternating keys and values.
+    For example /a/3/b/5 -> { 'a': '3', 'b': '5' }.
+    Any keys not present get default values from **defaults"""
+    parts = re.split('/',path)
+    d = dict(zip(parts[:-1:2], parts[1::2]))
+    for k,v in defaults.items():
+        if k not in d:
+            d[k] = v
+    return d
+
+@app.route('/api/mosaic/pid/<path:pid>')
+def serve_mosaic(pid):
     hit = pid_resolver.resolve(pid=pid)
-    (pil_format, mimetype) = image_types(hit)
+    if hit.extension == 'html':
+        return Response(render_template('mosaics.html',hit=hit),mimetype='text/html')
+    else:
+        serve_mosaic_image(pid)
+
+@app.route('/api/mosaic/<path:params>/pid/<path:pid>')
+def serve_mosaic_image(pid, params='/'):
+    """Generate a mosaic of ROIs from a sample bin.
+    params include the following, with default values
+    - series (mvco) - time series (FIXME: handle with resolver, clarify difference between namespace, time series, pid, lid)
+    - size (1024x1024) - size of the mosaic image
+    - page (1) - page. for typical image sizes the entire bin does not fit and so is split into pages.
+    - scale - scaling factor for image dimensions """
+    # parse params
+    params = parse_params(params, size='1024x1024',page=1, series='mvco', scale=1.0)
+    time_series = params[TIME_SERIES]
+    (w,h) = tuple(map(int,re.split('x',params[SIZE])))
+    scale = float(params[SCALE])
+    page = int(params[PAGE])
+    # resolve ADC
+    hit = pid_resolver.resolve(pid=pid)
     adc_path = resolve_adc(time_series, hit.bin_lid)
-    size = tuple(map(int,re.split('x',size)))
+    # read ADC and convert to Tiles in size-descending order
     def descending_size(t):
         (w,h) = t.size
         return 0 - (w * h)
-    tiles = sorted([Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))], key=descending_size)
-    layout = list(mosaic.layout(tiles, size))
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))]
+    tiles.sort(key=descending_size)
+    # perform layout operation
+    scaled_size = (int(w/scale), int(h/scale))
+    layout = mosaic.layout(tiles, scaled_size, page, threshold=0.05)
+    # FIXME should serve tiles in JSON
+    # resolve ROI
     roi_path = resolve_roi(time_series,hit.bin_lid)
+    # read all images needed for compositing and inject into Tiles
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
             target = tile.image
             for roi in read_rois([target], roi_file=roi_file):
                 tile.image = roi # should only iterate once
-    # for now serve images, but should serve tiles too
-    mosaic_image = mosaic.composite(layout, size, mode='L', bgcolor=160)
+    # produce and serve composite image
+    mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    (pil_format, mimetype) = image_types(hit)
     return image_response(mosaic_image, pil_format, mimetype)
-
+    
 @app.route('/<time_series>/api/product/<product_type>/pid/<path:pid>')
 def serve_product(time_series,product_type,pid):
     if product_type != 'blob': # just blobs for now
@@ -135,7 +176,6 @@ def serve_product(time_series,product_type,pid):
         png = blobzip.read(hit.lid+'.png')
         blobzip.close()
         return Response(png, mimetype='image/png')
-
 
 @app.route('/<time_series>/api/<path:ignore>')
 def api_error(time_series,ignore):
@@ -221,11 +261,11 @@ def serve_bin(hit,mimetype):
     targets = list_targets(hit)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
     template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
-    if hit.extension == 'hdr':
+    if hit.extension == HDR:
         return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
-    elif hit.extension == 'adc':
+    elif hit.extension == ADC:
         return Response(file(resolve_adc(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='text/csv')
-    elif hit.extension == 'roi':
+    elif hit.extension == ROI:
         return Response(file(resolve_roi(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='application/octet-stream')
     elif minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
@@ -266,12 +306,12 @@ def image_types(hit):
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
-    (adc_path, roi_path) = resolve_files(hit.time_series, hit.bin_lid, ('adc', 'roi'))
+    (adc_path, roi_path) = resolve_files(hit.time_series, hit.bin_lid, (ADC, ROI))
     if app.config[STITCH]:
         limit=2 # read two targets, in case we need to stitch
     else:
         limit=1 # just read one
-    targets = list(read_adc(LocalFileSource(adc_path),offset=hit.target_no-1,limit=limit))
+    targets = list(read_adc(LocalFileSource(adc_path),target_no=hit.target_no,limit=limit))
     if len(targets) == 0: # no targets? return Not Found
         abort(404)
     # open the ROI file as we may need to read more than one
@@ -291,7 +331,6 @@ def serve_roi(hit):
                 abort(404)
             images = list(read_rois([target],roi_file=roi_file)) # read the image
             roi_image = images[0]
-        sdfokjsdf
         # now determine PIL format and MIME type
         (pil_format, mimetype) = image_types(hit)
         # return the image data

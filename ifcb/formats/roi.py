@@ -4,6 +4,8 @@ from PIL import Image
 from array import array
 from StringIO import StringIO
 
+ROI='roi'
+
 def read_roi(source, target):
     """target should be a dictionary containing BYTE_OFFSET, WIDTH, and HEIGHT,
     i.e., the output of read_adc,
