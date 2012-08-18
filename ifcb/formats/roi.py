@@ -38,7 +38,3 @@ def read_rois(targets,roi_path=None,roi_file=None):
             yield Image.fromstring('L', (h, w), StringIO(fp.read(size)).getvalue()) # rotate 90 degrees
     if roi_path is not None:
         fp.close()
-
-            
-    
-    

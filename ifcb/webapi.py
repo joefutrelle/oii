@@ -22,6 +22,7 @@ from oii.image import mosaic
 from oii.image.mosaic import Tile
 import mimetypes
 from zipfile import ZipFile
+from PIL import Image
 
 app = Flask(__name__)
 app.debug = True
@@ -161,10 +162,8 @@ def serve_mosaic_image(pid, params='/'):
     (pil_format, mimetype) = image_types(hit)
     return image_response(mosaic_image, pil_format, mimetype)
     
-@app.route('/<time_series>/api/product/<product_type>/pid/<path:pid>')
-def serve_product(time_series,product_type,pid):
-    if product_type != 'blob': # just blobs for now
-        abort(404)
+@app.route('/api/blob/pid/<path:pid>')
+def serve_blob(pid):
     hit = blob_resolver.resolve(pid=pid)
     zip_path = hit.value
     if hit.target is None:
@@ -175,7 +174,14 @@ def serve_product(time_series,product_type,pid):
         blobzip = ZipFile(zip_path)
         png = blobzip.read(hit.lid+'.png')
         blobzip.close()
-        return Response(png, mimetype='image/png')
+        # now determine PIL format and MIME type
+        (pil_format, mimetype) = image_types(hit)
+        if mimetype == 'image/png':
+            return Response(png, mimetype='image/png')
+        else:
+            # FIXME support more imaage types
+            blob_image = Image.open(StringIO(png))
+            return image_response(blob_image, pil_format, mimetype)
 
 @app.route('/<time_series>/api/<path:ignore>')
 def api_error(time_series,ignore):
