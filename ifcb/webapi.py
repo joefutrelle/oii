@@ -23,17 +23,13 @@ from oii.image.mosaic import Tile
 import mimetypes
 from zipfile import ZipFile
 from PIL import Image
+from werkzeug.contrib.cache import SimpleCache
 
 app = Flask(__name__)
 app.debug = True
 
 # importantly, set max-age on static files (e.g., javascript) to something really short
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
-# FIXME this should be selected by time series somehow
-rs = parse_stream('oii/ifcb/mvco.xml')
-binpid2path = rs['binpid2path']
-pid_resolver = rs['pid']
-blob_resolver = rs['mvco_blob']
 
 # string key constants
 STITCH='stitch'
@@ -43,19 +39,43 @@ SIZE='size'
 SCALE='scale'
 PAGE='page'
 PID='pid'
+CACHE='cache'
+CACHE_TTL='ttl'
 
-def configure(config):
-    # FIXME populate app.config dict
+# FIXME do this in main
+# FIXME this should be selected by time series somehow
+rs = parse_stream('oii/ifcb/mvco.xml')
+binpid2path = rs['binpid2path']
+pid_resolver = rs['pid']
+blob_resolver = rs['mvco_blob']
+
+def configure(config=None):
+    app.config[CACHE] = SimpleCache()
+    app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
+    app.config[STITCH] = True
+    app.config[CACHE_TTL] = 60
     pass
-
-app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
-app.config[STITCH] = True
 
 def major_type(mimetype):
     return re.sub(r'/.*','',mimetype)
 
 def minor_type(mimetype):
     return re.sub(r'.*/','',mimetype)
+
+# simple memoization decorator using Werkzeug's caching support
+def memoized(func):
+    def wrap(*args):
+        cache = app.config[CACHE] # get cache object from config
+        # because the cache is shared across the entire app, we need
+        # to include the function name in the cache key
+        key = ' '.join([func.__name__] + map(str,args))
+        result = cache.get(key)
+        if result is None: # cache miss
+            app.logger.debug('cache miss on %s' % str(key))
+            result = func(*args) # produce the result
+            cache.set(key, result, timeout=app.config[CACHE_TTL]) # cache it
+        return result
+    return wrap
 
 # utilities
 
@@ -114,13 +134,26 @@ def parse_params(path, **defaults):
             d[k] = v
     return d
 
+@memoized
+def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort options
+    adc_path = resolve_adc(time_series, bin_lid)
+    # read ADC and convert to Tiles in size-descending order
+    def descending_size(t):
+        (w,h) = t.size
+        return 0 - (w * h)
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))]
+    # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
+    tiles.sort(key=descending_size)
+    return tiles
+
 @app.route('/api/mosaic/pid/<path:pid>')
 def serve_mosaic(pid):
+    """Serve a mosaic with all-default parameters"""
     hit = pid_resolver.resolve(pid=pid)
-    if hit.extension == 'html':
+    if hit.extension == 'html': # here we generate an HTML representation with multiple pages
         return Response(render_template('mosaics.html',hit=hit),mimetype='text/html')
     else:
-        serve_mosaic_image(pid)
+        return serve_mosaic_image(pid) # default mosaic image
 
 @app.route('/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(pid, params='/'):
@@ -136,20 +169,14 @@ def serve_mosaic_image(pid, params='/'):
     (w,h) = tuple(map(int,re.split('x',params[SIZE])))
     scale = float(params[SCALE])
     page = int(params[PAGE])
-    # resolve ADC
+    # parse pid/lid
     hit = pid_resolver.resolve(pid=pid)
-    adc_path = resolve_adc(time_series, hit.bin_lid)
-    # read ADC and convert to Tiles in size-descending order
-    def descending_size(t):
-        (w,h) = t.size
-        return 0 - (w * h)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))]
-    tiles.sort(key=descending_size)
+    tiles = get_sorted_tiles(time_series, hit.bin_lid) # convert to tiles
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = mosaic.layout(tiles, scaled_size, page, threshold=0.05)
-    # FIXME should serve tiles in JSON
-    # resolve ROI
+    # FIXME should also serve tiles in JSON
+    # resolve ROI file
     roi_path = resolve_roi(time_series,hit.bin_lid)
     # read all images needed for compositing and inject into Tiles
     with open(roi_path,'rb') as roi_file:
@@ -164,13 +191,15 @@ def serve_mosaic_image(pid, params='/'):
     
 @app.route('/api/blob/pid/<path:pid>')
 def serve_blob(pid):
+    """Serve blob zip or image"""
     hit = blob_resolver.resolve(pid=pid)
     zip_path = hit.value
-    if hit.target is None:
+    if hit.target is None: # bin, not target?
         if hit.extension != 'zip':
             abort(404)
+        # the zip file is on disk, stream it directly to client
         return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
-    else:
+    else: # target, not bin
         blobzip = ZipFile(zip_path)
         png = blobzip.read(hit.lid+'.png')
         blobzip.close()
@@ -257,7 +286,16 @@ def bin2csv(hit,targets):
     return Response(render_template('bin.csv',rows=csv_iter()),mimetype='text/plain')
 
 def serve_bin(hit,mimetype):
+    """Serve a sample bin in some format"""
+    # for raw files, simply pass the file through
+    if hit.extension == ADC:
+        return Response(file(resolve_adc(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='text/csv')
+    elif hit.extension == ROI:
+        return Response(file(resolve_roi(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='application/octet-stream')
+    # at this point we need to resolve the HDR file
     hdr_path = resolve_hdr(hit.time_series, hit.bin_lid)
+    if hit.extension == HDR:
+        return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
     props = read_hdr(LocalFileSource(hdr_path))
     context = props[CONTEXT]
     del props[CONTEXT]
@@ -267,13 +305,7 @@ def serve_bin(hit,mimetype):
     targets = list_targets(hit)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
     template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
-    if hit.extension == HDR:
-        return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
-    elif hit.extension == ADC:
-        return Response(file(resolve_adc(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='text/csv')
-    elif hit.extension == ROI:
-        return Response(file(resolve_roi(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='application/octet-stream')
-    elif minor_type(mimetype) == 'xml':
+    if minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
@@ -354,5 +386,7 @@ if __name__=='__main__':
             port = int(config.port)
         except KeyError:
             pass
+    else:
+        configure()
     app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0',port=port)
