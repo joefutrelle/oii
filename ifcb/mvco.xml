@@ -10,16 +10,20 @@
       <hit/>
     </match>
   </resolver>
-  <resolver name="binpid2path">
-    <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
-    <import name="pid"/>
-    <var name="filename">${lid}.${format}</var>
+  <resolver name="data_roots">
     <var name="root">
       <value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
       <value>/data/vol3</value>
       <value>/data/vol1</value>
       <value>/data/vol2</value>
     </var>
+    <hit/>
+  </resolver>
+  <resolver name="binpid2path">
+    <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
+    <import name="pid"/>
+    <var name="filename">${lid}.${format}</var>
+    <import name="data_roots"/>
     <path match="${root}/${instrument}_${year}_${day}/${filename}"/>
   </resolver>
   <resolver name="mvco_blob">
@@ -29,5 +33,24 @@
       <value>/data/vol4/blobs</value>
     </var>
     <path match="${root}/${year}/${year}_${day}/${filename}"/>
+  </resolver>
+  <resolver name="list_adcs">
+    <!-- list all adc files. -->
+    <import name="data_roots"/>
+    <path var="day_dir" match="${root}/IFCB*">
+      <path var="adc_file" match="IFCB*.adc">
+	<!-- find the adc file -->
+	<match var="adc_file" groups="pid">.*(IFCB.*)\..*</match>
+	<!-- now resolve all three files separately as they may not be co-located -->
+	<var name="format">
+	  <value>adc</value>
+	  <value>roi</value>
+	  <value>hdr</value>
+	</var>
+	<!-- resolve using pid and format -->
+	<import name="binpid2path"/>
+	<hit>${day_dir}/${filename}</hit>
+      </path>
+    </path>
   </resolver>
 </resolvers>

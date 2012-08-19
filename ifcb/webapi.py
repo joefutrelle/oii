@@ -48,6 +48,10 @@ rs = parse_stream('oii/ifcb/mvco.xml')
 binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
+lister = rs['list_adcs']
+
+#for hit in lister.resolve_all():
+#    print hit.value
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -87,7 +91,7 @@ def get_target(bin,target_no):
     else:
         # in the stitching case we need to read two targets and see if they overlap,
         # so we can set the STITCHED flag
-        targets = list(read_adc(LocalFileSource(adc_path), target_no, limit=2))
+        targets = read_targets(adc_path, target_no, limit=2)
         target = targets[0]
         if len(list(find_pairs(targets))) > 1:
             target[STITCHED] = 1
@@ -141,7 +145,7 @@ def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort option
     def descending_size(t):
         (w,h) = t.size
         return 0 - (w * h)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_adc(LocalFileSource(adc_path))]
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_targets(adc_path)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -248,9 +252,13 @@ def resolve(time_series,lid):
     # nothing recognized, so return Not Found
     abort(404)
 
+@memoized
+def read_targets(adc_path, target_no=1, limit=-1):
+    return list(read_adc(LocalFileSource(adc_path), target_no, limit))
+
 def list_targets(hit):
     adc_path = resolve_adc(hit.time_series, hit.bin_lid)
-    targets = list(read_adc(LocalFileSource(adc_path)))
+    targets = read_targets(adc_path)
     if app.config[STITCH]:
         # in the stitching case we need to compute "stitched" flags based on pairs
         pairs = find_pairs(targets)
