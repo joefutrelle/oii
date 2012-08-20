@@ -238,17 +238,16 @@ def resolve(time_series,lid):
     (mimetype, _) = mimetypes.guess_type(filename)
     if mimetype is None:
         mimetype = 'application/octet-stream'
-    # is the user requesting an image?
+    # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
-    if major_type(mimetype) == 'image':
-        return serve_roi(hit)
-    else:
-        if hit.target is not None: # is this a target endpoint (rather than a bin endpoint?)
+        if major_type(mimetype) == 'image': # need an image?
+            return serve_roi(hit) # serve it
+        else:  # otherwise serve metadata
             hit.target_pid = hit.namespace + hit.lid # construct target pid
             return serve_target(hit,mimetype)
-        else:
-            return serve_bin(hit,mimetype)
+    else: # nope, it's for a whole bin
+        return serve_bin(hit,mimetype)
     # nothing recognized, so return Not Found
     abort(404)
 
