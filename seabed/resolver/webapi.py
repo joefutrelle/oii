@@ -18,7 +18,7 @@ Written by Mark Nye, Aug 4, 2012
 """
 
 
-RESOLVER_CONFIG = "seabed-resolvers.xml"
+RESOLVER_CONFIG = "resolvers.xml"
 DEBUG = True
 
 
@@ -106,4 +106,4 @@ def api_xml(pid):
 
 if __name__ == '__main__':
     "Are we in the __main__ scope? Start test server."
-    app.run(host='127.0.0.1',port=5000,debug=DEBUG) 
+    app.run(host='0.0.0.0',port=1235,debug=DEBUG) 
