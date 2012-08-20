@@ -91,7 +91,7 @@ def get_target(bin,target_no):
     else:
         # in the stitching case we need to read two targets and see if they overlap,
         # so we can set the STITCHED flag
-        targets = read_targets(adc_path, target_no, limit=2)
+        targets = read_targets(adc_path, target_no, 2)
         target = targets[0]
         if len(list(find_pairs(targets))) > 1:
             target[STITCHED] = 1
