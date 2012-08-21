@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
 def authme(u,p):
     valid = [
         ('joe','83e4a96aed96436c621b9809e258b309'),
-        ('amber','83e4a96aed96436c621b9809e258b309')
+        ('yorksea','f477dcb057f22c8083b2aa00e45bbad8')
         ]
     return (u,md5_string(p)) in valid
 
