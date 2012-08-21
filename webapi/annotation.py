@@ -48,7 +48,11 @@ DEFAULT_CONFIG = {
 }
 
 def authme(u,p):
-    return u == 'joe' and md5_string(p) == '83e4a96aed96436c621b9809e258b309'
+    valid = [
+        ('joe','83e4a96aed96436c621b9809e258b309'),
+        ('amber','83e4a96aed96436c621b9809e258b309')
+        ]
+    return (u,md5_string(p)) in valid
 
 auth_api.auth_callback = authme
 
