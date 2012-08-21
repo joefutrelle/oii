@@ -90,20 +90,11 @@ def memoized(func):
 
 # utilities
 
-def get_target(bin,target_no):
+def get_target(hit, adc_path=None):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
-    adc_path = binpid2path.resolve(pid=bin,format=ADC).value
-    if not app.config[STITCH]: # no stitching, read one target
-        return read_target(LocalFileSource(adc_path), target_no)
-    else:
-        # in the stitching case we need to read two targets and see if they overlap,
-        # so we can set the STITCHED flag
-        targets = read_targets(adc_path, target_no, 2)
-        target = targets[0]
-        if len(list(find_pairs(targets))) > 1:
-            target[STITCHED] = 1
-        else:
-            target[STITCHED] = 0
+    if adc_path is None:
+        adc_path = resolve_adc(hit.time_series, hit.bin_lid)
+    for target in list_targets(hit, hit.target_no, adc_path=adc_path):
         return target
 
 def image_response(image,format,mimetype):
@@ -262,9 +253,10 @@ def resolve(time_series,lid):
 def read_targets(adc_path, target_no=1, limit=-1):
     return list(read_adc(LocalFileSource(adc_path), target_no, limit))
 
-def list_targets(hit):
-    adc_path = resolve_adc(hit.time_series, hit.bin_lid)
-    targets = read_targets(adc_path)
+def list_targets(hit, target_no=1, limit=-1, adc_path=None):
+    if adc_path is None:
+        adc_path = resolve_adc(hit.time_series, hit.bin_lid)
+    targets = read_targets(adc_path, target_no, limit)
     if app.config[STITCH]:
         # in the stitching case we need to compute "stitched" flags based on pairs
         pairs = find_pairs(targets)
@@ -277,17 +269,24 @@ def list_targets(hit):
         # and we have to exclude the second of each pair from the list of targets
         Bs = [b for (_,b) in pairs]
         targets = filter(lambda target: target not in Bs, targets)
+    for target in targets:
+        # add a binID and pid what are the right keys for these?
+        target['binID'] = '%s' % hit.bin_pid
+        target['pid'] = '%s_%05d' % (hit.bin_pid, target[TARGET_NUMBER])
     return targets
-    
+
+def csv_quote(thing):
+    if re.match(r'^-?[0-9]+(\.[0-9]+)?$',thing):
+        return thing
+    else:
+        return '"' + thing + '"'
+
 def bin2csv(hit,targets):
     # get the ADC keys for this version of the ADC format
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
     def csv_iter():
         first = True
         for target in targets:
-            # add a binID and pid what are the right keys for these?
-            target['binID'] = '"%s"' % hit.bin_pid
-            target['pid'] = '"%s_%05d"' % (hit.bin_pid, target['targetNumber'])
             # now order all keys even the ones not in the schema
             keys = order_keys(target, schema_keys)
             # fetch all the data for this row as strings
@@ -296,7 +295,7 @@ def bin2csv(hit,targets):
                 yield ','.join(keys)
                 first = False
             # now emit the row
-            yield ','.join(row)
+            yield ','.join(map(csv_quote,row))
     return Response(render_template('bin.csv',rows=csv_iter()),mimetype='text/plain')
 
 def serve_bin(hit,mimetype):
@@ -334,7 +333,7 @@ def serve_bin(hit,mimetype):
         abort(404)
 
 def serve_target(hit,mimetype):
-    target = get_target(hit.bin_lid, hit.target_no) # read the target from the ADC file
+    target = get_target(hit) # read the target from the ADC file
     # sort the target properties according to the order in the schema
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
     target = [(k,target[k]) for k in order_keys(target, schema_keys)]
