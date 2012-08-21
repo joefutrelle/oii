@@ -1,0 +1,25 @@
+.imagepager_nodisplay {
+    display: none;
+}
+.imagepager_placeholder {
+    background-color: #999999;
+    background-image: url('images/ajax-loader_small.gif');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.imagepager_frame {
+    overflow: hidden;
+}
+.imagepager_left_arrow {
+    width: 40px;
+    background-image: url('images/left_arrow.png');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.imagepager_right_arrow {
+    width: 40px;
+    background-image: url('images/right_arrow.png');
+    background-repeat: no-repeat;
+    background-position: center;
+
+}

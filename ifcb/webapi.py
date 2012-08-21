@@ -25,6 +25,13 @@ from zipfile import ZipFile
 from PIL import Image
 from werkzeug.contrib.cache import SimpleCache
 
+# TODO image list service for paging through ROIs / mosaic pages# (necessary? use bin JSON?)
+# TODO JSON on everything
+# TODO static files
+# TODO jQuery plugin for paging through mosaic list
+# TODO jQuery plugin for paging through ROI list
+# -> generic jQuery plugin for paging through image list
+
 app = Flask(__name__)
 app.debug = True
 
