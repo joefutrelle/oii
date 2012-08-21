@@ -29,8 +29,8 @@
 					$this.authentication(login_callback, logout_callback);
 				    });
 			    },
-			    failure: function() {
-				alert('wrong credentials. no cookie for you!');
+			    error: function() {
+				alert('Incorrect username / password');
 			    }
 			});
 		    });

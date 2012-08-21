@@ -13,6 +13,7 @@ from oii.annotation.psql import PsqlAnnotationStore
 from oii.annotation.categories import Categories
 from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
+from oii.utils import md5_string
 from utils import jsonr
 import urllib
 
@@ -45,6 +46,11 @@ ASSIGNMENT_STORE = 'assignment_store'
 DEFAULT_CONFIG = {
     ANNOTATION_STORE: DebugAnnotationStore(),
 }
+
+def authme(u,p):
+    return u == 'joe' and md5_string(p) == '83e4a96aed96436c621b9809e258b309'
+
+auth_api.auth_callback = authme
 
 # get a configured component, or use a default one for testing
 def my(key):
