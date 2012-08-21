@@ -60,6 +60,28 @@ def sha1_file(pathname):
     with open(pathname,'rb') as fl:
         return sha1_filelike(fl)
 
+def md5_string(data):
+    """Compute the MD5 hash of a string"""
+    m = hashlib.md5()
+    m.update(data)
+    return m.hexdigest()
+
+def md5_filelike(filelike):
+    """Compute the MD5 hash of a file-like object"""
+    m = hashlib.md5()
+    while True:
+        s = filelike.read()
+        if len(s) == 0:
+            break
+        else:
+            m.update(s)
+    return m.hexdigest()
+
+def md5_file(pathname):
+    """Compute the MD5 hash of a file at a pathname"""
+    with open(pathname,'rb') as fl:
+        return md5_filelike(fl)
+
 # recursively map a function onto an item. if the item is a sequence,
 # descend into each item; if it's a dict, descend into each value.
 def mapr(function,item):
