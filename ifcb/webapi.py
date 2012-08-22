@@ -409,7 +409,8 @@ def serve_roi(hit):
         return image_response(roi_image,pil_format,mimetype)
 
 if __name__=='__main__':
-    port = 5061
+    """First argument is a config file which must at least have psql_connect in it
+    to support feed arguments. Filesystem config is in the resolver."""
     if len(sys.argv) > 1:
         configure(get_config(sys.argv[1]))
     else:
