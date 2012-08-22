@@ -9,15 +9,18 @@
 }
 .imagepager_frame {
     overflow: hidden;
+    margin: 2px;
 }
 .imagepager_arrow {
     width: 40px;
     background-repeat: no-repeat;
     background-position: center;
     opacity: 0.2;
+    border: 1px solid rgba(255,255,255,0);
 }
 .imagepager_arrow:hover {
     opacity: 1.0;
+    border: 1px solid #cccccc;
 }
 .imagepager_left {
     background-image: url('images/left_arrow.png');

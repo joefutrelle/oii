@@ -69,7 +69,7 @@ def configure(config=None):
     app.config[CACHE] = SimpleCache()
     app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
     app.config[STITCH] = True
-    app.config[CACHE_TTL] = 60
+    app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
     try:
