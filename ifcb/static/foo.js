@@ -1,13 +1,19 @@
 $(document).ready(function() {
-    var images = [];
     var width=640;
     var height=480;
-    for(page=1; page <= 30; page++) {
-	images.push('/api/mosaic/size/'+width+'x'+height+'/scale/0.333/page/'+page+'/pid/IFCB5_2012_231_205056.jpg');
-    }
-    console.log(images);
-    $('#main').append('<div class="wrapper"></div>').find('div').imagePager(images, width, height).change(function(event, href) {
-	$('#url_label').empty().append(href);
+    $.getJSON('/api/feed/format/json', function(r) {
+	var center_column = $('#main').empty().append('<div/>').find('div:last').css('float','left');
+	var right_column = $('#main').append('<div/>').find('div:last').css('float','right');
+	$.each(r, function(ix, bin) {
+	    var images = []
+	    for(page=1; page <= 30; page++) {
+		images.push('/api/mosaic/size/'+width+'x'+height+'/scale/0.333/page/'+page+'/pid/'+bin.lid+'.jpg');
+	    }
+	    if(ix == 0) {
+		$(center_column).append('<div/>').find('div').imagePager(images, width, height);
+	    } else {
+		$(right_column).append('<div/><br/>').find('div:last').imagePager(images, Math.floor(width/4), Math.floor(height/4));
+	    }
+	});
     });
-    $('#main').append('<div id="url_label"></div>');
 });

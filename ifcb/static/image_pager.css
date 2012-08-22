@@ -10,16 +10,18 @@
 .imagepager_frame {
     overflow: hidden;
 }
-.imagepager_left_arrow {
+.imagepager_arrow {
     width: 40px;
-    background-image: url('images/left_arrow.png');
     background-repeat: no-repeat;
     background-position: center;
+    opacity: 0.2;
 }
-.imagepager_right_arrow {
-    width: 40px;
+.imagepager_arrow:hover {
+    opacity: 1.0;
+}
+.imagepager_left {
+    background-image: url('images/left_arrow.png');
+}
+.imagepager_right {
     background-image: url('images/right_arrow.png');
-    background-repeat: no-repeat;
-    background-position: center;
-
 }

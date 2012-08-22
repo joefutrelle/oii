@@ -14,12 +14,14 @@ from oii.utils import order_keys
 from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
+from oii.ifcb.db import IfcbFeed
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
 from oii.image.mosaic import Tile
+from oii.config import get_config
 import mimetypes
 from zipfile import ZipFile
 from PIL import Image
@@ -48,6 +50,9 @@ PAGE='page'
 PID='pid'
 CACHE='cache'
 CACHE_TTL='ttl'
+PSQL_CONNECT='psql_connect'
+FEED='feed'
+PORT='port'
 
 # FIXME do this in main
 # FIXME this should be selected by time series somehow
@@ -65,7 +70,12 @@ def configure(config=None):
     app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
     app.config[STITCH] = True
     app.config[CACHE_TTL] = 60
-    pass
+    app.config[PSQL_CONNECT] = config.psql_connect
+    app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
+    try:
+        app.config[PORT] = int(config.port)
+    except:
+        app.config[PORT] = 5061
 
 def major_type(mimetype):
     return re.sub(r'/.*','',mimetype)
@@ -147,6 +157,17 @@ def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort option
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
+
+@app.route('/api/feed/format/<format>')
+def serve_feed(format):
+    # FIXME support formats other than JSON, also use extension
+    def feed2dicts():
+        for bin_lid in app.config[FEED].latest_bins():
+            yield {
+                'lid': bin_lid,
+                'pid': pid_resolver.resolve(pid=bin_lid).bin_pid
+                }
+    return jsonr(list(feed2dicts()))
 
 @app.route('/api/mosaic/pid/<path:pid>')
 def serve_mosaic(pid):
@@ -390,16 +411,8 @@ def serve_roi(hit):
 if __name__=='__main__':
     port = 5061
     if len(sys.argv) > 1:
-        config = get_config(sys.argv[1])
-        try:
-            configure(config)
-        except KeyError:
-            pass
-        try:
-            port = int(config.port)
-        except KeyError:
-            pass
+        configure(get_config(sys.argv[1]))
     else:
         configure()
     app.secret_key = os.urandom(24)
-    app.run(host='0.0.0.0',port=port)
+    app.run(host='0.0.0.0',port=app.config[PORT])

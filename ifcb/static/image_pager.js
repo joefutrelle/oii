@@ -50,9 +50,9 @@
 		    .append('<div></div>')
 		    .find('div').css('display','inline-block')
 		    .end()
-		    .find('div:first').css('height',height).addClass('imagepager_left_arrow')
+		    .find('div:first').css('height',height).addClass('imagepager_arrow imagepager_left')
 		    .end()
-		    .find('div:last').css('height',height).addClass('imagepager_right_arrow')
+		    .find('div:last').css('height',height).addClass('imagepager_arrow imagepager_right')
 		    .end().css('clear','both')
 		    .find('div:eq(1)')
 		function showImage() {
@@ -60,13 +60,13 @@
 		    grayLoadingImage($(gli), image_href, width, height);
 		    $this.trigger('change', image_href);
 		}
-		$this.find('.imagepager_left_arrow').click(function() {
+		$this.find('.imagepager_left').click(function() {
 		    if(ix > 0) {
 			ix--;
 			showImage();
 		    }
 		});
-		$this.find('.imagepager_right_arrow').click(function() {
+		$this.find('.imagepager_right').click(function() {
 		    if(ix < image_list.length -1) {
 			ix++;
 			showImage();
