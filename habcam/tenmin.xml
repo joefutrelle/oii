@@ -1,0 +1,37 @@
+<resolver>
+  <resolver name="png_roots">
+    <var name="root">
+      <value>/mnt/rose5/f/HS_20120601/nmfs</value>
+      <value>/mnt/rose4/HS_201203_testset</value>
+      <value>/mnt/rose4/nmfs</value>
+      <value>/mnt/rose6/nmfs</value>
+      <value>/mnt/temp/nmfs</value>
+    </var>
+    <hit/>
+  </resolver>
+  <resolver name="tenmin">
+    <!-- takes a dir={name of ten minute directory} and returns a list of pngs -->
+    <!-- dirs are things like 20120609_2050 -->
+    <!-- which e.g., resolves to /mnt/rose6/nmfs/201206/20120609/20120609_20/20120609_2050/*.png -->
+    <match var="dir" groups="ymdh ymd ym"
+	   pattern="(((\d{6})\d{2})_\d\d)\d\d">
+      <import name="png_roots"/>
+      <path var="png" match="${root}/${ym}/${ymd}/${ymdh}/${dir}/*.png">
+	<hit>${png}</hit>
+      </path>
+    </match>
+  </resolver>
+</resolver>
+
+<!-- here's an example script that uses this
+
+from oii import resolver
+
+if __name__=='__main__':
+    r = resolver.parse_stream('oii/habcam/tenmin.xml')
+    t = r['tenmin']
+    for hit in t.resolve_all(dir='20120609_2050'):
+        print hit.value
+
+-->
+
