@@ -14,7 +14,7 @@ from oii.utils import order_keys
 from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
-from oii.ifcb.db import IfcbFeed
+from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch
 from oii.io import UrlSource, LocalFileSource
@@ -52,6 +52,7 @@ CACHE='cache'
 CACHE_TTL='ttl'
 PSQL_CONNECT='psql_connect'
 FEED='feed'
+FIXITY='fixity'
 PORT='port'
 
 # FIXME do this in main
@@ -72,6 +73,7 @@ def configure(config=None):
     app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
+    app.config[FIXITY] = IfcbFixity(app.config[PSQL_CONNECT], rs)
     try:
         app.config[PORT] = int(config.port)
     except:
@@ -168,6 +170,10 @@ def serve_feed(format):
                 'pid': pid_resolver.resolve(pid=bin_lid).bin_pid
                 }
     return jsonr(list(feed2dicts()))
+
+@app.route('/api/volume')
+def serve_volume():
+    return jsonr(app.config[FIXITY].summarize_data_volume())
 
 @app.route('/api/mosaic/pid/<path:pid>')
 def serve_mosaic(pid):

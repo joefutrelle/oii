@@ -1,0 +1,118 @@
+<html>
+<head>
+    <title>Timeline demo</title>
+
+    <script type="text/javascript" src="../timeline.js"></script>
+    <script type="text/javascript" src="../../js/jquery-1.5.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../timeline.css">
+
+    <style type="text/css">
+        body {font: 10pt arial;}
+
+        div.timeline-event {
+            border: none;
+            background: none;
+            border-radius: 0;
+        }
+        div.timeline-event-selected {
+            border: none;
+            background: none;
+        }
+        div.timeline-event-content {
+            margin: 0;
+        }
+        div.timeline-event-range {
+            border: none;
+            border-radius: 0;
+            height: 100px;
+            width: 100%;
+            position: relative;
+            overflow: visible;
+        }
+        div.bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            /* height and color is set for each individual bar */
+        }
+        div.requirement {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            border-top: 2px solid gray;
+            background: #e5e5e5;
+            opacity: 0.5;
+        }
+    </style>
+
+    <script type="text/javascript">
+        var timeline;
+
+        // Called when the Visualization API is loaded.
+        function drawVisualization() {
+
+	$.getJSON('/api/volume', function(volume) {
+            // Create and populate a data table.
+            var data = [];
+	    $.each(volume, function(ix, day_volume) {
+	        var bin_count = day_volume.bin_count;
+                var date = day_volume.day; // should be 'date'
+	        var gb = day_volume.gb;
+	        var year = date.split('-')[0];
+	        var month = date.split('-')[1];
+                var day = date.split('-')[2];
+                var start = new Date(year, month-1, day)
+                var end = new Date(year, month-1, day);
+                end.setHours(end.getHours() + 24);
+
+                // create item with actual number
+                var height = Math.round(gb * 15);
+                var style = 'height:' + height + 'px;'
+                var color = '#ff0000';
+                style = 'height:' + height + 'px;' +
+                        'background-color: ' + color + ';'+
+	                'border: 1px solid ' + color + ';';
+                var actual = '<div class="bar" style="' + style + '" ' +
+                        ' title="'+gb+'GB"></div>';
+                var item = {
+                    'group': 'Data volume',
+                    'start': start,
+                    'end': end,
+                    'content': actual
+                };
+                data.push(item);
+            });
+
+            // specify options
+            var options = {
+                "width":  "100%",
+                "height": "200px",
+                "style": "box"
+            };
+
+            // Instantiate our timeline object.
+            timeline = new links.Timeline(document.getElementById('mytimeline'));
+            timeline.recalcConversion();
+	    $('#mytimeline').bind('mousemove', {timeline:timeline}, function(event) {
+	        var x = event.clientX - $('#mytimeline div.timeline-frame div').offset().left;
+	        var time = event.data.timeline.screenToTime(x)
+	        console.log('x='+x+', time='+time);
+            });
+
+            // Draw our timeline with the created data and options
+            timeline.draw(data, options);
+});
+        }
+    </script>
+</head>
+
+<body onload="drawVisualization();">
+<h1>Timeline - Bar Graph Example</h1>
+<div id="mytimeline"></div>
+
+</body>
+</html>
