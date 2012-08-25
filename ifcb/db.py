@@ -16,7 +16,7 @@ class Psql(object):
         self.psql_connect = psql_connect
 
 class IfcbFeed(Psql):
-    def latest_bins(self,n=25,date=None):
+    def latest_bins(self,date=None,n=25):
         """Return the LIDs of the n latest bins"""
         if date is None:
             date = time.gmtime()
@@ -24,6 +24,15 @@ class IfcbFeed(Psql):
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
             db.execute("select lid,sample_time from bins where sample_time <= %s order by sample_time desc limit %s",(dt,n)) # dangling comma is necessary
+            for row in db.fetchall():
+                yield row[0]
+    def nearest_bin(self,date=None):
+        if date is None:
+            date = time.gmtime()
+        dt = utcdatetime(date)
+        with xa(self.psql_connect) as (c,db):
+            db.execute("set session time zone 'UTC'")
+            db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins order by time_delta limit 1",(dt,))
             for row in db.fetchall():
                 yield row[0]
     def day_bins(self,date=None):

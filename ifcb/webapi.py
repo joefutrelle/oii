@@ -160,16 +160,50 @@ def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort option
     tiles.sort(key=descending_size)
     return tiles
 
+def parse_date_param(sdate):
+    try:
+        return strptime(sdate,'%Y-%m-%d')
+    except:
+        pass
+    try:
+        return strptime(sdate,'%Y-%m-%dT%H:%M:%S')
+    except:
+        pass
+    try:
+        return strptime(sdate,'%Y-%m-%dT%H:%M:%SZ')
+    except:
+        pass
+    try:
+        return strptime(re.sub(r'\.\d+Z','',sdate),'%Y-%m-%dT%H:%M:%S')
+    except:
+        app.logger.debug('could not parse date param %s' % sdate)
+
+
+def binlid2dict(bin_lid):
+    return {
+        'lid': bin_lid,
+        'pid': pid_resolver.resolve(pid=bin_lid).bin_pid
+        }
+
 @app.route('/api/feed/format/<format>')
-def serve_feed(format):
+@app.route('/api/feed/date/<date>/format/<format>')
+def serve_feed(date=None,format='json'):
+    if date is not None:
+        date = parse_date_param(date)
     # FIXME support formats other than JSON, also use extension
     def feed2dicts():
-        for bin_lid in app.config[FEED].latest_bins():
-            yield {
-                'lid': bin_lid,
-                'pid': pid_resolver.resolve(pid=bin_lid).bin_pid
-                }
+        for bin_lid in app.config[FEED].latest_bins(date):
+            yield binlid2dict(bin_lid)
     return jsonr(list(feed2dicts()))
+
+@app.route('/api/feed/nearest/<date>')
+def serve_nearest(date):
+    if date is not None:
+        date = parse_date_param(date)
+    app.logger.debug('date = %s' % date)
+    for bin_lid in app.config[FEED].nearest_bin(date):
+        d = binlid2dict(bin_lid)
+    return jsonr(d)
 
 @app.route('/api/volume')
 def serve_volume():

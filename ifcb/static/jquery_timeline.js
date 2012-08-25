@@ -48,10 +48,15 @@
 		    console.log('trying to install timeline on '+$this.get(0));
 		    timeline = new links.Timeline($this.get(0))
 		    timeline.recalcConversion();
-		    $this.bind('mousemove', {timeline:timeline}, function(event) {
+		    function screenToDate(event) {
 			var x = event.clientX - $this.find('div.timeline-frame div').offset().left;
-     			var date = new Date(event.data.timeline.screenToTime(x))
-			$this.trigger('dateHover', date);
+			return new Date(event.data.timeline.screenToTime(x))
+		    }
+		    $this.bind('mousemove', {timeline:timeline}, function(event) {
+			$this.trigger('dateHover', screenToDate(event));
+		    });
+		    $this.bind('click', {timeline:timeline}, function(event) {
+			$this.trigger('dateClick', screenToDate(event));
 		    });
 
 		    // Draw our timeline with the created data and options
