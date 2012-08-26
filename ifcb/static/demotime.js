@@ -5,7 +5,7 @@ $(document).ready(function() {
     // add the timeline control
     $('body').append('<div id="timeline"></div>').find('div').timeline()
 	.bind('dateHover', function(event, date, clientX) { // on hover, show the date
-	    $('#date_label').empty().append(date.toString());
+	    $('#date_label').empty().append(date.toISOString());
 	    $('#date_label').css('margin-left',clientX);
 	})
 	.bind('dateClick', function(event, date) { // on click,
@@ -49,12 +49,13 @@ $(document).ready(function() {
 	    var style = 'height:' + height + 'px;'
 	    var color = '#ff0000';
 	    style = 'height:' + height + 'px;' +
+		'margin-bottom: -25px;'+
 		'background-color: ' + color + ';'+
 		'border: 1px solid ' + color + ';';
 	    var bar = '<div class="bar" style="' + style + '" ' +
-		' title="'+gb+'GB"></div>'; // FIXME remove insignificant digits
+		' title="'+gb.toFixed(2)+'GB"></div>';
 	    var item = {
-		'group': 'Data volume', // "Group" is displayed on the left as a label
+		'group': 'B/day', // "Group" is displayed on the left as a label
 		'start': start,
 		'end': end,
 		'content': bar
@@ -65,7 +66,7 @@ $(document).ready(function() {
 	// layout parameters accepted by showdata and passed to underlying widget
 	var timeline_options = {
 	    "width":  "100%",
-	    "height": "200px",
+	    "height": "150px",
 	    "style": "box"
 	};
 	// now tell the timeline plugin to draw it
