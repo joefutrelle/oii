@@ -55,7 +55,7 @@ $(document).ready(function() {
 	    var bar = '<div class="bar" style="' + style + '" ' +
 		' title="'+gb.toFixed(2)+'GB"></div>';
 	    var item = {
-		'group': 'B/day', // "Group" is displayed on the left as a label
+		'group': 'bytes/day', // "Group" is displayed on the left as a label
 		'start': start,
 		'end': end,
 		'content': bar

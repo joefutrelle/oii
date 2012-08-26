@@ -27,18 +27,13 @@ from zipfile import ZipFile
 from PIL import Image
 from werkzeug.contrib.cache import SimpleCache
 
-# TODO image list service for paging through ROIs / mosaic pages# (necessary? use bin JSON?)
 # TODO JSON on everything
-# TODO static files
-# TODO jQuery plugin for paging through mosaic list
-# TODO jQuery plugin for paging through ROI list
-# -> generic jQuery plugin for paging through image list
 
 app = Flask(__name__)
 app.debug = True
 
 # importantly, set max-age on static files (e.g., javascript) to something really short
-#app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
 
 # string key constants
 STITCH='stitch'
@@ -148,18 +143,6 @@ def parse_params(path, **defaults):
             d[k] = v
     return d
 
-@memoized
-def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort options
-    adc_path = resolve_adc(time_series, bin_lid)
-    # read ADC and convert to Tiles in size-descending order
-    def descending_size(t):
-        (w,h) = t.size
-        return 0 - (w * h)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_targets(adc_path)]
-    # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
-    tiles.sort(key=descending_size)
-    return tiles
-
 def parse_date_param(sdate):
     try:
         return strptime(sdate,'%Y-%m-%d')
@@ -218,6 +201,24 @@ def serve_mosaic(pid):
     else:
         return serve_mosaic_image(pid) # default mosaic image
 
+@memoized
+def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort options
+    adc_path = resolve_adc(time_series, bin_lid)
+    # read ADC and convert to Tiles in size-descending order
+    def descending_size(t):
+        (w,h) = t.size
+        return 0 - (w * h)
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_targets(adc_path)]
+    # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
+    tiles.sort(key=descending_size)
+    return tiles
+
+@memoized
+def get_mosaic_layout(time_series, lid, scaled_size, page):
+    tiles = get_sorted_tiles(time_series, lid)
+    # perform layout operation
+    return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
+
 @app.route('/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(pid, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
@@ -234,10 +235,9 @@ def serve_mosaic_image(pid, params='/'):
     page = int(params[PAGE])
     # parse pid/lid
     hit = pid_resolver.resolve(pid=pid)
-    tiles = get_sorted_tiles(time_series, hit.bin_lid) # convert to tiles
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
-    layout = mosaic.layout(tiles, scaled_size, page, threshold=0.05)
+    layout = get_mosaic_layout(time_series, hit.bin_lid, scaled_size, page)
     # FIXME should also serve tiles in JSON
     # resolve ROI file
     roi_path = resolve_roi(time_series,hit.bin_lid)
