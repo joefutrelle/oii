@@ -163,9 +163,12 @@ def parse_date_param(sdate):
 
 
 def binlid2dict(bin_lid):
+    hit = pid_resolver.resolve(pid=bin_lid)
+    date = iso8601(strptime(hit.date, hit.date_format))
     return {
         'lid': bin_lid,
-        'pid': pid_resolver.resolve(pid=bin_lid).bin_pid
+        'pid': hit.bin_pid,
+        'date': date
         }
 
 @app.route('/api/feed/format/<format>')

@@ -11,6 +11,7 @@ $(document).ready(function() {
 	    var roi_scale = 0.333; // scaling factor per roi
 	    var width = 600; // width of displayed mosaic
 	    var height = 480; // height of displayed mosaic
+	    $('#date_label').empty().append(r.date);
 	    // put 30 pages on the pager, just in case it's a huge bin
 	    var images = []
 	    for(page=1; page <= 30; page++) {
@@ -36,7 +37,7 @@ $(document).ready(function() {
 	    $('#date_label').empty().append(date.toISOString());
 	}).timeline_bind('timechanged', function(timeline, r) {
 	    showNearest(r.time);
-	}).timeline_bind('select', function(t) {
+	}).timeline_bind('select', function(t) { // FIXME won't retrigger when user clicks on same date
 	    var date = t.hoverDate;
 	    $.each(t.getSelection(), function(ix, s) {
 		//var date = t.getItem(s.row).start;
