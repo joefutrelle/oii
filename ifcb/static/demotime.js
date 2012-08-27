@@ -2,30 +2,49 @@ $(document).ready(function() {
     // add a title
     var title = 'MVCO data volume';
     $('body').append('<h1>'+title+'</h1>');
+    function showNearest(date) {
+	var ds = date.toISOString();
+	$.getJSON('/api/feed/nearest/'+ds, function(r) { // find the nearest bin
+	    console.log(JSON.stringify(r)); // FIXME need the date
+	    // now draw a multi-page mosaic
+	    var pid = r.pid;
+	    var roi_scale = 0.333; // scaling factor per roi
+	    var width = 600; // width of displayed mosaic
+	    var height = 480; // height of displayed mosaic
+	    // put 30 pages on the pager, just in case it's a huge bin
+	    var images = []
+	    for(page=1; page <= 30; page++) {
+		images.push('/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg');
+	    }
+	    // create an image pager
+	    $('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
+		.find('div:last').imagePager(images, width, height);
+	});
+    }
     // add the timeline control
     $('body').append('<div id="timeline"></div>').find('div').timeline()
+	/*
 	.bind('dateHover', function(event, date, clientX) { // on hover, show the date
 	    $('#date_label').empty().append(date.toISOString());
 	    $('#date_label').css('margin-left',clientX);
 	})
-	.bind('dateClick', function(event, date) { // on click,
-	    var ds = date.toISOString();
-	    $.getJSON('/api/feed/nearest/'+ds, function(r) { // find the nearest bin
-		// now draw a multi-page mosaic
-		var pid = r.pid;
-		var roi_scale = 0.333; // scaling factor per roi
-		var width = 600; // width of displayed mosaic
-		var height = 480; // height of displayed mosaic
-		// put 30 pages on the pager, just in case it's a huge bin
-		var images = []
-		for(page=1; page <= 30; page++) {
-		    images.push('/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg');
-		}
-		// create an image pager
-		$('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
-		    .find('div:last').imagePager(images, width, height);
+	.bind('dateClick', function(event, date, clientX) { // on click,
+	});
+	*/
+	.timeline_bind('timechange', function(timeline, r) {
+	    var date = r.time;
+	    $('#date_label').empty().append(date.toISOString());
+	}).timeline_bind('timechanged', function(timeline, r) {
+	    showNearest(r.time);
+	}).timeline_bind('select', function(t) {
+	    var date = t.hoverDate;
+	    $.each(t.getSelection(), function(ix, s) {
+		//var date = t.getItem(s.row).start;
+		$('#date_label').empty().append(date.toISOString());
+		showNearest(date);
 	    });
 	});
+    ;
     // now load the data volume series
     console.log('loading data series...');
     $.getJSON('/api/volume', function(volume) {
@@ -65,9 +84,11 @@ $(document).ready(function() {
 	});
 	// layout parameters accepted by showdata and passed to underlying widget
 	var timeline_options = {
-	    "width":  "100%",
-	    "height": "150px",
-	    "style": "box"
+	    'width':  '100%',
+	    'height': '150px',
+	    'style': 'box',
+	    'showCustomTime': true,
+	    'showNavigation': true
 	};
 	// now tell the timeline plugin to draw it
 	$('#timeline').trigger('showdata', [data, timeline_options]);
