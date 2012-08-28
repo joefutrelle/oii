@@ -154,7 +154,7 @@ $(document).ready(function() {
 			    if(clickX >= tile.x && clickX <= tile.x + tile.width &&
 			       clickY >= tile.y && clickY <= tile.y + tile.height) {
 				console.log('user clicked on '+tile.pid);
-				$('#roi_image').empty().append('<img src="'+tile.pid+'.jpg">');
+				$('#roi_image').empty().grayLoadingImage(tile.pid+'.jpg', tile.width / roi_scale, tile.height / roi_scale);
 			    }
 			});
 		    }
