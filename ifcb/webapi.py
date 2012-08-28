@@ -202,16 +202,17 @@ def serve_mosaic(pid):
     if hit.extension == 'html': # here we generate an HTML representation with multiple pages
         return Response(render_template('mosaics.html',hit=hit),mimetype='text/html')
     else:
-        return serve_mosaic_image(pid) # default mosaic image
+        return serve_mosaic(pid) # default mosaic image
 
 @memoized
 def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort options
     adc_path = resolve_adc(time_series, bin_lid)
+    hit = resolve_pid(time_series, bin_lid)
     # read ADC and convert to Tiles in size-descending order
     def descending_size(t):
         (w,h) = t.size
         return 0 - (w * h)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in read_targets(adc_path)]
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in list_targets(hit, adc_path=adc_path)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -222,8 +223,15 @@ def get_mosaic_layout(time_series, lid, scaled_size, page):
     # perform layout operation
     return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
 
+def layout2json(layout):
+    """Doesn't actually produce JSON but rather JSON-serializable representation of the tiles"""
+    for t in layout:
+        (w,h) = t.size
+        (x,y) = t.position
+        yield dict(pid=t.image['pid'], width=w, height=h, x=x, y=y)
+
 @app.route('/api/mosaic/<path:params>/pid/<path:pid>')
-def serve_mosaic_image(pid, params='/'):
+def serve_mosaic(pid, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
     params include the following, with default values
     - series (mvco) - time series (FIXME: handle with resolver, clarify difference between namespace, time series, pid, lid)
@@ -241,7 +249,9 @@ def serve_mosaic_image(pid, params='/'):
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = get_mosaic_layout(time_series, hit.bin_lid, scaled_size, page)
-    # FIXME should also serve tiles in JSON
+    # serve JSON on request
+    if hit.extension == 'json':
+        return jsonr(layout2json(layout))
     # resolve ROI file
     roi_path = resolve_roi(time_series,hit.bin_lid)
     # read all images needed for compositing and inject into Tiles
