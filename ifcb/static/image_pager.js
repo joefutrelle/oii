@@ -17,6 +17,7 @@
 	    .end()
 	    .find('img')
 	    .css('display','none')
+            .addClass('page_image')
 	    .addClass('imagepager_nodisplay')
 	    .attr('src',image_href)
 	    .load(function() {
@@ -58,7 +59,11 @@
 		function showImage() {
 		    var image_href = image_list[ix];
 		    grayLoadingImage($(gli), image_href, width, height);
-		    $this.trigger('change', image_href);
+		    // defer in case this is the first showImage
+		    // and clients are still waiting to attach event handlers
+		    setTimeout(function() {
+			$this.trigger('change', image_href);
+		    }, 0);
 		}
 		$this.find('.imagepager_left').click(function() {
 		    if(ix > 0) {

@@ -3,7 +3,7 @@ $(document).ready(function() {
     var title = 'IFCB @ MVCO 2006-present'
     $('body').append('<h1>'+title+'</h1><div id="workspace"></div>')
 	.find('#workspace').css('display','none')
-	.data('mosaic_width',600)
+	.data('mosaic_width',640)
 	.data('mosaic_height',480)
 	.data('roi_scale',0.333);
     function showNearest(date) {
@@ -132,14 +132,22 @@ $(document).ready(function() {
 	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
 	    var height = $('#workspace').data('mosaic_height'); // height of displayed mosaic
 	    // put 30 pages on the pager, just in case it's a huge bin
-	    var images = []
+	    var images = [];
 	    for(var page=1; page <= 30; page++) {
 		var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
 		images.push(url);
 	    }
 	    // create an image pager
 	    $('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
-		.find('div:last').imagePager(images, width, height);
-	}).bind('click', function(event) {
+		.find('div:last').imagePager(images, width, height)
+		.bind('change', function(event, image_href) {
+		    console.log('user paged to '+image_href);
+		}).delegate('.page_image', 'click', function(event) {
+		    // figure out where the click was
+		    var clickX = event.pageX - $(this).offset().left;
+		    var clickY = event.pageY - $(this).offset().top;
+		    console.log('user clicked at '+clickX+','+clickY);
+		    // FIXME now figure out which ROI the user clicked on
+		});
 	});
 });
