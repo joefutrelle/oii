@@ -122,6 +122,7 @@ $(document).ready(function() {
 	    });
     });
     $('body').append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
+	.css('float','left')
 	.bind('drawMosaic', function() {
 	    var pid = $('#workspace').data('selected_pid');
 	    if(pid == undefined) {
@@ -154,7 +155,9 @@ $(document).ready(function() {
 			    if(clickX >= tile.x && clickX <= tile.x + tile.width &&
 			       clickY >= tile.y && clickY <= tile.y + tile.height) {
 				console.log('user clicked on '+tile.pid);
-				$('#roi_image').empty().grayLoadingImage(tile.pid+'.jpg', tile.width / roi_scale, tile.height / roi_scale);
+				$('#roi_image').empty()
+				    .grayLoadingImage(tile.pid+'.jpg', tile.width / roi_scale, tile.height / roi_scale)
+				    .append('<div>'+tile.pid+'</div>');
 			    }
 			});
 		    }
@@ -169,5 +172,7 @@ $(document).ready(function() {
 		    }
 		});
 	});
-    $('body').append('<div id="roi_image"></div>');
+    $('body').append('<div id="roi_image"></div>')
+	.find('div:last')
+	.css('float','right');
 });

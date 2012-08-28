@@ -258,6 +258,7 @@ def serve_mosaic(pid, params='/'):
         for tile in layout:
             target = tile.image
             for roi in read_rois([target], roi_file=roi_file):
+                # FIXME need to stitch: this is bug #1636
                 tile.image = roi # should only iterate once
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))

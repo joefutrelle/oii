@@ -23,8 +23,11 @@
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
     <import name="pid"/>
-    <var name="filename">${lid}.${format}</var>
     <import name="data_roots"/>
+    <var name="filename">
+      <value>${lid}.${format}</value>
+      <value>${lid}.${format}.mod</value>
+    </var>
     <path match="${root}/${instrument}_${year}_${day}/${filename}"/>
   </resolver>
   <resolver name="mvco_blob">
