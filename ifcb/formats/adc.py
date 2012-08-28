@@ -98,7 +98,7 @@ STITCHED = 'stitched'
 def read_adc(source, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
     """Convert ADC data in its native format to dictionaries representing each target.
     Read starting at the specified target number (default 1)"""
-    target_number = target_no
+    target_number = target_no-1
     for row in read_csv(source, ADC_SCHEMA[schema_version], target_no-1, limit):
         target_number += 1
         # skip 0x0 targets

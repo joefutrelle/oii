@@ -186,7 +186,6 @@ def serve_feed(date=None,format='json'):
 def serve_nearest(date):
     if date is not None:
         date = parse_date_param(date)
-    app.logger.debug('date = %s' % date)
     for bin_lid in app.config[FEED].nearest_bin(date):
         d = binlid2dict(bin_lid)
     return jsonr(d)
@@ -223,12 +222,12 @@ def get_mosaic_layout(time_series, lid, scaled_size, page):
     # perform layout operation
     return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
 
-def layout2json(layout):
+def layout2json(layout, scale):
     """Doesn't actually produce JSON but rather JSON-serializable representation of the tiles"""
     for t in layout:
         (w,h) = t.size
         (x,y) = t.position
-        yield dict(pid=t.image['pid'], width=w, height=h, x=x, y=y)
+        yield dict(pid=t.image['pid'], width=w*scale, height=h*scale, x=x*scale, y=y*scale)
 
 @app.route('/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic(pid, params='/'):
@@ -251,7 +250,7 @@ def serve_mosaic(pid, params='/'):
     layout = get_mosaic_layout(time_series, hit.bin_lid, scaled_size, page)
     # serve JSON on request
     if hit.extension == 'json':
-        return jsonr(layout2json(layout))
+        return jsonr(layout2json(layout, scale))
     # resolve ROI file
     roi_path = resolve_roi(time_series,hit.bin_lid)
     # read all images needed for compositing and inject into Tiles
@@ -436,7 +435,7 @@ def serve_roi(hit):
         limit=2 # read two targets, in case we need to stitch
     else:
         limit=1 # just read one
-    targets = list(read_adc(LocalFileSource(adc_path),target_no=hit.target_no,limit=limit))
+    targets = list(read_targets(adc_path, hit.target_no, limit))
     if len(targets) == 0: # no targets? return Not Found
         abort(404)
     # open the ROI file as we may need to read more than one
@@ -447,6 +446,7 @@ def serve_roi(hit):
             pairs = targets
         if len(pairs) >= 1: # found one?
             (a,b) = pairs[0] # split pair
+            app.logger.debug(pairs[0]);
             images = list(read_rois((a,b),roi_file=roi_file)) # read the images
             (roi_image, mask) = stitch((a,b), images) # stitch them
         else:

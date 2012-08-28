@@ -142,12 +142,32 @@ $(document).ready(function() {
 		.find('div:last').imagePager(images, width, height)
 		.bind('change', function(event, image_href) {
 		    console.log('user paged to '+image_href);
+		    $('#workspace').data('mosaic_image_href', image_href);
+		    $('#workspace').removeData('mosaic_layout');
 		}).delegate('.page_image', 'click', function(event) {
 		    // figure out where the click was
 		    var clickX = event.pageX - $(this).offset().left;
 		    var clickY = event.pageY - $(this).offset().top;
-		    console.log('user clicked at '+clickX+','+clickY);
-		    // FIXME now figure out which ROI the user clicked on
+		    //console.log('user clicked at '+clickX+','+clickY);
+		    function roi_click(layout) {
+			$.each(layout, function(ix, tile) {
+			    if(clickX >= tile.x && clickX <= tile.x + tile.width &&
+			       clickY >= tile.y && clickY <= tile.y + tile.height) {
+				console.log('user clicked on '+tile.pid);
+				$('#roi_image').empty().append('<img src="'+tile.pid+'.jpg">');
+			    }
+			});
+		    }
+		    var mosaic_layout = $('#workspace').data('mosaic_layout');
+		    if(mosaic_layout == undefined) {
+			var mosaic_image_href = $('#workspace').data('mosaic_image_href');
+			$.getJSON(mosaic_image_href.replace('jpg','json'), function(layout) {
+			    roi_click(layout);
+			});
+		    } else {
+			roi_click(mosaic_layout);
+		    }
 		});
 	});
+    $('body').append('<div id="roi_image"></div>');
 });
