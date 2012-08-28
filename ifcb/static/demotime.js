@@ -1,25 +1,22 @@
 $(document).ready(function() {
     // add a title
-    var title = 'MVCO data volume';
-    $('body').append('<h1>'+title+'</h1>');
+    var title = 'IFCB @ MVCO 2006-present'
+    $('body').append('<h1>'+title+'</h1><div id="workspace"></div>')
+	.find('#workspace').css('display','none')
+	.data('mosaic_width',600)
+	.data('mosaic_height',480)
+	.data('roi_scale',0.333)
+	.data('selected_pid','')
+	.data('selected_date','');
     function showNearest(date) {
 	var ds = date.toISOString();
 	$.getJSON('/api/feed/nearest/'+ds, function(r) { // find the nearest bin
 	    console.log(JSON.stringify(r)); // FIXME need the date
-	    // now draw a multi-page mosaic
-	    var pid = r.pid;
-	    var roi_scale = 0.333; // scaling factor per roi
-	    var width = 600; // width of displayed mosaic
-	    var height = 480; // height of displayed mosaic
 	    $('#date_label').empty().append(r.date);
-	    // put 30 pages on the pager, just in case it's a huge bin
-	    var images = []
-	    for(page=1; page <= 30; page++) {
-		images.push('/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg');
-	    }
-	    // create an image pager
-	    $('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
-		.find('div:last').imagePager(images, width, height);
+	    $('#workspace').data('selected_pid',r.pid);
+	    $('#workspace').data('selected_date',r.date);
+	    // now draw a multi-page mosaic
+	    $('#mosaic_pager').trigger('drawMosaic');
 	});
     }
     // add the timeline control
@@ -33,16 +30,21 @@ $(document).ready(function() {
 	});
 	*/
 	.timeline_bind('timechange', function(timeline, r) {
-	    var date = r.time;
-	    $('#date_label').empty().append(date.toISOString());
+	    $('#date_label').empty().append(r.time.toISOString());
 	}).timeline_bind('timechanged', function(timeline, r) {
 	    showNearest(r.time);
-	}).timeline_bind('select', function(t) { // FIXME won't retrigger when user clicks on same date
-	    var date = t.hoverDate;
-	    $.each(t.getSelection(), function(ix, s) {
-		//var date = t.getItem(s.row).start;
-		$('#date_label').empty().append(date.toISOString());
-		showNearest(date);
+	}).getTimeline(function(t) {
+	    // because timeline's select event is too coarse, we want to handle
+	    // every click. then we need to interrogate the timeline object itself,
+	    // hence the surrounding call to getTimeline
+	    $('#timeline').bind('click', {timeline:t}, function(event) {
+		var clickDate = event.data.timeline.clickDate;
+		// the call to "get selection" ensures that we clicked on data
+		// and not on a gap.
+		$.each(t.getSelection(), function(ix, s) {
+		    $('#date_label').empty().append(clickDate.toISOString());
+		    showNearest(clickDate);
+		});
 	    });
 	});
     ;
@@ -97,5 +99,52 @@ $(document).ready(function() {
     // our date label goes below the timeline
     $('body').append('<div id="date_label"></div>');
     // and the mosaic pager is below that
-    $('body').append('<div id="mosaic_pager"></div>');
+    $('body').append('<div id="mosaic_controls"></div>');
+    var mosaic_sizes = [[640,480],[1280,720],[1280,1280]];
+    $.each(mosaic_sizes, function(ix, size) {
+	var width = size[0];
+	var height = size[1];
+	$('#mosaic_controls').append('<a>'+width+'x'+height+'</a>')
+	    .find('a:last')
+	    .button()
+	    .click(function() {
+		var selected_pid = $('#workspace').data('selected_pid')
+		if(selected_pid != undefined) {
+		    $('#workspace').data('mosaic_width', width)
+			.data('mosaic_height', height);
+		    $('#mosaic_pager').trigger('drawMosaic');
+		}		    
+	    });
+    });
+    var magnifications = [10, 25, 33, 50, 66, 75, 100];
+    $.each(magnifications, function(ix, magnification) {
+	$('#mosaic_controls').append('<a>'+magnification+'%</a>')
+	    .find('a:last')
+	    .button()
+	    .click(function() {
+		var selected_pid = $('#workspace').data('selected_pid');
+		if(selected_pid != undefined) {
+		    $('#workspace').data('roi_scale', magnification/100);
+		    $('#mosaic_pager').trigger('drawMosaic');
+		}		    
+	    });
+    });
+    $('body').append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
+	.bind('drawMosaic', function() {
+	    var pid = $('#workspace').data('selected_pid');
+	    var date = $('#workspace').data('selected_date');
+	    var roi_scale = $('#workspace').data('roi_scale'); // scaling factor per roi
+	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
+	    var height = $('#workspace').data('mosaic_height'); // height of displayed mosaic
+	    // put 30 pages on the pager, just in case it's a huge bin
+	    var images = []
+	    for(var page=1; page <= 30; page++) {
+		var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
+		images.push(url);
+	    }
+	    // create an image pager
+	    $('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
+		.find('div:last').imagePager(images, width, height);
+	}).bind('click', function(event) {
+	});
 });

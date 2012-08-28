@@ -12,6 +12,18 @@
 		    var x = event.clientX - $this.find('div.timeline-frame div').offset().left;
 		    return new Date(event.data.timeline.screenToTime(x))
 		}
+		// FIXME remove these in deference to timeline's event API
+		// and use timeline_bind in calling scripts
+		$this.bind('mousemove', {timeline:timeline}, function(event) {
+		    $.extend(timeline, { hoverDate: screenToDate(event) })
+		    //$this.trigger('dateHover', [screenToDate(event), event.clientX]);
+		});
+		$this.bind('click', {timeline:timeline}, function(event) {
+		    console.log('clicked on '+screenToDate(event));
+		    $.extend(timeline, { clickDate: screenToDate(event) })
+		    //console.log('extending timeline with clickDate');
+		    //$this.trigger('dateClick', [screenToDate(event), event.clientX]);
+		});
 		// trigger this when you want to show data
 		// FIXME should deal with being triggered twice in a row
 		$this.bind('showdata', function(event, data, options) {
@@ -23,19 +35,20 @@
 			}
 		    }
 		    timeline.draw(data, options);
-		    // FIXME remove these in deference to timeline's event API
-		    // and use timeline_bind in calling scripts
-		    $this.bind('mousemove', {timeline:timeline}, function(event) {
-			$.extend(timeline, { hoverDate: screenToDate(event) })
-			//$this.trigger('dateHover', [screenToDate(event), event.clientX]);
-		    });
-		    $this.bind('click', {timeline:timeline}, function(event) {
-			//console.log('extending timeline with clickDate');
-			//$this.trigger('dateClick', [screenToDate(event), event.clientX]);
-		    });
 		});
             });
         },//timeline
+	getTimeline: function(callback) {
+	    // provide direct access to the timeline object in a callback
+	    return this.each(function() {
+		var $this = $(this);
+		// find the
+		var timeline = $this.data('timeline');
+		if(timeline != undefined) {
+		    callback(timeline)
+		}
+	    });
+	},//getTimeline
 	timeline_bind: function(event, callback) {
 	    // here we allow binding to timeline's events, and in the handler
 	    // pass the timeline object back, so the timeline API can be used,
