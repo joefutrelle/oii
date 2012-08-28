@@ -5,9 +5,7 @@ $(document).ready(function() {
 	.find('#workspace').css('display','none')
 	.data('mosaic_width',600)
 	.data('mosaic_height',480)
-	.data('roi_scale',0.333)
-	.data('selected_pid','')
-	.data('selected_date','');
+	.data('roi_scale',0.333);
     function showNearest(date) {
 	var ds = date.toISOString();
 	$.getJSON('/api/feed/nearest/'+ds, function(r) { // find the nearest bin
@@ -100,7 +98,7 @@ $(document).ready(function() {
     $('body').append('<div id="date_label"></div>');
     // and the mosaic pager is below that
     $('body').append('<div id="mosaic_controls"></div>');
-    var mosaic_sizes = [[640,480],[1280,720],[1280,1280]];
+    var mosaic_sizes = [[640,480],[800,600],[1280,720],[1280,1280]];
     $.each(mosaic_sizes, function(ix, size) {
 	var width = size[0];
 	var height = size[1];
@@ -108,12 +106,9 @@ $(document).ready(function() {
 	    .find('a:last')
 	    .button()
 	    .click(function() {
-		var selected_pid = $('#workspace').data('selected_pid')
-		if(selected_pid != undefined) {
-		    $('#workspace').data('mosaic_width', width)
-			.data('mosaic_height', height);
-		    $('#mosaic_pager').trigger('drawMosaic');
-		}		    
+		$('#workspace').data('mosaic_width', width)
+		    .data('mosaic_height', height);
+		$('#mosaic_pager').trigger('drawMosaic');
 	    });
     });
     var magnifications = [10, 25, 33, 50, 66, 75, 100];
@@ -122,16 +117,16 @@ $(document).ready(function() {
 	    .find('a:last')
 	    .button()
 	    .click(function() {
-		var selected_pid = $('#workspace').data('selected_pid');
-		if(selected_pid != undefined) {
-		    $('#workspace').data('roi_scale', magnification/100);
-		    $('#mosaic_pager').trigger('drawMosaic');
-		}		    
+		$('#workspace').data('roi_scale', magnification/100);
+		$('#mosaic_pager').trigger('drawMosaic');
 	    });
     });
     $('body').append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
 	.bind('drawMosaic', function() {
 	    var pid = $('#workspace').data('selected_pid');
+	    if(pid == undefined) {
+		return;
+	    }
 	    var date = $('#workspace').data('selected_date');
 	    var roi_scale = $('#workspace').data('roi_scale'); // scaling factor per roi
 	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
