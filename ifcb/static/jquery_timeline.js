@@ -35,6 +35,15 @@
 			}
 		    }
 		    timeline.draw(data, options);
+		    // if utc is set, then make sure current time and custom time are offset by UTC
+		    if(options.utc) {
+			var now = new Date();
+			var nowOffset = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
+			timeline.setCurrentTime(nowOffset);
+			if(options.showCustomTime) {
+			    timeline.setCustomTime(nowOffset);
+			}
+		    }
 		});
             });
         },//timeline

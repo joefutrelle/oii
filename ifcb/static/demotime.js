@@ -8,6 +8,11 @@ $(document).ready(function() {
 	.data('mosaic_width',640)
 	.data('mosaic_height',480)
 	.data('roi_scale',0.333);
+    // timeline thinks all timestamps are in the current locale, so we need
+    // to fake that they're UTC
+    function asUTC(date) {
+	return new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
 	var ds = date.toISOString();
@@ -23,8 +28,10 @@ $(document).ready(function() {
     $('body').append('<div id="timeline"></div>').find('div').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
-	    $('#date_label').empty().append(r.time.toISOString());
+	    $('#date_label').empty().append(asUTC(r.time).toISOString());
 	}).timeline_bind('timechanged', function(timeline, r) {
+	    // correct tooltip to be in UTC
+	    $('.timeline-customtime').attr('title',asUTC(r.time).toISOString());
 	    // when the user is done dragging, show the nearest bin
 	    showNearest(r.time);
 	}).getTimeline(function(t) {
@@ -34,12 +41,11 @@ $(document).ready(function() {
 		// every click. then we need to interrogate the timeline object itself,
 		// hence the surrounding call to getTimeline
 		var clickDate = event.data.timeline.clickDate;
-		// the call to "get selection" ensures that we clicked on data
-		// and not on a gap.
-		$.each(t.getSelection(), function(ix, s) {
-		    $('#date_label').empty().append(clickDate.toISOString());
-		    showNearest(clickDate);
-		});
+		if(clickDate != undefined) {
+		    // because timeline uses the current locale, we need to adjust for timezone offset
+		    var utcClickDate = asUTC(clickDate);
+		    showNearest(utcClickDate);
+		}
 	    });
 	});
     // now load the data volume series
@@ -48,6 +54,8 @@ $(document).ready(function() {
     $.getJSON('/api/volume', function(volume) {
 	// make a bar graph showing data volume
 	var data = [];
+	var minDate = new Date();
+	var maxDate = new Date(0);
 	$.each(volume, function(ix, day_volume) {
 	    // for each day/volume record, make a bar
 	    // get the volume data for that day
@@ -79,14 +87,26 @@ $(document).ready(function() {
 	    };
 	    // we're done with one bar
 	    data.push(item);
+	    // track min/max date
+	    if(start <= minDate) {
+		minDate = start;
+	    }
+	    if(end >= maxDate) {
+		maxDate = end;
+	    }
 	});
+	// add a week to max date so that current time isn't squished over to the right
+	maxDate = new Date(maxDate.getTime() + (86400000 * 7));
 	// layout parameters accepted by showdata and passed to underlying widget
 	var timeline_options = {
 	    'width':  '100%',
 	    'height': '150px',
 	    'style': 'box',
+	    'min': minDate,
+	    'max': maxDate,
 	    'showCustomTime': true,
-	    'showNavigation': true
+	    'showNavigation': true,
+	    'utc': true
 	};
 	// now tell the timeline plugin to draw it
 	$('#timeline').trigger('showdata', [data, timeline_options]);

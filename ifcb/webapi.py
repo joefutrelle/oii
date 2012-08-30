@@ -30,7 +30,7 @@ from werkzeug.contrib.cache import SimpleCache
 # TODO JSON on everything
 
 app = Flask(__name__)
-app.debug = True
+#app.debug = True
 
 # importantly, set max-age on static files (e.g., javascript) to something really short
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
@@ -49,6 +49,7 @@ PSQL_CONNECT='psql_connect'
 FEED='feed'
 FIXITY='fixity'
 PORT='port'
+DEBUG='debug'
 
 # FIXME do this in main
 # FIXME this should be selected by time series somehow
@@ -69,6 +70,11 @@ def configure(config=None):
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
     app.config[FIXITY] = IfcbFixity(app.config[PSQL_CONNECT], rs)
+    try:
+        if config.debug in ['True', 'true', 'T', 't', 'Yes', 'yes', 'debug']:
+            app.debug = True
+    except:
+        pass
     try:
         app.config[PORT] = int(config.port)
     except:
