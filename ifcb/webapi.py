@@ -11,12 +11,12 @@ from oii.times import iso8601
 from oii.webapi.utils import jsonr
 import urllib
 from oii.utils import order_keys
-from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, WIDTH, HEIGHT, STITCHED
+from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
-from oii.ifcb.stitching import find_pairs, stitch
+from oii.ifcb.stitching import find_pairs, stitch, stitched_box
 from oii.io import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
@@ -217,7 +217,8 @@ def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort option
     def descending_size(t):
         (w,h) = t.size
         return 0 - (w * h)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in list_targets(hit, adc_path=adc_path)]
+    # using read_target means we don't stitch. this is simply for performance.
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in list_targets(hit, adc_path=adc_path, stitch_targets=False)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -256,7 +257,7 @@ def serve_mosaic(pid, params='/'):
     layout = get_mosaic_layout(time_series, hit.bin_lid, scaled_size, page)
     # serve JSON on request
     if hit.extension == 'json':
-        return jsonr(layout2json(layout, scale))
+        return jsonr(list(layout2json(layout, scale)))
     # resolve ROI file
     roi_path = resolve_roi(time_series,hit.bin_lid)
     # read all images needed for compositing and inject into Tiles
@@ -264,7 +265,7 @@ def serve_mosaic(pid, params='/'):
         for tile in layout:
             target = tile.image
             for roi in read_rois([target], roi_file=roi_file):
-                # FIXME need to stitch: this is bug #1636
+                # as per resolution of #1636 we do not stitch, so as to improve performance
                 tile.image = roi # should only iterate once
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
@@ -333,23 +334,26 @@ def resolve(time_series,lid):
 def read_targets(adc_path, target_no=1, limit=-1):
     return list(read_adc(LocalFileSource(adc_path), target_no, limit))
 
-def list_targets(hit, target_no=1, limit=-1, adc_path=None):
+def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None):
+    if stitch_targets is None:
+        stitch_targets = app.config[STITCH]
     if adc_path is None:
         adc_path = resolve_adc(hit.time_series, hit.bin_lid)
     targets = read_targets(adc_path, target_no, limit)
-    if app.config[STITCH]:
+    if stitch_targets:
         # in the stitching case we need to compute "stitched" flags based on pairs
         pairs = find_pairs(targets)
-        As = [a for (a,_) in pairs]
-        for target in targets:
-            if target in As:
-                target[STITCHED] = 1
-            else:
-                target[STITCHED] = 0
-        # and we have to exclude the second of each pair from the list of targets
+        # correct image metrics
+        for a,b in pairs:
+            (a[LEFT], a[BOTTOM], a[WIDTH], a[HEIGHT]) = stitched_box([a,b])
+            a[STITCHED] = 1
+            b[STITCHED] = 0
+        # exclude the second of each pair from the list of targets
         Bs = [b for (_,b) in pairs]
         targets = filter(lambda target: target not in Bs, targets)
     for target in targets:
+        if not STITCHED in target:
+            target[STITCHED] = 0
         # add a binID and pid what are the right keys for these?
         target['binID'] = '%s' % hit.bin_pid
         target['pid'] = '%s_%05d' % (hit.bin_pid, target[TARGET_NUMBER])
