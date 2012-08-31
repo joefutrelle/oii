@@ -53,6 +53,13 @@
  * Declare a unique namespace for CHAP's Common Hybrid Visualisation Library,
  * "links"
  */
+
+/*
+Modified version 2.1.1 to render some dates in UTC rather than current locale.
+Modifications by Joe Futrelle (hereafter JMF) at Woods Hole Oceanographic Institution,
+August 31, 2012. See comments marked JMF below.
+*/
+
 if (typeof links === 'undefined') {
     links = {};
     // important: do not use var, as "var links = {};" will overwrite 
@@ -1706,7 +1713,10 @@ links.Timeline.prototype.redrawCurrentTime = function() {
     var visible = (x > -size.contentWidth && x < 2 * size.contentWidth);
     dom.currentTime.style.display = visible ? '' : 'none';
     dom.currentTime.style.left = x + "px";
-    dom.currentTime.title = "Current time: " + nowOffset;
+    // JMF modified this line to use toISOString to render the date, because
+    // the GBMF OII apps all use UTC. See top of the file for change rationale.
+    // August 31, 2012
+    dom.currentTime.title = "Current time: " + nowOffset.toISOString();
 
     // start a timer to adjust for the new time
     if (this.currentTimeTimer != undefined) {
