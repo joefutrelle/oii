@@ -154,50 +154,15 @@ $(document).ready(function() {
 	    var roi_scale = $('#workspace').data('roi_scale'); // scaling factor per roi
 	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
 	    var height = $('#workspace').data('mosaic_height'); // height of displayed mosaic
-	    // put 30 pages on the pager, just in case it's a huge bin
-	    var images = [];
-	    for(var page=1; page <= 30; page++) {
-		// each page is a mosaic API call URL with a successive page number
-		var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
-		images.push(url);
-	    }
 	    // list of images in hand, create the image pager
-	    $('#mosaic_pager').empty().append('<div/><p class="bin_label">'+pid+'</p>')
-		.find('div:last').imagePager(images, width, height) // use the image pager plugin
-		.bind('change', function(event, image_href) { // when the user changes which page they're viewing
-		    console.log('user paged to '+image_href);
-		    // record the page's mosaic image URL in the workspace for later
-		    $('#workspace').data('mosaic_image_href', image_href);
-		    $('#workspace').removeData('mosaic_layout');
-		}).delegate('.page_image', 'click', function(event) { // when the user clicks on the mosaic image
-		    // figure out where the click was
-		    var clickX = event.pageX - $(this).offset().left;
-		    var clickY = event.pageY - $(this).offset().top;
-		    // now figure out which ROI the click was in. that requires the layout, see below
-		    function roi_click(layout) {
-			$.each(layout, function(ix, tile) {
-			    if(clickX >= tile.x && clickX <= tile.x + tile.width &&
-			       clickY >= tile.y && clickY <= tile.y + tile.height) {
-				console.log('user clicked on '+tile.pid);
-				// we found it. now load the image and unscale it
-				$('#roi_image').empty()
-				    // use grayLoadingImage from image_pager because it might take a while to load
-				    .grayLoadingImage(tile.pid+'.jpg', tile.width / roi_scale, tile.height / roi_scale)
-				    .append('<div>'+tile.pid+'</div>');
-			    }
-			});
-		    }
-		    // the layout is cached in the workspace
-		    var mosaic_layout = $('#workspace').data('mosaic_layout');
-		    if(mosaic_layout == undefined) { // but if it's not there
-			// fetch it from the mosaic page image URL except with the extension "json"
-			var mosaic_image_href = $('#workspace').data('mosaic_image_href');
-			$.getJSON(mosaic_image_href.replace('jpg','json'), function(layout) {
-			    roi_click(layout); // now figure out where the user clicked
-			});
-		    } else {
-			roi_click(mosaic_layout); // figure out where the user clicked
-		    }
+	    $('#mosaic_pager').mosaicPager(pid, width, height, roi_scale)
+		.bind('roi_click', function(event, roi_pid, roi_width, roi_height) {
+		    console.log(roi_pid)
+		    // we found it. now load the image and unscale it
+		    $('#roi_image').empty()
+		    // use grayLoadingImage from image_pager because it might take a while to load
+			.grayLoadingImage(roi_pid+'.jpg', roi_width / roi_scale, roi_height / roi_scale)
+			.append('<div>'+roi_pid+'</div>');
 		});
 	});
     // now add a place to display the ROI image
