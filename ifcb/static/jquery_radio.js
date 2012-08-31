@@ -7,8 +7,10 @@
 // events:
 // select(value) - a value is selected
 (function($) {
+    var seq = 0;
     $.fn.extend({
 	// each choice is a sequence of label, value
+	// or its a list of values and tostring is a function that returns a label for each one
 	radio: function(choices, tostring) {
 	    if(tostring != undefined) {
 		var newChoices = [];
@@ -20,16 +22,20 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		$this.empty();
+		var name='jquery_radio_'+(seq++);
 		$.each(choices, function(ix, choice) {
 		    var label = choice[0];
 		    var value = choice[1];
-		    $this.append('<a>'+label+'</a>')
-			.find('a:last')
-			.button()
+		    var id='jquery_radio_'+(seq++);
+		    $this.append('<input type="radio" name="'+name+'" id="'+id+'"><label for="'+id+'">'+label+'</label>')
+			.find('input:last')
 			.click(function() {
 			    $this.trigger('select', [value]);
 			});//click
 		});//each choice
+		setTimeout(function() {
+		    $this.buttonset();
+		}, 0);
 	    });// each in radio
 	}//radio
     });//$.fn.extend
