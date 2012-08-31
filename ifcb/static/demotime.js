@@ -117,7 +117,7 @@ $(document).ready(function() {
     $('body').append('<div id="mosaic_controls"></div>');
     // add some controls for changing the size of the mosaic
     var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
-    $('#mosaic_controls').append('<span></span>').find('span:last')
+    $('#mosaic_controls').append('Mosaic size: <span></span>').find('span:last')
 	.radio(mosaic_sizes, function(size) {
  	    return size[0] + 'x' + size[1];
 	}).bind('select', function(event, value) {
@@ -129,7 +129,7 @@ $(document).ready(function() {
 	});
     // add some controls for changing the roi scale in the mosaic
     var roi_scales = [15, 25, 33, 40, 66, 100];
-    $('#mosaic_controls').append('<span></span>').find('span:last')
+    $('#mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
 	.radio(roi_scales, function(scale) {
 	    return scale + '%';
 	}).bind('select', function(event, value) {
@@ -157,11 +157,16 @@ $(document).ready(function() {
 		    $('#roi_image').empty()
 		    // use grayLoadingImage from image_pager because it might take a while to load
 			.grayLoadingImage(roi_pid+'.jpg', roi_width / roi_scale, roi_height / roi_scale)
-			.append('<div>'+roi_pid+'</div>');
+			.append('<div></div>')
+			.find('div:last')
+			.css('clear','right')
+			.css('float','right')
+			.append('<span class="bin_label"><a href="'+roi_pid+'.html">'+roi_pid+'</a></span>')
+			.append('<span> <a href="'+pid+'.xml">XML</a></span>')
+			.append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
+			.end().find('.imagepager_frame').css('float','right');
 		});
 	});
     // now add a place to display the ROI image
-    $('body').append('<div id="roi_image"></div>')
-	.find('div:last')
-	.css('float','right');
+    $('body').append('<div id="roi_image"></div>');
 });

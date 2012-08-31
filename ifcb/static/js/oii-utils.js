@@ -22,6 +22,7 @@ function query_param(name,default_value) {
 }
 
 /* make a JSON AJAX request */
+// DEPRECATED use $.getJSON instead
 function with_json_request(url, fn) {
     $.ajax({
         url : url,
@@ -31,6 +32,8 @@ function with_json_request(url, fn) {
     });
 }
 /* console log */
+// DEPRECATED destroys line number information.
+// use console.log instead
 function clog(s) {
     if (window.console) console.log(s);
 }
@@ -78,4 +81,8 @@ function elide(string, len) {
     } else {
 	return string;
     }
+}
+
+function changeExtension(path_or_url, new_extension) {
+    return path_or_url.replace(/\.[^.]+$/, '.' + new_extension);
 }

@@ -21,7 +21,14 @@
 		    images.push(url);
 		}
 		// list of images in hand, create the image pager
-		$this.empty().append('<div/><p class="bin_label">'+pid+'</p>')
+		$this.empty().append('<div></div>')
+		    .append('<span class="bin_label"><a href="'+pid+'.html">'+pid+'</a></span>')
+		    .append('<span> <a href="'+pid+'.adc">ADC</a></span>')
+		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
+		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')
+		    .append('<span> <a href="'+pid+'.csv">CSV</a></span>')
+		    .append('<span> <a href="'+pid+'.xml">XML</a></span>')
+		    .append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
 		    .find('div:last').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
