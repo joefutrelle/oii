@@ -116,30 +116,26 @@ $(document).ready(function() {
     // and the mosaic pager is below that
     $('body').append('<div id="mosaic_controls"></div>');
     // add some controls for changing the size of the mosaic
-    var mosaic_sizes = [[640,480],[800,600],[1280,720],[1280,1280]];
-    $.each(mosaic_sizes, function(ix, size) {
-	var width = size[0];
-	var height = size[1];
-	$('#mosaic_controls').append('<a>'+width+'x'+height+'</a>')
-	    .find('a:last')
-	    .button()
-	    .click(function() { // when clicked, trigger a redraw
-		$('#workspace').data('mosaic_width', width)
-		    .data('mosaic_height', height);
-		$('#mosaic_pager').trigger('drawMosaic');
-	    });
-    });
+    var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
+    $('#mosaic_controls').append('<span></span>').find('span:last')
+	.radio(mosaic_sizes, function(size) {
+ 	    return size[0] + 'x' + size[1];
+	}).bind('select', function(event, value) {
+	    var width = value[0];
+	    var height = value[1];
+	    $('#workspace').data('mosaic_width', width)
+		.data('mosaic_height', height);
+	    $('#mosaic_pager').trigger('drawMosaic');
+	});
     // add some controls for changing the roi scale in the mosaic
-    var magnifications = [15, 25, 33, 40, 66, 100];
-    $.each(magnifications, function(ix, magnification) {
-	$('#mosaic_controls').append('<a>'+magnification+'%</a>')
-	    .find('a:last')
-	    .button()
-	    .click(function() { // when clicked, trigger a redraw
-		$('#workspace').data('roi_scale', magnification/100);
-		$('#mosaic_pager').trigger('drawMosaic');
-	    });
-    });
+    var roi_scales = [15, 25, 33, 40, 66, 100];
+    $('#mosaic_controls').append('<span></span>').find('span:last')
+	.radio(roi_scales, function(scale) {
+	    return scale + '%';
+	}).bind('select', function(event, value) {
+	    $('#workspace').data('roi_scale', value/100);
+	    $('#mosaic_pager').trigger('drawMosaic');
+	});
     // now add the mosaic pager
     $('body').append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
 	.css('float','left')
@@ -150,11 +146,10 @@ $(document).ready(function() {
 		return;
 	    }
 	    // get the selection and user preferred size/scale from the workspace
-	    var date = $('#workspace').data('selected_date');
 	    var roi_scale = $('#workspace').data('roi_scale'); // scaling factor per roi
 	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
 	    var height = $('#workspace').data('mosaic_height'); // height of displayed mosaic
-	    // list of images in hand, create the image pager
+	    // create the mosaic pager
 	    $('#mosaic_pager').mosaicPager(pid, width, height, roi_scale)
 		.bind('roi_click', function(event, roi_pid, roi_width, roi_height) {
 		    console.log(roi_pid)
