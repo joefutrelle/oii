@@ -44,7 +44,7 @@
 				   clickY >= tile.y && clickY <= tile.y + tile.height) {
 				    console.log('user clicked on '+tile.pid);
 				    setTimeout(function() {
-					$this.trigger('roi_click', [tile.pid, tile.width, tile.height]);
+					$this.trigger('roi_click', tile.pid);
 				    }, 0);
 				}
 			    });
