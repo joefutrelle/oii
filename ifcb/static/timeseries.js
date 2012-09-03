@@ -29,7 +29,7 @@ function timeseries_add(e, pid) {
 	});
     }
     // add the timeline control
-    $(e).append('<div id="timeline"></div>').find('div').timeline()
+    $(e).append('<div id="timeline"></div>').find('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
 	    $('#date_label').empty().append(asUTC(r.time).toISOString());
@@ -117,6 +117,8 @@ function timeseries_add(e, pid) {
     });
     // our date label goes below the timeline
     $(e).append('<div id="date_label"></div>');
+    // now add a place to display the ROI image
+    $(e).append('<div id="roi_image"></div>');
     // and the mosaic pager is below that
     $(e).append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
 	.css('float','left')
@@ -132,18 +134,15 @@ function timeseries_add(e, pid) {
 		    .click(function() {
 			// if user clicks on roi image, go to roi page
 			window.location.href = roi_pid + '.html';
-		    }).append('<div></div>')
-		    .find('div:last')
-		    .css('clear','right')
-		    .css('float','right')
-		    .append('<span class="bin_label"><a href="'+roi_pid+'.html">'+roi_pid+'</a></span>')
-		    .append('<span> <a href="'+roi_pid+'.xml">XML</a></span>')
-		    .append('<span> <a href="'+roi_pid+'.rdf">RDF</a></span>')
-		    .end().find('.imagepager_frame').css('float','right');
+		    }).css('float','right')
+		    .css('text-align','right')
+		    .append('<div class="roi_info bin_label"></div>').find('.roi_info')
+		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
+		    .append('<a href="'+roi_pid+'.xml">XML</a> ')
+		    .append('<a href="'+roi_pid+'.rdf">RDF</a>').end()
+		    .find('.imagepager_frame').css('float','right');
 	    });
 	});
-    // now add a place to display the ROI image
-    $(e).append('<div id="roi_image"></div>');
     // if a pid is selected, show it
     if(pid != undefined) {
 	showMosaic(pid, false);
