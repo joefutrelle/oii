@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>Sample Bin {{hit.bin_pid}}</title>
+    <title>Target ROI {{hit.target_pid}}</title>
     <!-- jQuery -->
     <script type="text/javascript" src="{{static}}js/jquery-1.5.1.min.js"></script>
     <!-- jQuery UI -->
@@ -16,47 +16,20 @@
     <link type="text/css" href="{{static}}dashboard.css" rel="Stylesheet"/>
     <script type="text/javascript" src="{{static}}jquery_radio.js"></script>
     <script type="text/javascript" src="{{static}}mosaic_pager.js"></script>
-    <script type="text/javascript" src="{{static}}bin.js"></script>
-    <script type="text/javascript">
-$(document).ready(function() {
-    $('#mosaic_pager').bin_page('{{hit.bin_pid}}');
-});
+    <script type="text/javascript" src="{{static}}target.js"></script>
     </script>
 </head>
 <body>
-  <h1>{{hit.bin_pid}}</h1>
-  <div id="mosaic_pager"></div>
+  <h1>{{hit.target_pid}}</h1>
+  <div id="roi_pager"><img src="{{hit.target_pid}}.jpg"></div>
   <div style="clear: both"></div>
-  <h2>{{hit.date}}</h2>
-  <div>
-    <div class="metadata_key">context</div>
-{% for v in context %}
-    <div>{{v}}</div>
-{% endfor %}
-  </div>
-{% for k,v in properties %}
+{% for k,v in target %}
   <div>
     <span class="metadata_key">{{k}}</span>
     <span class="metadata_value">{{v}}</span>
   </div>
 {% endfor %}
 <table>
-<tr class="tbl">
-  <th class="tbl">#/trigger</th>
-  <th class="tbl">pid</th>
-  <th class="tbl">size</th>
-  <th class="tbl">fl. L/H</th>
-  <th class="tbl">scat. L/H</th>
-</tr>
-{% for target in targets %}
-  <tr class="tbl">
-    <td class="tbl">{{target.targetNumber}}/{{target.trigger}}</td>
-    <td class="tbl"><a href="{{target.pid}}.html">{{target.pid}}</a></td>
-    <td class="tbl">{{target.width}}x{{target.height}}</td>
-    <td class="tbl">{{"%.2f/%.2f"|format(target.fluorescenceLow,target.fluorescenceHigh)}}</td>
-    <td class="tbl">{{"%.2f/%.2f"|format(target.scatteringLow,target.scatteringHigh)}}</td>
-  </tr>
-{% endfor %}
 </body>
 </html>
 

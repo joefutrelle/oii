@@ -308,8 +308,8 @@ def resolve(time_series,lid):
     # use the PID resolver (which also works for LIDs)
     hit = resolve_pid(time_series,lid)
     # construct the namespace from the configuration and time series ID
-    hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
-    hit.bin_pid = hit.namespace + hit.bin_lid
+    #hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
+    #hit.bin_pid = hit.namespace + hit.bin_lid
     hit.date = iso8601(strptime(hit.date, hit.date_format))
     # determine extension
     if hit.extension is None: # default is .rdf
@@ -426,11 +426,13 @@ def serve_target(hit,mimetype):
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
     target = [(k,target[k]) for k in order_keys(target, schema_keys)]
     # now populate the template appropriate for the MIME type
-    template = dict(hit=hit,target=target)
+    template = dict(hit=hit,target=target,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
         return Response(render_template('target.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('target.rdf',**template), mimetype='text/xml')
+    elif mimetype == 'text/html':
+        return Response(render_template('target.html',**template), mimetype='text/html')
     elif mimetype == 'application/json':
         return jsonr(dict(target))
     print minor_type(mimetype)

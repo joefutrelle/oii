@@ -12,5 +12,15 @@ body {
     font-size: small !important;
 }
 .tbl {
+    padding-left: 4px;
+    padding-right: 4px;
     font-family: monospace;
+}
+.tbl_even {
+    background: #aaaaaa;
+}
+.metadata_key {
+    font-style: italic;
+}
+.metadata_value {
 }

@@ -64,6 +64,7 @@
 	    var ROI_SCALE = 'mosaic_pager_roi_scale';
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
+		// store user preferences in data
 		$this.data(PID, pid);
 		$this.data(WIDTH, width == undefined ? 800 : width);
 		$this.data(HEIGHT, height == undefined ? 600 : height);
@@ -71,6 +72,7 @@
 		// add some controls for changing the size of the mosaic
 		var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
 		var roi_scales = [15, 25, 33, 40, 66, 100];
+		// add size controls
 		$this.append('<div class="mosaic_controls"></div>').find('.mosaic_controls')
 		    .append('Mosaic size: <span></span>').find('span:last')
 		    .radio(mosaic_sizes, function(size) {
@@ -81,7 +83,7 @@
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .find('.mosaic_pager').trigger('drawMosaic');
 		    });
-		// add some controls for changing the roi scale in the mosaic
+		// add ROI scale controls
 		$this.find('.mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
 		    .radio(roi_scales, function(scale) {
 			return scale + '%';
@@ -89,26 +91,25 @@
 			$this.data(ROI_SCALE, value/100)
 			    .find('.mosaic_pager').trigger('drawMosaic');
 		    });
+		// now add the mosaic pager
 		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
 		    .css('float','left'); // FIXME remove
-		$this.bind('drawMosaic', function(event, the_pid) { // on redraw
-		    console.log('draw mosaic triggered with '+the_pid);
-		    // make sure something is selected
+		// on redraw
+		$this.bind('drawMosaic', function(event, the_pid) { 
+		    // if the_pid is undefined, use whatever the pid was set to before
 		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
+		    // if there's no pid at this point
 		    if(pid == undefined) {
-			return;
+			return; // there's nothing to do
 		    }
-		    $this.data(PID, pid);
+		    $this.data(PID, pid); // save pid for future redraws
 		    // get the selection and user preferred size/scale from the workspace
 		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
 		    var width = $this.data(WIDTH); // width of displayed mosaic
 		    var height = $this.data(HEIGHT); // height of displayed mosaic
 		    // create the mosaic pager
 		    $this.find('.mosaic_pager')
-			.mosaicPager(pid, width, height, roi_scale)
-			.bind('roi_click', function(event, pid) {
-			    $this.trigger('roi_click', pid); // manually bubble up
-			});
+			.mosaicPager(pid, width, height, roi_scale);
 		});
 	    });//each in resizableMosaicPager
 	}
