@@ -130,17 +130,14 @@ function timeseries_add(e, pid) {
 		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
 		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
 		$('#roi_image').empty()
-		    .grayLoadingImage(roi_pid+'.jpg', roi_width, roi_height)
-		    .click(function() {
-			// if user clicks on roi image, go to roi page
-			window.location.href = roi_pid + '.html';
-		    }).css('float','right')
+		    .target_image(roi_pid, roi_width, roi_height)
+		    .css('float','right')
 		    .css('text-align','right')
 		    .append('<div class="roi_info bin_label"></div>').find('.roi_info')
 		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
 		    .append('<a href="'+roi_pid+'.xml">XML</a> ')
 		    .append('<a href="'+roi_pid+'.rdf">RDF</a>').end()
-		    .find('.imagepager_frame').css('float','right');
+		    .find('.target_image').css('float','right');//FIXME
 	    });
 	});
     // if a pid is selected, show it

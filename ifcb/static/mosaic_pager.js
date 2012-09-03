@@ -95,12 +95,17 @@
 		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
 		    .css('float','left'); // FIXME remove
 		// on redraw
-		$this.bind('drawMosaic', function(event, the_pid) { 
+		$this.bind('drawMosaic', function(event, the_pid, props) { 
 		    // if the_pid is undefined, use whatever the pid was set to before
 		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
 		    // if there's no pid at this point
 		    if(pid == undefined) {
 			return; // there's nothing to do
+		    }
+		    if(props != undefined) {
+			$this.data(HEIGHT, props.height == undefined ? $this.data(HEIGHT) : props.height);
+			$this.data(WIDTH, props.width == undefined ? $this.data(WIDTH) : props.width);
+			$this.data(ROI_SCALE, props.roiScale == undefined ? $this.data(ROI_SCALE) : props.roiScale);
 		    }
 		    $this.data(PID, pid); // save pid for future redraws
 		    // get the selection and user preferred size/scale from the workspace
