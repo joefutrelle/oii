@@ -339,6 +339,7 @@ def resolve(time_series,lid):
     # nothing recognized, so return Not Found
     abort(404)
 
+@app.route('/')
 @app.route('/api/timeseries')
 @app.route('/api/timeseries/pid/<path:pid>')
 def serve_timeseries(pid=None):
