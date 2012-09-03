@@ -17,11 +17,15 @@
     <script type="text/javascript" src="{{static}}jquery_radio.js"></script>
     <script type="text/javascript" src="{{static}}mosaic_pager.js"></script>
     <script type="text/javascript" src="{{static}}target.js"></script>
+    <script type="text/javascript">
+$(document).ready(function() {
+    $('#roi_pager').target_image('{{hit.target_pid}}',{{properties.height}},{{properties.width}});// 90 degree rotation
+});
     </script>
 </head>
 <body>
   <h1>{{hit.target_pid}}</h1>
-  <div id="roi_pager"><img src="{{hit.target_pid}}.jpg"></div>
+  <div id="roi_pager"></div>
   <div style="clear: both"><a href="{{hit.bin_pid}}.html">Show sample bin</a></div>
 </div>
 {% for k,v in target %}

@@ -129,7 +129,10 @@ function timeseries_add(e, pid) {
 		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
 		$('#roi_image').empty()
 		    .grayLoadingImage(roi_pid+'.jpg', roi_width, roi_height)
-		    .append('<div></div>')
+		    .click(function() {
+			// if user clicks on roi image, go to roi page
+			window.location.href = roi_pid + '.html';
+		    }).append('<div></div>')
 		    .find('div:last')
 		    .css('clear','right')
 		    .css('float','right')
