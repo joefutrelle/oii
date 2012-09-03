@@ -319,6 +319,9 @@ def resolve(time_series,lid):
     (mimetype, _) = mimetypes.guess_type(filename)
     if mimetype is None:
         mimetype = 'application/octet-stream'
+    # is this request for a product?
+    if hit.product == 'blob':
+        return serve_blob(hit.pid)
     # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
@@ -422,11 +425,12 @@ def serve_bin(hit,mimetype):
 
 def serve_target(hit,mimetype):
     target = get_target(hit) # read the target from the ADC file
+    properties = target
     # sort the target properties according to the order in the schema
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
     target = [(k,target[k]) for k in order_keys(target, schema_keys)]
     # now populate the template appropriate for the MIME type
-    template = dict(hit=hit,target=target,static=app.config[STATIC])
+    template = dict(hit=hit,target=target,properties=properties,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
         return Response(render_template('target.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':

@@ -5,4 +5,5 @@
   <{{k}}>{{v}}</{{k}}>
   {% endfor %}
   <dcterms:hasFormat>{{hit.target_pid}}.png</dcterms:hasFormat>
+  <dcterms:isPartOf>{{properties.binID}}</dcterms:isPartOf>
 </Target>
