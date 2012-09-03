@@ -198,9 +198,13 @@ def serve_nearest(date):
         d = binlid2dict(bin_lid)
     return jsonr(d)
 
+@memoized
+def get_volume():
+    return json.dumps(app.config[FIXITY].summarize_data_volume())
+
 @app.route('/api/volume')
 def serve_volume():
-    return jsonr(app.config[FIXITY].summarize_data_volume())
+    return Response(get_volume(), mimetype='application/json')
 
 @app.route('/api/mosaic/pid/<path:pid>')
 def serve_mosaic(pid):
@@ -334,6 +338,15 @@ def resolve(time_series,lid):
         return serve_bin(hit,mimetype)
     # nothing recognized, so return Not Found
     abort(404)
+
+@app.route('/api/timeseries')
+@app.route('/api/timeseries/pid/<path:pid>')
+def serve_timeseries(pid=None):
+    template = dict(static=app.config[STATIC])
+    if pid is not None:
+        hit = pid_resolver.resolve(pid=pid)
+        template['pid'] = hit.bin_pid
+    return Response(render_template('timeseries.html',**template), mimetype='text/html')
 
 @memoized
 def read_targets(adc_path, target_no=1, limit=-1):

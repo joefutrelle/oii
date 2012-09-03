@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>Target ROI {{hit.target_pid}}</title>
+    <title>{{title}}</title>
     <!-- jQuery -->
     <script type="text/javascript" src="{{static}}js/jquery-1.5.1.min.js"></script>
     <!-- jQuery UI -->
@@ -9,28 +9,31 @@
     <!-- image_pager plugin -->
     <script type="text/javascript" src="{{static}}image_pager.js"></script>
     <link type="text/css" href="{{static}}image_pager.css" rel="Stylesheet"/>
+    <!-- timeline -->
+    <script type="text/javascript" src="{{static}}timeline/timeline.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{static}}timeline/timeline.css"/>
     <!-- OII utilities and CSS -->
     <script type="text/javascript" src="{{static}}js/oii-utils.js"></script>
     
     <!-- this demo -->
     <link type="text/css" href="{{static}}dashboard.css" rel="Stylesheet"/>
+    <link type="text/css" href="{{static}}demotime.css" rel="Stylesheet"/>
+    <script type="text/javascript" src="{{static}}jquery_timeline.js"></script>
     <script type="text/javascript" src="{{static}}jquery_radio.js"></script>
     <script type="text/javascript" src="{{static}}mosaic_pager.js"></script>
-    <script type="text/javascript" src="{{static}}target.js"></script>
-    </script>
+    <script type="text/javascript" src="{{static}}timeseries.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    {% if pid %}
+        $('#timeseries').timeseries('{{pid}}');
+    {% else %}
+        $('#timeseries').timeseries();
+    {% endif %}
+});
+</script>
 </head>
 <body>
-  <h1>{{hit.target_pid}}</h1>
-  <div id="roi_pager"><img src="{{hit.target_pid}}.jpg"></div>
-  <div style="clear: both"><a href="{{hit.bin_pid}}.html">Show sample bin</a></div>
-</div>
-{% for k,v in target %}
-  <div>
-    <span class="metadata_key">{{k}}</span>
-    <span class="metadata_value">{{v}}</span>
-  </div>
-{% endfor %}
-<table>
+<h1>{{title}}</h1>
+<div id="timeseries"></div>
 </body>
 </html>
-
