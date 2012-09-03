@@ -50,6 +50,7 @@ FEED='feed'
 FIXITY='fixity'
 PORT='port'
 DEBUG='debug'
+STATIC='static'
 
 # FIXME do this in main
 # FIXME this should be selected by time series somehow
@@ -70,6 +71,7 @@ def configure(config=None):
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
     app.config[FIXITY] = IfcbFixity(app.config[PSQL_CONNECT], rs)
+    app.config[STATIC] = '/static/'
     try:
         if config.debug in ['True', 'true', 'T', 't', 'Yes', 'yes', 'debug']:
             app.debug = True
@@ -401,13 +403,15 @@ def serve_bin(hit,mimetype):
     # get a list of all targets, taking into account stitching
     targets = list_targets(hit)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
-    template = dict(hit=hit,context=context,properties=props,target_pids=target_pids)
+    template = dict(hit=hit,context=context,properties=props,target_pids=target_pids,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'csv':
         return bin2csv(hit,targets)
+    elif mimetype == 'text/html':
+        return Response(render_template('bin.html',**template), mimetype='text/html')
     elif mimetype == 'application/json':
         properties = dict(props)
         properties['context'] = context

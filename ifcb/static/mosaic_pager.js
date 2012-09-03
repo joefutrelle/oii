@@ -56,6 +56,61 @@
 			});
 		    });
 	    });//each in mosaicPager
-	}//mosaicPager
+	},//mosaicPager
+        resizableMosaicPager: function(width, height, roi_scale, pid) {
+	    var PID = 'mosaic_pager_bin_pid';
+	    var WIDTH = 'mosaic_pager_width';
+	    var HEIGHT = 'mosaic_pager_height';
+	    var ROI_SCALE = 'mosaic_pager_roi_scale';
+	    return this.each(function () {
+		var $this = $(this); // retain ref to $(this)
+		$this.data(PID, pid);
+		$this.data(WIDTH, width == undefined ? 800 : width);
+		$this.data(HEIGHT, height == undefined ? 600 : height);
+		$this.data(ROI_SCALE, roi_scale == undefined ? 0.33 : roi_scale);
+		// add some controls for changing the size of the mosaic
+		var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
+		var roi_scales = [15, 25, 33, 40, 66, 100];
+		$this.append('<div class="mosaic_controls"></div>').find('.mosaic_controls')
+		    .append('Mosaic size: <span></span>').find('span:last')
+		    .radio(mosaic_sizes, function(size) {
+ 			return size[0] + 'x' + size[1];
+		    }).bind('select', function(event, value) {
+			var width = value[0];
+			var height = value[1];
+			$this.data(WIDTH, width).data(HEIGHT, height)
+			    .find('.mosaic_pager').trigger('drawMosaic');
+		    });
+		// add some controls for changing the roi scale in the mosaic
+		$this.find('.mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
+		    .radio(roi_scales, function(scale) {
+			return scale + '%';
+		    }).bind('select', function(event, value) {
+			$this.data(ROI_SCALE, value/100)
+			    .find('.mosaic_pager').trigger('drawMosaic');
+		    });
+		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
+		    .css('float','left'); // FIXME remove
+		$this.bind('drawMosaic', function(event, the_pid) { // on redraw
+		    console.log('draw mosaic triggered with '+the_pid);
+		    // make sure something is selected
+		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
+		    if(pid == undefined) {
+			return;
+		    }
+		    $this.data(PID, pid);
+		    // get the selection and user preferred size/scale from the workspace
+		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
+		    var width = $this.data(WIDTH); // width of displayed mosaic
+		    var height = $this.data(HEIGHT); // height of displayed mosaic
+		    // create the mosaic pager
+		    $this.find('.mosaic_pager')
+			.mosaicPager(pid, width, height, roi_scale)
+			.bind('roi_click', function(event, pid) {
+			    $this.trigger('roi_click', pid); // manually bubble up
+			});
+		});
+	    });//each in resizableMosaicPager
+	}
     });//$.fn.extend
 })(jQuery);//end of plugin

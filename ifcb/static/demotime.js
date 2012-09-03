@@ -4,10 +4,7 @@ $(document).ready(function() {
     $('body').append('<h1>'+title+'</h1>');
     // create an invisible "workspace" element to hold data
     $('body').append('<div id="workspace"></div>')
-	.find('#workspace').css('display','none')
-	.data('mosaic_width',640)
-	.data('mosaic_height',480)
-	.data('roi_scale',0.333);
+	.find('#workspace').css('display','none');
     // timeline thinks all timestamps are in the current locale, so we need
     // to fake that they're UTC
     function asUTC(date) {
@@ -21,7 +18,7 @@ $(document).ready(function() {
 	    $('#workspace').data('selected_pid',r.pid);
 	    $('#workspace').data('selected_date',r.date);
 	    // now draw a multi-page mosaic
-	    $('#mosaic_pager').trigger('drawMosaic');
+	    $('#mosaic_pager').trigger('drawMosaic',[r.pid]);
 	});
     }
     // add the timeline control
@@ -114,61 +111,26 @@ $(document).ready(function() {
     // our date label goes below the timeline
     $('body').append('<div id="date_label"></div>');
     // and the mosaic pager is below that
-    $('body').append('<div id="mosaic_controls"></div>');
-    // add some controls for changing the size of the mosaic
-    var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
-    $('#mosaic_controls').append('Mosaic size: <span></span>').find('span:last')
-	.radio(mosaic_sizes, function(size) {
- 	    return size[0] + 'x' + size[1];
-	}).bind('select', function(event, value) {
-	    var width = value[0];
-	    var height = value[1];
-	    $('#workspace').data('mosaic_width', width)
-		.data('mosaic_height', height);
-	    $('#mosaic_pager').trigger('drawMosaic');
-	});
-    // add some controls for changing the roi scale in the mosaic
-    var roi_scales = [15, 25, 33, 40, 66, 100];
-    $('#mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
-	.radio(roi_scales, function(scale) {
-	    return scale + '%';
-	}).bind('select', function(event, value) {
-	    $('#workspace').data('roi_scale', value/100);
-	    $('#mosaic_pager').trigger('drawMosaic');
-	});
-    // now add the mosaic pager
     $('body').append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
 	.css('float','left')
-	.bind('drawMosaic', function() { // on redraw
-	    // make sure something is selected
-	    var pid = $('#workspace').data('selected_pid');
-	    if(pid == undefined) {
-		return;
-	    }
-	    // get the selection and user preferred size/scale from the workspace
-	    var roi_scale = $('#workspace').data('roi_scale'); // scaling factor per roi
-	    var width = $('#workspace').data('mosaic_width'); // width of displayed mosaic
-	    var height = $('#workspace').data('mosaic_height'); // height of displayed mosaic
-	    // create the mosaic pager
-	    $('#mosaic_pager').mosaicPager(pid, width, height, roi_scale)
-		.bind('roi_click', function(event, roi_pid) {
-		    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
-		    $.getJSON(roi_pid+'.json', function(r) {
-			// use grayLoadingImage from image_pager to display the ROI
-			var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
-			var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
-			$('#roi_image').empty()
-			    .grayLoadingImage(roi_pid+'.jpg', roi_width, roi_height)
-			    .append('<div></div>')
-			    .find('div:last')
-			    .css('clear','right')
-			    .css('float','right')
-			    .append('<span class="bin_label"><a href="'+roi_pid+'.html">'+roi_pid+'</a></span>')
-			    .append('<span> <a href="'+roi_pid+'.xml">XML</a></span>')
-			    .append('<span> <a href="'+roi_pid+'.rdf">RDF</a></span>')
-			    .end().find('.imagepager_frame').css('float','right');
-		    });
-		});
+	.resizableMosaicPager()
+	.bind('roi_click', function(event, roi_pid) {
+	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
+	    $.getJSON(roi_pid+'.json', function(r) {
+		// use grayLoadingImage from image_pager to display the ROI
+		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
+		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
+		$('#roi_image').empty()
+		    .grayLoadingImage(roi_pid+'.jpg', roi_width, roi_height)
+		    .append('<div></div>')
+		    .find('div:last')
+		    .css('clear','right')
+		    .css('float','right')
+		    .append('<span class="bin_label"><a href="'+roi_pid+'.html">'+roi_pid+'</a></span>')
+		    .append('<span> <a href="'+roi_pid+'.xml">XML</a></span>')
+		    .append('<span> <a href="'+roi_pid+'.rdf">RDF</a></span>')
+		    .end().find('.imagepager_frame').css('float','right');
+	    });
 	});
     // now add a place to display the ROI image
     $('body').append('<div id="roi_image"></div>');
