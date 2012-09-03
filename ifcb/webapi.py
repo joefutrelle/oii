@@ -403,7 +403,7 @@ def serve_bin(hit,mimetype):
     # get a list of all targets, taking into account stitching
     targets = list_targets(hit)
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
-    template = dict(hit=hit,context=context,properties=props,target_pids=target_pids,static=app.config[STATIC])
+    template = dict(hit=hit,context=context,properties=props,targets=targets,target_pids=target_pids,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
         return Response(render_template('bin.xml',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':

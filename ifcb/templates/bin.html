@@ -19,10 +19,31 @@
     <script type="text/javascript" src="{{static}}bin.js"></script>
     <script type="text/javascript">
 $(document).ready(function() {
-    show_bin_page('{{hit.bin_pid}}');
+    $('#mosaic_pager').bin_page('{{hit.bin_pid}}');
 });
     </script>
 </head>
 <body>
+  <h1>{{hit.bin_pid}}</h1>
+  <div id="mosaic_pager"></div>
+  <div style="clear: both"></div>
+  <h2>{{hit.date}}</h2>{% for v in context %}
+<div>{{v}}</div>{% endfor %}{% for k,v in properties %}
+  <div><span>{{k}}</span> <span>{{v}}</span></div>{% endfor %}<table>
+<tr class="tbl">
+  <th class="tbl">pid</th>
+  <th class="tbl">trigger</th>
+  <th class="tbl">size</th>
+  <th class="tbl">fl. L/H</th>
+  <th class="tbl">scat. L/H</th>
+</tr>{% for target in targets %}
+  <td class="tbl"><a href="{{target.pid}}.html">{{target.pid}}</a></td>
+  <td class="tbl">{{"%d"|format(target.trigger)}}</td>
+  <td class="tbl">{{target.width}}x{{target.height}}</td>
+  <td class="tbl">{{"%.2f/%.2f"|format(target.fluorescenceLow,target.fluorescenceHigh)}}</td>
+  <td class="tbl">{{"%.2f/%.2f"|format(target.scatteringLow,target.scatteringHigh)}}</td>
+</tr>
+{% endfor %}
 </body>
 </html>
+

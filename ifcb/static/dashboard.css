@@ -11,3 +11,6 @@ body {
 .ui-button-text {
     font-size: small !important;
 }
+.tbl {
+    font-family: monospace;
+}
