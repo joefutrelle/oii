@@ -3,12 +3,12 @@
     <dc:date>{{hit.date}}</dc:date>{% for v in context %}
 <context>{{v}}</context>{% endfor %}{% for k,v in properties %}
   <{{k}}>{{v}}</{{k}}>{% endfor %}
-    <hasTargets>
+    <dcterms:hasPart>
       <rdf:Seq rdf:about="{{hit.bin_pid}}/targets">{% for target_pid in target_pids %}
         <rdf:li>
           <Target rdf:about="{{target_pid}}"/>
         </rdf:li>{% endfor %}
       </rdf:Seq>
-    </hasTargets>
+    </dcterms:hasPart>
   </Bin>
 </rdf:RDF>
