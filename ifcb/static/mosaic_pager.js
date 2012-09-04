@@ -18,6 +18,7 @@
 		for(var page=1; page <= 30; page++) {
 		    // each page is a mosaic API call URL with a successive page number
 		    var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
+		    console.log('mosaic url = '+url);
 		    images.push(url);
 		}
 		// list of images in hand, create the image pager

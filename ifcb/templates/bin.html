@@ -14,7 +14,7 @@ $(document).ready(function() {
   <div style="clear: both"></div>
   <h2>{{hit.date}}</h2>
   <div>
-    <div><a href="/api/timeseries/pid/{{hit.bin_lid}}">Show in time series</a></div>
+    <div><a href="/{{hit.time_series}}/dashboard/pid/{{hit.bin_pid}}">Show in time series</a></div>
     <div class="metadata_key">context</div>
 {% for v in context %}
     <div>{{v}}</div>

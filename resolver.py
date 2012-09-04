@@ -133,7 +133,10 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         # ${w1} -> "yes"
         # ${w2} -> "no"
         # ${num} -> "123"
-        # numbered bindings will also be added for each group in this case. Importantly,
+        # note that if a group doesn't match any existing value will be retained rather than
+        # being set to None, and that allows for defaults. if you want the matched group itself
+        # in that case, you can use numbered bindings;
+        # numbered bindings will also be added for each group. Importantly,
         # this variant also means that any non-matching subexpression will result in a binding
         # of None rather than an unmodified variable reference such as "${3}" and so it's
         # a good way to test for the presence of a group.
@@ -157,7 +160,8 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
                 local_bindings[str(index+1)] = group
             if expr.groups is not None: # bind names in "groups" attribute to groups
                 for var,group in zip(expr.groups, groups):
-                    local_bindings[var] = group
+                    if group is not None or var not in local_bindings:
+                        local_bindings[var] = group
             if expr.expressions is not None: # there are subexpressions, so descend as a result of the match
                 for solution in resolve(expr.expressions,local_bindings,cwd,namespace):
                     yield solution

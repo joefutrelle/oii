@@ -5,9 +5,9 @@
 <script type="text/javascript">
 $(document).ready(function() {
     {% if pid %}
-        $('#timeseries').timeseries('{{pid}}');
+        $('#timeseries').timeseries('{{pid}}', '{{time_series}}');
     {% else %}
-        $('#timeseries').timeseries();
+        $('#timeseries').timeseries(undefined, '{{time_series}}');
     {% endif %}
 });
 </script>

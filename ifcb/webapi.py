@@ -38,7 +38,6 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
 # string key constants
 STITCH='stitch'
 NAMESPACE='namespace'
-TIME_SERIES='series'
 SIZE='size'
 SCALE='scale'
 PAGE='page'
@@ -108,7 +107,7 @@ def memoized(func):
 def get_target(hit, adc_path=None):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
     if adc_path is None:
-        adc_path = resolve_adc(hit.time_series, hit.bin_lid)
+        adc_path = resolve_adc(hit.bin_pid)
     for target in list_targets(hit, hit.target_no, adc_path=adc_path):
         return target
 
@@ -118,26 +117,23 @@ def image_response(image,format,mimetype):
     im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
-def resolve_pid(time_series,pid):
-    # FIXME for now, ignore time_series, but it will be used to configure resolver
+def resolve_pid(pid):
     return pid_resolver.resolve(pid=pid)
 
-def resolve_file(time_series,pid,format):
-    # FIXME for now, ignore time_series, but it will be used to configure resolver
+def resolve_file(pid,format):
     return binpid2path.resolve(pid=pid,format=format).value
 
-def resolve_adc(time_series,pid):
-    return resolve_file(time_series,pid,ADC)
+def resolve_adc(pid):
+    return resolve_file(pid,ADC)
 
-def resolve_hdr(time_series,pid):
-    return resolve_file(time_series,pid,HDR)
+def resolve_hdr(pid):
+    return resolve_file(pid,HDR)
 
-def resolve_roi(time_series,pid):
-    return resolve_file(time_series,pid,ROI)
+def resolve_roi(pid):
+    return resolve_file(pid,ROI)
 
-def resolve_files(time_series,pid,formats):
-    # FIXME for now, ignore time_series, but it will be used to configure resolver
-    return [resolve_file(time_series,pid,format) for format in formats]
+def resolve_files(pid,formats):
+    return [resolve_file(pid,format) for format in formats]
 
 def parse_params(path, **defaults):
     """Parse a path fragment and convert to dict.
@@ -170,8 +166,8 @@ def parse_date_param(sdate):
         app.logger.debug('could not parse date param %s' % sdate)
 
 
-def binlid2dict(bin_lid):
-    hit = pid_resolver.resolve(pid=bin_lid)
+def binlid2dict(time_series, bin_lid):
+    hit = pid_resolver.resolve(pid=bin_lid, time_series=time_series)
     date = iso8601(strptime(hit.date, hit.date_format))
     return {
         'lid': bin_lid,
@@ -179,23 +175,25 @@ def binlid2dict(bin_lid):
         'date': date
         }
 
-@app.route('/api/feed/format/<format>')
-@app.route('/api/feed/date/<date>/format/<format>')
-def serve_feed(date=None,format='json'):
+@app.route('/<time_series>/api/feed/format/<format>')
+@app.route('/<time_series>/api/feed/date/<date>/format/<format>')
+def serve_feed(time_series,date=None,format='json'):
     if date is not None:
         date = parse_date_param(date)
     # FIXME support formats other than JSON, also use extension
     def feed2dicts():
+        # FIXME choose feed based on time series!
         for bin_lid in app.config[FEED].latest_bins(date):
-            yield binlid2dict(bin_lid)
+            yield binlid2dict(time_series, bin_lid)
     return jsonr(list(feed2dicts()))
 
-@app.route('/api/feed/nearest/<date>')
-def serve_nearest(date):
+@app.route('/<time_series>/api/feed/nearest/<date>')
+def serve_nearest(time_series,date):
     if date is not None:
         date = parse_date_param(date)
+    # FIXME choose feed based on time series!
     for bin_lid in app.config[FEED].nearest_bin(date):
-        d = binlid2dict(bin_lid)
+        d = binlid2dict(time_series, bin_lid)
     return jsonr(d)
 
 @memoized
@@ -216,9 +214,9 @@ def serve_mosaic(pid):
         return serve_mosaic(pid) # default mosaic image
 
 @memoized
-def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort options
-    adc_path = resolve_adc(time_series, bin_lid)
-    hit = resolve_pid(time_series, bin_lid)
+def get_sorted_tiles(bin_pid): # FIXME support multiple sort options
+    adc_path = resolve_adc(bin_pid)
+    hit = resolve_pid(bin_pid)
     # read ADC and convert to Tiles in size-descending order
     def descending_size(t):
         (w,h) = t.size
@@ -230,8 +228,8 @@ def get_sorted_tiles(time_series, bin_lid): # FIXME support multiple sort option
     return tiles
 
 @memoized
-def get_mosaic_layout(time_series, lid, scaled_size, page):
-    tiles = get_sorted_tiles(time_series, lid)
+def get_mosaic_layout(pid, scaled_size, page):
+    tiles = get_sorted_tiles(pid)
     # perform layout operation
     return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
 
@@ -251,8 +249,7 @@ def serve_mosaic(pid, params='/'):
     - page (1) - page. for typical image sizes the entire bin does not fit and so is split into pages.
     - scale - scaling factor for image dimensions """
     # parse params
-    params = parse_params(params, size='1024x1024',page=1, series='mvco', scale=1.0)
-    time_series = params[TIME_SERIES]
+    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
     (w,h) = tuple(map(int,re.split('x',params[SIZE])))
     scale = float(params[SCALE])
     page = int(params[PAGE])
@@ -260,12 +257,12 @@ def serve_mosaic(pid, params='/'):
     hit = pid_resolver.resolve(pid=pid)
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
-    layout = get_mosaic_layout(time_series, hit.bin_lid, scaled_size, page)
+    layout = get_mosaic_layout(hit.bin_pid, scaled_size, page)
     # serve JSON on request
     if hit.extension == 'json':
         return jsonr(list(layout2json(layout, scale)))
     # resolve ROI file
-    roi_path = resolve_roi(time_series,hit.bin_lid)
+    roi_path = resolve_roi(hit.bin_pid)
     # read all images needed for compositing and inject into Tiles
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
@@ -305,12 +302,13 @@ def serve_blob(pid):
 def api_error(time_series,ignore):
     abort(404)
 
-@app.route('/<time_series>/<path:lid>')
-def resolve(time_series,lid):
+@app.route('/<path:pid>')
+def resolve(pid):
     """Resolve a URL to some data endpoint in a time series, including bin and target metadata endpoints,
     and image endpoints"""
     # use the PID resolver (which also works for LIDs)
-    hit = resolve_pid(time_series,lid)
+    app.logger.debug('attempting to resolve '+pid)
+    hit = resolve_pid(pid)
     # construct the namespace from the configuration and time series ID
     #hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
     #hit.bin_pid = hit.namespace + hit.bin_lid
@@ -339,14 +337,16 @@ def resolve(time_series,lid):
     # nothing recognized, so return Not Found
     abort(404)
 
-@app.route('/')
-@app.route('/api/timeseries')
-@app.route('/api/timeseries/pid/<path:pid>')
-def serve_timeseries(pid=None):
+@app.route('/<time_series>/dashboard')
+@app.route('/<time_series>/dashboard/<path:pid>')
+def serve_timeseries(time_series, pid=None):
     template = dict(static=app.config[STATIC])
     if pid is not None:
         hit = pid_resolver.resolve(pid=pid)
         template['pid'] = hit.bin_pid
+        template['time_series'] = hit.time_series
+    else:
+        template['time_series'] = time_series
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
 
 @memoized
@@ -357,7 +357,7 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
     if stitch_targets is None:
         stitch_targets = app.config[STITCH]
     if adc_path is None:
-        adc_path = resolve_adc(hit.time_series, hit.bin_lid)
+        adc_path = resolve_adc(hit.bin_pid)
     targets = read_targets(adc_path, target_no, limit)
     if stitch_targets:
         # in the stitching case we need to compute "stitched" flags based on pairs
@@ -405,11 +405,11 @@ def serve_bin(hit,mimetype):
     """Serve a sample bin in some format"""
     # for raw files, simply pass the file through
     if hit.extension == ADC:
-        return Response(file(resolve_adc(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='text/csv')
+        return Response(file(resolve_adc(hit.bin_pid)), direct_passthrough=True, mimetype='text/csv')
     elif hit.extension == ROI:
-        return Response(file(resolve_roi(hit.time_series, hit.bin_lid)), direct_passthrough=True, mimetype='application/octet-stream')
+        return Response(file(resolve_roi(hit.bin_pid)), direct_passthrough=True, mimetype='application/octet-stream')
     # at this point we need to resolve the HDR file
-    hdr_path = resolve_hdr(hit.time_series, hit.bin_lid)
+    hdr_path = resolve_hdr(hit.bin_pid)
     if hit.extension == HDR:
         return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
     props = read_hdr(LocalFileSource(hdr_path))
@@ -465,7 +465,7 @@ def image_types(hit):
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
-    (adc_path, roi_path) = resolve_files(hit.time_series, hit.bin_lid, (ADC, ROI))
+    (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
     if app.config[STITCH]:
         limit=2 # read two targets, in case we need to stitch
     else:

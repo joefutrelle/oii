@@ -1,4 +1,4 @@
-function timeseries_add(e, pid) {
+function timeseries_add(e, pid, timeseries) {
     // internal function. params
     // e - element to add to
     // pid - (optional) initial pid to display
@@ -15,13 +15,14 @@ function timeseries_add(e, pid) {
 	$('#mosaic_pager').trigger('drawMosaic',[pid]);
 	// set the address for back button
 	if(pushHistory == undefined || pushHistory) {
-	    window.history.pushState(pid, pid, '/api/timeseries/pid/'+pid);
+	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
 	}
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
 	var ds = date.toISOString();
-	$.getJSON('/api/feed/nearest/'+ds, function(r) { // find the nearest bin
+	// FIXME need to specify time series
+	$.getJSON('/'+timeseries+'/api/feed/nearest/'+ds, function(r) { // find the nearest bin
 	    $('#date_label').empty().append(r.date);
 	    $('#workspace').data('selected_pid',r.pid);
 	    $('#workspace').data('selected_date',r.date);
@@ -154,10 +155,10 @@ function timeseries_add(e, pid) {
 }
 (function($) {
     $.fn.extend({
-	timeseries: function(bin_pid) {
+	timeseries: function(bin_pid, timeseries) {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
-		timeseries_add($this, bin_pid);
+		timeseries_add($this, bin_pid, timeseries);
 	    });//each in bin_page
 	}//bin_page
     });//$.fn.extend

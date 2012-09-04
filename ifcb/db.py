@@ -44,7 +44,7 @@ class IfcbFeed(Psql):
             db.execute("set session time zone 'UTC'")
             db.execute("select lid,sample_time from bins where date_part('year',sample_time) = %s and date_part('month',sample_time) = %s and date_part('day',sample_time) = %s order by sample_time desc",(dt.year,dt.month,dt.day))
         for row in db.fetchall():
-            yield ifcb.pid(row[0])
+            yield row[0]
 
 class FixityError(Exception):
     pass
