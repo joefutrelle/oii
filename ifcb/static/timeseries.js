@@ -135,6 +135,8 @@ function timeseries_add(e, pid, timeseries) {
 		    .css('float','right')
 		    .css('text-align','right')
 		    .append('<div class="roi_info bin_label"></div>').find('.roi_info')
+		    .css('float','right')
+		    .css('clear','right')
 		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
 		    .append('<a href="'+roi_pid+'.xml">XML</a> ')
 		    .append('<a href="'+roi_pid+'.rdf">RDF</a>').end()
