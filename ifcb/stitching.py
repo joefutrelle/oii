@@ -102,13 +102,13 @@ def mask(targets):
     return mask
 
 # stitch with no noise fill
-def stitch_raw(targets,images,box=None):
+def stitch_raw(targets,images,box=None,background=0):
     # compute bounds relative to the camera field
     if box is None:
         box = stitched_box(targets)
     (x,y,w,h) = box
     # now we swap width and height to rotate the image 90 degrees
-    s = Image.new('L',(h,w)) # the stitched image with a missing region
+    s = Image.new('L',(h,w),background) # the stitched image with a missing region
     for (roi,image) in zip(targets,images):
         rx = roi[LEFT] - x
         ry = roi[BOTTOM] - y

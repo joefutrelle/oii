@@ -16,7 +16,7 @@ from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
-from oii.ifcb.stitching import find_pairs, stitch, stitched_box
+from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw
 from oii.io import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
@@ -222,7 +222,7 @@ def get_sorted_tiles(bin_pid): # FIXME support multiple sort options
         (w,h) = t.size
         return 0 - (w * h)
     # using read_target means we don't stitch. this is simply for performance.
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in list_targets(hit, adc_path=adc_path, stitch_targets=False)]
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in list_targets(hit, adc_path=adc_path)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -267,9 +267,8 @@ def serve_mosaic(pid, params='/'):
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
             target = tile.image
-            for roi in read_rois([target], roi_file=roi_file):
-                # as per resolution of #1636 we do not stitch, so as to improve performance
-                tile.image = roi # should only iterate once
+            # FIXME use fast stitching
+            tile.image = get_roi_image(hit.bin_pid, target[TARGET_NUMBER], fast_stitching=True)
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
     (pil_format, mimetype) = image_types(hit)
@@ -307,8 +306,10 @@ def resolve(pid):
     """Resolve a URL to some data endpoint in a time series, including bin and target metadata endpoints,
     and image endpoints"""
     # use the PID resolver (which also works for LIDs)
-    app.logger.debug('attempting to resolve '+pid)
+    #app.logger.debug('attempting to resolve '+pid)
     hit = resolve_pid(pid)
+    if hit is None:
+        abort(404)
     # construct the namespace from the configuration and time series ID
     #hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
     #hit.bin_pid = hit.namespace + hit.bin_lid
@@ -462,39 +463,51 @@ def image_types(hit):
     (mimetype, _) = mimetypes.guess_type(filename)
     return (pil_format, mimetype)
 
-def serve_roi(hit):
+def get_roi_image(bin_pid, target_no, fast_stitching=False):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
-    (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
+    (adc_path, roi_path) = resolve_files(bin_pid, (ADC, ROI))
     if app.config[STITCH]:
-        limit=2 # read two targets, in case we need to stitch
+        offset=max(1,target_no-1)
+        limit=3 # read three targets, in case we need to stitch
     else:
+        offset=target_no
         limit=1 # just read one
-    targets = list(read_targets(adc_path, hit.target_no, limit))
+    targets = list(read_targets(adc_path, offset, limit))
     if len(targets) == 0: # no targets? return Not Found
-        abort(404)
+        return None
     # open the ROI file as we may need to read more than one
     with open(roi_path,'rb') as roi_file:
         if app.config[STITCH]:
             pairs = list(find_pairs(targets)) # look for stitched pairs
         else:
             pairs = targets
+        roi_image = None
         if len(pairs) >= 1: # found one?
             (a,b) = pairs[0] # split pair
             app.logger.debug(pairs[0]);
             images = list(read_rois((a,b),roi_file=roi_file)) # read the images
-            (roi_image, mask) = stitch((a,b), images) # stitch them
+            if fast_stitching:
+                roi_image = stitch_raw((a,b), images, background=180)
+            else:
+                (roi_image, mask) = stitch((a,b), images) # stitch them
         else:
             # now check that the target number is correct
-            target = targets[0]
-            if target[TARGET_NUMBER] != hit.target_no:
-                abort(404)
-            images = list(read_rois([target],roi_file=roi_file)) # read the image
-            roi_image = images[0]
-        # now determine PIL format and MIME type
-        (pil_format, mimetype) = image_types(hit)
-        # return the image data
-        return image_response(roi_image,pil_format,mimetype)
+            for target in targets:
+                if target[TARGET_NUMBER] == target_no:
+                    images = list(read_rois([target],roi_file=roi_file)) # read the image
+                    roi_image = images[0]
+        return roi_image
+
+def serve_roi(hit):
+    """Serve a stitched ROI image given the output of the pid resolver"""
+    roi_image = get_roi_image(hit.bin_pid, hit.target_no)
+    if roi_image is None:
+        abort(404)
+    # now determine PIL format and MIME type
+    (pil_format, mimetype) = image_types(hit)
+    # return the image data
+    return image_response(roi_image,pil_format,mimetype)
 
 if __name__=='__main__':
     """First argument is a config file which must at least have psql_connect in it
