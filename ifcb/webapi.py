@@ -98,6 +98,7 @@ def memoized(func):
         if result is None: # cache miss
             app.logger.debug('cache miss on %s' % str(key))
             result = func(*args) # produce the result
+            # FIXME accept a TTL argument
             cache.set(key, result, timeout=app.config[CACHE_TTL]) # cache it
         return result
     return wrap
@@ -362,15 +363,17 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
     targets = read_targets(adc_path, target_no, limit)
     if stitch_targets:
         # in the stitching case we need to compute "stitched" flags based on pairs
-        pairs = find_pairs(targets)
         # correct image metrics
-        for a,b in pairs:
+        Bs = []
+        for a,b in find_pairs(targets):
             (a[LEFT], a[BOTTOM], a[WIDTH], a[HEIGHT]) = stitched_box([a,b])
             a[STITCHED] = 1
             b[STITCHED] = 0
+            Bs.append(b)
         # exclude the second of each pair from the list of targets
-        Bs = [b for (_,b) in pairs]
+        app.logger.debug('number of targets (pre-stitched): %d, number of pairs: %d' % (len(targets),len(Bs)))
         targets = filter(lambda target: target not in Bs, targets)
+        app.logger.debug('number of targets (post-stitched): %d' % len(targets))
     for target in targets:
         if not STITCHED in target:
             target[STITCHED] = 0
