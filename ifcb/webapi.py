@@ -434,8 +434,12 @@ def serve_bin(hit,mimetype):
     # sort properties according to their order in the header schema
     props = [(k,props[k]) for k,_ in HDR_SCHEMA]
     # get a list of all targets, taking into account stitching
-    targets = list_targets(hit)
-    target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
+    if hit.product != 'short':
+        targets = list_targets(hit)
+        target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
+    else:
+        targets = []
+        target_pids = []
     template = dict(hit=hit,context=context,properties=props,targets=targets,target_pids=target_pids,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
         return Response(bin2xml(template), mimetype='text/xml')
@@ -449,6 +453,9 @@ def serve_bin(hit,mimetype):
         properties = dict(props)
         properties['context'] = context
         properties['targets'] = targets
+        properties['date'] = hit.date
+        if hit.product == 'short':
+            del properties['targets']
         return jsonr(properties)
     elif mimetype == 'application/zip':
         return Response(bin_zip(hit,targets,template), mimetype=mimetype)

@@ -10,9 +10,23 @@ function timeseries_add(e, pid, timeseries) {
     function asUTC(date) {
 	return new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
     }
+    function asLocal(date) {
+	return new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+    }
     function showMosaic(pid, pushHistory) {
+	$.getJSON(pid+'_short.json', function(r) {
+	    $('#workspace').data('selected_pid',r.pid);
+	    // set the time markers accordingly
+	    $('#date_label').empty().append(r.date);
+	    $('#workspace').data('selected_date',r.date);
+	    $('#timeline').getTimeline(function(t) {
+		t.setCustomTime(asLocal(new Date(r.date)).toISOString());
+	    });
+	});
 	// now draw a multi-page mosaic
 	$('#mosaic_pager').trigger('drawMosaic',[pid]);
+	// remove any existing ROI image
+	$('#roi_image').empty()
 	// set the address for back button
 	if(pushHistory == undefined || pushHistory) {
 	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
@@ -23,9 +37,6 @@ function timeseries_add(e, pid, timeseries) {
 	var ds = date.toISOString();
 	// FIXME need to specify time series
 	$.getJSON('/'+timeseries+'/api/feed/nearest/'+ds, function(r) { // find the nearest bin
-	    $('#date_label').empty().append(r.date);
-	    $('#workspace').data('selected_pid',r.pid);
-	    $('#workspace').data('selected_date',r.date);
 	    showMosaic(r.pid);
 	});
     }
