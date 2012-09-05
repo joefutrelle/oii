@@ -100,7 +100,7 @@ def memoized(func):
         key = ' '.join([func.__name__] + map(str,args))
         result = cache.get(key)
         if result is None: # cache miss
-            app.logger.debug('cache miss on %s' % str(key))
+            #app.logger.debug('cache miss on %s' % str(key))
             result = func(*args) # produce the result
             # FIXME accept a TTL argument
             cache.set(key, result, timeout=app.config[CACHE_TTL]) # cache it
@@ -361,6 +361,7 @@ def serve_timeseries(time_series, pid=None):
         hit = pid_resolver.resolve(pid=pid)
         template['pid'] = hit.bin_pid
         template['time_series'] = hit.time_series
+        template['title'] = hit.title
     else:
         template['time_series'] = time_series
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
