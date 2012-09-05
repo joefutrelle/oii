@@ -109,8 +109,14 @@ def get_target(hit, adc_path=None):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
     if adc_path is None:
         adc_path = resolve_adc(hit.bin_pid)
-    for target in list_targets(hit, hit.target_no, adc_path=adc_path):
-        return target
+    if app.config[STITCH]:
+        for target in list_targets(hit, max(1,hit.target_no-1), 3, adc_path=adc_path):
+            app.logger.debug(target)
+            if target[TARGET_NUMBER] == hit.target_no:
+                return target
+    else:
+        for target in list_targets(hit, hit.target_no, adc_path=adc_path):
+            return target
 
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
@@ -371,9 +377,7 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
             b[STITCHED] = 0
             Bs.append(b)
         # exclude the second of each pair from the list of targets
-        app.logger.debug('number of targets (pre-stitched): %d, number of pairs: %d' % (len(targets),len(Bs)))
         targets = filter(lambda target: target not in Bs, targets)
-        app.logger.debug('number of targets (post-stitched): %d' % len(targets))
     for target in targets:
         if not STITCHED in target:
             target[STITCHED] = 0
@@ -443,6 +447,8 @@ def serve_bin(hit,mimetype):
 
 def serve_target(hit,mimetype):
     target = get_target(hit) # read the target from the ADC file
+    if target is None:
+        abort(404)
     properties = target
     # sort the target properties according to the order in the schema
     schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
