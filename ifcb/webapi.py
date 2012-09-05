@@ -488,7 +488,8 @@ def get_roi_image(bin_pid, target_no, fast_stitching=False):
         roi_image = None
         if len(pairs) >= 1: # found one?
             (a,b) = pairs[0] # split pair
-            app.logger.debug(pairs[0]);
+            if b[TARGET_NUMBER] == target_no: # second of a pair?
+                return None
             images = list(read_rois((a,b),roi_file=roi_file)) # read the images
             if fast_stitching:
                 roi_image = stitch_raw((a,b), images, background=180)
