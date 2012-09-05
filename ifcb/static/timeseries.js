@@ -56,7 +56,7 @@ function timeseries_add(e, pid, timeseries) {
     // now load the data volume series
     console.log('loading data series...');
     // call the data volume API
-    $.getJSON('/api/volume', function(volume) {
+    $.getJSON('/'+timeseries+'/api/volume', function(volume) {
 	// make a bar graph showing data volume
 	var data = [];
 	var minDate = new Date();

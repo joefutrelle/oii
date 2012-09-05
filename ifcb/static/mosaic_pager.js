@@ -28,6 +28,7 @@
 		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
 		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')
 		    .append('<span> <a href="'+pid+'.csv">CSV</a></span>')
+		    .append('<span> <a href="'+pid+'.zip">ZIP</a></span>')
 		    .append('<span> <a href="'+pid+'.xml">XML</a></span>')
 		    .append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
 		    .find('div:last').imagePager(images, width, height) // use the image pager plugin

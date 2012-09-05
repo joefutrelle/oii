@@ -4,6 +4,10 @@ import json
 import re
 import sys
 import os
+import tempfile
+from io import BytesIO
+import shutil
+from zipfile import ZipFile, ZIP_DEFLATED
 from time import strptime
 from StringIO import StringIO
 from oii.config import get_config
@@ -189,7 +193,7 @@ def serve_feed(time_series,date=None,format='json'):
         date = parse_date_param(date)
     # FIXME support formats other than JSON, also use extension
     def feed2dicts():
-        # FIXME choose feed based on time series!
+        # FIXME parameterize by time series!
         for bin_lid in app.config[FEED].latest_bins(date):
             yield binlid2dict(time_series, bin_lid)
     return jsonr(list(feed2dicts()))
@@ -198,27 +202,29 @@ def serve_feed(time_series,date=None,format='json'):
 def serve_nearest(time_series,date):
     if date is not None:
         date = parse_date_param(date)
-    # FIXME choose feed based on time series!
+    # FIXME parameterize by time series!
     for bin_lid in app.config[FEED].nearest_bin(date):
         d = binlid2dict(time_series, bin_lid)
     return jsonr(d)
 
 @memoized
 def get_volume():
+    # FIXME parameterize by time series!
     return json.dumps(app.config[FIXITY].summarize_data_volume())
 
-@app.route('/api/volume')
-def serve_volume():
+@app.route('/<time_series>/api/volume')
+def serve_volume(time_series):
     return Response(get_volume(), mimetype='application/json')
 
 @app.route('/api/mosaic/pid/<path:pid>')
-def serve_mosaic(pid):
+@app.route('/<time_series>/api/mosaic/pid/<path:pid>')
+def serve_mosaic(time_series=None,pid=None):
     """Serve a mosaic with all-default parameters"""
     hit = pid_resolver.resolve(pid=pid)
     if hit.extension == 'html': # here we generate an HTML representation with multiple pages
         return Response(render_template('mosaics.html',hit=hit),mimetype='text/html')
     else:
-        return serve_mosaic(pid) # default mosaic image
+        return serve_mosaic_image(time_series,pid) # default mosaic image
 
 @memoized
 def get_sorted_tiles(bin_pid): # FIXME support multiple sort options
@@ -248,7 +254,8 @@ def layout2json(layout, scale):
         yield dict(pid=t.image['pid'], width=w*scale, height=h*scale, x=x*scale, y=y*scale)
 
 @app.route('/api/mosaic/<path:params>/pid/<path:pid>')
-def serve_mosaic(pid, params='/'):
+@app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
+def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
     params include the following, with default values
     - series (mvco) - time series (FIXME: handle with resolver, clarify difference between namespace, time series, pid, lid)
@@ -282,7 +289,8 @@ def serve_mosaic(pid, params='/'):
     return image_response(mosaic_image, pil_format, mimetype)
     
 @app.route('/api/blob/pid/<path:pid>')
-def serve_blob(pid):
+@app.route('/<time_series>/api/blob/pid/<path:pid>')
+def serve_blob(time_series,pid):
     """Serve blob zip or image"""
     hit = blob_resolver.resolve(pid=pid)
     zip_path = hit.value
@@ -331,7 +339,7 @@ def resolve(pid):
         mimetype = 'application/octet-stream'
     # is this request for a product?
     if hit.product == 'blob':
-        return serve_blob(hit.pid)
+        return serve_blob(hit.time_series,hit.pid)
     # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
@@ -407,7 +415,7 @@ def bin2csv(hit,targets):
                 first = False
             # now emit the row
             yield ','.join(map(csv_quote,row))
-    return Response(render_template('bin.csv',rows=csv_iter()),mimetype='text/plain')
+    return render_template('bin.csv',rows=csv_iter())
 
 def serve_bin(hit,mimetype):
     """Serve a sample bin in some format"""
@@ -430,11 +438,11 @@ def serve_bin(hit,mimetype):
     target_pids = ['%s_%05d' % (hit.bin_pid, target['targetNumber']) for target in targets]
     template = dict(hit=hit,context=context,properties=props,targets=targets,target_pids=target_pids,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
-        return Response(render_template('bin.xml',**template), mimetype='text/xml')
+        return Response(bin2xml(template), mimetype='text/xml')
     elif minor_type(mimetype) == 'rdf+xml':
         return Response(render_template('bin.rdf',**template), mimetype='text/xml')
     elif minor_type(mimetype) == 'csv':
-        return bin2csv(hit,targets)
+        return Response(bin2csv(hit,targets), mimetype='text/plain')
     elif mimetype == 'text/html':
         return Response(render_template('bin.html',**template), mimetype='text/html')
     elif mimetype == 'application/json':
@@ -442,8 +450,38 @@ def serve_bin(hit,mimetype):
         properties['context'] = context
         properties['targets'] = targets
         return jsonr(properties)
+    elif mimetype == 'application/zip':
+        return Response(bin_zip(hit,targets,template), mimetype=mimetype)
     else:
         abort(404)
+
+def bin2xml(template):
+    return render_template('bin.xml',**template)
+
+def bin_zip(hit,targets,template):
+    buffer = BytesIO()
+    with tempfile.SpooledTemporaryFile() as temp:
+        z = ZipFile(temp,'w',ZIP_DEFLATED)
+        z.writestr(hit.bin_lid + '.csv', bin2csv(hit,targets))
+        # xml as well, including header info
+        z.writestr(hit.bin_lid + '.xml', bin2xml(template))
+        for target in targets:
+            buffer.seek(0)
+            buffer.truncate()
+            im = get_roi_image(hit.bin_pid, target[TARGET_NUMBER])
+            with tempfile.SpooledTemporaryFile() as imtemp:
+                im.save(imtemp,'PNG')
+                imtemp.seek(0)
+                shutil.copyfileobj(imtemp, buffer)
+            # need LID here
+            target_lid = re.sub(r'.*/','',target[PID]) # FIXME resolver should do this
+            z.writestr(target_lid + '.png', buffer.getvalue())
+        z.close()
+        temp.seek(0)
+        buffer.seek(0)
+        buffer.truncate()
+        shutil.copyfileobj(temp, buffer)
+        return buffer.getvalue()
 
 def serve_target(hit,mimetype):
     target = get_target(hit) # read the target from the ADC file
