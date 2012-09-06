@@ -5,6 +5,7 @@
 // $.change(function(event, image_href) {
 //    ... do something image_href ...
 // });
+// to go to a page fire a gotopage event
 (function($) {
     function grayLoadingImage(node, image_href, width, height) {
 	$(node).empty()
@@ -78,6 +79,12 @@
 		    }
 		});
 		showImage();
+		// trigger gotopage to go to a specific page number
+		$this.bind('gotopage', function(event, pageNumber) {
+		    event.stopPropagation();
+		    ix = pageNumber - 1;
+		    showImage();
+		});
 	    });//each in imagePager
 	}//imagePager
     });//$.fn.extend

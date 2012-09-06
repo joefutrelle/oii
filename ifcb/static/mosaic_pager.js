@@ -135,6 +135,10 @@
 		    // create the mosaic pager
 		    $this.find('.mosaic_pager')
 			.mosaicPager(pid, width, height, roi_scale);
+		    // delegate gotopage events to image pager
+		    $this.bind('gotopage', function(event, page) {
+			$this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
+		    });
 		});
 	    });//each in resizableMosaicPager
 	}
