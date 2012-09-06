@@ -13,20 +13,31 @@ function timeseries_add(e, pid, timeseries) {
     function asLocal(date) {
 	return new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
     }
+    function updateDateLabel(timeline) {
+	var customTime = timeline.getCustomTime();
+	var iso8601utcTime = asUTC(customTime).toISOString();
+	var tts = timeline.timeToScreen(customTime);
+	$('#date_label').empty().append(iso8601utcTime)
+	    .css('margin-left',tts+'px');
+    }
     function showMosaic(pid, pushHistory) {
-	$.getJSON(pid+'_short.json', function(r) {
-	    $('#workspace').data('selected_pid',r.pid);
-	    // set the time markers accordingly
-	    $('#date_label').empty().append(r.date);
-	    $('#workspace').data('selected_date',r.date);
-	    $('#timeline').getTimeline(function(t) {
-		t.setCustomTime(asLocal(new Date(r.date)).toISOString());
-	    });
-	});
 	// now draw a multi-page mosaic
 	$('#mosaic_pager').trigger('drawMosaic',[pid]);
 	// remove any existing ROI image
-	$('#roi_image').empty()
+	$('#roi_image').empty().css('display','none');
+	// update date label on timeline control
+	$.getJSON(pid+'_short.json', function(r) { // need date information
+	    $('#workspace').data('selected_pid',r.pid);
+	    // set the time markers accordingly
+	    $('#date_label').empty().append(r.date); // FIXME no ms
+	    $('#workspace').data('selected_date',r.date);
+	    var newCustomTime = asLocal(new Date(r.date));
+	    $('#timeline').getTimeline(function(t) {
+		console.log('setting custom time to '+newCustomTime);
+		t.setCustomTime(newCustomTime);
+		updateDateLabel(t);
+	    });
+	});
 	// set the address for back button
 	if(pushHistory == undefined || pushHistory) {
 	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
@@ -41,15 +52,19 @@ function timeseries_add(e, pid, timeseries) {
 	});
     }
     // add the timeline control
-    $(e).append('<div id="timeline"></div>').find('#timeline').timeline()
+    $(e).append('<div id="timeline" class="major"></div>').find('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
-	    $('#date_label').empty().append(asUTC(r.time).toISOString());
+	    updateDateLabel(timeline);
 	}).timeline_bind('timechanged', function(timeline, r) {
 	    // correct tooltip to be in UTC
 	    $('.timeline-customtime').attr('title',asUTC(r.time).toISOString());
 	    // when the user is done dragging, show the nearest bin
 	    showNearest(r.time);
+	}).timeline_bind('rangechanged', function(timeline, r) {
+	    updateDateLabel(timeline);
+	}).timeline_bind('rangechange', function(timeline, r) {
+	    updateDateLabel(timeline);
 	}).getTimeline(function(t) {
 	    // when the user clicks on the data series, show the nearest bin
 	    $('#timeline').bind('click', {timeline:t}, function(event) {
@@ -128,12 +143,12 @@ function timeseries_add(e, pid, timeseries) {
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
     // our date label goes below the timeline
-    $(e).append('<div id="date_label"></div>');
+    $(e).append('<div id="date_label" class="major"></div>');
     // now add a place to display the ROI image
-    $(e).append('<div id="roi_image"></div>');
+    $(e).append('<div id="roi_image" class="major target_image "></div>').find('div:last')
+	.css('display','none');
     // and the mosaic pager is below that
-    $(e).append('<div id="mosaic_pager"></div>').find('#mosaic_pager')
-	.css('float','left')
+    $(e).append('<div id="mosaic_pager" class="major"></div>').find('#mosaic_pager')
 	.resizableMosaicPager()
 	.bind('roi_click', function(event, roi_pid) {
 	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
@@ -142,12 +157,9 @@ function timeseries_add(e, pid, timeseries) {
 		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
 		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
 		$('#roi_image').empty()
+		    .css('display','inline-block')
 		    .target_image(roi_pid, roi_width, roi_height)
-		    .css('float','right')
-		    .css('text-align','right')
-		    .append('<div class="roi_info bin_label"></div>').find('.roi_info')
-		    .css('float','right')
-		    .css('clear','right')
+		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
 		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
 		    .append('<a href="'+roi_pid+'.xml">XML</a> ')
 		    .append('<a href="'+roi_pid+'.rdf">RDF</a>').end()

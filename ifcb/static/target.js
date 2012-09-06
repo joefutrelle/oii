@@ -11,7 +11,7 @@
 		function update() {
 		    $this.find('div.target_image').empty()
 			.grayLoadingImage(urls[view], width, height)
-			.append('shown: '+labels[view]);
+			.append('shown: '+labels[view]+'. click for '+labels[(view+1)%urls.length]);
 		}
 		$this.append('<div class="target_image"></div>').find('div:last')
 		    .css('width',width)
