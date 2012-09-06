@@ -74,22 +74,37 @@
 		// add some controls for changing the size of the mosaic
 		var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
 		var roi_scales = [15, 25, 33, 40, 66, 100];
+		// make the selected on checked
+		var selected_size = undefined;
+		$.each(mosaic_sizes, function(ix, size) {
+		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
+			selected_size = size;
+		    }
+		});
 		// add size controls
 		$this.append('<div class="mosaic_controls"></div>').find('.mosaic_controls')
 		    .append('Mosaic size: <span></span>').find('span:last')
 		    .radio(mosaic_sizes, function(size) {
  			return size[0] + 'x' + size[1];
-		    }).bind('select', function(event, value) {
+		    }, selected_size).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .find('.mosaic_pager').trigger('drawMosaic');
 		    });
 		// add ROI scale controls
+		// make the selected on checked
+		var selected_scale = undefined;
+		$.each(roi_scales, function(ix, scale) {
+		    console.log(scale);
+		    if(scale/100 == $this.data(ROI_SCALE)) {
+			selected_scale = scale
+		    }
+		});
 		$this.find('.mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
 		    .radio(roi_scales, function(scale) {
 			return scale + '%';
-		    }).bind('select', function(event, value) {
+		    }, selected_scale).bind('select', function(event, value) {
 			$this.data(ROI_SCALE, value/100)
 			    .find('.mosaic_pager').trigger('drawMosaic');
 		    });
