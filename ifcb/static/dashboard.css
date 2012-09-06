@@ -77,6 +77,12 @@ img.logo {
 }
 .target_image {
 }
+.target_image_text {
+    clear: both;
+    padding-top: 5px;
+    margin-bottom: 0px;
+    padding-bottom: 0px;
+}
 .major {
   -moz-border-radius: 7px;
   border-radius: 7px;

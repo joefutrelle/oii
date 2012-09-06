@@ -192,8 +192,6 @@ function timeseries_add(e, pid, timeseries) {
 		    .find('.target_image').css('float','right');//FIXME
 	    });
 	});
-    // must clear the floats for footer to layout correctly
-    $(e).append('<div class="pre_footer"></div>');
     // handle popstate
     window.onpopstate = function(event) {
 	if(event.state != undefined) {
