@@ -140,8 +140,10 @@ function timeseries_add(e, pid, timeseries) {
 		maxDate = end;
 	    }
 	});
-	// add a week to max date so that current time isn't squished over to the right
-	maxDate = new Date(maxDate.getTime() + (86400000 * 7));
+	// add a year to max date so that current time isn't squished over to the right
+	maxDate = new Date(maxDate.getTime() + (86400000 * 365));
+	// subtract a year to max date so that current time isn't squished over to the right
+	minDate = new Date(minDate.getTime() - (86400000 * 365));
 	// layout parameters accepted by showdata and passed to underlying widget
 	var timeline_options = {
 	    'width':  '100%',
@@ -154,6 +156,12 @@ function timeseries_add(e, pid, timeseries) {
 	    'utc': true
 	};
 	// now tell the timeline plugin to draw it
+	// if a pid is selected, show it
+	if(pid != undefined) {
+	    showMosaic(pid, false);
+	} else {
+	    showNearest(new Date());
+	}
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
     $('#title').closeBox();
@@ -184,10 +192,6 @@ function timeseries_add(e, pid, timeseries) {
 		    .find('.target_image').css('float','right');//FIXME
 	    });
 	});
-    // if a pid is selected, show it
-    if(pid != undefined) {
-	showMosaic(pid, false);
-    }
     // handle popstate
     window.onpopstate = function(event) {
 	if(event.state != undefined) {

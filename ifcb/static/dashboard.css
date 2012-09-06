@@ -52,6 +52,7 @@ img.logo {
   font-weight: bold;
   width: 13em;
   text-align: center;
+  margin-top: 5px;
 }
 #timeline {
     margin-top: 0px;
@@ -61,10 +62,11 @@ img.logo {
   text-align: right;
 }
 .major {
-  -moz-border-radius: 8px;
-  border-radius: 8px;
-  background: #eeeeee;
-  padding: 8px;
+  -moz-border-radius: 7px;
+  border-radius: 7px;
+  background: #dddddd;
+  padding: 7px;
+  box-shadow: 0px 0px 8px #aaaaaa;
 }
 div.h1 {
     margin-top: 5px;
