@@ -45,6 +45,8 @@ img.logo {
   text-align: middle;
 }
 #roi_image {
+  float: right;
+  text-align: right;
   margin-right: 0px;
   margin-top: 15px;
 }
@@ -58,8 +60,6 @@ img.logo {
     margin-top: 0px;
 }
 .target_image {
-  float: right;
-  text-align: right;
 }
 .major {
   -moz-border-radius: 7px;

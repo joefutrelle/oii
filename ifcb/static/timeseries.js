@@ -168,7 +168,7 @@ function timeseries_add(e, pid, timeseries) {
     // our date label goes below the timeline
     $(e).append('<div id="date_label" class="major"></div>');
     // now add a place to display the ROI image
-    $(e).append('<div id="roi_image" class="major target_image "></div>').find('div:last')
+    $(e).append('<div id="roi_image" class="major target_image"></div>').find('div:last')
 	.closeBox()
 	.css('display','none');
     // and the mosaic pager is below that
