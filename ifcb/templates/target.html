@@ -19,7 +19,13 @@ $(document).ready(function() {
 {% for k,v in target %}
   <div>
     <span class="metadata_key">{{k}}</span>
-    <span class="metadata_value">{{v}}</span>
+    <span class="metadata_value">
+      {% if k in ['next','previous','binID'] %} <!-- FIXME hardcoded -->
+        <a href="{{v}}.html">{{v}}</a>
+      {% else %}
+        {{v}}
+      {% endif %}
+    </span>
   </div>
 {% endfor %}
   </div>

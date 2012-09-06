@@ -54,6 +54,8 @@ FIXITY='fixity'
 PORT='port'
 DEBUG='debug'
 STATIC='static'
+PREVIOUS='previous'
+NEXT='next'
 
 # FIXME do this in main
 # FIXME this should be selected by time series somehow
@@ -113,11 +115,19 @@ def get_target(hit, adc_path=None):
     """Read a single target from an ADC file given the bin PID/LID and target number"""
     if adc_path is None:
         adc_path = resolve_adc(hit.bin_pid)
+    prev_pid = None
+    this = None
     if app.config[STITCH]:
-        for target in list_targets(hit, max(1,hit.target_no-1), 3, adc_path=adc_path):
-            app.logger.debug(target)
+        for target in list_targets(hit, adc_path=adc_path):
             if target[TARGET_NUMBER] == hit.target_no:
-                return target
+                if prev_pid is not None:
+                    target[PREVIOUS] = prev_pid
+                this = target
+            elif target[TARGET_NUMBER] > hit.target_no and this is not None:
+                this[NEXT] = target[PID]
+                break
+            prev_pid = target[PID]
+        return this
     else:
         for target in list_targets(hit, hit.target_no, adc_path=adc_path):
             return target
