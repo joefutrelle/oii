@@ -316,6 +316,22 @@ def serve_blob(time_series,pid):
 def api_error(time_series,ignore):
     abort(404)
 
+@app.route('/<time_series>')
+@app.route('/<time_series>/')
+@app.route('/<time_series>/dashboard')
+@app.route('/<time_series>/dashboard/')
+@app.route('/<time_series>/dashboard/<path:pid>')
+def serve_timeseries(time_series, pid=None):
+    template = dict(static=app.config[STATIC])
+    if pid is not None:
+        hit = pid_resolver.resolve(pid=pid)
+        template['pid'] = hit.bin_pid
+        template['time_series'] = hit.time_series
+        template['title'] = hit.title
+    else:
+        template['time_series'] = time_series
+    return Response(render_template('timeseries.html',**template), mimetype='text/html')
+
 @app.route('/<path:pid>')
 def resolve(pid):
     """Resolve a URL to some data endpoint in a time series, including bin and target metadata endpoints,
@@ -352,19 +368,6 @@ def resolve(pid):
         return serve_bin(hit,mimetype)
     # nothing recognized, so return Not Found
     abort(404)
-
-@app.route('/<time_series>/dashboard')
-@app.route('/<time_series>/dashboard/<path:pid>')
-def serve_timeseries(time_series, pid=None):
-    template = dict(static=app.config[STATIC])
-    if pid is not None:
-        hit = pid_resolver.resolve(pid=pid)
-        template['pid'] = hit.bin_pid
-        template['time_series'] = hit.time_series
-        template['title'] = hit.title
-    else:
-        template['time_series'] = time_series
-    return Response(render_template('timeseries.html',**template), mimetype='text/html')
 
 @memoized
 def read_targets(adc_path, target_no=1, limit=-1):
@@ -433,7 +436,7 @@ def serve_bin(hit,mimetype):
     context = props[CONTEXT]
     del props[CONTEXT]
     # sort properties according to their order in the header schema
-    props = [(k,props[k]) for k,_ in HDR_SCHEMA]
+    props = [(k,props[k]) for k,_ in HDR_SCHEMA if k in props]
     # get a list of all targets, taking into account stitching
     if hit.product != 'short':
         targets = list_targets(hit)
