@@ -28,3 +28,7 @@
 .imagepager_right {
     background-image: url('images/right_arrow.png');
 }
+.imagepager_page_number {
+    font-size: 12px;
+    text-align: center;
+}

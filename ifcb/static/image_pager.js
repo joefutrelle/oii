@@ -55,14 +55,14 @@
 		    .end()
 		    .find('div:last').css('height',height).addClass('imagepager_arrow imagepager_right')
 		    .end().css('clear','both')
-		    .find('div:eq(1)')
+		    .find('div:eq(1)');
 		function showImage() {
 		    var image_href = image_list[ix];
 		    grayLoadingImage($(gli), image_href, width, height);
 		    // defer in case this is the first showImage
 		    // and clients are still waiting to attach event handlers
 		    setTimeout(function() {
-			$this.trigger('change', image_href);
+			$this.trigger('change', [ix, image_href]);
 		    }, 0);
 		}
 		$this.find('.imagepager_left').click(function() {

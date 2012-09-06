@@ -14,15 +14,16 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		// put 30 pages on the pager, just in case it's a huge bin
+		// FIXME somehow figure out how many pages there are re #1701
 		var images = [];
 		for(var page=1; page <= 30; page++) {
 		    // each page is a mosaic API call URL with a successive page number
 		    var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
-		    console.log('mosaic url = '+url);
 		    images.push(url);
 		}
 		// list of images in hand, create the image pager
-		$this.empty().append('<div></div>')
+		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
+		    .append('<div class="imagepager_page_number"></div>')
 		    .append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
 		    .append('<span> (<a href="'+pid+'.adc">ADC</a></span>')
 		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
@@ -32,9 +33,10 @@
 		    .append('<span> <a href="'+pid+'.xml">XML</a></span>')
 		    .append('<span> <a href="'+pid+'.rdf">RDF</a>)</span>')
 		    .find('span').addClass('bin_label').end()
-		    .find('div:last').imagePager(images, width, height) // use the image pager plugin
-		    .bind('change', function(event, image_href) { // when the user changes which page they're viewing
+		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
+		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
+			$('.imagepager_page_number').empty().append('page '+(ix+1));
 			$this.trigger('page_change', image_href);
 		    }).delegate('.page_image', 'click', function(event) { // when the user clicks on the mosaic image
 			// figure out where the click was
