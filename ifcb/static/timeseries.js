@@ -21,10 +21,12 @@ function timeseries_add(e, pid, timeseries) {
 	    .css('margin-left',tts+'px');
     }
     function showMosaic(pid, pushHistory) {
-	// now draw a multi-page mosaic
-	$('#mosaic_pager').trigger('drawMosaic',[pid]);
 	// remove any existing ROI image
 	$('#roi_image').empty().css('display','none');
+	// set the address for back button
+	if(pushHistory == undefined || pushHistory) {
+	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
+	}
 	// update date label on timeline control
 	$.getJSON(pid+'_short.json', function(r) { // need date information
 	    $('#workspace').data('selected_pid',r.pid);
@@ -38,10 +40,8 @@ function timeseries_add(e, pid, timeseries) {
 		updateDateLabel(t);
 	    });
 	});
-	// set the address for back button
-	if(pushHistory == undefined || pushHistory) {
-	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
-	}
+	// now draw a multi-page mosaic
+	$('#mosaic_pager').trigger('drawMosaic',[pid]);
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
@@ -52,7 +52,7 @@ function timeseries_add(e, pid, timeseries) {
 	});
     }
     // add the timeline control
-    $(e).append('<div id="timeline" class="major"></div>').find('#timeline').timeline()
+    $(e).append('<div class="major"><div class="h2">Data volume by day</div><br><div id="timeline"></div></div>').find('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
 	    updateDateLabel(timeline);
