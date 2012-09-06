@@ -187,8 +187,8 @@ function timeseries_add(e, pid, timeseries) {
 		    .target_image(roi_pid, roi_width, roi_height)
 		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
 		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
-		    .append('<a href="'+roi_pid+'.xml">XML</a> ')
-		    .append('<a href="'+roi_pid+'.rdf">RDF</a>').end()
+		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
+		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
 		    .find('.target_image').css('float','right');//FIXME
 	    });
 	});
