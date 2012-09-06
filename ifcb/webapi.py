@@ -282,7 +282,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         for tile in layout:
             target = tile.image
             # FIXME use fast stitching
-            tile.image = get_roi_image(hit.bin_pid, target[TARGET_NUMBER], fast_stitching=True)
+            tile.image = get_fast_stitched_roi(hit.bin_pid, target[TARGET_NUMBER])
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
     (pil_format, mimetype) = image_types(hit)
@@ -476,7 +476,7 @@ def bin_zip(hit,targets,template):
         for target in targets:
             buffer.seek(0)
             buffer.truncate()
-            im = get_roi_image(hit.bin_pid, target[TARGET_NUMBER])
+            im = get_stitched_roi(hit.bin_pid, target[TARGET_NUMBER])
             with tempfile.SpooledTemporaryFile() as imtemp:
                 im.save(imtemp,'PNG')
                 imtemp.seek(0)
@@ -518,6 +518,12 @@ def image_types(hit):
     (mimetype, _) = mimetypes.guess_type(filename)
     return (pil_format, mimetype)
 
+def get_stitched_roi(bin_pid, target_no):
+    return get_roi_image(bin_pid, target_no)
+
+def get_fast_stitched_roi(bin_pid, target_no):
+    return get_roi_image(bin_pid, target_no, True)
+
 def get_roi_image(bin_pid, target_no, fast_stitching=False):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
@@ -557,7 +563,7 @@ def get_roi_image(bin_pid, target_no, fast_stitching=False):
 
 def serve_roi(hit):
     """Serve a stitched ROI image given the output of the pid resolver"""
-    roi_image = get_roi_image(hit.bin_pid, hit.target_no)
+    roi_image = get_stitched_roi(hit.bin_pid, hit.target_no)
     if roi_image is None:
         abort(404)
     # now determine PIL format and MIME type

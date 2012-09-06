@@ -81,3 +81,18 @@ div.h2 {
     font-size: 1.2em;
     font-weight: bold;
 }
+.close {
+    display: block;
+    float: right;
+    width: 30px;
+    height: 30px;
+    font-family: sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    text-align: right;
+    color: #888888;
+/*    background: #444444;*/
+}
+.close:before {
+    content: '\000d7';
+}

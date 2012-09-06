@@ -1,3 +1,17 @@
+(function($) {
+    $.fn.extend({
+	closeBox: function() {
+	    return this.each(function () {
+		var $this = $(this); // retain ref to $(this)
+		$this.append('<a class="close"></a>').find('a:last')
+		    .bind('click', function() {
+			$this.css('display','none');
+		    });
+	    });// each in closeBox
+	}//closeBox
+    });//$.fn.extend
+})(jQuery);//end of plugin
+
 function timeseries_add(e, pid, timeseries) {
     // internal function. params
     // e - element to add to
@@ -41,7 +55,7 @@ function timeseries_add(e, pid, timeseries) {
 	    });
 	});
 	// now draw a multi-page mosaic
-	$('#mosaic_pager').trigger('drawMosaic',[pid]);
+	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
@@ -142,13 +156,16 @@ function timeseries_add(e, pid, timeseries) {
 	// now tell the timeline plugin to draw it
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
+    $('#title').closeBox();
     // our date label goes below the timeline
     $(e).append('<div id="date_label" class="major"></div>');
     // now add a place to display the ROI image
     $(e).append('<div id="roi_image" class="major target_image "></div>').find('div:last')
+	.closeBox()
 	.css('display','none');
     // and the mosaic pager is below that
     $(e).append('<div id="mosaic_pager" class="major"></div>').find('#mosaic_pager')
+	.closeBox()
 	.resizableMosaicPager()
 	.bind('roi_click', function(event, roi_pid) {
 	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
@@ -157,6 +174,7 @@ function timeseries_add(e, pid, timeseries) {
 		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
 		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
 		$('#roi_image').empty()
+		    .closeBox()
 		    .css('display','inline-block')
 		    .target_image(roi_pid, roi_width, roi_height)
 		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
