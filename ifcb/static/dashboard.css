@@ -1,6 +1,14 @@
-body {
+html {
+    height: 100%;
     font-family: sans-serif;
     font-size: small;
+}
+#content {
+    position: relative;
+    min-height: 100%;
+}
+body {
+    height: 100%;
 }
 .bin_label {
     font-family: sans-serif;
@@ -23,12 +31,17 @@ body {
 }
 .metadata_value {
 }
+.pre_footer {
+    clear: both;
+    height: 115px;
+}
 .footer {
-  clear: both;
+  position: relative;
+  margin-top: -115px;
   text-align: center;
   font-family: sans-serif;
-  font-size: 0.9em;
-  margin-top: 15px;
+  font-size: 15px;
+  padding-top: 15px;
   margin-right: auto;
   margin-left: auto;
 }
@@ -69,7 +82,7 @@ img.logo {
   border-radius: 7px;
   background: #dddddd;
   padding: 7px;
-  box-shadow: 0px 0px 8px #aaaaaa;
+  box-shadow: 0px 0px 5px #777777;
 }
 div.h1 {
     margin-top: 5px;
