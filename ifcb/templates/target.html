@@ -10,13 +10,17 @@ $(document).ready(function() {
     </script>
 {% endblock head %}
 {% block content %}
-  <h1>{{hit.target_pid}}</h1>
-  <div id="roi_pager"></div>
-  <div style="clear: both"><a href="{{hit.bin_pid}}.html">Show sample bin</a></div>
+  <div class="major h1">Target {{hit.target_pid}}</div>
+  <div id="roi_pager" class="major inline"></div>
+  <br class="break">
+  <div class="major inline" style="clear: both">{{hit.date}} (<a href="{{hit.bin_pid}}.html">Show sample bin</a>)</div>
+  <br class="break">
+  <div class="major inline" style="clear: both">
 {% for k,v in target %}
   <div>
     <span class="metadata_key">{{k}}</span>
     <span class="metadata_value">{{v}}</span>
   </div>
 {% endfor %}
+  </div>
 {% endblock content %}
