@@ -3,6 +3,8 @@
 // fires the following events
 // page_change(pageNumber, page_url) - when the user changes the page; generally not used
 // roi_click(roi_pid, width, height) - when the user clicks a ROI
+// resizable version triggers
+// state_change({pageNumber, width, height, roi_scale}) when state changes
 (function($) {
     $.fn.extend({
 	mosaicPager: function(pid, width, height, roi_scale) {
@@ -79,6 +81,14 @@
 		var roi_scales = [15, 25, 33, 40, 66, 100];
 		// make the selected on checked
 		var selected_size = undefined;
+		function stateChanged(pageNumber) {
+		    pageNumber == pageNumber ? pageNumber : 1;
+		    $this.trigger('state_change', [{
+			pageNumber: pageNumber,
+			width: $this.data(WIDTH),
+			height: $this.data(HEIGHT),
+			roi_scale: $this.data(ROI_SCALE)}]);
+		}
 		$.each(mosaic_sizes, function(ix, size) {
 		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
 			selected_size = size;
@@ -94,6 +104,7 @@
 			var height = value[1];
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .find('.mosaic_pager').trigger('drawMosaic');
+			stateChanged(1);
 		    });
 		// add ROI scale controls
 		// make the selected on checked
@@ -110,6 +121,7 @@
 		    }, selected_scale).bind('select', function(event, value) {
 			$this.data(ROI_SCALE, value/100)
 			    .find('.mosaic_pager').trigger('drawMosaic');
+			stateChanged(1);
 		    });
 		// now add the mosaic pager
 		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
@@ -135,9 +147,13 @@
 		    // create the mosaic pager
 		    $this.find('.mosaic_pager')
 			.mosaicPager(pid, width, height, roi_scale);
+		    $this.delegate('.mosaic_pager','page_change', function(event, pageNumber, href, noChangeEvent) {
+			stateChanged(pageNumber);
+		    });
 		    // delegate gotopage events to image pager
 		    $this.bind('gotopage', function(event, page) {
 			$this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
+			stateChanged(page);
 		    });
 		});
 	    });//each in resizableMosaicPager

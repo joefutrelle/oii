@@ -39,7 +39,7 @@ function timeseries_add(e, pid, timeseries) {
 	$('#roi_image').empty().css('display','none');
 	// set the address for back button
 	if(pushHistory == undefined || pushHistory) {
-	    window.history.pushState(pid, pid, '/'+timeseries+'/dashboard/pid/'+pid);
+	    window.history.pushState({pid:pid, mosaic_state:{}}, pid, '/'+timeseries+'/dashboard/pid/'+pid);
 	}
 	// update date label on timeline control
 	$.getJSON(pid+'_short.json', function(r) { // need date information
@@ -55,7 +55,14 @@ function timeseries_add(e, pid, timeseries) {
 	    });
 	});
 	// now draw a multi-page mosaic
-	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
+	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid])
+	    .bind('state_change', function(event, s) {
+		var stateString = 'p'+s.pageNumber+'s'+s.width+'x'+s.height+'s'+s.roi_scale;
+		console.log('mosaic state string = '+stateString);
+		if(false && s.pageNumber > 1) { // FIXME currently disabled
+		    history.pushState({pid:pid, mosaic_state:s}, pid, '/'+timeseries+'/dashboard/pid/'+pid+'#'+stateString);
+		}
+	    });
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
@@ -196,9 +203,14 @@ function timeseries_add(e, pid, timeseries) {
 	});
     // handle popstate
     window.onpopstate = function(event) {
-	if(event.state != undefined) {
-	    console.log(event.state);
-	    showMosaic(event.state, false);
+	console.log(event);
+	if(event.state) {
+	    if(event.state.pid) {
+		showMosaic(event.state.pid, false);
+	    }
+	    if(event.state.mosaic_state) {
+		$('#mosaic_pager').trigger('restoreState', event.state.mosaic_state);
+	    }
 	}
     };
 }
