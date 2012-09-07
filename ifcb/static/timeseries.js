@@ -3,7 +3,7 @@
 	closeBox: function() {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
-		$this.append('<a class="close"></a>').find('a:last')
+		$this.prepend('<a class="close"></a>').find('a:first')
 		    .bind('click', function() {
 			$this.css('display','none');
 		    });

@@ -129,11 +129,15 @@ div.h2 {
     font-weight: bold;
     text-align: right;
     color: #888888;
-/*    background: #444444;*/
 }
 .close:before {
     content: '\000d7';
 }
 .target_metadata {
     text-align: left;
+}
+.dashboard_links {
+    margin-top: 5px;
+    font-size: small;
+    font-weight: normal;
 }
