@@ -1,0 +1,14 @@
+<resolvers>
+  <resolver name="pid">
+    <match var="pid" pattern="([A-Z]+\.((\d{4})\d{4})\.(\d{3}).*)\.([a-zA-Z0-9]+)"
+	   groups="imagename day year tenmin extension">
+      <var name="filename">${imagename}.${extension}</var>
+      <var name="img_dir">${day}_${tenmin}0</var>
+      <var name="root">/mnt/nmfs-2/webdata/HabCam/data/Cruises</var>
+      <path var="cruise_dir" match="${root}/*">
+        <match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
+        <path match="Images/Full/${img_dir}/${imagename}.jpg"/>
+      </path>
+    </match>
+  </resolver>
+</resolvers>
