@@ -29,6 +29,9 @@ body {
 .metadata_key {
     font-style: italic;
 }
+.metadata_key:after {
+    content: ':';
+}
 .metadata_value {
 }
 .pre_footer {
@@ -65,6 +68,9 @@ img.logo {
   text-align: right;
   margin-right: 0px;
   margin-top: 15px;
+}
+.roi_info {
+  margin-bottom: 5px;
 }
 #date_label {
   font-weight: bold;
@@ -127,4 +133,7 @@ div.h2 {
 }
 .close:before {
     content: '\000d7';
+}
+.target_metadata {
+    text-align: left;
 }

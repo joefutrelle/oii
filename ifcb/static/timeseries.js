@@ -189,7 +189,9 @@ function timeseries_add(e, pid, timeseries) {
 		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
 		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
 		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
-		    .find('.target_image').css('float','right');//FIXME
+		    .append('<div><div class="target_metadata"></div></div>')
+		    .find('.target_metadata').target_metadata(roi_pid).collapsing('metadata').end()
+		    .find('.target_image').css('float','right');
 	    });
 	});
     // handle popstate

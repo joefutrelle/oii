@@ -25,8 +25,6 @@
 			update();
 		    });
 		$(e).append('<div></div>').find('div:last').addClass('target_image_text');
-		$(e).append('<div class="target_metadata"></div>').find('div:last')
-		    .target_metadata(target_pid).collapsing('metadata')
 		update();
 	    });//each in target_image
 	},//target_image
