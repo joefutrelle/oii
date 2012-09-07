@@ -23,6 +23,9 @@
 		    var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
 		    images.push(url);
 		}
+		$.getJSON(pid+'_medium.json', function(r) {
+		    bin_size = r.targets.length;
+		});
 		// list of images in hand, create the image pager
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
 		    .append('<div class="imagepager_page_number"></div>')
@@ -40,6 +43,10 @@
 			$this.data(BIN_URL, image_href);
 			$('.imagepager_page_number').empty().append('page '+(ix+1));
 			$this.trigger('page_change', [ix+1, image_href]);
+			$.getJSON(image_href.replace('.jpg','.json'), function(r) {
+			    var bin_size_label = bin_size != undefined ? bin_size+'' : '?';
+			    $('.imagepager_page_number').empty().append('page '+(ix+1)+', showing '+r.length+' of '+bin_size_label+' target(s)');
+			});
 		    }).delegate('.page_image', 'click', function(event) { // when the user clicks on the mosaic image
 			// figure out where the click was
 			var clickX = event.pageX - $(this).offset().left;

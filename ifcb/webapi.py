@@ -479,6 +479,8 @@ def serve_bin(hit,mimetype):
         properties['date'] = hit.date
         if hit.product == 'short':
             del properties['targets']
+        if hit.product == 'medium':
+            properties['targets'] = target_pids
         return jsonr(properties)
     elif mimetype == 'application/zip':
         return Response(bin_zip(hit,targets,template), mimetype=mimetype)

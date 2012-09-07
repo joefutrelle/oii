@@ -55,7 +55,8 @@ function timeseries_add(e, pid, timeseries) {
 	    });
 	});
 	// now draw a multi-page mosaic
-	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid])
+	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
+/*
 	    .bind('state_change', function(event, s) {
 		var stateString = 'p'+s.pageNumber+'s'+s.width+'x'+s.height+'s'+s.roi_scale;
 		console.log('mosaic state string = '+stateString);
@@ -63,6 +64,7 @@ function timeseries_add(e, pid, timeseries) {
 		    history.pushState({pid:pid, mosaic_state:s}, pid, '/'+timeseries+'/dashboard/pid/'+pid+'#'+stateString);
 		}
 	    });
+*/
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date) {
