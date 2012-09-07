@@ -25,29 +25,24 @@
 			update();
 		    });
 		$(e).append('<div></div>').find('div:last').addClass('target_image_text');
-		$(e).append('<div>&#x25B6; Show metadata</div>').find('div:last').addClass('collapse')
-		    .css('text-align','left')
-		    .css('color','gray')
-		    .click(function() {
-			var display = $(e).find('div.metadata').css('display') == 'block' ? 'none' : 'block';
-			if(display == 'none') {
-			    $(e).find('div.collapse').empty().append('&#x25B6; Show metadata</div>');
-			} else {
-			    $(e).find('div.collapse').empty().append('&#x25BC; Hide metadata</div>');
-			}
-			$this.find('div.metadata').css('display',display);
-		    });
-		$(e).append('<div></div>').find('div:last').addClass('metadata')
-		    .css('display','none')
-		    .css('text-align','left');
-		$.getJSON(target_pid+'.json', function(r) {
-		    for(var key in r) {
-			$(e).find('div.metadata')
-			    .append('<div><span class="metadata_key">'+key+'</span> <span class="metadata_value">'+r[key]+'</span></div>');
-		    }
-		});
+		$(e).append('<div class="target_metadata"></div>').find('div:last')
+		    .target_metadata(target_pid).collapsing('metadata')
 		update();
-	    });//each in bin_page
-	}//bin_page
+	    });//each in target_image
+	},//target_image
+	target_metadata: function(target_pid) {
+	    return this.each(function () {
+		var $this = $(this); // retain ref to $(this)
+		$.get(target_pid+'.xml', function(x) {
+		    $(x).find('Target *').each(function(ix, thang) {
+			var key = $(thang).get(0).tagName;
+			var value = $(thang).text();
+			console.log(key+'='+value);
+			$this.append('<div><span class="metadata_key">'+key+'</span> '+
+				    '<span class="metadata_value">'+value+'</span></div>');
+		    });
+		});
+	    });//each in target_metadata
+	}//target_metadata
     });//$.fn.extend
 })(jQuery);//end of plugin

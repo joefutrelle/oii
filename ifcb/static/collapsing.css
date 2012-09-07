@@ -1,0 +1,9 @@
+.collapse_button {
+   color:gray;
+}
+.collapse_button_closed:before {
+   content: '\025b6 ';
+}
+.collapse_button_open:before {
+   content: '\025bc ';
+}
