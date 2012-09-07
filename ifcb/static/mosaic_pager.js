@@ -1,7 +1,7 @@
 // jQuery plugin extending image_pager for IFCB mosaic images.
 // obv requires image_pager.
 // fires the following events
-// page_change(page_url) - when the user changes the page; generally not used
+// page_change(pageNumber, page_url) - when the user changes the page; generally not used
 // roi_click(roi_pid, width, height) - when the user clicks a ROI
 (function($) {
     $.fn.extend({
@@ -37,7 +37,7 @@
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
 			$('.imagepager_page_number').empty().append('page '+(ix+1));
-			$this.trigger('page_change', image_href);
+			$this.trigger('page_change', [ix+1, image_href]);
 		    }).delegate('.page_image', 'click', function(event) { // when the user clicks on the mosaic image
 			// figure out where the click was
 			var clickX = event.pageX - $(this).offset().left;

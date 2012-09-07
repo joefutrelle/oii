@@ -15,7 +15,8 @@ from oii.times import iso8601
 from oii.webapi.utils import jsonr
 import urllib
 from oii.utils import order_keys
-from oii.ifcb.formats.adc import read_adc, read_target, ADC, ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
+from oii.ifcb.formats.adc import read_adc, read_target, ADC
+from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
@@ -29,6 +30,9 @@ from oii.config import get_config
 import mimetypes
 from zipfile import ZipFile
 from PIL import Image
+from ImageFilter import FIND_EDGES
+import ImageOps
+import ImageChops
 from werkzeug.contrib.cache import SimpleCache
 
 # TODO JSON on everything
@@ -302,7 +306,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 @app.route('/<time_series>/api/blob/pid/<path:pid>')
 def serve_blob(time_series,pid):
     """Serve blob zip or image"""
-    hit = blob_resolver.resolve(pid=pid)
+    hit = blob_resolver.resolve(pid=pid,time_series=time_series)
     zip_path = hit.value
     if hit.target is None: # bin, not target?
         if hit.extension != 'zip':
@@ -315,11 +319,16 @@ def serve_blob(time_series,pid):
         blobzip.close()
         # now determine PIL format and MIME type
         (pil_format, mimetype) = image_types(hit)
-        if mimetype == 'image/png':
+        if hit.product == 'blob' and mimetype == 'image/png':
             return Response(png, mimetype='image/png')
         else:
             # FIXME support more imaage types
             blob_image = Image.open(StringIO(png))
+            if hit.product == 'blob_outline':
+                blob_image = blob_image.convert('RGB').filter(FIND_EDGES)
+                blob_image = ImageOps.colorize(blob_image.convert('L'),(255,255,255),(255,0,0))
+                roi_image = get_stitched_roi(hit.bin_pid, int(hit.target)).convert('RGB')
+                blob_image = ImageChops.multiply(roi_image, blob_image)
             return image_response(blob_image, pil_format, mimetype)
 
 @app.route('/<time_series>/api/<path:ignore>')
@@ -364,7 +373,7 @@ def resolve(pid):
     if mimetype is None:
         mimetype = 'application/octet-stream'
     # is this request for a product?
-    if hit.product == 'blob':
+    if hit.product is not None and re.match(r'blob.*',hit.product):
         return serve_blob(hit.time_series,hit.pid)
     # is the request for a single target?
     if hit.target is not None:
