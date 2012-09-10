@@ -11,8 +11,11 @@ Match = namedtuple('Match', ['var','regex', 'expressions', 'groups'])
 Var = namedtuple('Var', ['name','values'])
 Path = namedtuple('Path', ['var', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
+All = namedtuple('All', ['expressions', 'hit'])
 Hit  = namedtuple('Hit', ['value', 'stop'])
 Import = namedtuple('Import', ['name'])
+
+TRUE=['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes']
 
 # convert XML format into named tuple representation.
 # a resolver is a sequence of expressions, each of which is
@@ -39,12 +42,18 @@ def sub_parse(node):
             yield Path(var=child.get('var'), match=child.get('match'), expressions=list(sub_parse(child)))
         elif child.tag == 'any':
             yield Any(expressions=list(sub_parse(child)))
+        elif child.tag == 'all':
+            hit = child.get('hit')
+            if hit is not None:
+                yield All(expressions=list(sub_parse(child)), hit=hit)
+            else:
+                yield All(expressions=list(sub_parse(child)), hit=None)
         elif child.tag == 'import':
             yield Import(name=child.get('name'))
         elif child.tag == 'hit':
             stop = child.get('stop')
             if stop is not None:
-                yield Hit(value=child.text, stop=stop in ['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes'])
+                yield Hit(value=child.text, stop=stop in TRUE)
             elif child.text is None:
                 yield Hit('', stop=False)
             else:
@@ -109,6 +118,29 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         for ex in expr.expressions:
             for solution in resolve([ex] + resolver[1:], bindings, cwd, namespace):
                 yield solution
+    elif isinstance(expr,All):
+        # "all" means that all subexpressions mus match; it is the explicit form of the implicit
+        # behavior of an entire resolver. If any subexpression does not produce variable bindings or a solution,
+        # then "all" produces no solutions for its parents. an optional "hit" attribute, if present, means that
+        # the "all" will always produce a hit after all subexpressions match; the contents of the "hit" attribute
+        # are a template that will be produced as the solution.
+        # this can be used in conjunction with any to iterate over groups of variable bindings:
+        # <any>
+        #   <all hit="${a}${b}">
+        #     <var name="a">A</var>
+        #     <var name="b">B</var>
+        #   </all>
+        #   <all hit="${a}${b}">
+        #     <var name="a">a</var>
+        #     <var name="b">b</var>
+        #   </all>
+        # </any>
+        # yields "AB" and "ab"
+        expr_hit = expr.expressions
+        if expr.hit is not None:
+            expr_hit = expr_hit + [Hit(expr.hit, stop=False)]
+        for solution in resolve(expr_hit + resolver[1:], bindings, cwd, namespace):
+            yield solution
     elif isinstance(expr,Hit):
         # "hit" immediately yields a solution, then continues, unless "stop" is true.
         # so <hit>foo</hit> yields a hit on 'foo'
