@@ -189,6 +189,7 @@ def parse_date_param(sdate):
         return strptime(re.sub(r'\.\d+Z','',sdate),'%Y-%m-%dT%H:%M:%S')
     except:
         app.logger.debug('could not parse date param %s' % sdate)
+        abort(400)
 
 
 def binlid2dict(time_series, bin_lid):
@@ -220,6 +221,19 @@ def serve_nearest(time_series,date):
     for bin_lid in app.config[FEED].nearest_bin(date):
         d = binlid2dict(time_series, bin_lid)
     return jsonr(d)
+
+@app.route('/<time_series>/api/feed/start/<start>')
+@app.route('/<time_series>/api/feed/start/<start>/end/<end>')
+@app.route('/<time_series>/api/feed/end/<end>')
+def serve_between(time_series,start,end=None):
+    if start is not None:
+        start = parse_date_param(start)
+    if end is not None:
+        end = parse_date_param(end)
+    def doit():
+        for bin_lid in app.config[FEED].between(start,end):
+            yield binlid2dict(time_series, bin_lid)
+    return jsonr(list(doit()))
 
 @memoized
 def get_volume():

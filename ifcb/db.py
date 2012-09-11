@@ -35,6 +35,18 @@ class IfcbFeed(Psql):
             db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins order by time_delta limit 1",(dt,))
             for row in db.fetchall():
                 yield row[0]
+    def between(self,start=None,end=None):
+        if end is None:
+            end = time.gmtime()
+        if start is None:
+            start = time.gmtime(0)
+        start_dt = utcdatetime(start)
+        end_dt = utcdatetime(end)
+        with xa(self.psql_connect) as (c,db):
+            db.execute("set session time zone 'UTC'")
+            db.execute("select lid from bins where sample_time >= %s and sample_time <= %s",(start_dt, end_dt))
+            for row in db.fetchall():
+                yield row[0]
     def day_bins(self,date=None):
         """Return the LIDs of all bins on the given day"""
         if date is None:
