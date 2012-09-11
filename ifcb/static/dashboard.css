@@ -167,3 +167,12 @@ div.api {
   box-shadow: 0px 0px 5px #777777;
   margin-left: 10px;
 }
+div.api i {
+  font-family: serif;
+}
+div.api i:before {
+  content: '{';
+}
+div.api i:after {
+  content: '}';
+}
