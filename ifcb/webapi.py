@@ -11,7 +11,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from time import strptime
 from StringIO import StringIO
 from oii.config import get_config
-from oii.times import iso8601
+from oii.times import iso8601, rfc822
 from oii.webapi.utils import jsonr
 import urllib
 from oii.utils import order_keys
@@ -60,6 +60,11 @@ DEBUG='debug'
 STATIC='static'
 PREVIOUS='previous'
 NEXT='next'
+START='start'
+END='end'
+NEAREST='nearest'
+LATEST='latest'
+FORMAT='format'
 
 # FIXME do this in main
 # FIXME this should be selected by time series somehow
@@ -192,16 +197,34 @@ def parse_date_param(sdate):
         abort(400)
 
 
-def binlid2dict(time_series, bin_lid):
+def binlid2dict(time_series, bin_lid, format='json'):
+    date_format = iso8601
+    if format == 'rss':
+        date_format = rfc822
     hit = pid_resolver.resolve(pid=bin_lid, time_series=time_series)
-    date = iso8601(strptime(hit.date, hit.date_format))
+    date = date_format(strptime(hit.date, hit.date_format))
+    # FIXME fetch metadata?
     return {
-        'lid': bin_lid,
         'pid': hit.bin_pid,
         'date': date
         }
 
+# FIXME need max date, URL prefix
+def feed_response(time_series,dicts,format='json'):
+    app.logger.debug(dicts)
+    max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
+    context = dict(max_date=max_date, time_series=time_series, feed=dicts)
+    if format == 'json':
+        return jsonr(dicts)
+    elif format == 'html':
+        return Response(render_template('feed.html',**context),mimetype='text/html')
+    elif format == 'atom':
+        return Response(render_template('feed.atom',**context),mimetype='application/xml+atom')
+    elif format == 'rss':
+        return Response(render_template('feed.rss',**context),mimetype='application/xml+rss')
+
 @app.route('/<time_series>/api/feed/format/<format>')
+@app.route('/<time_series>/api/feed/date/<date>')
 @app.route('/<time_series>/api/feed/date/<date>/format/<format>')
 def serve_feed(time_series,date=None,format='json'):
     if date is not None:
@@ -210,8 +233,8 @@ def serve_feed(time_series,date=None,format='json'):
     def feed2dicts():
         # FIXME parameterize by time series!
         for bin_lid in app.config[FEED].latest_bins(date):
-            yield binlid2dict(time_series, bin_lid)
-    return jsonr(list(feed2dicts()))
+            yield binlid2dict(time_series, bin_lid, format)
+    return feed_response(time_series, list(feed2dicts()), format)
 
 @app.route('/<time_series>/api/feed/nearest/<date>')
 def serve_nearest(time_series,date):
@@ -222,18 +245,38 @@ def serve_nearest(time_series,date):
         d = binlid2dict(time_series, bin_lid)
     return jsonr(d)
 
+# FIXME there's got to be a better way of handling optional parts of URL patterns
 @app.route('/<time_series>/api/feed/start/<start>')
 @app.route('/<time_series>/api/feed/start/<start>/end/<end>')
 @app.route('/<time_series>/api/feed/end/<end>')
-def serve_between(time_series,start,end=None):
+@app.route('/<time_series>/api/feed/start/<start>/format/<format>')
+@app.route('/<time_series>/api/feed/start/<start>/end/<end>/format/<format>')
+@app.route('/<time_series>/api/feed/end/<end>/format/<format>')
+def serve_between(time_series,start,end=None,format='json'):
     if start is not None:
         start = parse_date_param(start)
     if end is not None:
         end = parse_date_param(end)
     def doit():
         for bin_lid in app.config[FEED].between(start,end):
-            yield binlid2dict(time_series, bin_lid)
-    return jsonr(list(doit()))
+            yield binlid2dict(time_series, bin_lid, format)
+    return feed_response(time_series, list(doit()), format)
+
+@app.route('/<time_series>/feed.json')
+def serve_json_feed(time_series):
+    return serve_feed(time_series,format='json')
+
+@app.route('/<time_series>/feed.rss')
+def serve_rss_feed(time_series):
+    return serve_feed(time_series,format='rss')
+
+@app.route('/<time_series>/feed.atom')
+def serve_atom_feed(time_series):
+    return serve_feed(time_series,format='atom')
+
+@app.route('/<time_series>/feed.html')
+def serve_html_feed(time_series):
+    return serve_feed(time_series,format='html')
 
 @memoized
 def get_volume():

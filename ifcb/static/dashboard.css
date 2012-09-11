@@ -141,3 +141,14 @@ div.h2 {
     font-size: small;
     font-weight: normal;
 }
+div.scale_bar_container {
+  text-align: center;
+  display: inline-block;
+  margin-right: 10px;
+  margin-left: 10px;
+}
+div.scale_bar {
+  background: black;
+  width: 34px;
+  height: 5px;
+}
