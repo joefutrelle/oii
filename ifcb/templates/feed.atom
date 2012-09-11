@@ -1,0 +1,23 @@
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Imaging FlowCytobot data</title>
+  <subtitle>Live marine phytoplankton cytometry with imagery</subtitle>
+  <author>
+    <name>Imaging FlowCytobot</name>
+  </author>
+  <link href="http://ifcb-data.whoi.edu/{{time_series}}/feed.atom" rel="self"/>
+  <id>http://ifcb-data.whoi.edu/{{time_series}}/feed.atom</id>
+  <updated>{{max_date}}</updated>{% for entry in feed %}
+  <entry>
+    <title>Sample @ {{entry.date}}</title>
+    <link href="{{entry.pid}}" type="application/rdf+xml" rel="alternate"/>  
+    <link href="{{entry.pid}}.xml" type="text/xml" rel="alternate"/>  
+    <link href="{{entry.pid}}.json" type="application/json" rel="alternate"/>  
+    <id>{{entry.pid}}</id>
+    <updated>{{entry.date}}</updated>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <a href="{{entry.pid}}.html">Sample @ {{entry.date}}</a>
+      </div>
+    </content>
+  </entry>{% endfor %}
+</feed>

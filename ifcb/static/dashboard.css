@@ -36,11 +36,11 @@ body {
 }
 .pre_footer {
     clear: both;
-    height: 115px;
+    height: 125px;
 }
 .footer {
   position: relative;
-  margin-top: -115px;
+  margin-top: -125px;
   text-align: center;
   font-family: sans-serif;
   font-size: 15px;
@@ -151,4 +151,19 @@ div.scale_bar {
   background: black;
   width: 34px;
   height: 5px;
+}
+div.doc {
+  width: 700px;
+  margin: auto;
+}
+div.api {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  font-family: monospace;
+  -moz-border-radius: 7px;
+  border-radius: 7px;
+  background: #dddddd;
+  padding: 7px;
+  box-shadow: 0px 0px 5px #777777;
+  margin-left: 10px;
 }

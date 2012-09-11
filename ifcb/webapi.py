@@ -357,7 +357,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     (pil_format, mimetype) = image_types(hit)
     return image_response(mosaic_image, pil_format, mimetype)
     
-@app.route('/api/blob/pid/<path:pid>')
 @app.route('/<time_series>/api/blob/pid/<path:pid>')
 def serve_blob(time_series,pid):
     """Serve blob zip or image"""
@@ -405,6 +404,12 @@ def serve_timeseries(time_series, pid=None):
     else:
         template['time_series'] = time_series
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
+
+@app.route('/api')
+@app.route('/api.html')
+def serve_doc():
+    template = dict(static=app.config[STATIC])
+    return Response(render_template('api.html',**template), mimetype='text/html')
 
 @app.route('/<path:pid>')
 def resolve(pid):

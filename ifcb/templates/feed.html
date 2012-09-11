@@ -1,0 +1,16 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Imaging FlowCytobot data</title>
+</head>
+<body>
+  <div class="title">Imaging FlowCytobot data</div>
+  <div class="bins">
+    <ul class="bins">{% for entry in feed %}
+      <li class="bin">
+        <a href="{{entry.pid}}.html">Sample @ {{entry.date}}</a>
+      </li>{% endfor %}
+    </ul>
+  </div>
+</body>
+</html>
