@@ -183,7 +183,7 @@ function timeseries_add(e, pid, timeseries) {
     // and the mosaic pager is below that
     $(e).append('<div id="mosaic_pager" class="major"></div>').find('#mosaic_pager')
 	.closeBox()
-	.resizableMosaicPager()
+	.resizableMosaicPager(timeseries)
 	.bind('roi_click', function(event, roi_pid) {
 	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
 	    $.getJSON(roi_pid+'.json', function(r) {

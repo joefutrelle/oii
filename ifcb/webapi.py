@@ -287,7 +287,6 @@ def get_volume():
 def serve_volume(time_series):
     return Response(get_volume(), mimetype='application/json')
 
-@app.route('/api/mosaic/pid/<path:pid>')
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 def serve_mosaic(time_series=None,pid=None):
     """Serve a mosaic with all-default parameters"""
@@ -324,7 +323,6 @@ def layout2json(layout, scale):
         (x,y) = t.position
         yield dict(pid=t.image['pid'], width=w*scale, height=h*scale, x=x*scale, y=y*scale)
 
-@app.route('/api/mosaic/<path:params>/pid/<path:pid>')
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.

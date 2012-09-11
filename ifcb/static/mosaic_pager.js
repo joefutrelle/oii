@@ -7,7 +7,7 @@
 // state_change({pageNumber, width, height, roi_scale}) when state changes
 (function($) {
     $.fn.extend({
-	mosaicPager: function(pid, width, height, roi_scale) {
+	mosaicPager: function(timeseries, pid, width, height, roi_scale) {
 	    var BIN_URL='mosaic_bin_url';
 	    // pid - bin pid (or lid)
 	    // width -  the width  \__of the mosaic
@@ -20,7 +20,7 @@
 		var images = [];
 		for(var page=1; page <= 30; page++) {
 		    // each page is a mosaic API call URL with a successive page number
-		    var url = '/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
+		    var url = '/'+timeseries+'/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
 		    images.push(url);
 		}
 		$.getJSON(pid+'_medium.json', function(r) {
@@ -71,7 +71,7 @@
 		    });
 	    });//each in mosaicPager
 	},//mosaicPager
-        resizableMosaicPager: function(width, height, roi_scale, pid) {
+        resizableMosaicPager: function(timeseries, width, height, roi_scale, pid) {
 	    var PID = 'mosaic_pager_bin_pid';
 	    var WIDTH = 'mosaic_pager_width';
 	    var HEIGHT = 'mosaic_pager_height';
@@ -153,7 +153,7 @@
 		    var height = $this.data(HEIGHT); // height of displayed mosaic
 		    // create the mosaic pager
 		    $this.find('.mosaic_pager')
-			.mosaicPager(pid, width, height, roi_scale);
+			.mosaicPager(timeseries, pid, width, height, roi_scale);
 		    $this.delegate('.mosaic_pager','page_change', function(event, pageNumber, href, noChangeEvent) {
 			stateChanged(pageNumber);
 		    });
