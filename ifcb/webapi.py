@@ -386,12 +386,13 @@ def serve_blob(time_series,pid):
 def api_error(time_series,ignore):
     abort(404)
 
+@app.route('/')
 @app.route('/<time_series>')
 @app.route('/<time_series>/')
 @app.route('/<time_series>/dashboard')
 @app.route('/<time_series>/dashboard/')
 @app.route('/<time_series>/dashboard/<path:pid>')
-def serve_timeseries(time_series, pid=None):
+def serve_timeseries(time_series='mvco', pid=None):
     template = dict(static=app.config[STATIC])
     if pid is not None:
         hit = pid_resolver.resolve(pid=pid)
