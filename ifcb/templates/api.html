@@ -13,7 +13,7 @@ You can use these web services to access IFCB data from anywhere, and discover w
 All IFCB API URLs are prefixed with a namespace URL that identifies the time series being accessed.
 For example, the MVCO time series is at this URL prefix:
 
-<div class="api">
+<div class="api code">
 http://ifcb-data.whoi.edu/mvco
 </div>
 
@@ -23,15 +23,16 @@ image data.
 
 <p>
 
-Each bin has a URL. Bin URLs are available from API calls that list bins given some criteria. A bin URL begins with
+Each bin has a URL. Bin URLs are available from the <a href='#feedapi'>feed API</a> described below. A bin URL begins with
 the namespace URL, followed by a code identifying the bin.
 
+<a name="feedapi"></a>
 <h2>Feed API</h2>
 
 Feeds of most recent data are available in standard formats. The following URLs return a list of the most recent
 bins up to the current time:
 
-<div class="api">
+<div class="api code">
 <i>namespace</i>/feed.rss<br>
 <i>namespace</i>/feed.html<br>
 <i>namespace</i>/feed.atom<br>
@@ -40,7 +41,7 @@ bins up to the current time:
 
 To constrain the feed to an earlier date, use this variant:
 
-<div class="api">
+<div class="api code">
 <i>namespace</i>/api/feed/date/<i>date</i>/format/<i>format</i><br>
 </div>
 
@@ -48,7 +49,7 @@ Where "date" is an ISO8601 compliant timestamp (e.g., 2007-04-05) and "format" i
 <p>
 
 To list all sample bins in a date range, use this variant
-<div class="api">
+<div class="api code">
 <i>namespace</i>/api/feed/start/<i>date</i>/end/<i>date</i>/format/<i>format</i><br>
 </div>
 
@@ -56,7 +57,7 @@ To list all sample bins in a date range, use this variant
 
 Raw data is available for each sample bin at the following endpoints:
 
-<div class="api">
+<div class="api code">
 <i>bin URL</i>.hdr<br>
 <i>bin URL</i>.adc<br>
 <i>bin URL</i>.roi<br>
@@ -67,7 +68,7 @@ These URLs return raw IFCB data. It is not in any standard format, although ADC 
 
 XML, RDF, JSON, and CSV variants are available by using the appropriate prefixes:
 
-<div class="api">
+<div class="api code">
 <i>bin URL</i>.xml<br>
 <i>bin URL</i>.rdf<br>
 <i>bin URL</i>.csv<br>
@@ -76,17 +77,31 @@ XML, RDF, JSON, and CSV variants are available by using the appropriate prefixes
 
 These variants provide metadata from the sample bin's header file as well as a list of target URLs, which can be used
 with the target API.
+
+<div class="api">
+<b>RAW DATA CONTAINS "EXTRA" TARGETS:</b>
+Raw IFCB data for a sample bin almost always contains more targets than will appear in metadata returned from the
+XML, RDF, CSV and JSON URLs. This is for two reasons:
+<ol>
+<li>Some targets in an ADC file have no image associated with them. In the ADC file these will have a (width,height) of (0,0).
+These targets are skipped for URLs other than <i>bin URL</i>.adc.</li>
+<li>In early IFCB models, some pairs of images associated with the same trigger overlap. In this case the web services
+will return a composited target at the URL of the first target of the pair, and will report that the second target
+of the pair does not exist.</li>
+</ol>
+</div>
+
 <p>
 A ZIP endpoint returns image data along with metadata, in zip format. Note that this is a CPU-intensive
 call that can take as long as 30 seconds to complete for a large sample bin.
 
-<div class="api">
+<div class="api code">
 <i>bin URL</i>.zip
 </div>
 
 To see an interactive web page summarizing the sample bin, use this URL:
 
-<div class="api">
+<div class="api code">
 <i>bin URL</i>.html<br>
 </div>
 
@@ -94,7 +109,7 @@ To see an interactive web page summarizing the sample bin, use this URL:
 
 Once a target URL is in hand, metadata about it can be fetched in a variety of standard formats:
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>.xml<br>
 <i>target URL</i>.rdf<br>
 <i>target URL</i>.json<br>
@@ -102,7 +117,7 @@ Once a target URL is in hand, metadata about it can be fetched in a variety of s
 
 Images can be fetched using image extensions;
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>.png<br>
 <i>target URL</i>.tiff<br>
 <i>target URL</i>.jpg<br>
@@ -114,7 +129,7 @@ The PNG and TIFF variants are guaranteed to contain the exact data in the image.
 be lossy.
 
 <div class="api">
-<b>IMPORTANT NOTE ABOUT IMAGE DIMENSIONS:</b>
+<b>IMAGE DIMENSIONS ARE ROTATED:</b>
 The image dimensions given in image metadata are 90 degrees rotated from the coordinate systems of the images
 returned by the image endpoints. So the field called "width" in target metadata corresponds to the height
 of the image returned from the target image URLs, and the field called "height" corresponds to the width
@@ -122,7 +137,7 @@ of the image returned from the target image URLs.</div>
 
 To see an interactive web page summarizing the sample bin, use this URL:
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>.html<br>
 </div>
 
@@ -131,7 +146,7 @@ To see an interactive web page summarizing the sample bin, use this URL:
 In addition to instrument data, products are also available. "Blob" images, bitmap masks separating the
 target from its background, are available for each target at
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>_blob.<i>extension</i><br>
 </div>
 
@@ -139,33 +154,33 @@ Where <i>extension</i> is a valid image type extension such as "png".
 
 To conveniently fetch all blob images for a given sample bin as a zip file, use one of the following URL patterns:
 
-<div class="api">
+<div class="api code">
 <i>bin URL</i>_blob.zip<br>
 <i>namespace</i>/api/blob/pid/<i>bin URL</i>.zip<br>
 </div>
 
 Note that in the second variant you should put the entire bin URL in after <tt>/pid/</tt>. The URL should look like this:
 
-<div class="api">
+<div class="api code">
 http://ifcb-data.whoi.edu/mvco/api/blob/pid/http://demi.whoi.edu:5062/mvco/IFCB1_2009_208_123123.zip
 </div>
 
 Instead of this:
 
-<div class="api">
+<div class="api code">
 http://ifcb-data.whoi.edu/mvco/api/blob/pid/IFCB1_2009_208_123123.zip
 </div>
 
 Blobs are avilable for targets at the following URLs:
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>_blob.<i>extension</i><br>
 <i>namespace</i>/api/blob/pid/<i>target URL</i>.<i>extension</i><br>
 </div>
 
 A simple visualization that shows the outline of the blob overlaid on the target image is available at:
 
-<div class="api">
+<div class="api code">
 <i>target URL</i>_blob_outline.<i>extension</i><br>
 </div>
 

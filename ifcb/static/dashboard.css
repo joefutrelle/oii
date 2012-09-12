@@ -159,13 +159,15 @@ div.doc {
 div.api {
   margin-top: 1em;
   margin-bottom: 1em;
-  font-family: monospace;
   -moz-border-radius: 7px;
   border-radius: 7px;
   background: #dddddd;
   padding: 7px;
   box-shadow: 0px 0px 5px #777777;
   margin-left: 10px;
+}
+div.code {
+  font-family: monospace;
 }
 div.api i {
   font-family: serif;
