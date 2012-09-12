@@ -65,17 +65,13 @@ END='end'
 NEAREST='nearest'
 LATEST='latest'
 FORMAT='format'
-
-# FIXME do this in main
-# FIXME this should be selected by time series somehow
-rs = parse_stream('oii/ifcb/mvco.xml')
-binpid2path = rs['binpid2path']
-pid_resolver = rs['pid']
-blob_resolver = rs['mvco_blob']
-lister = rs['list_adcs']
+RESOLVER='resolver'
 
 #for hit in lister.resolve_all():
 #    print hit.value
+
+# FIXME don't use globals
+(rs,binpid2path,pid_resolver,blob_resolver,lister) = ({},None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -83,6 +79,7 @@ def configure(config=None):
     app.config[STITCH] = True
     app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
+    app.config[RESOLVER] = config.resolver
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
     app.config[FIXITY] = IfcbFixity(app.config[PSQL_CONNECT], rs)
     app.config[STATIC] = '/static/'
@@ -655,6 +652,8 @@ def serve_roi(hit):
     # return the image data
     return image_response(roi_image,pil_format,mimetype)
 
+app.secret_key = os.urandom(24)
+
 if __name__=='__main__':
     """First argument is a config file which must at least have psql_connect in it
     to support feed arguments. Filesystem config is in the resolver."""
@@ -662,5 +661,17 @@ if __name__=='__main__':
         configure(get_config(sys.argv[1]))
     else:
         configure()
-    app.secret_key = os.urandom(24)
+else:
+    configure(get_config(os.environ['IFCB_CONFIG_FILE']))
+
+# FIXME don't use globals
+# FIXME do this in config
+# FIXME this should be selected by time series somehow
+rs = parse_stream(app.config[RESOLVER])
+binpid2path = rs['binpid2path']
+pid_resolver = rs['pid']
+blob_resolver = rs['mvco_blob']
+lister = rs['list_adcs']
+
+if __name__=='__main__':
     app.run(host='0.0.0.0',port=app.config[PORT])
