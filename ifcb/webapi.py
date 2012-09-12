@@ -71,7 +71,7 @@ RESOLVER='resolver'
 #    print hit.value
 
 # FIXME don't use globals
-(rs,binpid2path,pid_resolver,blob_resolver,lister) = ({},None,None,None,None)
+(rs,binpid2path,pid_resolver,blob_resolver,lister,ts_resolver) = ({},None,None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -399,6 +399,8 @@ def serve_timeseries(time_series, pid=None):
         template['time_series'] = hit.time_series
         template['title'] = hit.title
     else:
+        hit = ts_resolver.resolve(time_series=time_series)
+        template['title'] = hit.title
         template['time_series'] = time_series
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
 
@@ -672,6 +674,7 @@ binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
 lister = rs['list_adcs']
+ts_resolver = rs['time_series']
 
 if __name__=='__main__':
     app.run(host='0.0.0.0',port=app.config[PORT])

@@ -1,13 +1,19 @@
 <resolvers>
+  <resolver name="time_series">
+    <var name="base_url">http://demi.whoi.edu/</var>
+    <var name="namespace">${base_url}${time_series}/</var>
+    <match var="time_series" pattern="^mvco$">
+      <var name="title">IFCB @ MVCO 2006-present</var>
+      <hit/>
+    </match>
+  </resolver>
   <resolver name="pid">
     <match var="pid" groups="namespace time_series lid bin_lid instrument date year day time - target - product - extension"
 	   pattern="(.*?\b([a-zA-Z0-9_]+)?)/?(((IFCB\d+)_((\d{4})_(\d{3})_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
-      <var name="base_url">http://demi.whoi.edu/</var>
-      <var name="namespace">${base_url}${time_series}/</var>
+      <import name="time_series"/>
       <var name="date_format">%Y_%j_%H%M%S</var>
       <var name="schema_version">v1</var>
       <var name="bin_pid">${namespace}${bin_lid}</var>
-      <var name="title">IFCB @ MVCO 2006-present</var><!-- FIXME select by time series -->
       <hit/>
     </match>
   </resolver>
