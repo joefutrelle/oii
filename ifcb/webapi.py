@@ -401,6 +401,8 @@ def serve_timeseries(time_series='mvco', pid=None):
         template['title'] = hit.title
     else:
         hit = ts_resolver.resolve(time_series=time_series)
+        if hit is None:
+            abort(404)
         template['title'] = hit.title
         template['time_series'] = time_series
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
