@@ -62,7 +62,7 @@ class FixityError(Exception):
     pass
 
 class IfcbFixity(Psql):
-    def __init__(self,psql_connect,resolvers):
+    def __init__(self,psql_connect,resolvers=None):
         super(IfcbFixity,self).__init__(psql_connect)
         self.time_threshold = 0
         self.resolvers = resolvers

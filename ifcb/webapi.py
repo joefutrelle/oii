@@ -75,13 +75,11 @@ RESOLVER='resolver'
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
-    app.config[NAMESPACE] = 'http://demi.whoi.edu:5061/'
     app.config[STITCH] = True
     app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[RESOLVER] = config.resolver
     app.config[FEED] = IfcbFeed(app.config[PSQL_CONNECT])
-    app.config[FIXITY] = IfcbFixity(app.config[PSQL_CONNECT], rs)
     app.config[STATIC] = '/static/'
     try:
         if config.debug in ['True', 'true', 'T', 't', 'Yes', 'yes', 'debug']:
@@ -98,6 +96,18 @@ def major_type(mimetype):
 
 def minor_type(mimetype):
     return re.sub(r'.*/','',mimetype)
+
+def get_psql_connect(time_series):
+    hit = ts_resolver.resolve(time_series=time_series)
+    if hit is None:
+        abort(404)
+    return '%s dbname=%s' % (app.config[PSQL_CONNECT], hit.dbname)
+
+def get_feed(time_series):
+    return IfcbFeed(get_psql_connect(time_series));
+
+def get_fixity(time_series):
+    return IfcbFixity(get_psql_connect(time_series));
 
 # simple memoization decorator using Werkzeug's caching support
 def memoized(func):
@@ -229,7 +239,7 @@ def serve_feed(time_series,date=None,format='json'):
     # FIXME support formats other than JSON, also use extension
     def feed2dicts():
         # FIXME parameterize by time series!
-        for bin_lid in app.config[FEED].latest_bins(date):
+        for bin_lid in get_feed(time_series).latest_bins(date):
             yield binlid2dict(time_series, bin_lid, format)
     return feed_response(time_series, list(feed2dicts()), format)
 
@@ -238,7 +248,7 @@ def serve_nearest(time_series,date):
     if date is not None:
         date = parse_date_param(date)
     # FIXME parameterize by time series!
-    for bin_lid in app.config[FEED].nearest_bin(date):
+    for bin_lid in get_feed(time_series).nearest_bin(date):
         d = binlid2dict(time_series, bin_lid)
     return jsonr(d)
 
@@ -276,13 +286,13 @@ def serve_html_feed(time_series):
     return serve_feed(time_series,format='html')
 
 @memoized
-def get_volume():
+def get_volume(time_series):
     # FIXME parameterize by time series!
-    return json.dumps(app.config[FIXITY].summarize_data_volume())
+    return json.dumps(get_fixity(time_series).summarize_data_volume())
 
 @app.route('/<time_series>/api/volume')
 def serve_volume(time_series):
-    return Response(get_volume(), mimetype='application/json')
+    return Response(get_volume(time_series), mimetype='application/json')
 
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 def serve_mosaic(time_series=None,pid=None):
@@ -680,4 +690,6 @@ lister = rs['list_adcs']
 ts_resolver = rs['time_series']
 
 if __name__=='__main__':
+#    print blob_resolver.resolve(pid='http://demi.whoi.edu:5062/mvco/IFCB5_2012_243_142205_00179_blob.png')
+#    print blob_resolver.resolve(pid='http://demi.whoi.edu:5062/Healy1101/IFCB8_2011_210_011714_00005_blob.png')
     app.run(host='0.0.0.0',port=app.config[PORT])

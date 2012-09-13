@@ -14,6 +14,7 @@ Any = namedtuple('Any', ['expressions'])
 All = namedtuple('All', ['expressions', 'hit'])
 Hit  = namedtuple('Hit', ['value', 'stop'])
 Import = namedtuple('Import', ['name'])
+Log = namedtuple('Log', ['message'])
 
 TRUE=['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes']
 
@@ -58,6 +59,8 @@ def sub_parse(node):
                 yield Hit('', stop=False)
             else:
                 yield Hit(value=child.text, stop=False)
+        elif child.tag == 'log':
+            yield Log(message=child.text)
 
 # parsing entry point. use parse_stream instead
 def parse(pathname,resolver_name=None):
@@ -118,6 +121,10 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         for ex in expr.expressions:
             for solution in resolve([ex] + resolver[1:], bindings, cwd, namespace):
                 yield solution
+    elif isinstance(expr,Log):
+        print substitute(expr.message, bindings)
+        for solution in resolve(resolver[1:], bindings, cwd, namespace):
+            yield solution
     elif isinstance(expr,All):
         # "all" means that all subexpressions mus match; it is the explicit form of the implicit
         # behavior of an entire resolver. If any subexpression does not produce variable bindings or a solution,
