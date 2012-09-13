@@ -19,7 +19,13 @@
 		    //$this.trigger('dateHover', [screenToDate(event), event.clientX]);
 		});
 		$this.bind('click', {timeline:timeline}, function(event) {
-		    console.log('clicked on '+screenToDate(event));
+		    var inControls = 0;
+		    if($(event.target).hasClass('timeline-navigation-zoom-in') ||
+		       $(event.target).hasClass('timeline-navigation-zoom-out') ||
+		       $(event.target).hasClass('timeline-navigation-move-left') ||
+		       $(event.target).hasClass('timeline-navigation-move-right')) {
+			event.stopImmediatePropagation(); // user clicked on the controls
+		    }
 		    $.extend(timeline, { clickDate: screenToDate(event) })
 		    //console.log('extending timeline with clickDate');
 		    //$this.trigger('dateClick', [screenToDate(event), event.clientX]);
