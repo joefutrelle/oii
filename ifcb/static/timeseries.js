@@ -91,6 +91,12 @@ function timeseries_add(e, pid, timeseries) {
 	}).getTimeline(function(t) {
 	    // when the user clicks on the data series, show the nearest bin
 	    $('#timeline').bind('click', {timeline:t}, function(event) {
+		if($(event.target).hasClass('timeline-navigation-zoom-in') ||
+		   $(event.target).hasClass('timeline-navigation-zoom-out') ||
+		   $(event.target).hasClass('timeline-navigation-move-left') ||
+		   $(event.target).hasClass('timeline-navigation-move-right')) {
+		    return;
+		}
 		// because timeline's select event is too coarse, we want to handle
 		// every click. then we need to interrogate the timeline object itself,
 		// hence the surrounding call to getTimeline
