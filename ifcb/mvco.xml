@@ -1,6 +1,6 @@
 <resolvers>
   <resolver name="time_series">
-    <var name="base_url">http://demi.whoi.edu:5062/</var>
+    <var name="base_url">http://demi.whoi.edu/</var>
     <var name="namespace">${base_url}${time_series}/</var>
     <match var="time_series" pattern="^mvco$">
       <var name="title">IFCB @ MVCO 2006-present</var>
