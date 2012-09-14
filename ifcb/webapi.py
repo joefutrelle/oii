@@ -75,7 +75,7 @@ RESOLVER='resolver'
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
-    app.config[STITCH] = True
+    app.config[TSITCH] = True
     app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[RESOLVER] = config.resolver
@@ -422,6 +422,12 @@ def serve_timeseries(time_series='mvco', pid=None):
 def serve_doc():
     template = dict(static=app.config[STATIC])
     return Response(render_template('api.html',**template), mimetype='text/html')
+
+@app.route('/about')
+@app.route('/about.html')
+def serve_about():
+    template = dict(static=app.config[STATIC])
+    return Response(render_template('help.html',**template), mimetype='text/html')
 
 @app.route('/<path:pid>')
 def resolve(pid):
