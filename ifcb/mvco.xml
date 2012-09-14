@@ -2,14 +2,14 @@
   <resolver name="time_series">
     <var name="base_url">http://demi.whoi.edu/</var>
     <var name="namespace">${base_url}${time_series}/</var>
-    <var name="bot_name">&lt;a href="/static/help/index.html"&gt;Imaging FlowCytobot&lt;a&gt;</var>
+    <var name="bot_name">&lt;a href="/about"&gt;Imaging FlowCytobot&lt;a&gt;</var>
     <match var="time_series" pattern="^mvco$">
       <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/mvco/"&gt;MVCO&lt;a&gt; 2006-present</var>
       <var name="dbname">ifcb</var>
       <hit/>
     </match>
     <match var="time_series" pattern="^Healy1101$">
-      <var name="title">${bot_name} @ Healy1101</var>
+      <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1101&lt;a&gt;</var>
       <var name="dbname">healy1101</var>
       <hit/>
     </match>
