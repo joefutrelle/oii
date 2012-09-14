@@ -34,6 +34,7 @@ from ImageFilter import FIND_EDGES
 import ImageOps
 import ImageChops
 from werkzeug.contrib.cache import SimpleCache
+from lxml import html
 
 # TODO JSON on everything
 
@@ -75,7 +76,7 @@ RESOLVER='resolver'
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
-    app.config[TSITCH] = True
+    app.config[STITCH] = True
     app.config[CACHE_TTL] = 120
     app.config[PSQL_CONNECT] = config.psql_connect
     app.config[RESOLVER] = config.resolver
@@ -408,13 +409,13 @@ def serve_timeseries(time_series='mvco', pid=None):
         hit = pid_resolver.resolve(pid=pid)
         template['pid'] = hit.bin_pid
         template['time_series'] = hit.time_series
-        template['title'] = hit.title
     else:
         hit = ts_resolver.resolve(time_series=time_series)
         if hit is None:
             abort(404)
-        template['title'] = hit.title
         template['time_series'] = time_series
+    template['page_title'] = html.fromstring(hit.title).text_content()
+    template['title'] = hit.title
     return Response(render_template('timeseries.html',**template), mimetype='text/html')
 
 @app.route('/api')
