@@ -14,11 +14,11 @@ $(document).ready(function() {
 {% endblock head %}
 {% block content %}
 <div id="title" class="major h1">
-  {{title}}
+  {{title|safe}}
   <div class="dashboard_links">
 Other timeseries:
 <a href="http://ifcb-data.whoi.edu/saltpond">Saltpond</a>
-<a href="http://ifcb-data.whoi.edu/Healy1101">Healy 11/01</a>
+<a href="http://ifcb-data.whoi.edu/Healy1101/">Healy 1101</a>
   </div>
 </div>
 <div id="timeseries"></div>
