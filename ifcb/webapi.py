@@ -150,14 +150,15 @@ def get_target(hit, adc_path=None):
 
 def max_age(ttl=None):
     if ttl is None:
-        ttl = app.config[CACHE_TTL]
-    return {'Cache-control': 'max-age=%d' % ttl}
+        return {}
+    else:
+        return {'Cache-control': 'max-age=%d' % ttl}
 
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
     buf = StringIO()
     im = image.save(buf,format)
-    return Response(buf.getvalue(), mimetype=mimetype, headers=max_age())
+    return Response(buf.getvalue(), mimetype=mimetype)
 
 def resolve_pid(pid):
     return pid_resolver.resolve(pid=pid)
@@ -236,17 +237,16 @@ def feed_response(time_series,dicts,format='json'):
     app.logger.debug(dicts)
     max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
     context = dict(max_date=max_date, time_series=time_series, feed=dicts)
-    feed_ttl = 120
     if format == 'json':
-        return jsonr(dicts, feed_ttl)
+        return jsonr(dicts)
     if format == 'html':
-        return template_response('feed.html', ttl=feed_ttl, **context)
+        return template_response('feed.html', **context)
     elif format == 'atom':
         #return template_response('feed.atom', mimetype='application/xml+atom', ttl=feed_ttl, **context)
-        return template_response('feed.atom', ttl=feed_ttl, **context)
+        return template_response('feed.atom', **context)
     elif format == 'rss':
         #return template_response('feed.rss', mimetype='application/xml+rss', ttl=feed_ttl, **context)
-        return template_response('feed.rss', ttl=feed_ttl, **context)
+        return template_response('feed.rss', **context)
 
 @app.route('/<time_series>/api/feed/format/<format>')
 @app.route('/<time_series>/api/feed/date/<date>')
@@ -309,7 +309,7 @@ def get_volume(time_series):
 
 @app.route('/<time_series>/api/volume')
 def serve_volume(time_series):
-    return jsonr(get_volume(time_series), ttl=120)
+    return jsonr(get_volume(time_series))
 
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 def serve_mosaic(time_series=None,pid=None):

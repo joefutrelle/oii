@@ -4,7 +4,7 @@
   {{ super() }}
     <script type="text/javascript">
 $(document).ready(function() {
-    $('#mosaic_pager').bin_page('{{hit.bin_pid}}');
+    $('#mosaic_pager').bin_page('{{hit.bin_pid}}','{{hit.time_series}}');
 });
     </script>
 {% endblock head %}
