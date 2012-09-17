@@ -12,9 +12,8 @@ from time import strptime
 from StringIO import StringIO
 from oii.config import get_config
 from oii.times import iso8601, rfc822
-from oii.webapi.utils import jsonr
 import urllib
-from oii.utils import order_keys
+from oii.utils import order_keys, jsons
 from oii.ifcb.formats.adc import read_adc, read_target, ADC
 from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
@@ -149,11 +148,16 @@ def get_target(hit, adc_path=None):
         for target in list_targets(hit, hit.target_no, adc_path=adc_path):
             return target
 
+def max_age(ttl=None):
+    if ttl is None:
+        ttl = app.config[CACHE_TTL]
+    return {'Cache-control': 'max-age=%d' % ttl}
+
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
     buf = StringIO()
     im = image.save(buf,format)
-    return Response(buf.getvalue(), mimetype=mimetype)
+    return Response(buf.getvalue(), mimetype=mimetype, headers=max_age())
 
 def resolve_pid(pid):
     return pid_resolver.resolve(pid=pid)
@@ -217,19 +221,32 @@ def binlid2dict(time_series, bin_lid, format='json'):
         'date': date
         }
 
+def template_response(template, mimetype=None, ttl=None, **kw):
+    if mimetype is None:
+        (mimetype, _) = mimetypes.guess_type(template)
+    if mimetype is None:
+        mimetype = 'application/octet-stream'
+    return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+
+def jsonr(obj, ttl=None):
+    return Response(jsons(obj), mimetype='application/json', headers=max_age(ttl))
+
 # FIXME need max date, URL prefix
 def feed_response(time_series,dicts,format='json'):
     app.logger.debug(dicts)
     max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
     context = dict(max_date=max_date, time_series=time_series, feed=dicts)
+    feed_ttl = 120
     if format == 'json':
-        return jsonr(dicts)
-    elif format == 'html':
-        return Response(render_template('feed.html',**context),mimetype='text/html')
+        return jsonr(dicts, feed_ttl)
+    if format == 'html':
+        return template_response('feed.html', ttl=feed_ttl, **context)
     elif format == 'atom':
-        return Response(render_template('feed.atom',**context),mimetype='application/xml+atom')
+        #return template_response('feed.atom', mimetype='application/xml+atom', ttl=feed_ttl, **context)
+        return template_response('feed.atom', ttl=feed_ttl, **context)
     elif format == 'rss':
-        return Response(render_template('feed.rss',**context),mimetype='application/xml+rss')
+        #return template_response('feed.rss', mimetype='application/xml+rss', ttl=feed_ttl, **context)
+        return template_response('feed.rss', ttl=feed_ttl, **context)
 
 @app.route('/<time_series>/api/feed/format/<format>')
 @app.route('/<time_series>/api/feed/date/<date>')
@@ -286,21 +303,20 @@ def serve_atom_feed(time_series):
 def serve_html_feed(time_series):
     return serve_feed(time_series,format='html')
 
-@memoized
 def get_volume(time_series):
     # FIXME parameterize by time series!
-    return json.dumps(get_fixity(time_series).summarize_data_volume())
+    return get_fixity(time_series).summarize_data_volume()
 
 @app.route('/<time_series>/api/volume')
 def serve_volume(time_series):
-    return Response(get_volume(time_series), mimetype='application/json')
+    return jsonr(get_volume(time_series), ttl=120)
 
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 def serve_mosaic(time_series=None,pid=None):
     """Serve a mosaic with all-default parameters"""
     hit = pid_resolver.resolve(pid=pid)
     if hit.extension == 'html': # here we generate an HTML representation with multiple pages
-        return Response(render_template('mosaics.html',hit=hit),mimetype='text/html')
+        return template_response('mosaics.html',hit=hit)
     else:
         return serve_mosaic_image(time_series,pid) # default mosaic image
 
@@ -374,7 +390,7 @@ def serve_blob(time_series,pid):
         if hit.extension != 'zip':
             abort(404)
         # the zip file is on disk, stream it directly to client
-        return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+        return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip', headers=max_age())
     else: # target, not bin
         blobzip = ZipFile(zip_path)
         png = blobzip.read(hit.lid+'.png')
@@ -382,7 +398,7 @@ def serve_blob(time_series,pid):
         # now determine PIL format and MIME type
         (pil_format, mimetype) = image_types(hit)
         if hit.product == 'blob' and mimetype == 'image/png':
-            return Response(png, mimetype='image/png')
+            return Response(png, mimetype='image/png', headers=max_age())
         else:
             # FIXME support more imaage types
             blob_image = Image.open(StringIO(png))
@@ -416,19 +432,19 @@ def serve_timeseries(time_series='mvco', pid=None):
         template['time_series'] = time_series
     template['page_title'] = html.fromstring(hit.title).text_content()
     template['title'] = hit.title
-    return Response(render_template('timeseries.html',**template), mimetype='text/html')
+    return template_response('timeseries.html', **template)
 
 @app.route('/api')
 @app.route('/api.html')
 def serve_doc():
     template = dict(static=app.config[STATIC])
-    return Response(render_template('api.html',**template), mimetype='text/html')
+    return template_response('api.html', **template)
 
 @app.route('/about')
 @app.route('/about.html')
 def serve_about():
     template = dict(static=app.config[STATIC])
-    return Response(render_template('help.html',**template), mimetype='text/html')
+    return template_response('help.html', **template)
 
 @app.route('/<path:pid>')
 def resolve(pid):
@@ -544,13 +560,13 @@ def serve_bin(hit,mimetype):
         target_pids = []
     template = dict(hit=hit,context=context,properties=props,targets=targets,target_pids=target_pids,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
-        return Response(bin2xml(template), mimetype='text/xml')
+        return template_response('bin.xml', **template)
     elif minor_type(mimetype) == 'rdf+xml':
-        return Response(render_template('bin.rdf',**template), mimetype='text/xml')
+        return template_response('bin.rdf', mimetype='text/xml', **template)
     elif minor_type(mimetype) == 'csv':
-        return Response(bin2csv(hit,targets), mimetype='text/plain')
+        return Response(bin2csv(hit,targets), mimetype='text/plain', headers=max_age())
     elif mimetype == 'text/html':
-        return Response(render_template('bin.html',**template), mimetype='text/html')
+        return template_response('bin.html', **template)
     elif mimetype == 'application/json':
         properties = dict(props)
         properties['context'] = context
@@ -562,7 +578,7 @@ def serve_bin(hit,mimetype):
             properties['targets'] = target_pids
         return jsonr(properties)
     elif mimetype == 'application/zip':
-        return Response(bin_zip(hit,targets,template), mimetype=mimetype)
+        return Response(bin_zip(hit,targets,template), mimetype=mimetype, headers=max_age())
     else:
         abort(404)
 
@@ -605,14 +621,13 @@ def serve_target(hit,mimetype):
     # now populate the template appropriate for the MIME type
     template = dict(hit=hit,target=target,properties=properties,static=app.config[STATIC])
     if minor_type(mimetype) == 'xml':
-        return Response(render_template('target.xml',**template), mimetype='text/xml')
+        return template_response('target.xml', **template)
     elif minor_type(mimetype) == 'rdf+xml':
-        return Response(render_template('target.rdf',**template), mimetype='text/xml')
+        return template_response('target.rdf', mimetype='text/xml', **template)
     elif mimetype == 'text/html':
-        return Response(render_template('target.html',**template), mimetype='text/html')
+        return template_response('target.html', **template)
     elif mimetype == 'application/json':
         return jsonr(dict(target))
-    print minor_type(mimetype)
 
 def image_types(hit):
     # now determine PIL format and MIME type
