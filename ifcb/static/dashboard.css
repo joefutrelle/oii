@@ -1,11 +1,26 @@
+* {
+    margin: 0;
+}
 html {
+    height: 100%;
+}
+body {
     height: 100%;
     font-family: sans-serif;
     font-size: small;
+    margin: 0px 8px 0px 8px;
+    padding: 0px 0px 0px 0px;
+    -ms-overflow-style: scrollbar;
+}
+img {
+    border: none;
 }
 #content {
     position: relative;
     min-height: 100%;
+    height: auto !important;
+    height: 100%;
+    margin: 0 auto -125px; /* the bottom margin is the negative value of the footer's height */
 }
 body {
     height: 100%;
@@ -40,13 +55,11 @@ body {
 }
 .footer {
   position: relative;
-  margin-top: -125px;
+  margin: -125px auto 0px auto;
+  padding-top: 18px;
   text-align: center;
   font-family: sans-serif;
   font-size: 15px;
-  padding-top: 15px;
-  margin-right: auto;
-  margin-left: auto;
 }
 img.logo {
   height: 50px;
