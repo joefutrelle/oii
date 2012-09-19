@@ -198,19 +198,27 @@ class TestAnnotation(TestCase):
                     for r in structs(self.app.get(url_for('taxonomy_autocomplete', term=pfx)).data):
                         assert r.label[:i] == pfx
                         assert r.pid == url
-                         
+
+def config_backend(config):
+    try:
+        app.config[ANNOTATION_STORE] = HabcamAnnotationStore(config)
+        app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
+        app.config[CATEGORIES] = HabcamCategories(config)
+    except KeyError:
+        pass # FIXME log error
+
+app.secret_key = os.urandom(24)
+
 if __name__=='__main__':
     if len(sys.argv) > 1:
         config = get_config(sys.argv[1])
-        try:
-            app.config[ANNOTATION_STORE] = HabcamAnnotationStore(config)
-            app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
-            app.config[CATEGORIES] = HabcamCategories(config)
-        except KeyError:
-            pass
+        config_backend(config)
         try:
             port = int(config.port)
         except KeyError:
             port = 5000
-    app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0',port=port)
+else:
+    config = get_config(os.environ['ANNOTATOR_CONFIG_FILE'])
+    config_backend(config)
+
