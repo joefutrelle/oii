@@ -133,15 +133,16 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         # are a template that will be produced as the solution.
         # this can be used in conjunction with any to iterate over groups of variable bindings:
         # <any>
-        #   <all hit="${a}${b}">
+        #   <all>
         #     <var name="a">A</var>
         #     <var name="b">B</var>
         #   </all>
-        #   <all hit="${a}${b}">
+        #   <all>
         #     <var name="a">a</var>
         #     <var name="b">b</var>
         #   </all>
         # </any>
+        # <hit>${a}${b}</hit>
         # yields "AB" and "ab"
         expr_hit = expr.expressions
         if expr.hit is not None:
