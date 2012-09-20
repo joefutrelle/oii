@@ -1,14 +1,48 @@
 <resolvers>
   <resolver name="pid">
-    <match var="pid" pattern="([A-Z]+\.((\d{4})\d{4})\.(\d{3}).*)\.([a-zA-Z0-9]+)"
-	   groups="imagename day year tenmin extension">
+    <match var="pid" pattern="([A-Z0-9]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)\.([a-zA-Z0-9]+)"
+	   groups="imagename ymd ym y ts tenmin h extension">
       <var name="filename">${imagename}.${extension}</var>
-      <var name="img_dir">${day}_${tenmin}0</var>
-      <var name="root">/mnt/nmfs-2/webdata/HabCam/data/Cruises</var>
-      <path var="cruise_dir" match="${root}/*">
-        <match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
-        <path match="Images/Full/${img_dir}/${imagename}.jpg"/>
-      </path>
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
     </match>
+  </resolver>
+  <resolver name="image">
+    <import name="pid"/>
+    <any>
+      <match var="extension" pattern="^jpg$">
+	<var name="root_suffix">
+	  <value>/mnt/nmfs-2/webdata/HabCam/data/Cruises,Images/Full</value>
+	  <value>/mnt/habcam-images/Images,</value>
+	  <value>/mnt/rose6/RSA,jpg</value>
+	  <value>/mnt/rose6/RSA,</value>
+	  <value>/mnt/habcam-images3/Images,jpg/Full</value>
+	  <value>/mnt/habcam-images3/Images,Full</value>
+	  <value>/mnt/habcam-images3/Images,jpg</value>
+	  <value>/mnt/rose6/mosaics,</value>
+	</var>
+	<match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
+	  <path var="cruise_dir" match="${root}/*">
+	    <match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
+	    <log>trying ${cruise_dir}/${suffix}/${img_dir}/${filename}</log>
+	    <path match="${suffix}/${img_dir}/${filename}"/>
+	  </path>
+	</match>
+      </match>
+      <match var="extension" pattern="^tiff?$">
+	<var name="root">
+	  <value>/mnt/loligo/tiffs1</value>
+	  <value>/mnt/rose5/a/nmfs</value>
+	  <value>/mnt/rose5/b/nmfs</value>
+	  <value>/mnt/rose5/c/nmfs</value>
+	  <value>/mnt/rose5/d/nmfs</value>
+	  <value>/mnt/rose5/e/nmfs</value>
+	  <value>/mnt/rose5/f/nmfs</value>
+	  <value>/mnt/rose5/g/nmfs</value>
+	  <value>/mnt/rose5/h/nmfs</value>
+	</var>
+	<path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
+      </match>
+    </any>
   </resolver>
 </resolvers>
