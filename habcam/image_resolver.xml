@@ -1,7 +1,7 @@
 <resolvers>
   <resolver name="pid">
-    <match var="pid" pattern="([A-Z0-9]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)\.([a-zA-Z0-9]+)"
-	   groups="imagename ymd ym y ts tenmin h extension">
+    <match var="pid" pattern="([A-Z0-9]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
+	   groups="imagename ymd ym y ts tenmin h - product extension">
       <var name="filename">${imagename}.${extension}</var>
       <var name="img_dir">${ymd}_${tenmin}0</var>
       <hit/>
@@ -24,7 +24,6 @@
 	<match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
 	  <path var="cruise_dir" match="${root}/*">
 	    <match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
-	    <log>trying ${cruise_dir}/${suffix}/${img_dir}/${filename}</log>
 	    <path match="${suffix}/${img_dir}/${filename}"/>
 	  </path>
 	</match>
@@ -40,6 +39,17 @@
 	  <value>/mnt/rose5/f/nmfs</value>
 	  <value>/mnt/rose5/g/nmfs</value>
 	  <value>/mnt/rose5/h/nmfs</value>
+	</var>
+	<path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
+      </match>
+      <match var="extension" pattern="^png$">
+	<var name="root">
+	  <value>/mnt/rose5/f/HS_20120601/nmfs</value>
+	  <value>/mnt/rose4/HS_201203_testset</value>
+	  <value>/mnt/rose4/nmfs</value>
+	  <value>/mnt/rose6/nmfs</value>
+	  <value>/mnt/rose6/debayer</value>
+	  <value>/mnt/temp/nmfs</value>
 	</var>
 	<path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
       </match>

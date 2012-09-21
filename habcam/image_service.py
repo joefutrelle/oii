@@ -34,22 +34,7 @@ PORT='port'
 
 # resolver names
 PID='pid'
-
-# simple memoization decorator using Werkzeug's caching support
-def memoized(func):
-    def wrap(*args):
-        cache = app.config[CACHE] # get cache object from config
-        # because the cache is shared across the entire app, we need
-        # to include the function name in the cache key
-        key = ' '.join([func.__name__] + map(str,args))
-        result = cache.get(key)
-        if result is None: # cache miss
-            #app.logger.debug('cache miss on %s' % str(key))
-            result = func(*args) # produce the result
-            # FIXME accept a TTL argument
-            cache.set(key, result, timeout=app.config[CACHE_TTL]) # cache it
-        return result
-    return wrap
+IMAGE='image'
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -90,11 +75,18 @@ def image_response(image,format,mimetype):
 def serve_image(imagename):
     resolver = app.config[RESOLVER]
     app.logger.debug(imagename)
-    hit = resolver[PID].resolve(pid=imagename)
+    # FIXME debug
+    for s in resolver[IMAGE].resolve_all(pid=imagename):
+        app.logger.debug(str(s))
+    # end debug
+    hit = resolver[IMAGE].resolve(pid=imagename)
     if hit is not None:
         pathname = hit.value
         (format, mimetype) = image_types(hit.filename)
-        return image_response(Image.open(pathname), format, mimetype)
+        if mimetype == 'image/tiff':
+            return Response(file(pathname), direct_passthrough=True, mimetype=mimetype)
+        else:
+            return image_response(Image.open(pathname), format, mimetype)
     else:
         abort(404)
 
@@ -107,3 +99,7 @@ if __name__=='__main__':
         configure()
     app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0',port=app.config[PORT])
+else:
+    config = get_config(os.environ['HABCAM_CONFIG_FILE'])
+    configure(config)
+
