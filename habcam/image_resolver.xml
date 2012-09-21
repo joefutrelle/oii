@@ -65,13 +65,7 @@
     <match var="extension" pattern="^tiff?$">
       <match resolver="tiff"/>
     </match>
-    <match var="extension" pattern="^png$">
-      <any>
-	<match resolver="png"/>
-	<match resolver="jpg"/>
-      </any>
-    </match>
-    <match var="extension" pattern="^(gif|bmp)$">
+    <match var="extension" pattern="^(png|gif|bmp)$">
       <any>
 	<match resolver="png"/>
 	<match resolver="jpg"/>
