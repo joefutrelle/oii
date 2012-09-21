@@ -8,6 +8,7 @@ from os import path
 # "little language" pattern
 
 Match = namedtuple('Match', ['var','regex', 'expressions', 'groups'])
+MatchImport = namedtuple('MatchImport', ['resolver'])
 Var = namedtuple('Var', ['name','values'])
 Path = namedtuple('Path', ['var', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
@@ -24,7 +25,9 @@ TRUE=['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes']
 # for details on the syntax see the resolve function
 def sub_parse(node):
     for child in node:
-        if child.tag == 'match':
+        if child.tag == 'match' and child.get('resolver'): # matchimport
+            yield MatchImport(child.get('resolver'))
+        elif child.tag == 'match':
             var = child.get('var')
             pattern = child.get('pattern')
             groups = child.get('groups')
@@ -107,8 +110,8 @@ def substitute(template,bindings):
 def resolve(resolver,bindings,cwd='/',namespace={}):
     if not resolver: # no more expressions left?
         return
-    expr = resolver[0] # work on the first one
-    #print (expr,bindings)
+    expr = resolver[0]
+    #print (expr,bindings) # FIXME debug
     if isinstance(expr,Any):
         # "any" means to accept any matching subexpression instead of terminating
         # if the first one doesn't match. For example
@@ -241,6 +244,14 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
             # done, now do the rest of the resolver
             for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
                 yield solution
+    elif isinstance(expr,MatchImport):
+        imported = namespace[expr.resolver] # import the named resolver
+        for solution in resolve(imported,bindings,cwd,namespace):
+            yield solution
+            local_bindings = solution.bindings.copy()
+            # and do the rest of this resolver
+            for subs in resolve(resolver[1:],local_bindings,cwd,namespace):
+                yield subs
     elif isinstance(expr,Import):
         imported = namespace[expr.name] # import the named resolver
         for solution in resolve(imported,bindings,cwd,namespace):
