@@ -283,7 +283,7 @@ def serve_between(time_series,start,end=None,format='json'):
     if end is not None:
         end = parse_date_param(end)
     def doit():
-        for bin_lid in app.config[FEED].between(start,end):
+        for bin_lid in get_feed(time_series).between(start,end):
             yield binlid2dict(time_series, bin_lid, format)
     return feed_response(time_series, list(doit()), format)
 
