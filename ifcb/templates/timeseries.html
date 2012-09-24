@@ -16,9 +16,10 @@ $(document).ready(function() {
 <div id="title" class="major h1">
   {{title|safe}}
   <div class="dashboard_links">
-Other timeseries:
-<a href="http://ifcb-data.whoi.edu/saltpond">Saltpond</a>
-<a href="http://ifcb-data.whoi.edu/Healy1101/">Healy 1101</a>
+Timeseries:
+{% for ts,n in all_series %}
+<a href="{{base_url}}/{{ts}}">{{n}}</a>
+{% endfor %}
   </div>
 </div>
 <div id="timeseries"></div>

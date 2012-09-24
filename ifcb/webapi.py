@@ -430,8 +430,10 @@ def serve_timeseries(time_series='mvco', pid=None):
         if hit is None:
             abort(404)
         template['time_series'] = time_series
+    template['base_url'] = hit.base_url
     template['page_title'] = html.fromstring(hit.title).text_content()
     template['title'] = hit.title
+    template['all_series'] = [(h.time_series,h.name) for h in all_series.resolve_all()]
     return template_response('timeseries.html', **template)
 
 @app.route('/api')
@@ -710,6 +712,7 @@ pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
 lister = rs['list_adcs']
 ts_resolver = rs['time_series']
+all_series = rs['all_series']
 
 if __name__=='__main__':
 #    print blob_resolver.resolve(pid='http://demi.whoi.edu:5062/mvco/IFCB5_2012_243_142205_00179_blob.png')

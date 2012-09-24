@@ -1,4 +1,14 @@
 <resolvers>
+  <resolver name="all_series">
+    <var name="ignore">
+      <value>mvco,MVCO</value>
+      <value>Healy1101,Healy 1101</value>
+      <value>saltpond,Salt Pond</value>
+    </var>
+    <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
+      <hit/>
+    </match>
+  </resolver>
   <resolver name="time_series">
     <var name="base_url">http://demi.whoi.edu/</var>
     <var name="namespace">${base_url}${time_series}/</var>
