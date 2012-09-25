@@ -4,6 +4,7 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		$this.prepend('<a class="close"></a>').find('a:first')
+		    .css('cursor','pointer')
 		    .bind('click', function() {
 			$this.css('display','none');
 		    });
@@ -31,7 +32,8 @@ function timeseries_add(e, pid, timeseries) {
 	var customTime = timeline.getCustomTime();
 	var iso8601utcTime = asUTC(customTime).toISOString();
 	var tts = timeline.timeToScreen(customTime);
-	$('#date_label').empty().append(iso8601utcTime.replace(/....Z/,'Z'))
+	$('#date_label').empty()
+	    .append(iso8601utcTime.replace(/....Z/,'Z'))
 	    .css('margin-left',tts+'px');
     }
     function showMosaic(pid, pushHistory) {
@@ -202,6 +204,8 @@ function timeseries_add(e, pid, timeseries) {
 		    .find('.target_metadata').target_metadata(roi_pid).collapsing('metadata').end()
 		    .find('.target_image').css('float','right');
 	    });
+	}).bind('goto_bin', function(event, pid) {
+	    showMosaic(pid);
 	});
     // handle popstate
     window.onpopstate = function(event) {

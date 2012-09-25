@@ -1,4 +1,5 @@
 // jQuery UI plugin providing collapsing element
+// requires disable_selection.js
 (function($) {
     $.fn.extend({
 	collapsing: function(title) {
@@ -10,6 +11,7 @@
 		    .wrap('<div class="collapsing"></div>').parent();
 		$(e).prepend('<div class="collapse_button collapse_button_closed">Show '+title+'</div>')
 		    .find('.collapse_button')
+		    //.disableSelection()
 		    .click(function() {
 			console.log('clicked collapse button');
 			if(state == 0) {

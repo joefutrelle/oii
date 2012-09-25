@@ -76,6 +76,19 @@ img.logo {
   margin-bottom: 5px;
   white-space: nowrap;
 }
+.mosaic_next_prev {
+  text-align: center;
+  margin-bottom: 5px;
+  white-space: nowrap;
+}
+.previousBin {
+    padding: 5px;
+    float: left;
+}
+.nextBin {
+    padding: 5px;
+    float: right;
+}
 #roi_image {
   float: right;
   text-align: right;
@@ -131,6 +144,13 @@ div.h2 {
 }
 .ui-button-text {
  font-size: inherit !important;
+}
+.controlGray {
+    color: #888888;
+    cursor: pointer;
+}
+.biggerText {
+    font-size: 1.3em;
 }
 .close {
     display: block;

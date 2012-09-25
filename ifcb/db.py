@@ -54,7 +54,7 @@ class IfcbFeed(Psql):
                 yield row[0]
     def after(self,lid,n=1):
         with xa(self.psql_connect) as (c,db):
-            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) limit %s",(lid,n))
+            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) order by sample_time asc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def day_bins(self,date=None):

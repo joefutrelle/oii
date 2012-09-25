@@ -10,6 +10,8 @@
 		    .resizableMosaicPager(timeseries)
 		    .bind('roi_click', function(event, roi_pid) {
 			window.location.href = roi_pid + '.html';
+		    }).bind('goto_bin', function(event, bin_pid) {
+			window.location.href = bin_pid + '.html';
 		    }).trigger('drawMosaic', [bin_pid])
 	    });//each in bin_page
 	}//bin_page

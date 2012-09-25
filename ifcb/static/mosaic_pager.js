@@ -5,6 +5,7 @@
 // roi_click(roi_pid, width, height) - when the user clicks a ROI
 // resizable version triggers
 // state_change({pageNumber, width, height, roi_scale}) when state changes
+// goto_bin(pid) - when the user clicks on the "next/prev" bin button
 (function($) {
     $.fn.extend({
 	mosaicPager: function(timeseries, pid, width, height, roi_scale) {
@@ -103,8 +104,10 @@
 		    }
 		});
 		// add size controls
-		$this.append('<div class="mosaic_controls"></div>').find('.mosaic_controls')
-		    .append('Mosaic size: <span></span>').find('span:last')
+		$this.append('<div class="mosaic_controls"></div>')
+		    .find('.mosaic_controls')
+		    .append('Mosaic size: <span></span>')
+		    .find('span:last')
 		    .radio(mosaic_sizes, function(size) {
  			return size[0] + 'x' + size[1];
 		    }, selected_size).bind('select', function(event, value) {
@@ -134,6 +137,22 @@
 		// now add the mosaic pager
 		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
 		    .css('float','left'); // FIXME remove
+		$this.append('<div class="mosaic_next_prev"></div>')
+		$this.find('.mosaic_next_prev')
+		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
+		    .append('<span class="controlGray biggerText nextBin">Next &#x25B6;</span>');
+		$this.find('.mosaic_next_prev .nextBin')
+		    .click(function() {
+			$.getJSON('/'+timeseries+'/api/feed/after/pid/'+$this.data(PID), function(r) {
+			    $this.trigger('goto_bin', [r[0].pid]);
+			});
+		    });
+		$this.find('.mosaic_next_prev .previousBin')
+		    .click(function() {
+			$.getJSON('/'+timeseries+'/api/feed/before/pid/'+$this.data(PID), function(r) {
+			    $this.trigger('goto_bin', [r[0].pid]);
+			});
+		    });
 		// on redraw
 		$this.bind('drawMosaic', function(event, the_pid, props) { 
 		    // if the_pid is undefined, use whatever the pid was set to before

@@ -1,9 +1,12 @@
 .collapse_button {
-   color:gray;
+   color: gray;
+   cursor: pointer;
 }
 .collapse_button_closed:before {
    content: '\025b6 ';
+   cursor: pointer;
 }
 .collapse_button_open:before {
    content: '\025bc ';
+   cursor: pointer;
 }
