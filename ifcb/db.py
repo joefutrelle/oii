@@ -47,6 +47,16 @@ class IfcbFeed(Psql):
             db.execute("select lid from bins where sample_time >= %s and sample_time <= %s",(start_dt, end_dt))
             for row in db.fetchall():
                 yield row[0]
+    def before(self,lid,n=1):
+        with xa(self.psql_connect) as (c,db):
+            db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) order by sample_time desc limit %s",(lid,n))
+            for row in db.fetchall():
+                yield row[0]
+    def after(self,lid,n=1):
+        with xa(self.psql_connect) as (c,db):
+            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) limit %s",(lid,n))
+            for row in db.fetchall():
+                yield row[0]
     def day_bins(self,date=None):
         """Return the LIDs of all bins on the given day"""
         if date is None:

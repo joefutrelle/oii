@@ -31,7 +31,7 @@ function timeseries_add(e, pid, timeseries) {
 	var customTime = timeline.getCustomTime();
 	var iso8601utcTime = asUTC(customTime).toISOString();
 	var tts = timeline.timeToScreen(customTime);
-	$('#date_label').empty().append(iso8601utcTime)
+	$('#date_label').empty().append(iso8601utcTime.replace(/....Z/,'Z'))
 	    .css('margin-left',tts+'px');
     }
     function showMosaic(pid, pushHistory) {

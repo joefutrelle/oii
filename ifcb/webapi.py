@@ -287,6 +287,20 @@ def serve_between(time_series,start,end=None,format='json'):
             yield binlid2dict(time_series, bin_lid, format)
     return feed_response(time_series, list(doit()), format)
 
+@app.route('/<time_series>/api/feed/<after_before>/pid/<path:pid>')
+@app.route('/<time_series>/api/feed/<after_before>/n/<int:n>/pid/<path:pid>')
+def serve_after_before(time_series,after_before,n=1,pid=None):
+    if pid is None:
+        abort(400)
+    if after_before not in ['after', 'before']:
+        abort(400)
+    hit = resolve_pid(pid)
+    if after_before == 'after':
+        response = [binlid2dict(time_series, lid) for lid in get_feed(time_series).after(hit.bin_lid,n)]
+    else:
+        response = [binlid2dict(time_series, lid) for lid in get_feed(time_series).before(hit.bin_lid,n)]
+    return jsonr(response)
+
 @app.route('/<time_series>/feed.json')
 def serve_json_feed(time_series):
     return serve_feed(time_series,format='json')
