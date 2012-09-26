@@ -36,7 +36,7 @@
 		    $(x).find('Target *').each(function(ix, thang) {
 			var key = $(thang).get(0).tagName;
 			var value = $(thang).text();
-			console.log(key+'='+value);
+			//console.log(key+'='+value);
 			$this.append('<div><span class="metadata_key">'+key+'</span> '+
 				    '<span class="metadata_value">'+value+'</span></div>');
 		    });

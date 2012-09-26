@@ -13,13 +13,16 @@
     });//$.fn.extend
 })(jQuery);//end of plugin
 
+var $ws = undefined;
+
 function timeseries_add(e, pid, timeseries) {
     // internal function. params
     // e - element to add to
     // pid - (optional) initial pid to display
     // create an invisible "workspace" element to hold data
-    $(e).append('<div id="workspace"></div>')
+    $ws = $(e).append('<div id="workspace"></div>')
 	.find('#workspace').css('display','none');
+    $ws.data('show_roi_metadata',0);
     // timeline thinks all timestamps are in the current locale, so we need
     // to fake that they're UTC
     function asUTC(date) {
@@ -45,10 +48,10 @@ function timeseries_add(e, pid, timeseries) {
 	}
 	// update date label on timeline control
 	$.getJSON(pid+'_short.json', function(r) { // need date information
-	    $('#workspace').data('selected_pid',r.pid);
+	    $ws.data('selected_pid',r.pid);
 	    // set the time markers accordingly
 	    $('#date_label').empty().append(r.date); // FIXME no ms
-	    $('#workspace').data('selected_date',r.date);
+	    $ws.data('selected_date',r.date);
 	    var newCustomTime = asLocal(new Date(r.date));
 	    $('#timeline').getTimeline(function(t) {
 		console.log('setting custom time to '+newCustomTime);
@@ -192,6 +195,7 @@ function timeseries_add(e, pid, timeseries) {
 		// use grayLoadingImage from image_pager to display the ROI
 		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
 		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
+		console.log('collapse state is '+$ws.data('show_roi_metadata'))
 		$('#roi_image').empty()
 		    .closeBox()
 		    .css('display','inline-block')
@@ -201,7 +205,13 @@ function timeseries_add(e, pid, timeseries) {
 		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
 		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
 		    .append('<div><div class="target_metadata"></div></div>')
-		    .find('.target_metadata').target_metadata(roi_pid).collapsing('metadata').end()
+		    .find('.target_metadata')
+		    .target_metadata(roi_pid)
+		    .collapsing('metadata',$ws.data('show_roi_metadata'))
+		    .bind('collapse_state', function(event, s) {
+			console.log('setting collapse state to '+s);
+			$ws.data('show_roi_metadata', s);
+		    }).end()
 		    .find('.target_image').css('float','right');
 	    });
 	}).bind('goto_bin', function(event, pid) {
