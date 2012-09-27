@@ -1,6 +1,6 @@
 from oii.procutil import Process
 import sys
-from oii.utils import Struct
+from oii.utils import Struct, md5_file
 import os
 import re
 from oii.workflow.rabbit import Job, JobExit, WIN, FAIL, SKIP
@@ -34,6 +34,20 @@ class ImageStackWorker(ProcessWorker):
         if not os.path.exists(od):
             os.makedirs(od)
         return dict(img_in=img_in,img_out=img_out)
+    def win_callback(self,params):
+        img_out = params['img_out']
+        if not os.path.exists(img_out):
+            self.log('FAIL output file does not exist: %s' % img_out)
+            return FAIL
+        # FIXME compute fixity
+        self.log('FIXITY md5 of %s is %s' % (img_out, md5_file(img_out)))
+        file_stat = os.stat(img_out)
+        file_length = file_stat.st_size
+        self.log('FIXITY length of %s is %d' % (img_out, file_length))
+        # FIXME emit provenance record
+        return WIN
+    def fail_callback(self,params):
+        return FAIL
 
 def enqueue_from_stdin(hl):
     batch = []

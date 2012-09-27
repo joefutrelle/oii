@@ -21,15 +21,19 @@ class ProcessWorker(Job):
         (e.g., the job has already been completed by another worker). All validation
         and provisioning (e.g., creating output directories) must take place at this stage"""
         return {}
+    def win_callback(self,params):
+        return WIN
+    def fail_callback(self,params):
+        return FAIL
     def run_callback(self,message):
         try:
             params = self.get_parameters(message)
             try:
                 for msg in self.process.run(params):
                     self.log(msg['message'])
-                return WIN
+                return self.win_callback(params)
             except RuntimeError:
-                return FAIL
+                return self.fail_callback(params)
         except:
             raise
 
