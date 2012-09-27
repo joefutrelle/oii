@@ -25,12 +25,14 @@
 		    images.push(url);
 		}
 		$.getJSON(pid+'_medium.json', function(r) {
-		    bin_size = r.targets.length;
+		    $this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
+		    $this.find('.imagepager_date').attr('title',r.date).timeago();
 		});
 		// list of images in hand, create the image pager
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
-		    .append('<div class="imagepager_page_number"></div>')
+		    .append('<div class="imagepager_paging">page <span class="imagepager_page_number"></span>, showing <span class="imagepager_rois_shown">?</span> of <span class="imagepager_rois_total">?</span> target(s)</div>')
 		    .append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
+		    .append(' (<span class="imagepager_date timeago"></span>)')
 		    .append('<span> (<a href="'+pid+'.adc">ADC</a></span>')
 		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
 		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')
@@ -43,11 +45,11 @@
 		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
-			$('.imagepager_page_number').empty().append('page '+(ix+1));
+			$this.find('.imagepager_page_number').empty().append((ix+1)+'');
+			$this.find('.imagepager_rois_shown').empty().append('&#x21BB;');
 			$this.trigger('page_change', [ix+1, image_href]);
 			$.getJSON(image_href.replace('.jpg','.json'), function(r) {
-			    var bin_size_label = bin_size != undefined ? bin_size+'' : '?';
-			    $('.imagepager_page_number').empty().append('page '+(ix+1)+', showing '+r.length+' of '+bin_size_label+' target(s)');
+			    $this.find('.imagepager_rois_shown').empty().append(r.length+'');
 			});
 		    }).delegate('.page_image', 'click', function(event) { // when the user clicks on the mosaic image
 			// figure out where the click was
@@ -121,7 +123,6 @@
 		// make the selected on checked
 		var selected_scale = undefined;
 		$.each(roi_scales, function(ix, scale) {
-		    console.log(scale);
 		    if(scale/100 == $this.data(ROI_SCALE)) {
 			selected_scale = scale
 		    }
