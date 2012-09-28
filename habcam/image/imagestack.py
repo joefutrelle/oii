@@ -3,10 +3,11 @@ import sys
 from oii.utils import Struct, md5_file, gen_id
 import os
 import re
-from oii.workflow.rabbit import Job, JobExit, WIN, FAIL, SKIP
+from oii.workflow.rabbit import Job, JobExit, WIN, FAIL, SKIP, PASS
 from oii.workflow.workers import ProcessWorker
 from oii.times import iso8601
 from oii.config import get_config
+from oii.psql import xa
 import json
 
 class ImageStackWorker(ProcessWorker):
@@ -77,6 +78,22 @@ class ImageStackWorker(ProcessWorker):
     def fail_callback(self,params):
         return FAIL
 
+class ProvenanceLogger(Job):
+    def __init__(self,config):
+        super(ProvenanceLogger,self).__init__('%s_prov' % config.queue_name)
+        self.config = config
+    def run_callback(self,message):
+        try:
+            r = Struct(json.loads(message))
+            r.imagename = re.sub(r'.*/','',r.pathname)
+            with xa(self.config.psql_connect) as (c,db):
+                db.execute("set session time zone 'UTC'")
+                db.execute("insert into provenance_test (process_id, algorithm_id, direction, imagename, no_earlier_than, no_later_than, fixity_md5, fixity_length) values (%s,%s,%s,%s,%s,%s,%s,%s)",(r.process_id, r.algorithm_id, r.direction, r.imagename, r.no_earlier_than, r.no_later_than, r.fixity_md5, r.fixity_length))
+                c.commit()
+            return WIN
+        except:
+            return FAIL
+
 def enqueue_from_stdin(hl):
     batch = []
     while True:
@@ -92,12 +109,12 @@ def enqueue_from_stdin(hl):
     hl.enqueue(batch)
 
 def cli(job,argv):
-    cmd = sys.argv[2]
+    cmd = argv[2]
     if cmd == 'q':
-        if sys.argv[3] == '-':
+        if argv[3] == '-':
             enqueue_from_stdin(job)
         else:
-            job.enqueue(sys.argv[3:])
+            job.enqueue(argv[3:])
     elif cmd == 'r':
         job.retry_failed()
     elif cmd == 'w':

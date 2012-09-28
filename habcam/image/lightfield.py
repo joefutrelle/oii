@@ -1,6 +1,6 @@
 import sys
 from oii.config import get_config
-from oii.habcam.image.imagestack import ImageStackWorker, cli
+from oii.habcam.image.imagestack import ImageStackWorker, ProvenanceLogger, cli
 
 class HabcamLightfieldNhv(ImageStackWorker):
     """Note that this impl uses NHV's modded version of ImageStack containing wls2 and histoadapt operators"""
@@ -49,9 +49,16 @@ class HabcamLightfieldJoe(ImageStackWorker):
 #   requeue failed processing jobs
 # w
 #   run as a worker
+# p
+#   consume provenance log
 # log
 #   show logging messages as they come in
 if __name__=='__main__':
-    hl = HabcamLightfieldNhv(get_config(sys.argv[1]))
-    cli(hl, sys.argv)
+    config = get_config(sys.argv[1])
+    if sys.argv[2] == 'p':
+        pl = ProvenanceLogger(config)
+        cli(pl, [None,None,'w'])
+    else:
+        hl = HabcamLightfieldNhv(config)
+        cli(hl, sys.argv)
 

@@ -19,7 +19,7 @@ DIE='die' # worker cannot work, should requeue and terminate
 # handy properties
 PERSISTENT=pika.BasicProperties(delivery_mode=2)
 
-DEBUG=False
+DEBUG=True
 
 def debug(message):
     if debug:
@@ -137,6 +137,7 @@ class Job(object):
         debug('enqueue %s to %s' % (message,qname))
         enqueue(message,qname,self.host,self.work_channels[qname])
     def work(self,fork=False):
+        debug('work called')
         """Start doing work. Will not return as it blocks for messages.
         If fork is true, will start in a separate process, wait for that process
         to terminate, and restart it when it does"""
