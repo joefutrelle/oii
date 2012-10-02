@@ -60,6 +60,33 @@ Modifications by Joe Futrelle (hereafter JMF) at Woods Hole Oceanographic Instit
 August 31, 2012. See comments marked JMF below.
 */
 
+// JMF modified 10/2012 to add toISOString support for IE8
+// from http://stackoverflow.com/questions/11440569/converting-a-normal-date-to-iso-8601-format
+// Override only if native toISOString is not defined
+	    if (!Date.prototype.toISOString) {
+    // Here we rely on JSON serialization for dates because it matches 
+    // the ISO standard. However, we check if JSON serializer is present 
+    // on a page and define our own .toJSON method only if necessary
+		if (!Date.prototype.toJSON) {
+		    Date.prototype.toJSON = function (key) {
+			function f(n) {
+                // Format integers to have at least two digits.
+			    return n < 10 ? '0' + n : n;
+			}
+
+			return this.getUTCFullYear()   + '-' +
+			    f(this.getUTCMonth() + 1) + '-' +
+			    f(this.getUTCDate())      + 'T' +
+			    f(this.getUTCHours())     + ':' +
+			    f(this.getUTCMinutes())   + ':' +
+			    f(this.getUTCSeconds())   + 'Z';
+		    };
+		}
+
+		Date.prototype.toISOString = Date.prototype.toJSON;
+	    }
+// end JMF mod
+
 if (typeof links === 'undefined') {
     links = {};
     // important: do not use var, as "var links = {};" will overwrite 
