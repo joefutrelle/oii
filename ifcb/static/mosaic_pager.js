@@ -105,6 +105,11 @@
 			selected_size = size;
 		    }
 		});
+		$this.append('<div class="mosaic_next_prev"></div>')
+		$this.find('.mosaic_next_prev')
+		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
+		    .append('<span class="controlGray biggerText"> | </span>')
+		    .append('<span class="controlGray biggerText nextBin">Next &#x25B6;</span>');
 		// add size controls
 		$this.append('<div class="mosaic_controls"></div>')
 		    .find('.mosaic_controls')
@@ -138,10 +143,6 @@
 		// now add the mosaic pager
 		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
 		    .css('float','left'); // FIXME remove
-		$this.append('<div class="mosaic_next_prev"></div>')
-		$this.find('.mosaic_next_prev')
-		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
-		    .append('<span class="controlGray biggerText nextBin">Next &#x25B6;</span>');
 		$this.find('.mosaic_next_prev .nextBin')
 		    .click(function() {
 			$.getJSON('/'+timeseries+'/api/feed/after/pid/'+$this.data(PID), function(r) {

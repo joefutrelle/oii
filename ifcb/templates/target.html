@@ -8,17 +8,12 @@ $(document).ready(function() {
     var height = {{properties.width}}; // 90 degree rotation
     $('#target_image')
         .target_image('{{hit.target_pid}}',width,height);
-    $('.targetpager').css('height',height)
-        .addClass('inline')
-        .addClass('imagepager_arrow');
-    $('.targetpager_right').addClass('imagepager_right')
-        .click(function() {
+    $('.nextTarget').click(function() {
             {% for k,v in target if k == 'next' %}
                 window.location.href = '{{v}}.html';
             {% endfor %}
         });
-    $('.targetpager_left').addClass('imagepager_left')
-        .click(function() {
+    $('.previousTarget').click(function() {
             {% for k,v in target if k == 'previous' %}
                 window.location.href = '{{v}}.html';
             {% endfor %}
@@ -29,9 +24,11 @@ $(document).ready(function() {
 {% block content %}
   <div class="major h1">Target {{hit.target_pid}}</div>
   <div id="roi_pager" class="major inline">
-    <div class="targetpager targetpager_left"></div>
-    <div id="target_image" class="inline"></div>
-    <div class="targetpager targetpager_right"></div>
+    <div>
+      <span class="controlGray previousTarget">&#x25C0; Previous</span>
+      <span class="controlGray nextTarget"> | Next &#x25B6;</span>
+    </div>
+    <div id="target_image"></div>
   </div>
   <br class="break">
   <div class="major inline" style="clear: both">{{hit.date}} (<a href="{{hit.bin_pid}}.html">Show sample bin</a>)</div>

@@ -72,22 +72,23 @@ img.logo {
   font-size: 10px;
 }
 .mosaic_controls {
+  clear: both;
   text-align: center;
   margin-bottom: 5px;
   white-space: nowrap;
 }
 .mosaic_next_prev {
-  text-align: center;
+    /*clear: both;*/
+  float: left;
+  margin-top: 5px;
   margin-bottom: 5px;
   white-space: nowrap;
 }
 .previousBin {
     padding: 5px;
-    float: left;
 }
 .nextBin {
     padding: 5px;
-    float: right;
 }
 #roi_image {
   float: right;
