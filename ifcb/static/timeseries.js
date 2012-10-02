@@ -154,10 +154,10 @@ function timeseries_add(e, pid, timeseries) {
 		maxDate = end;
 	    }
 	});
-	// add a year to max date so that current time isn't squished over to the right
-	maxDate = new Date(maxDate.getTime() + (86400000 * 365));
-	// subtract a year to max date so that current time isn't squished over to the right
-	minDate = new Date(minDate.getTime() - (86400000 * 365));
+	// add two years to max date so that current time isn't squished over to the right
+	maxDate = new Date(maxDate.getTime() + (86400000 * 365 * 2));
+	// subtract two years from min date so that current time isn't squished over to the left
+	minDate = new Date(minDate.getTime() - (86400000 * 365 * 2));
 	// layout parameters accepted by showdata and passed to underlying widget
 	var timeline_options = {
 	    'width':  '100%',

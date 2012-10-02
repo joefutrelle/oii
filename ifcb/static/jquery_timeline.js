@@ -12,6 +12,42 @@
 		    var x = event.clientX - $this.find('div.timeline-frame div').offset().left;
 		    return new Date(event.data.timeline.screenToTime(x))
 		}
+		// support for animating to new time
+		// based on http://almende.github.com/chap-links-library/js/timeline/examples/example21_animate_visible_range.html
+		// create a simple animation
+		var animateTimeout = undefined;
+		var animateFinal = undefined;
+		function animateTo(date) {
+		    // get the new final date
+		    animateFinal = date.valueOf();
+		    
+		    // cancel any running animation
+		    if (animateTimeout) {
+			clearTimeout(animateTimeout);
+			animateTimeout = undefined;
+		    }
+		    // animate towards the final date
+		    function animate() {
+			var range = timeline.getVisibleChartRange();
+			var current = (range.start.getTime() + range.end.getTime())/ 2;
+			var width = (range.end.getTime() - range.start.getTime());
+			var minDiff = Math.max(width / 1000, 1);
+			var diff = (animateFinal - current);
+			if (Math.abs(diff) > minDiff) {
+			    // move towards the final date
+			    var start = new Date(range.start.getTime() + diff / 3);
+			    var end = new Date(range.end.getTime() + diff / 3);
+			    timeline.setVisibleChartRange(start, end);
+			    timeline.trigger('rangechange');
+
+			    // start next timer
+			    animateTimeout = setTimeout(animate, 20);
+			} else {
+			    timeline.trigger('rangechanged');
+			}
+		    };
+		    animate();
+		}
 		// FIXME remove these in deference to timeline's event API
 		// and use timeline_bind in calling scripts
 		$this.bind('mousemove', {timeline:timeline}, function(event) {
@@ -20,6 +56,10 @@
 		});
 		$this.bind('click', {timeline:timeline}, function(event) {
 		    var inControls = 0;
+		    if($(event.target).hasClass('timeline-navigation-zoom-in') ||
+		       $(event.target).hasClass('timeline-navigation-zoom-out')) {
+			animateTo(timeline.getCustomTime());
+		    }
 		    if($(event.target).hasClass('timeline-navigation-zoom-in') ||
 		       $(event.target).hasClass('timeline-navigation-zoom-out') ||
 		       $(event.target).hasClass('timeline-navigation-move-left') ||
