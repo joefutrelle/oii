@@ -72,11 +72,14 @@ function timeseries_add(e, pid, timeseries) {
 	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
     }
     // called when the user clicks on a date and wants to see the nearest bin
-    function showNearest(date) {
+    function showNearest(date, pushHistory, callback) {
 	var ds = date.toISOString();
 	// FIXME need to specify time series
 	$.getJSON('/'+timeseries+'/api/feed/nearest/'+ds, function(r) { // find the nearest bin
-	    showMosaic(r.pid);
+	    showMosaic(r.pid, pushHistory);
+	    if(callback != undefined) {
+		callback(r.pid);
+	    }
 	});
     }
     // add the timeline control
@@ -174,7 +177,9 @@ function timeseries_add(e, pid, timeseries) {
 	if(pid != undefined) {
 	    showMosaic(pid, false);
 	} else {
-	    showNearest(new Date());
+	    showNearest(new Date(), false, function(nearest) {
+		historyPushState({pid:nearest, mosaic_state:{}}, nearest, '/'+timeseries);
+	    });
 	}
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
