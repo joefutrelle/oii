@@ -132,7 +132,7 @@
 			selected_scale = scale
 		    }
 		});
-		$this.find('.mosaic_controls').append('ROI scaling: <span></span>').find('span:last')
+		$this.find('.mosaic_controls').append('Scaling: <span></span>').find('span:last')
 		    .radio(roi_scales, function(scale) {
 			return scale + '%';
 		    }, selected_scale).bind('select', function(event, value) {
