@@ -1,0 +1,8 @@
+<resolvers>
+  <resolver name="tiff">
+    <match var="pid" pattern="(\d{8}\.\d{6}\.\d{5})(_([a-z]+))?\.(\w+)"
+	   groups="lid - variant extension">
+      <path match="${root}/${lid}.tif"/>
+    </match>
+  </resolver>
+</resolvers>
