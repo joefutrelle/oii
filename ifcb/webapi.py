@@ -15,7 +15,7 @@ from oii.times import iso8601, rfc822
 import urllib
 from oii.utils import order_keys, jsons
 from oii.ifcb.formats.adc import read_adc, read_target, ADC
-from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
+from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_1
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
@@ -503,15 +503,15 @@ def resolve(pid):
     abort(404)
 
 @memoized
-def read_targets(adc_path, target_no=1, limit=-1):
-    return list(read_adc(LocalFileSource(adc_path), target_no, limit))
+def read_targets(adc_path, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
+    return list(read_adc(LocalFileSource(adc_path), target_no, limit, schema_version=schema_version))
 
 def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None):
     if stitch_targets is None:
         stitch_targets = app.config[STITCH]
     if adc_path is None:
         adc_path = resolve_adc(hit.bin_pid)
-    targets = read_targets(adc_path, target_no, limit)
+    targets = read_targets(adc_path, target_no, limit, hit.schema_version)
     if stitch_targets:
         # in the stitching case we need to compute "stitched" flags based on pairs
         # correct image metrics
@@ -664,6 +664,8 @@ def get_fast_stitched_roi(bin_pid, target_no):
 def get_roi_image(bin_pid, target_no, fast_stitching=False):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
+    hit = resolve_pid(pid=bin_pid)
+    schema_version = hit.schema_version
     (adc_path, roi_path) = resolve_files(bin_pid, (ADC, ROI))
     if app.config[STITCH]:
         offset=max(1,target_no-1)
@@ -671,7 +673,7 @@ def get_roi_image(bin_pid, target_no, fast_stitching=False):
     else:
         offset=target_no
         limit=1 # just read one
-    targets = list(read_targets(adc_path, offset, limit))
+    targets = list(read_targets(adc_path, offset, limit, schema_version)) 
     if len(targets) == 0: # no targets? return Not Found
         return None
     # open the ROI file as we may need to read more than one

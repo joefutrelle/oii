@@ -23,13 +23,26 @@
       <var name="dbname">healy1101</var>
       <hit/>
     </match>
+    <match var="time_series" pattern="^saltpond$">
+      <var name="title">${bot_name} @ Salt Pond</var>
+      <var name="dbname">saltpond</var>
+      <hit/>
+    </match>
   </resolver>
   <resolver name="pid">
     <match var="pid" groups="namespace time_series lid bin_lid instrument date year day time - target - product - extension"
-	   pattern="(.*?\b([a-zA-Z0-9_]+)?)/?(((IFCB\d+)_((\d{4})_(\d{3})_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
+	   pattern="(.*?\b(\w+)?)/?(((IFCB\d+)_((\d{4})_(\d{3})_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
       <import name="time_series"/>
       <var name="date_format">%Y_%j_%H%M%S</var>
       <var name="schema_version">v1</var>
+      <var name="bin_pid">${namespace}${bin_lid}</var>
+      <hit/>
+    </match>
+    <match var="pid" groups="namespace time_series lid bin_lid date year day time instrument - target - product - extension"
+	   pattern="(.*?\b(\w+)?)/?((D((\d{4})(\d{4})T(\d{6}))_(IFCB\d+))(_(\d{5}))?)(_(\w+))?(\.(\w+))?">
+      <import name="time_series"/>
+      <var name="date_format">%Y%m%dT%H%M%S</var>
+      <var name="schema_version">v2</var>
       <var name="bin_pid">${namespace}${bin_lid}</var>
       <hit/>
     </match>
@@ -50,6 +63,12 @@
       </var>
       <hit/>
     </match>
+    <match var="time_series" pattern="^saltpond$">
+      <var name="root">
+	<value>/mnt/saltpond</value>
+      </var>
+      <hit/>
+    </match>
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
@@ -63,6 +82,8 @@
       <path match="${root}/${instrument}_${year}_${day}/${filename}"/>
       <!-- in some cases there aren't year/day directories -->
       <path match="${root}/${filename}"/>
+      <!-- try v2 patterns -->
+      <path match="${root}/D${year}/D${year}${day}/${filename}"/>
     </any>
   </resolver>
   <resolver name="blob_roots">
@@ -74,12 +95,19 @@
       <var name="root">/mnt/healy1101/blobs</var>
       <hit/>
     </match>
+    <match var="time_series" pattern="^saltpond$">
+      <var name="root">/data/vol4/blobs/saltpond</var>
+      <hit/>
+    </match>
   </resolver>
   <resolver name="mvco_blob">
     <import name="pid"/>
     <import name="blob_roots"/>
     <var name="filename">${bin_lid}_blobs_v2.zip</var>
-    <path match="${root}/${year}/${year}_${day}/${filename}"/>
+    <any>
+      <path match="${root}/${year}/${year}_${day}/${filename}"/> <!-- v1-style -->
+      <path match="${root}/${year}/${year}${day}/${filename}"/> <!-- v2-style -->
+    </any>
   </resolver>
   <resolver name="list_adcs">
     <!-- list all adc files. -->
