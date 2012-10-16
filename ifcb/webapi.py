@@ -235,7 +235,10 @@ def jsonr(obj, ttl=None):
 # FIXME need max date, URL prefix
 def feed_response(time_series,dicts,format='json'):
     app.logger.debug(dicts)
-    max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
+    if len(dicts) > 0:
+        max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
+    else:
+        max_date = iso8601() # now
     context = dict(max_date=max_date, time_series=time_series, feed=dicts)
     if format == 'json':
         return jsonr(dicts)
