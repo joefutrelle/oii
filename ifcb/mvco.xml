@@ -13,33 +13,33 @@
     <var name="base_url">http://demi.whoi.edu/</var>
     <var name="namespace">${base_url}${time_series}/</var>
     <var name="bot_name">&lt;a href="/about"&gt;Imaging FlowCytobot&lt;a&gt;</var>
-    <match var="time_series" pattern="^mvco$">
+    <match var="time_series" value="mvco">
       <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/mvco/"&gt;MVCO&lt;a&gt; 2006-present</var>
       <var name="dbname">ifcb</var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^Healy1101$">
+    <match var="time_series" value="Healy1101">
       <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1101&lt;a&gt;</var>
       <var name="dbname">healy1101</var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^saltpond$">
+    <match var="time_series" value="saltpond">
       <var name="title">${bot_name} @ Salt Pond</var>
       <var name="dbname">saltpond</var>
       <hit/>
     </match>
   </resolver>
   <resolver name="pid">
-    <match var="pid" groups="namespace time_series lid bin_lid instrument date year day time - target - product - extension"
-	   pattern="(.*?\b(\w+)?)/?(((IFCB\d+)_((\d{4})_(\d{3})_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
+    <match var="pid" groups="namespace time_series lid bin_lid instrument date yearday year day time - target - product - extension"
+	   pattern="(.*?\b(\w+)?)/?(((IFCB\d+)_(((\d{4})_(\d{3}))_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
       <import name="time_series"/>
       <var name="date_format">%Y_%j_%H%M%S</var>
       <var name="schema_version">v1</var>
       <var name="bin_pid">${namespace}${bin_lid}</var>
       <hit/>
     </match>
-    <match var="pid" groups="namespace time_series lid bin_lid date year day time instrument - target - product - extension"
-	   pattern="(.*?\b(\w+)?)/?((D((\d{4})(\d{4})T(\d{6}))_(IFCB\d+))(_(\d{5}))?)(_(\w+))?(\.(\w+))?">
+    <match var="pid" groups="namespace time_series lid bin_lid date yearday year day time instrument - target - product - extension"
+	   pattern="(.*?\b(\w+)?)/?((D(((\d{4})(\d{4}))T(\d{6}))_(IFCB\d+))(_(\d{5}))?)(_(\w+))?(\.(\w+))?">
       <import name="time_series"/>
       <var name="date_format">%Y%m%dT%H%M%S</var>
       <var name="schema_version">v2</var>
@@ -48,7 +48,7 @@
     </match>
   </resolver>
   <resolver name="data_roots">
-    <match var="time_series" pattern="^mvco$">
+    <match var="time_series" value="mvco">
       <var name="root">
 	<value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
 	<value>/data/vol3</value>
@@ -57,16 +57,12 @@
       </var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^Healy1101$">
-      <var name="root">
-	<value>/mnt/healy1101/data</value>
-      </var>
+    <match var="time_series" value="Healy1101">
+      <var name="root">/mnt/healy1101/data</var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^saltpond$">
-      <var name="root">
-	<value>/mnt/saltpond</value>
-      </var>
+    <match var="time_series" value="saltpond">
+      <var name="root">/mnt/saltpond</var>
       <hit/>
     </match>
   </resolver>
@@ -87,16 +83,16 @@
     </any>
   </resolver>
   <resolver name="blob_roots">
-    <match var="time_series" pattern="^mvco$">
-      <var name="root">/data/vol4/blobs</var>
+    <match var="time_series" value="mvco">
+      <var name="product_root">/data/vol4/blobs</var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^Healy1101$">
-      <var name="root">/mnt/healy1101/blobs</var>
+    <match var="time_series" value="Healy1101">
+      <var name="product_root">/mnt/healy1101/blobs</var>
       <hit/>
     </match>
-    <match var="time_series" pattern="^saltpond$">
-      <var name="root">/data/vol4/blobs/saltpond</var>
+    <match var="time_series" value="saltpond">
+      <var name="product_root">/data/vol4/blobs/saltpond</var>
       <hit/>
     </match>
   </resolver>
@@ -104,15 +100,12 @@
     <import name="pid"/>
     <import name="blob_roots"/>
     <var name="filename">${bin_lid}_blobs_v2.zip</var>
-    <any>
-      <path match="${root}/${year}/${year}_${day}/${filename}"/> <!-- v1-style -->
-      <path match="${root}/${year}/${year}${day}/${filename}"/> <!-- v2-style -->
-    </any>
+    <path match="${product_root}/${year}/${yearday}/${filename}"/>
   </resolver>
   <resolver name="list_adcs">
     <!-- list all adc files. -->
     <import name="data_roots"/>
-    <path var="day_dir" match="${root}/IFCB*">
+    <path var="day_dir" match="${root}/IFCB*"> <!-- FIXME v1-specific -->
       <path var="adc_file" match="IFCB*.adc">
 	<!-- find the adc file -->
 	<match var="adc_file" groups="pid">.*(IFCB.*)\..*</match>

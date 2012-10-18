@@ -17,6 +17,9 @@ Hit  = namedtuple('Hit', ['value', 'stop'])
 Import = namedtuple('Import', ['name'])
 Log = namedtuple('Log', ['message'])
 
+# implicit terminal Hit on Match with subexpressions
+END = [Hit('',stop=False)]
+
 TRUE=['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes']
 
 # convert XML format into named tuple representation.
@@ -30,11 +33,14 @@ def sub_parse(node):
         elif child.tag == 'match':
             var = child.get('var')
             pattern = child.get('pattern')
+            value = child.get('value')
             groups = child.get('groups')
             if groups is not None:
                 groups = re.compile(r'\s+').split(groups)
             if pattern is not None:
                 yield Match(var, regex=pattern, expressions=list(sub_parse(child)), groups=groups)
+            elif value is not None:
+               yield Match(var, regex='^%s$' % value, expressions=list(sub_parse(child)), groups=groups)
             else:
                 yield Match(var, regex=child.text, expressions=None, groups=groups)
         elif child.tag == 'var':
@@ -121,6 +127,8 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         # </any>
         # will try both pid syntaxes and any match will bind the groups and
         # evaluate the rest of the resolver following the </any> tag.
+        # if there are no matches, execution will not proceed to the rest of the
+        # resolver that follows the <any> tag.
         for ex in expr.expressions:
             for solution in resolve([ex] + resolver[1:], bindings, cwd, namespace):
                 yield solution
@@ -192,6 +200,7 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         #     <var name="bar">${1}_${2}</var>
         #     ...
         # </match>
+        # The "value" attribute is shorthand for wrapping the "pattern" attribute in ^$
         value = bindings[expr.var] # look up the variable's value
         m = None
         if value is not None: # if the variable has no value, then don't attempt a regex match
@@ -206,7 +215,7 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
                     if group is not None or var not in local_bindings:
                         local_bindings[var] = group
             if expr.expressions is not None: # there are subexpressions, so descend as a result of the match
-                for solution in resolve(expr.expressions,local_bindings,cwd,namespace):
+                for solution in resolve(expr.expressions + END,local_bindings,cwd,namespace):
                     yield solution
             else: # matched, and no subexpressions, so continue with the rest of the resolver
                 for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
@@ -244,6 +253,7 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
             # done, now do the rest of the resolver
             for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
                 yield solution
+    # A variant of match allows to use an imported resolver to generate hits.
     elif isinstance(expr,MatchImport):
         imported = namespace[expr.resolver] # import the named resolver
         for solution in resolve(imported,bindings,cwd,namespace):
@@ -253,6 +263,14 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
             for subs in resolve(resolver[1:],local_bindings,cwd,namespace):
                 yield subs
     elif isinstance(expr,Import):
+        # <import> allows for descending into a named resolver outside
+        # of the importing resolver. The imported resolver is executed
+        # with current bindings and every hit it generates adds
+        # additional local bindings, and then the rest of the
+        # importing resolver is executed with those bindings. If the
+        # intention is to instead allow the imported resolver to
+        # generate hits on behalf of the importing resolver, use
+        # <match resolver="..."> instead (i.e., MatchImport)
         imported = namespace[expr.name] # import the named resolver
         for solution in resolve(imported,bindings,cwd,namespace):
             # for each of its solutions, use its bindings
