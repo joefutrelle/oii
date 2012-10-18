@@ -215,7 +215,7 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
                     if group is not None or var not in local_bindings:
                         local_bindings[var] = group
             if expr.expressions is not None: # there are subexpressions, so descend as a result of the match
-                for solution in resolve(expr.expressions + END,local_bindings,cwd,namespace):
+                for solution in resolve(expr.expressions,local_bindings,cwd,namespace):
                     yield solution
             else: # matched, and no subexpressions, so continue with the rest of the resolver
                 for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
