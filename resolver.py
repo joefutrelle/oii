@@ -5,6 +5,9 @@ import re
 from glob import iglob
 from os import path
 import sys
+import readline
+import cmd
+import traceback
 
 # "little language" pattern
 
@@ -378,11 +381,42 @@ def parse_stream(stream):
 # this case can be done as a text substitution.  if arithmetic is
 # required, this class doesn't currently support any such operations.
 
+def print_bindings(bindings):
+    for var in bindings.keys():
+        try:
+            int(var)
+            del bindings[var]
+        except ValueError:
+            pass
+    # colon-align
+    width = max([len(var) for var in bindings.keys()])
+    print '{'
+    for var in sorted(bindings.keys()):
+        print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
+    print '}'
+
 def interactive_shell(resolvers):
-    print 'Found %d resolver(s) in %s:' % (len(resolvers), resolver_file)
-    for name in sorted(resolvers.keys()):
-        print '- %s' % name
-    # FIXME should do more
+    bindings = {}
+    class Shell(cmd.Cmd):
+        def do_list(self,args):
+            for name in sorted(resolvers.keys()):
+                print '- %s' % name
+        def do_clear(self,args):
+            bindings = {}
+        def do_bind(self,args):
+            for kv in re.split(' +',args):
+                (k,v) = re.split(r'=',kv)
+                bindings[k] = v
+        def do_show(self,args):
+            print_bindings(bindings)
+        def do_run(self,resolver_name):
+            try:
+                for solution in resolvers[resolver_name].resolve_all(**bindings):
+                    print 'Solution: "%s"' % solution.value
+                    print_bindings(solution.bindings)
+            except:
+                traceback.print_exc(file=sys.stdout)
+    Shell().cmdloop('Found %d resolver(s) in %s:' % (len(resolvers), resolver_file))
 
 # FIXME split CLI into different module
 
@@ -414,4 +448,5 @@ if __name__=='__main__':
             for var in sorted(bindings.keys()):
                 print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
             print '}'
+
             
