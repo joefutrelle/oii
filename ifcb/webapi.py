@@ -21,7 +21,7 @@ from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw
-from oii.io import UrlSource, LocalFileSource
+from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
 from oii.image.mosaic import Tile

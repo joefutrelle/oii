@@ -14,7 +14,7 @@ from oii.image.pil.utils import filename2format, thumbnail
 import urllib
 from oii.utils import order_keys
 from oii.resolver import parse_stream
-from oii.io import UrlSource, LocalFileSource
+from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 import mimetypes
 from PIL import Image

@@ -1,4 +1,4 @@
-from oii.io import PartSource
+from oii.iopipes import PartSource
 from oii.ifcb.formats.adc import BYTE_OFFSET, WIDTH, HEIGHT
 from PIL import Image
 from array import array

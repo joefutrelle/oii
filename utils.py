@@ -264,6 +264,29 @@ def freespace(pth):
         s = os.statvfs(pth)
         return s.f_frsize * s.f_bavail
 
+def rpad(s,l,pad_string=' '):
+    return s + (pad_string * (l - len(s)))
+
+def asciitable(dicts):
+    # set of all keys in dicts
+    cols = sorted(list(set(reduce(lambda x,y: x+y, [d.keys() for d in dicts]))))
+    # compute col widths. initially wide enough for the column label
+    widths = dict([(col,len(col)) for col in cols])
+    # now create rows, and in doing so compute max width of each column
+    for row in dicts:
+        for col in cols:
+            try:
+                width = len(str(row[col]))
+            except KeyError:
+                width = 0
+            if width > widths[col]:
+                widths[col] = width
+    # now print rows
+    print ' | '.join([rpad(col,widths[col]) for col in cols])
+    print '-+-'.join(['-' * widths[col] for col in cols])
+    for row in dicts:
+        print ' | '.join([rpad(str(row[col]),widths[col]) for col in cols])
+    
 ### tests
 
 class test_gen_id(TestCase):

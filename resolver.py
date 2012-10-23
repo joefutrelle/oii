@@ -4,12 +4,13 @@ from collections import namedtuple
 import re
 from glob import iglob
 from os import path
+import sys
 
 # "little language" pattern
 
 Match = namedtuple('Match', ['var','regex', 'expressions', 'groups'])
 MatchImport = namedtuple('MatchImport', ['resolver'])
-Var = namedtuple('Var', ['name','values'])
+Var = namedtuple('Var', ['name','values', 'hit'])
 Path = namedtuple('Path', ['var', 'match', 'expressions'])
 Any = namedtuple('Any', ['expressions'])
 All = namedtuple('All', ['expressions', 'hit'])
@@ -43,11 +44,14 @@ def sub_parse(node):
                yield Match(var, regex='^%s$' % value, expressions=list(sub_parse(child)), groups=groups)
             else:
                 yield Match(var, regex=child.text, expressions=None, groups=groups)
-        elif child.tag == 'var':
+        elif child.tag == 'var' or (child.tag == 'hit' and child.get('name') is not None):
+            hit = False
+            if child.tag == 'hit':
+                hit = True
             values = [gc.text for gc in child if gc.tag == 'value'];
             if not values:
                 values = [child.text]
-            yield Var(name=child.get('name'), values=values)
+            yield Var(name=child.get('name'), values=values, hit=hit)
         elif child.tag == 'path':
             yield Path(var=child.get('var'), match=child.get('match'), expressions=list(sub_parse(child)))
         elif child.tag == 'any':
@@ -250,7 +254,9 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
         for template in expr.values:
             local_bindings = bindings.copy()
             local_bindings[name] = substitute(template,bindings)
-            # done, now do the rest of the resolver
+            if expr.hit: # hit now?
+                yield Solution(local_bindings[name], local_bindings)
+            # and continue
             for solution in resolve(resolver[1:],local_bindings,cwd,namespace):
                 yield solution
     # A variant of match allows to use an imported resolver to generate hits.
@@ -318,12 +324,12 @@ class Resolver(object):
     """Class handling resolution"""
     def __init__(self,expressions,name,namespace={}):
         """Internal use only. Use parse_stream as a resolver factory"""
-        self.engine = expressions
+        self.expressions = expressions
         self.name = name
         self.namespace = namespace
     def resolve_all(self,**bindings):
         """Iterate over all solutions, and include bindings with each solution"""
-        for solution in resolve(self.engine, bindings, namespace=self.namespace):
+        for solution in resolve(self.expressions, bindings, namespace=self.namespace):
             yield solution
     def resolve(self,**bindings):
         """Return the first hit, and do not include bindings with the solution.
@@ -371,3 +377,41 @@ def parse_stream(stream):
 # note that the computation of the name of the ten minute directory in
 # this case can be done as a text substitution.  if arithmetic is
 # required, this class doesn't currently support any such operations.
+
+def interactive_shell(resolvers):
+    print 'Found %d resolver(s) in %s:' % (len(resolvers), resolver_file)
+    for name in sorted(resolvers.keys()):
+        print '- %s' % name
+    # FIXME should do more
+
+# FIXME split CLI into different module
+
+if __name__=='__main__':
+    """Usage:
+    python resolver.py {resolver file} {resolver name} {key0=value0 key1=value1 ... keyN=valueN}"""
+    args = sys.argv
+    resolver_file = args[1]
+    resolvers = parse_stream(resolver_file)
+    if len(args)==2:
+        interactive_shell(resolvers)
+    else:
+        resolver_name = args[2]
+        bindings = {}
+        for kv in args[3:]:
+            (k,v) = re.split(r'=',kv)
+            bindings[k] = v
+        for solution in resolvers[resolver_name].resolve_all(**bindings):
+            bindings = solution.bindings
+            for var in bindings.keys():
+                try:
+                    int(var)
+                    del bindings[var]
+                except ValueError:
+                    pass
+            # colon-align
+            width = max([len(var) for var in bindings.keys()])
+            print 'Solution: "%s" {' % solution.value
+            for var in sorted(bindings.keys()):
+                print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
+            print '}'
+            
