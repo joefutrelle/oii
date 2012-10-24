@@ -516,11 +516,14 @@ function getCanvasForName(canvasName){
     return getImageLayer(getImageCanvii(),canvasName)[0];
 }
 function toggleExisting() {
+    // FIXME ugly. also shouldn't it change button text to "show existing"?
     var e = $('#workspace').data('showExisting');
     if(e) {
 	e = 0;
+	$('#toggleExisting span').html('Show existing');
     } else {
 	e = 1;
+	$('#toggleExisting span').html('Hide existing');
     }
     $('#workspace').data('showExisting',e);
     $(document).trigger('canvasChange');
@@ -701,7 +704,7 @@ $(document).ready(function() {
     $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
 	.find('div:last');
 
-    // add "existing annotations" control
+    // add "existing annotations" panel to right panel
     $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="existingAnnotations" ></div></fieldset>')
 	.find('div:last');
 
@@ -710,17 +713,20 @@ $(document).ready(function() {
         changeAssignment($('#assignment').val()); // deal with it
     });
 
-    // hide existing annotations
-    // FIXME
-    $('#controls').append('<button href="#" id="toggleExisting" class="button toggle">Hide Existing</a>');
-    $('#toggleExisting').click(function() {
-	toggleExisting();
-    });
+    // button hide existing annotations on image
+    $('#controls').append('<a href="#" id="toggleExisting" class="button">Hide Existing</a>')
+	.find('#toggleExisting')
+	.button()
+	.click(toggleExisting);
 
+    // FIXME remove this; it is an example for Amber
+    $('#rightPanel').append("<div>This is some stuff that's really long and you're gonna want to hide it honestly</div>")
+	.find('div:last')
+	.collapsing('Long stuff',0);
 
-//adding toggle buttons to right panel fieldsets
-	$('#rightPanel :not(.categoryPicker) legend')
-		.append(' <button class="button showhide toggle">show/hide</button>');
+    //adding toggle buttons to right panel fieldsets
+    $('#rightPanel :not(.categoryPicker) legend')
+	.append(' <button class="button showhide toggle">show/hide</button>');
 
 	//applies to all category pickers
 	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
