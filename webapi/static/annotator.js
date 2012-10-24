@@ -1,9 +1,13 @@
+// FIXME add comments
+// FIXME scope IDs should not be hardcoded in Javascript layer
 var TARGET_SCOPE=1;
 var IMAGE_SCOPE=2;
 var DOMINANT_SUBSTRATE_SCOPE=3;
-var SUBDOMINANT_SUBSTRATE_SCOPE=4
-var PENDING_COLOR='#00ff33'
-var EXISTING_COLOR='#ffff99'
+var SUBDOMINANT_SUBSTRATE_SCOPE=4;
+// FIXME move to CSS
+var PENDING_COLOR='#00ff33';
+var EXISTING_COLOR='#ffff99';
+// accessors for workspace data structure
 function getWorkspace(key) {
     return $('#workspace').data(key);
 }
@@ -273,6 +277,7 @@ function generateIds(annotations, callback) {
 	callback();
     });
 }
+// FIXME misleadingly named: also commits
 function preCommit() {
     generateIds(pending(), commit);
 }
@@ -439,12 +444,13 @@ clog('user is on assignment '+ass_pid + ' find status: ' + find_status);
 	callback(newPage);
     });
 }
+// clear pending annotations and deselect all cells
 function deselectAll() {
     $('#workspace').data('pending',{});
     $('div.thumbnail.selected').each(function(ix,cell) {
         toggleSelected(cell);
     });
-    $(document).trigger('canvasChange');
+    $(document).trigger('canvasChange'); // update cell layers
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
@@ -454,6 +460,7 @@ function listAssignments() {
         });
     });
 }
+// FIXME #1542 need to change offset accordingly etc
 function changeAssignment(ass_pid) {
     $('#label').val('');
     var ass_pid = $('#assignment').val();
@@ -518,10 +525,12 @@ function toggleExisting() {
     $('#workspace').data('showExisting',e);
     $(document).trigger('canvasChange');
 }
+// this is called on commit
 function resetPending() {
     $('#workspace').data('pending',{}); // pending annotations by pid
     $('#workspace').data('undo',[]); // stack of imagePids indicating the order in which anns were queued
 }
+// this is not called on commit; it's just called initially to populate these data structures
 function resetImageLevelPending() {
     $('#workspace').data('dominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
@@ -539,7 +548,7 @@ function validateLabel() {
 	$('#label').removeClass('invalid');
     }
 }
-
+// FIXME should record which annotator changed the status
 function changeImageStatus(status){
 	    //set status of image to waiting for review on next new
 	    if($('#workspace').data('login') != undefined) {
@@ -552,74 +561,85 @@ function changeImageStatus(status){
 		});
 	    }
 }
-
+// FIXME document.ready is huge
 $(document).ready(function() {
     page = 1;
     size = 1;
+    // set up annotation tracking data structures
     resetPending();
     resetImageLevelPending();
     $('#workspace').data('showExisting',1); // whether to display existing annotations
     // inputs are ui widget styled
-    $('input').addClass('ui-widget');
+    $('input').addClass('ui-widget'); // FIXME should be "live"?
     // images div is not text-selectable
     $('#images').disableSelection(); // note that this is a jQuery UI function
     // images are not draggable
     $('img').live('mousedown',function(event) {
         event.preventDefault();
     });
-    $('a.button').button();
+    $('a.button').button(); // jQuery UI
+    // paging controls: previous
     $('#prev').click(function() {
         page--;
         if(page < 1) page = 1;
         gotoPage(page,size);
     });
+    // paging controls: input page as a number
     $('#offset').change(function() {
 	page = parseInt($('#offset').val())+1;
 	gotoPage(page,size);
     });
+    // paging controls: next
     $('#next').click(function() {
 	page++;
 	gotoPage(page,size);
     });
+    // go to "next new" image
     $('#nextNew').click(function() {
-
+	// change current image status before moving to next one
 	changeImageStatus('waiting+for+review');
-
-	preCommit();//generates ids then commits in this function
-	commitSubstrate(function() {
-	    findNewImage(function(pp) {
+	// commit (not just pre-commit) all non-substrate annotations
+	preCommit();
+	// commit substrate annotations
+	commitSubstrate(function() { // and then,
+	    // find the next new image
+	    findNewImage(function(pp) { // and then,
 		page = pp;
-		gotoPage(page,size);
+		gotoPage(page,size); // go to it
 	    });
 	});
     });
 
     $('#commit').click(function() {
-        preCommit();
+        preCommit(); // commit
     });
     $('#cancel').click(function() {
-        deselectAll();
+        deselectAll(); // cancel pending annotations
     });
     $('#undo').click(function() {
-        undo();
+        undo(); // undo one annotation
     });
 
-    $(document).bind('keydown', 'ctrl+z', undo);
+    $(document).bind('keydown', 'ctrl+z', undo); // use ctrl+z for undo
 
+    // "geometry" is the global object with all the geometric types in it
+    // defined in geometry.js
+    // here, populate a menu with their names
     $.each(geometry, function(key,g) {
         $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
     });
-    selectedTool('boundingBox');
-    $('#tool').change(function() {
+    selectedTool('boundingBox'); // default tool is bounding box
+    $('#tool').change(function() { // use the dropdown to select it
         selectedTool($('#tool').val());
     });
-    listAssignments();
-    $('#label').autocomplete({
+    listAssignments(); // request assignments from server FIXME why not later?
+    $('#label').autocomplete({ // "label" is class label and it autocompletes
         source: function(req,resp) {
             var ass = $('#workspace').data('assignment');
             if(ass == undefined) {
                 return;
             }
+	    // autocomplete from this endpoint
             $.getJSON('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
                 resp($.map(r,function(item) {
                     return {
@@ -629,14 +649,10 @@ $(document).ready(function() {
                 }));
             });
         },
-	/*
-	select: function(event,ui) {
-	    $('#label').change();
-	},
-	*/
-        minLength: 2
+        minLength: 2 // user must type at least 2 characters
     });
-    $('#label').change(validateLabel);
+    $('#label').change(validateLabel); // when a new label is selected, validate it
+    // UI controls for opening and closing the right panel
     $('#closeRight').bind('click', function() {
         $('#openRight').show();
         $('#rightPanel').hide(100);
@@ -646,46 +662,57 @@ $(document).ready(function() {
         $('#rightPanel').show(100, resizeAll);
     });
     $(window).bind('resize', resizeAll);
-    $('#login').authentication(function(username) {
+    // make the login control using authentication.js
+    $('#login').authentication(function(username) { // on login,
 	clog('logged in as '+username);
-	$('#workspace').data('login',username);
+	// record the username in the workspace
+	$('#workspace').data('login',username); // FIXME use accessor
+	// hide page controls except "next new"
 	$('#next').addClass('hidden');
 	$('#prev').addClass('hidden');
-    }, function(username) {
+    }, function(username) { // on logout,
 	clog('logged out as '+username);
-	$('#workspace').removeData('login');
+	// erase the username from the workspace
+	$('#workspace').removeData('login'); // FIXME user accessor
+	// and unhide all paging controls
 	$('#next').removeClass('hidden');
 	$('#prev').removeClass('hidden');
     });
-
-
        
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
+    // FIXME lots of tiles
+    // add dominant substrate category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
+    // add subdominant substrate category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
-
+    // add image notes category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
         .find('div:last')
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
  $('#rightPanel').append('<br><fieldset ><legend>Assignment</legend> <select id="assignment"></select></fieldset>')
         .find('div:last');
 
+    // add "quick info" panel showing image and assignment metadata
     $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
 	.find('div:last');
 
-    $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="quickinfo" ></div></fieldset>')
+    // add "existing annotations" control
+    $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="existingAnnotations" ></div></fieldset>')
 	.find('div:last');
 
+    // when the user changes the assignment
     $('#assignment').change(function() {
-        changeAssignment($('#assignment').val());
+        changeAssignment($('#assignment').val()); // deal with it
     });
 
-$('#controls').append('<button href="#" id="toggleExisting" class="button toggle">Hide Existing</a>');
+    // hide existing annotations
+    // FIXME
+    $('#controls').append('<button href="#" id="toggleExisting" class="button toggle">Hide Existing</a>');
     $('#toggleExisting').click(function() {
 	toggleExisting();
     });
