@@ -37,10 +37,13 @@ img.thumbnail {
    // width: 320px;
     width:420px;
     margin: auto;
-    border: 1px solid;
+    border: 2px solid teal;
+	border-radius: 10px 5px;
+	border-radius: 10px; 
     padding: 5px;
     margin-left: 5px;
     display: none;
+
 }
 .left { float: left; }
 .right { float: right; }

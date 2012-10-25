@@ -11,9 +11,11 @@
 		    .css('display',state ? 'block' : 'none')
 		    .wrap('<div class="collapsing"></div>').parent();
 		if(state) {
-		    $(e).prepend('<div class="collapse_button collapse_button_open">Hide '+title+'</div>');
+		    //$(e).prepend('<div class="collapse_button collapse_button_open">Hide '+title+'</div>');
+		    $(e).prepend('<div class="collapse_button collapse_button_open">'+title+'</div>');
 		} else {
-		    $(e).prepend('<div class="collapse_button collapse_button_closed">Show '+title+'</div>');
+		   // $(e).prepend('<div class="collapse_button collapse_button_closed">Show '+title+'</div>');
+		   $(e).prepend('<div class="collapse_button collapse_button_closed">'+title+'</div>');
 		}
 		$(e).find('.collapse_button')
 		    .click(function() {

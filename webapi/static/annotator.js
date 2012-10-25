@@ -688,21 +688,24 @@ $(document).ready(function() {
     // add dominant substrate category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
-	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
+	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation)
+	
     // add subdominant substrate category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
 	.find('div:last')
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
+   
     // add image notes category picker
     $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
         .find('div:last')
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
- $('#rightPanel').append('<br><fieldset ><legend>Assignment</legend> <select id="assignment"></select></fieldset>')
-        .find('div:last');
+	
+	$('#rightPanel').append('<div><select id="assignment"></select></div>')
+        .find('div:last').collapsing('Assignment',1);
 
     // add "quick info" panel showing image and assignment metadata
-    $('#rightPanel').append('<br><fieldset><legend>Quick Info</legend><div id="quickinfo" ></div></fieldset>')
-	.find('div:last');
+    $('#rightPanel').append('<div><div id="quickinfo" ></div></div>')
+	   .find('div:last').collapsing('Quick Info',1);
 
     // add "existing annotations" panel to right panel
     $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="existingAnnotations" ></div></fieldset>')
@@ -719,15 +722,13 @@ $(document).ready(function() {
 	.button()
 	.click(toggleExisting);
 
-    // FIXME remove this; it is an example for Amber
+    /*FIXME remove this; it is an example for Amber
     $('#rightPanel').append("<div>This is some stuff that's really long and you're gonna want to hide it honestly</div>")
 	.find('div:last')
 	.collapsing('Long stuff',0);
+	*/
 
-    //adding toggle buttons to right panel fieldsets
-    $('#rightPanel :not(.categoryPicker) legend')
-	.append(' <button class="button showhide toggle">show/hide</button>');
-
+	$('#rightPanel fieldset').
 	//applies to all category pickers
 	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
 
