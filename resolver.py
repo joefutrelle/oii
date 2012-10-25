@@ -382,6 +382,9 @@ def parse_stream(stream):
 # required, this class doesn't currently support any such operations.
 
 def print_bindings(bindings):
+    if len(bindings) == 0:
+        print 'No variables in scope'
+        return
     for var in bindings.keys():
         try:
             int(var)
@@ -390,33 +393,64 @@ def print_bindings(bindings):
             pass
     # colon-align
     width = max([len(var) for var in bindings.keys()])
-    print '{'
     for var in sorted(bindings.keys()):
         print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
-    print '}'
+
+def parse_kvs(args):
+    bindings = {}
+    for kv in args:
+        if kv != '':
+            (k,v) = re.split(r'=',kv)
+            bindings[k] = v
+    return bindings
+
+def print_resolver(expressions,indent=0):
+    for expr in expressions:
+        d = expr._asdict()
+        print '%s%s' % (' ' * indent, d)
+        try:
+            print_resolver(expr.expressions,indent+2)
+        except:
+            pass
 
 def interactive_shell(resolvers):
     bindings = {}
     class Shell(cmd.Cmd):
         def do_list(self,args):
-            for name in sorted(resolvers.keys()):
-                print '- %s' % name
+            """List the resolvers"""
+            resolver_name = args
+            if resolver_name == '':
+                for name in sorted(resolvers.keys()):
+                    print '- %s' % name
+            else:
+                print_resolver(resolvers[resolver_name].expressions)
         def do_clear(self,args):
+            """Clear all bindings"""
             bindings = {}
-        def do_bind(self,args):
-            for kv in re.split(' +',args):
-                (k,v) = re.split(r'=',kv)
-                bindings[k] = v
-        def do_show(self,args):
             print_bindings(bindings)
-        def do_run(self,resolver_name):
+        def do_set(self,args):
+            """Bind variables (args should be k0=v0 k1=v1 ... kN=vN)"""
+            bindings.update(parse_kvs(re.split(' +',args)))
+            print_bindings(bindings)
+        def do_exit(self,args):
+            """Quit"""
+            sys.exit(1)
+        def do_resolve(self,args):
+            """Resolve. optionally include bindings"""
+            args = re.split(' +',args)
+            resolver_name = args[0]
+            local_bindings = {}
+            local_bindings.update(bindings)
+            local_bindings.update(parse_kvs(args[1:]))
             try:
-                for solution in resolvers[resolver_name].resolve_all(**bindings):
-                    print 'Solution: "%s"' % solution.value
+                for solution in resolvers[resolver_name].resolve_all(**local_bindings):
+                    print 'Solution: "%s" {' % solution.value
                     print_bindings(solution.bindings)
+                    print '}'
             except:
                 traceback.print_exc(file=sys.stdout)
-    Shell().cmdloop('Found %d resolver(s) in %s:' % (len(resolvers), resolver_file))
+    load_message = 'Found %d resolver(s) in %s:' % (len(resolvers), resolver_file)
+    Shell().cmdloop(load_message)
 
 # FIXME split CLI into different module
 
@@ -430,10 +464,7 @@ if __name__=='__main__':
         interactive_shell(resolvers)
     else:
         resolver_name = args[2]
-        bindings = {}
-        for kv in args[3:]:
-            (k,v) = re.split(r'=',kv)
-            bindings[k] = v
+        bindings = parse_kvs(args[3:])
         for solution in resolvers[resolver_name].resolve_all(**bindings):
             bindings = solution.bindings
             for var in bindings.keys():
