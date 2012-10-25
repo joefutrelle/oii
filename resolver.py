@@ -30,6 +30,9 @@ TRUE=['yes', 'true', 'True', 'T', 't', 'Y', 'y', 'Yes']
 # a resolver is a sequence of expressions, each of which is
 # either a Match, Var, Path, Any, or Hit expression.
 # for details on the syntax see the resolve function
+
+# FIXME unparse
+
 def sub_parse(node):
     for child in node:
         if child.tag == 'match' and child.get('resolver'): # matchimport
@@ -407,11 +410,20 @@ def parse_kvs(args):
 def print_resolver(expressions,indent=0):
     for expr in expressions:
         d = expr._asdict()
-        print '%s%s' % (' ' * indent, d)
+        attrs = ''
+        for k,v in d.items():
+            if k != 'expressions':
+                if type(v) == list:
+                    v = ' '.join(v)
+                attrs += ' %s="%s"' % (k,v)
         try:
+            exprs = expr.expressions
+            assert len(exprs) > 0
+            print '%s<%s%s>' % (' ' * indent, type(expr).__name__, attrs)
             print_resolver(expr.expressions,indent+2)
+            print '%s</%s>' % (' ' * indent, type(expr).__name__)
         except:
-            pass
+            print '%s<%s%s/>' % (' ' * indent, type(expr).__name__, attrs)
 
 def interactive_shell(resolvers):
     bindings = {}
