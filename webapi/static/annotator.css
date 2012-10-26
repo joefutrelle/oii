@@ -1,5 +1,6 @@
 body {
    font-size: .8em !important;
+   font-family: sans-serif;
 }
 .button {
    font-size: .8em !important;
@@ -30,7 +31,6 @@ img.thumbnail {
     text-align: center;
     font-size: 8px;
 }
-.selected { background: #9999ff; }
 
 #rightPanel {
     float: right;
@@ -52,56 +52,11 @@ img.thumbnail {
     color: black;
 }
 
-#rightPanel fieldset{
-padding:5px;
-margin:5px;
-// width:300px;
-width:400px;
-}
+.armdisarm{float:right;width:auto;}
 
 #assignment{
 // width:300px;
 width:400px;
-}
-
-.button {
-	//outline: none;
-	text-align: center;
-	text-decoration: none;
-	-webkit-border-radius: .5em; 
-	border-radius: .5em;
-}
-.button:hover {
-	text-decoration: none;
-}
-.button:active {
-	position: relative;
-	top: 1px;
-}
-
-.button .toggle {
-	border-top: solid 2px #eaeaea;
-	border-left: solid 2px #eaeaea;
-	border-bottom: solid 2px #777;
-	border-right: solid 2px #777;  
- -webkit-border-radius: .5em; 
-	border-radius: .5em;
-    }
-
-.button.toggle.selected {
-	background: #FF6600;
-	color:white;
-	border-top: solid 2px #803300;
-	border-left: solid 2px #803300;
-	border-bottom:solid 2px  #FFA366;
-	border-right: solid 2px #FFA366;	
-
-    }
-
-legend .button{
-font-size:0.8em;
-padding:0;
-margin:0;
 }
 
 .selectable .ui-selecting { background: #FECA40; }

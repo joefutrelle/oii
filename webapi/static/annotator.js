@@ -186,7 +186,8 @@ function gotoPage(pp,size) {
         }); // loop over images
 
 	//if user has the lock button selected don't reset image notes
-	if( $('fieldset:has(div#imageNotes) button.lock ').hasClass('selected')){
+
+	if( $('div:has(div#imageNotes) button.lock ').hasClass('selected')){
 		//do nothing	
 	} else{
 		$('#imageNotes').find('.resetButton').click();
@@ -576,6 +577,7 @@ function changeImageStatus(status){
 $(document).ready(function() {
     page = 1;
     size = 1;
+    
     // set up annotation tracking data structures
     resetPending();
     resetImageLevelPending();
@@ -620,6 +622,7 @@ $(document).ready(function() {
 	});
     });
 
+	
     $('#commit').click(function() {
         preCommit(); // commit
     });
@@ -671,6 +674,7 @@ $(document).ready(function() {
         $('#openRight').hide();
         $('#rightPanel').show(100, resizeAll);
     });
+    $('#openRight').click(); //makes the right panel visibile initially
     $(window).bind('resize', resizeAll);
     // make the login control using authentication.js
     $('#login').authentication(function(username) { // on login,
@@ -731,26 +735,37 @@ $(document).ready(function() {
 	.button()
 	.click(toggleExisting);
 
+
+	// FIXME use lock plugin
 	//applies to all category pickers
 	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
 
-    //$('fieldset:has(div#imageNotes) legend ').append(' <button  class="button lock toggle">lock</button>');
+    $('.categoryPicker >:first-child').prepend(' <a class="armdisarm"></a>');
+	$('.armdisarm').button({
+        icons: {
+            primary: "ui-icon-locked"
+        }
+    });
 
-	$('.showhide').click(function(){
-		 $(this).parent().siblings().slideToggle("fast");		
-	});
+    $('.armdisarm').bind("click", function() {
+        $(this).toggleClass('disarmed')
+            .find('.ui-button-icon-primary')
+            .toggleClass("ui-icon-locked ui-icon-unlocked");
+        return false;
+    });
 
-	$('.toggle').click(function(){
-	 $(this).toggleClass('selected');
-	});	
 
-    // FIXME use lock plugin
-	    $('#rightPanel fieldset:contains("Existing Annotations")').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
+   
+   
+   
+   
+	    $('#existingAnnotations').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
         .find('div:last');
 
-	$('#rightPanel fieldset:contains("Existing Annotations") legend').append('<button  class="button lock toggle" id="deprecate-button">Deprecate</button>'); // FIXME remove fieldset selector
+	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate</a>'); // FIXME remove fieldset selector
+	$('#deprecate-button').button();
 
-
+	// FIXME this is returning status:OK but does not actually deprecate.
 	$('#deprecate-button').bind('click', function() {		
 	 	$("li.ui-selected ").each(function() {		
 			var pid = $(this).attr('id');

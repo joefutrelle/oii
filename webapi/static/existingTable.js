@@ -1,10 +1,10 @@
 
 function emptyExistingLi() {
-	   $('fieldset:contains("Existing Annotations") li').remove();
+	   $('#existingAnnotations li').remove();
 }
 
 function addExistingLi(ann){
-	$('fieldset:contains("Existing Annotations") ol').append(
+	$('#existingAnnotations ol').append(
 			'<li class="ui-widget-content" id="' + ann.pid + '">' 
 				 +'<div><b>Scope:</b> ' + ann.scope + '</div>'
 				 +'<div><b>Category: </b>' + categoryLabelForPid(ann.category) + '</div>'
