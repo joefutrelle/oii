@@ -52,8 +52,8 @@ SCHEMA_VERSION_2 = 'v2'
 ADC_SCHEMA = {
 SCHEMA_VERSION_1: [(TRIGGER, int),
           (PROCESSING_END_TIME, float),
-          (FLUORESENCE_HIGH, float),
           (FLUORESCENCE_LOW, float),
+          (FLUORESENCE_HIGH, float),
           (SCATTERING_HIGH, float),
           (SCATTERING_LOW, float),
           (COMPARATOR_PULSE, float),
