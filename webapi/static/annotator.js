@@ -685,19 +685,21 @@ $(document).ready(function() {
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
     // FIXME lots of tiles
+    
     // add dominant substrate category picker
-    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Dominant Substrate</legend><div>&nbsp;</div></fieldset>')
-	.find('div:last')
+    // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
+    $('#rightPanel').append('<div class="categoryPicker" style="margin-top:40px;"><div>&nbsp;</div></div>')
+	 .find('div:last').collapsing('Dominant Substrate',1)
 	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation)
 	
     // add subdominant substrate category picker
-    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Subdominant Substrate</legend><div>&nbsp;</div></fieldset>')
-	.find('div:last')
+    $('#rightPanel').append('<div class="categoryPicker" ><div>&nbsp;</div></div>')
+	 .find('div:last').collapsing('Subdominant Substrate',1)
 	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
    
     // add image notes category picker
-    $('#rightPanel').append('<br><fieldset class="categoryPicker" ><legend>Image Notes</legend><div id="imageNotes">&nbsp;</div></fieldset>')
-        .find('div:last')
+    $('#rightPanel').append('<div class="categoryPicker"><div id="imageNotes">&nbsp;</div></div>')
+     .find('div:last').collapsing('Image Notes',1)
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
 	
 	$('#rightPanel').append('<div><select id="assignment"></select></div>')
@@ -708,8 +710,8 @@ $(document).ready(function() {
 	   .find('div:last').collapsing('Quick Info',1);
 
     // add "existing annotations" panel to right panel
-    $('#rightPanel').append('<br><fieldset><legend>Existing Annotations</legend><div id="existingAnnotations" ></div></fieldset>')
-	.find('div:last');
+    $('#rightPanel').append('<div><div id="existingAnnotations" ></div></div>')
+	 .find('div:last').collapsing('Existing Annotations',1);
 
     // when the user changes the assignment
     $('#assignment').change(function() {
