@@ -47,11 +47,13 @@ function addImage(cell,imageUrl,scale,zoomScale,zoomCenter) {
 	    //
             $(document).trigger('cellLoaded', cell);
 	    //
+	    // FIXME shouldn't this be in the cellLoaded handler?
 	    var translate = getImageCanvii().data('translatePos');
 	    if( translate != undefined ){
 		console.log('translate is ['+translate.x+', '+translate.y+']');
-		offsetX = translate.x;
-		offsetY = translate.y;
+		offsetX = translate.x; // FIXME offsetX is not used
+		offsetY = translate.y; // FIXME offsetY is not used
+		// FIXME dead code?
 	    }
 
             // create layers for
@@ -85,6 +87,9 @@ function addImageLayer(cell,claz,imageUrl) {
     var scaledWidth = $(cell).data('scaledWidth');
     var scaledHeight = $(cell).data('scaledHeight');
     clog('adding canvas '+scaledWidth+','+scaledHeight);
+    // ID of canvas is class (i.e., image, existing, pending, new) + '_' + image url
+    // FIXME is that necessary? can't we just read the image url from the cell data when we want to
+    // find a canvas?
     $(cell).append('<canvas id="'+claz+'_'+imageUrl+'" width="'+scaledWidth+'px" height="'+scaledHeight+'px" class="'+claz+' atorigin"></canvas>');
 }
 function getImageLayer(cell,claz) {
@@ -102,10 +107,9 @@ function drawImage(cell) {
     ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
 function getExistingAnnotations(cell, callback) {
-	emptyExistingLi();
+    emptyExistingLi();
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
-        var ctx = getImageLayerContext(cell,'existing');
         var counter = 0;
         clog("about to draw existing annotations...");
 	$(cell).data('existing',[]);
@@ -139,8 +143,11 @@ function addCell(imagePid) {
         .disableSelection();
         //.trigger('cellLoaded', this);
 }
-function gotoPage(page,size) {
-    if(page < 1) page = 1;
+// page = which page number to show
+// size = number of images per page
+function gotoPage(pp,size) {
+    if(pp < 1) pp = 1;
+    page = pp;
     clog('going to page '+page);
     clearPage();
     var offset = (page-1) * size;
@@ -164,9 +171,10 @@ function gotoPage(page,size) {
             // height: unscaled height of image
             // scaledWidth: scaled width of image
             // scaledHeight: scaled height of image
-            // ox: x origin of (new, not existing) bounding box
-            // oy: y origin of (new, not existing) bounding box
-            // rect: the bounding box rectangle (in *non-scaled* pixel coordinates)
+            // ox: x origin of (new, not existing) bounding box // FIXME still true?
+            // oy: y origin of (new, not existing) bounding box// FIXME still true?
+            // rect: the bounding box rectangle (in *non-scaled* pixel coordinates) // FIXME still true?
+	    // FIXME what about "existing"?
             clog('adding cell for '+imagePid);
             cell = addCell(imagePid);
             clog('adding image for '+imageUrl);
@@ -182,7 +190,7 @@ function gotoPage(page,size) {
 		//do nothing	
 	} else{
 		$('#imageNotes').find('.resetButton').click();
-		$('#workspace').data('imageNotes',{});
+		$('#workspace').data('imageNotes',{}); // FIXME use setWorkspace
 	}
 	
     });
@@ -602,13 +610,12 @@ $(document).ready(function() {
 	// change current image status before moving to next one
 	changeImageStatus('waiting+for+review');
 	// commit (not just pre-commit) all non-substrate annotations
-	preCommit();
+	preCommit(); // again, actually means "commit"
 	// commit substrate annotations
 	commitSubstrate(function() { // and then,
 	    // find the next new image
 	    findNewImage(function(pp) { // and then,
-		page = pp;
-		gotoPage(page,size); // go to it
+		gotoPage(pp,size); // go to it
 	    });
 	});
     });
@@ -631,7 +638,7 @@ $(document).ready(function() {
     $.each(geometry, function(key,g) {
         $('#tool').append('<option value="'+key+'">'+g.label+'</option>')
     });
-    selectedTool('boundingBox'); // default tool is bounding box
+    selectedTool('line'); // default tool is bounding box
     $('#tool').change(function() { // use the dropdown to select it
         selectedTool($('#tool').val());
     });
@@ -724,17 +731,10 @@ $(document).ready(function() {
 	.button()
 	.click(toggleExisting);
 
-    /*FIXME remove this; it is an example for Amber
-    $('#rightPanel').append("<div>This is some stuff that's really long and you're gonna want to hide it honestly</div>")
-	.find('div:last')
-	.collapsing('Long stuff',0);
-	*/
-
-	$('#rightPanel fieldset').
 	//applies to all category pickers
 	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
 
-	$('fieldset:has(div#imageNotes) legend ').append(' <button  class="button lock toggle">lock</button>');
+    //$('fieldset:has(div#imageNotes) legend ').append(' <button  class="button lock toggle">lock</button>');
 
 	$('.showhide').click(function(){
 		 $(this).parent().siblings().slideToggle("fast");		
@@ -744,10 +744,11 @@ $(document).ready(function() {
 	 $(this).toggleClass('selected');
 	});	
 
-	    $('#rightPanel fieldset:contains("Existing Annotations")').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>')
+    // FIXME use lock plugin
+	    $('#rightPanel fieldset:contains("Existing Annotations")').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
         .find('div:last');
 
-	$('#rightPanel fieldset:contains("Existing Annotations") legend').append('<button  class="button lock toggle" id="deprecate-button">Deprecate</button>');
+	$('#rightPanel fieldset:contains("Existing Annotations") legend').append('<button  class="button lock toggle" id="deprecate-button">Deprecate</button>'); // FIXME remove fieldset selector
 
 
 	$('#deprecate-button').bind('click', function() {		

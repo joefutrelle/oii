@@ -4,24 +4,7 @@ var poly_simplifyTolerance = 3;
 // assumes PENDING_COLOR is set globally (FIXME make preference)
 // geometric tool support
 var geometry = {};
-geometry.boundingBox = {
-    label: 'Bounding box',
-    draw: function(ctx, boundingBox, color) {
-        var left = scalingFactor * boundingBox[0][0];
-        var top = scalingFactor * boundingBox[0][1];
-        var right = scalingFactor * boundingBox[1][0]; 
-        var bottom = scalingFactor * boundingBox[1][1];
-        ctx.strokeStyle = color;
-	//clog('bounding box color is '+color);
-        ctx.strokeRect(left, top, right-left, bottom-top);
-    },
-    prepareForStorage: function(annotation) {
-        return unscaleAnnotation(this, annotation);
-    },
-    prepareForCanvas: function(annotation) {
-        return scaleAnnotation(this, annotation);
-    }
-};
+
 geometry.line = {
     label: 'Line',
     draw: function(ctx, line, color) {
@@ -43,6 +26,26 @@ geometry.line = {
         return scaleAnnotation(this, annotation);
     } 
 };
+
+geometry.boundingBox = {
+    label: 'Bounding box',
+    draw: function(ctx, boundingBox, color) {
+        var left = scalingFactor * boundingBox[0][0];
+        var top = scalingFactor * boundingBox[0][1];
+        var right = scalingFactor * boundingBox[1][0]; 
+        var bottom = scalingFactor * boundingBox[1][1];
+        ctx.strokeStyle = color;
+	//clog('bounding box color is '+color);
+        ctx.strokeRect(left, top, right-left, bottom-top);
+    },
+    prepareForStorage: function(annotation) {
+        return unscaleAnnotation(this, annotation);
+    },
+    prepareForCanvas: function(annotation) {
+        return scaleAnnotation(this, annotation);
+    }
+};
+
 geometry.path = {
     label: 'Path',
     draw: function(ctx, line, color) {
@@ -225,6 +228,8 @@ function scaleAnnotation(tool, annotation) {
     return fixedAnnotation;
 }
 
+// call with zero arguments and returns the currently selected tool
+// call with one argument and set the currently selected tool
 function selectedTool(value) {
     if(value == undefined || value.length < 1) {
         return $('#workspace').data('tool');

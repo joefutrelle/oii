@@ -1,8 +1,4 @@
 // jQuery UI plugin providing collapsing element
-// requires disable_selection.js (not required?)
-// triggers collapse_state(state=1 or 0) when collapsing or uncollapsing
-// modified so that "show" + title and "hide" + title, 
-//		just shows title next to the collapse arrow
 (function($) {
     $.fn.extend({
 	collapsing: function(title, initial_state) {
@@ -13,10 +9,8 @@
 		    .css('display',state ? 'block' : 'none')
 		    .wrap('<div class="collapsing"></div>').parent();
 		if(state) {
-		    //$(e).prepend('<div class="collapse_button collapse_button_open">Hide '+title+'</div>');
 		    $(e).prepend('<div class="collapse_button collapse_button_open"> '+title+'</div>');
 		} else {
-		   // $(e).prepend('<div class="collapse_button collapse_button_closed">Show '+title+'</div>');
 		   $(e).prepend('<div class="collapse_button collapse_button_closed"> '+title+'</div>');
 		}
 		$(e).find('.collapse_button')
@@ -25,7 +19,6 @@
 			if(state == 0) {
 			    $(e).find('.collapse_button').removeClass('collapse_button_closed')
 				.addClass('collapse_button_open')
-				//.empty().append('Hide '+title);
 				.empty().append(' ' + title);
 			    $(e).find('.collapsing_content').css('display','block');
 			    state = 1;
@@ -33,7 +26,6 @@
 			} else {
 			    $(e).find('.collapse_button').removeClass('collapse_button_open')
 				.addClass('collapse_button_closed')
-				//.empty().append('Show '+title);
 				.empty().append(' ' +title);
 			    $(e).find('.collapsing_content').css('display','none');
 			    state = 0;
