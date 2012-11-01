@@ -185,14 +185,12 @@ function gotoPage(pp,size) {
 
         }); // loop over images
 
-	//if user has the lock button selected don't reset image notes
+			//picker is unlocked and you are advancing an image.  Currently only used for image notes
+		if ( $('.categoryPicker:has(div#imageNotes)').find('.lockcontrol').hasClass('ui-icon-unlocked')) {
+			$('#imageNotes').find('.resetButton').click();
+			$('#workspace').data('imageNotes',{}); // FIXME use setWorkspace
+		}
 
-	if( $('div:has(div#imageNotes) button.lock ').hasClass('selected')){
-		//do nothing	
-	} else{
-		$('#imageNotes').find('.resetButton').click();
-		$('#workspace').data('imageNotes',{}); // FIXME use setWorkspace
-	}
 	
     });
 
@@ -693,6 +691,7 @@ $(document).ready(function() {
 	$('#prev').removeClass('hidden');
     });
        
+    //START div creation for controls (category pickers, etc)
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
     // FIXME lots of tiles
@@ -735,31 +734,15 @@ $(document).ready(function() {
 	.button()
 	.click(toggleExisting);
 
-
-	// FIXME use lock plugin
-	//applies to all category pickers
-	//$('.categoryPicker legend').append(' <button  class="button lock toggle">lock</button>');
-
-    $('.categoryPicker >:first-child').prepend(' <a class="armdisarm"></a>');
-	$('.armdisarm').button({
-        icons: {
-            primary: "ui-icon-locked"
-        }
-    });
-
-    $('.armdisarm').bind("click", function() {
-        $(this).toggleClass('disarmed')
-            .find('.ui-button-icon-primary')
-            .toggleClass("ui-icon-locked ui-icon-unlocked");
-        return false;
-    });
-
-
+   //END div creation for controls, start modifications of controls
    
-   
-   
-   
-	    $('#existingAnnotations').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
+    $('#imageNotes').closest('.categoryPicker').locking(function() { 
+			//alert('locked');
+		}, function() { // unlock callback
+			//alert('unlocked')		
+		});   
+        
+	$('#existingAnnotations').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
         .find('div:last');
 
 	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate</a>'); // FIXME remove fieldset selector

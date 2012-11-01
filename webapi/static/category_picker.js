@@ -45,15 +45,19 @@
 		    // the change handler for the select is compute_selected
 		    $(select).change(compute_selected);
 		}
+		function resetPicker() { 
+			$this.find('.resetButton').button().click(reset);
+			}
 		function reset() {
 		    $.getJSON('/list_categories/'+mode+'/'+scope, function(c) {
 			$this.data('all_categories',c);
 			$this.empty();
 			$this.append('<div class="selected_category"></div>');
-			$this.append('<a href="#" class="resetButton hidden">reset</a>').find('.resetButton').button().click(reset)
+			$this.append('<a href="#" class="resetButton hidden">reset</a>');
+			resetPicker();
 			add_choice();
 		    });
-		}
+		}		
 		// now actually do something: call list_categories, save the result, and add the first selector
 		reset();
 	    });

@@ -66,4 +66,11 @@ width:400px;
  margin: 2px; padding: 0.2em; font-size: 1em; height: 2em; 
 
 }
-.selectable li div {float:left; padding-right:3px; text-wrap:normal; };
+.selectable li div {float:left; padding-right:3px; text-wrap:normal; }
+
+.lockcontrol {
+    float: right;
+    margin:3px;
+}​
+
+
