@@ -16,7 +16,7 @@ json2db = {
 "pid": "annotation_id",
 "deprecated" : "deprecated"
 }
-SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotator_id, 'timestamp', assignment_id, annotation_id, deprecated from annotations "
+SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotator_id, to_char(timestamp AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"hh:MI:ss\"Z\"') as timestamp, assignment_id, annotation_id, deprecated from annotations "
 
 # abstract API for storing, querying, and creating annotations
 class HabcamAnnotationStore(AnnotationStore):
@@ -57,13 +57,11 @@ class HabcamAnnotationStore(AnnotationStore):
         "Fetch an annotation by its PID"
         for ann in list_annotations(dict(pid=pid)):
             return ann
-
     def deprecate_annotation(self,pid):
 	"Deprecate an annotation given the pid"
-	(connection, cursor) = self.__db()
-	cursor.execute("UPDATE annotations SET deprecated = true WHERE annotation_id = '{0}'".format(pid) )
-	connection.commit()
-
+        with xa(self.config_psql_connect) as (connection,cursor):
+            cursor.execute("UPDATE annotations SET deprecated = true WHERE annotation_id = '{0}'".format(pid) )
+            connection.commit()
     def create_annotations(self,annotations):
         tuples = []
         for d in annotations:
