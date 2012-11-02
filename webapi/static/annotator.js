@@ -735,7 +735,9 @@ $(document).ready(function() {
 	.click(toggleExisting);
 
    //END div creation for controls, start modifications of controls
-   
+
+    $('#rightPanel > div').addClass('subpanel');
+
     $('#imageNotes').closest('.categoryPicker').locking(function() { 
 			//alert('locked');
 		}, function() { // unlock callback

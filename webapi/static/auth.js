@@ -33,6 +33,14 @@
 				alert('Incorrect username / password');
 			    }
 			});
+		    })
+		    .end()
+		    .find('.auth_password')
+		    .bind('keydown', function(e) {
+			var code = (e.keyCode ? e.keyCode : e.which);
+			if(code == 13) {
+			    $this.find('.button').click();
+			}
 		    });
 	    });
 	}

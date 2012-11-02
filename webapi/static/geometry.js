@@ -283,6 +283,22 @@ function bindMeasurementTools(selector, env) {
                 tool.eventHandlers.mousemove(event);
             }
         }
+    }).bind('dblclick', env, function(event) {
+        var cell = event.data.cell;
+        if( isGeometryToolEnabled(cell) ){
+            var canvas = event.data.canvas;
+            var tool = selectedTool();
+            if('dblclick' in tool.eventHandlers) {
+                var mx = event.pageX - canvas.offset().left;
+                var my = event.pageY - canvas.offset().top;
+                event.data.mx = mx;
+                event.data.my = my;
+                event.data.ix = (mx/scalingFactor);
+                event.data.iy = (mx/scalingFactor);
+                // call the currently selected tool
+                tool.eventHandlers.dblclick(event);
+            }
+        }
     }).bind('mouseup', env, function(event) {
         var cell = event.data.cell;
         if( isGeometryToolEnabled(cell) ){
@@ -373,6 +389,19 @@ geometry.line.tool = new MeasurementTool({
     }
 });
 geometry.polyline.tool = new MeasurementTool({
+    dblclick: function(event) {
+        var cell = event.data.cell;
+        $(cell).data('px',-1);
+        $(cell).data('py',-1);
+	var line = $(cell).data('polyline');
+        var preppedLine = geometry.polyline.prepareForStorage(line);
+        queueAnnotation(cell, { polyline: preppedLine });
+        select(cell,$('#label').val());
+	$(cell).removeData('polyline');
+	// prevent doubleclick from toggling zoom mode
+	console.log('polyline is stopping doubleclick propagating'); // FIXME debug
+	event.stopPropagation();
+    },
     mousedown: function(event) {
         var cell = event.data.cell;
         var mx = event.data.mx;
@@ -380,14 +409,8 @@ geometry.polyline.tool = new MeasurementTool({
         var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
         var py = $(cell).data('py');
 	console.log('px='+px+', py='+py);
-	if(px==mx && py==my) { // doubleclick: commit
-            $(cell).data('px',-1);
-            $(cell).data('py',-1);
-	    var line = $(cell).data('polyline');
-            var preppedLine = geometry.polyline.prepareForStorage(line);
-            queueAnnotation(cell, { polyline: preppedLine });
-            select(cell,$('#label').val());
-	    $(cell).removeData('polyline');
+	if(px==mx && py==my) { // no movement
+	    // ignore
         } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
             var ctx = event.data.ctx;
             var mx = event.data.mx;
@@ -426,6 +449,21 @@ geometry.polyline.tool = new MeasurementTool({
     }
 });
 geometry.closedPolyline.tool = new MeasurementTool({
+    dblclick: function(event) {
+        $(cell).data('px',-1);
+        $(cell).data('py',-1);
+	var line = $(cell).data('polyline');
+	line.push([line[0][0], line[0][1]]);
+	console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
+        console.log('pre-prepped line: '+line);
+        var preppedLine = geometry.polyline.prepareForStorage(line);
+        console.log('post-prepped line: '+preppedLine);
+        queueAnnotation(cell, { polyline: preppedLine });
+        select(cell,$('#label').val());
+	$(cell).removeData('polyline');
+	console.log('closed polyline is stopping doubleclick propagating'); // FIXME debug
+	event.stopPropagation();
+    },
     mousedown: function(event) {
         var cell = event.data.cell;
         var mx = event.data.mx;
@@ -433,18 +471,8 @@ geometry.closedPolyline.tool = new MeasurementTool({
         var px = $(cell).data('px');//previous x,y; the point we're currently rubberbanding from
         var py = $(cell).data('py');
 	console.log('px='+px+', py='+py);
-	if(px==mx && py==my) { // doubleclick: commit
-            $(cell).data('px',-1);
-            $(cell).data('py',-1);
-	    var line = $(cell).data('polyline');
-	    line.push([line[0][0], line[0][1]]);
-	    console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
-            console.log('pre-prepped line: '+line);
-            var preppedLine = geometry.polyline.prepareForStorage(line);
-            console.log('post-prepped line: '+preppedLine);
-            queueAnnotation(cell, { polyline: preppedLine });
-            select(cell,$('#label').val());
-	    $(cell).removeData('polyline');
+	if(px==mx && py==my) { // no movement
+	    // ignore
         } else if(px >= 0 && py >= 0) { // click while rubberbanding: put down a point
             var ctx = event.data.ctx;
             var mx = event.data.mx;

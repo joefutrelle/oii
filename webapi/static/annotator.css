@@ -45,6 +45,17 @@ img.thumbnail {
     display: none;
 
 }
+
+.subpanel {
+border: 2px solid teal;
+border-top-left-radius: 10px 5px;
+border-top-right-radius: 10px; 
+padding: 2px;
+padding-top: 4px;
+padding-left: 4px;
+margin-bottom:4px;
+}
+
 .left { float: left; }
 .right { float: right; }
 .hidden { display: none; }

@@ -18,7 +18,7 @@ var modalSelector = 'ctrl';
 //zoom tool modal button
 var zoomModalButtonName = 'zoomModalButton';
 var zoomModalButton = '#'+zoomModalButtonName;
-var zoomMode = modalSelector+'+f'
+var zoomMode = modalSelector+'+f';
 var zoomButtonText = 'ZOOM ('+zoomMode+')';
 //zoom tool reset button
 var resetZoomModalButtonName = 'resetZoomModalButton';
@@ -126,10 +126,8 @@ zoomEvents['mousemove'] = function(evt){
 $(document).ready(function(){
     
     //setup the zoom tool in the tool panel
-    $('<BR>').attr('clear','all').appendTo(toolsPanel);
-    $('<BR>').attr('clear','all').appendTo(toolsPanel);
-    $('<FIELDSET>').attr('id',zoomToolName).appendTo(toolsPanel);
-    $('<LEGEND>').html('<span class="toolTitle">Zoom</span>').appendTo(zoomTool);
+    $('<div class="subpanel">').attr('id',zoomToolName).appendTo(toolsPanel);
+    $('<div class="toolTitle">').html('Zoom').appendTo(zoomTool);
 
     $('<A>').attr('id', zoomModalButtonName).attr('href', '#')
             .text(zoomButtonText)
@@ -162,13 +160,23 @@ $(document).ready(function(){
     });
     
     //detect zoom button presses
-    $(document).bind('keydown', zoomMode, function() {
+    $(document).bind('dblclick', function(evt) {
+	console.log('doubleclick, toggling zoom mode'); // FIXME debug
+	toggleZoomMode();
+    });
+    $(document).bind('keydown', zoomMode, function(evt) {
         toggleZoomMode(); 
+	evt.stopPropagation();
+	evt.preventDefault();
+	return false;
     });
     
     //detect reset zoom button presses
     $(document).bind('keydown', resetZoomMode, function() {
         resetZoom();
+	evt.stopPropagation();
+	evt.preventDefault();
+	return false;
     });
     
     //listen for image cell loading
@@ -402,7 +410,7 @@ function executeScroll(direction,evt){
     clog('xltpos = '+(getTranslatePos().x)+','+(getTranslatePos().y));
 
     console.log('executing scroll, direction = '+direction);
-    if(direction < 0 && !is_zooming) {
+    if(!is_zooming) {
 	toggleZoomMode();
     }
     if( is_zooming ){

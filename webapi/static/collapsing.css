@@ -10,13 +10,3 @@
    content: '\025bc ';
    cursor: pointer;
 }
-
-.collapsing {
-border: 2px solid teal;
-border-top-left-radius: 10px 5px;
-border-top-right-radius: 10px; 
-padding: 2px;
-padding-top: 4px;
-padding-left: 4px;
-margin-bottom:4px;
-}
