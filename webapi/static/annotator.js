@@ -723,17 +723,31 @@ $(document).ready(function() {
     $('#rightPanel').append('<div><div id="existingAnnotations" ></div></div>')
 	 .find('div:last').collapsing('Existing Annotations',1);
 
+
     // when the user changes the assignment
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val()); // deal with it
     });
 
+    // slider for percent cover.
+    $('#rightPanel').append('<div><input class="percentKnob" type="text" '+
+		'value="0" data-min="0" data-max="100" data-width="125" data-height="125" data-thickness=.3 ' +
+		'data-fgColor="#222222" data-bgColor="gray" ></div>')
+		.find('div:last').collapsing('Percent Cover',1);
+		
+		$('.percentKnob').knob({
+			"change": function(value) {
+				console.log(value);
+			}
+		});
+		
     // button hide existing annotations on image
     $('#controls').append('<a href="#" id="toggleExisting" class="button">Hide Existing</a>')
 	.find('#toggleExisting')
 	.button()
 	.click(toggleExisting);
 
+   
    //END div creation for controls, start modifications of controls
 
     $('#rightPanel > div').addClass('subpanel');
@@ -761,6 +775,9 @@ $(document).ready(function() {
 		    });
 		});
 	});
+
+
+
 
 $( ".selectable" ).selectable({
 			stop: function() {
