@@ -1,41 +1,23 @@
-
-function emptyExistingLi() {
-	   $('#existingAnnotations li').remove();
-}
-
-function addExistingLi(ann){
-	$('#existingAnnotations ol').append(
-			'<li class="ui-widget-content" id="' + ann.pid + '">' 
-				 +'<div><b>Scope:</b> ' + ann.scope + '</div>'
-				 +'<div><b>Category: </b>' + categoryLabelForPid(ann.category) + '</div>'
-				 +'<div><b>Annotator:</b> ' + ann.annotator + '</div>'
-				 //+'<div >' + ann.timestamp + '</div>'
-				+'<div><b>Dep: </b>' + ann.deprecated + '</div>'
-				+'<div><b>ID: </b>' + ann.pid + '</div>'
-			+ '</li>' );
-
-}
-
-//the non-qaqc table is below
-
 function emptyExistingTable() {
 	    $('#existingTable').remove();
-	    $('#rightPanel').append('<table id="existingTable"></table>')
-      		  .find('div:last');
+	   // $('#existingAnnotations').append('<table id="existingTable" class="dataTable"></table>')
+	    $('#existingAnnotations').append('<table id="existingTable" class="dataTable"  cellpadding="0" ' + 
+	    'cellspacing="0" border="0"></table>') ;
 
-	$('#existingTable').append('<tr><th>Scope</th>'
+	$('#existingTable').append('<thead><tr>'
 				+ '<th>Class Name</th>'
 				+ '<th>Annotator</th>'
-				+ '<th>Timestamp</th></tr>'
+				+ '<th>Timestamp</th></tr></thead><tbody></tbody>'
 				);
+	
 }
 
-function addExistingRow(scope,category,annotator,timestamp){
-	$('#existingTable').append('<tr><td>' + scope + '</td>'
-				+ '<td>' + category + '</td>'
-				+ '<td>' + annotator + '</td>'
-				+ '<td>' + timestamp + '</td></tr>'
-				);
+function addExistingRow(ann){
+	$('#existingTable tbody').append('<tr>'
+				+ '<td>' + categoryLabelForPid(ann.category)  + '</td>'
+				+ '<td>' + ann.annotator + '</td>'
+				+ '<td>' + ann.timestamp + '</td></tr>'
+				);		
 }
 
 

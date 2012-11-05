@@ -107,7 +107,7 @@ function drawImage(cell) {
     ctx.drawImage($(cell).data('image'),0,0,$(cell).data('scaledWidth'),$(cell).data('scaledHeight'));
 }
 function getExistingAnnotations(cell, callback) {
-    emptyExistingLi();
+    emptyExistingTable();
     $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var counter = 0;
@@ -115,8 +115,9 @@ function getExistingAnnotations(cell, callback) {
 	$(cell).data('existing',[]);
         $(r).each(function(ix,ann) {
             existing(cell)[counter++] = ann;
-	    addExistingLi(ann);
+			addExistingRow(ann);
         });
+        $('#existingTable').dataTable({"sPaginationType": "full_numbers"});
 	callback();
     });
 }
@@ -712,6 +713,20 @@ $(document).ready(function() {
      .find('div:last').collapsing('Image Notes',1)
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
 	
+	 // slider for percent cover.
+    $('#rightPanel').append('<div><input class="percentKnob" type="text" '+
+		'value="0" data-min="0" data-max="100" data-width="100" data-height="100" data-thickness=1 ' +
+		'data-fgColor="#222222" data-bgColor="gray" ></div>')
+		.find('div:last').collapsing('Percent Cover',1);
+		
+		$('.percentKnob').knob({
+			"change": function(value) {
+				console.log(value);
+				$('.percentKnob').css('color','white');
+			}
+		});
+		
+		
 	$('#rightPanel').append('<div><select id="assignment"></select></div>')
         .find('div:last').collapsing('Assignment',1);
 
@@ -729,17 +744,7 @@ $(document).ready(function() {
         changeAssignment($('#assignment').val()); // deal with it
     });
 
-    // slider for percent cover.
-    $('#rightPanel').append('<div><input class="percentKnob" type="text" '+
-		'value="0" data-min="0" data-max="100" data-width="125" data-height="125" data-thickness=.3 ' +
-		'data-fgColor="#222222" data-bgColor="gray" ></div>')
-		.find('div:last').collapsing('Percent Cover',1);
-		
-		$('.percentKnob').knob({
-			"change": function(value) {
-				console.log(value);
-			}
-		});
+
 		
     // button hide existing annotations on image
     $('#controls').append('<a href="#" id="toggleExisting" class="button">Hide Existing</a>')
@@ -775,8 +780,6 @@ $(document).ready(function() {
 		    });
 		});
 	});
-
-
 
 
 $( ".selectable" ).selectable({
