@@ -699,7 +699,7 @@ $(document).ready(function() {
     
     // add dominant substrate category picker
     // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
-    $('#rightPanel').append('<div class="categoryPicker" style="margin-top:40px;"><div>&nbsp;</div></div>')
+    $('#rightPanel').append('<div class="categoryPicker"><div>&nbsp;</div></div>')
 	 .find('div:last').collapsing('Dominant Substrate',1)
 	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation)
 	

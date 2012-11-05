@@ -34,7 +34,7 @@ img.thumbnail {
 
 #rightPanel {
     float: right;
-   // width: 320px;
+    display: block;
     width:420px;
     margin: auto;
     border: 2px solid teal;
@@ -42,7 +42,7 @@ img.thumbnail {
 	border-radius: 10px; 
     padding: 5px;
     margin-left: 5px;
-    display: none;
+    display: block;
 
 }
 
@@ -51,9 +51,12 @@ border: 2px solid teal;
 border-top-left-radius: 10px 5px;
 border-top-right-radius: 10px; 
 padding: 2px;
-padding-top: 4px;
+padding-top: 0;
 padding-left: 4px;
 margin-bottom:4px;
+float:left;
+padding-right:4px;
+width:97%;
 }
 
 .left { float: left; }
@@ -64,11 +67,6 @@ margin-bottom:4px;
 }
 
 .armdisarm{float:right;width:auto;}
-
-#assignment{
-// width:300px;
-width:400px;
-}
 
 .selectable .ui-selecting { background: #FECA40; }
 .selectable .ui-selected { background: #F39814; color: white; }
@@ -83,6 +81,3 @@ width:400px;
     float: right;
     margin:3px;
 }​
-
-.percentKnob{float:left}
-#existingTable { float:left}
