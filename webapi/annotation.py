@@ -17,9 +17,6 @@ from oii.utils import md5_string
 from utils import jsonr, UrlConverter
 import urllib
 
-# FIXME DEBUG
-from oii.psql import xa
-
 # test with IFCB
 #from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
 
@@ -90,17 +87,6 @@ def deprecate_annotation(pid):
     # return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
     my(ANNOTATION_STORE).deprecate_annotation(pid)
     return '{"status":"OK"}'
-
-def hardcodeme(image_pid):
-    yield image_pid
-    with xa(app.config[CONFIG].psql_connect) as (connection, cursor):
-        cursor.execute("select image_id, scope_id, category_id, geometry_text, annotator_id, to_char(timestamp AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"hh:MI:ss\"Z\"') as timestamp, assignment_id, annotation_id, deprecated from annotations where image_id = %s",('http://habcam-data.whoi.edu/data/UNQ.20110608.072618109.03524.jpg',))
-        for ann in cursor.fetchall():
-            yield ann
-
-@app.route('/foobar_baz/image/<url:image_pid>')
-def foobar_baz(image_pid):
-    return jsonr([image_pid])
 
 @app.route('/list_annotations/image/<url:image_pid>')
 @app.route('/list_annotations/image/<url:image_pid>/assignment/<url:assignment_pid>')
