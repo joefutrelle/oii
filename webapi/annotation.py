@@ -14,8 +14,11 @@ from oii.annotation.categories import Categories
 from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
 from oii.utils import md5_string
-from utils import jsonr
+from utils import jsonr, UrlConverter
 import urllib
+
+# FIXME DEBUG
+from oii.psql import xa
 
 # test with IFCB
 #from oii.ifcb.annotation import IfcbCategories, IfcbFeedAssignmentStore
@@ -30,6 +33,7 @@ see https://beagle.whoi.edu/redmine/issues/948
 and https://beagle.whoi.edu/redmine/issues/943"""
 
 app = Flask(__name__)
+app.url_map.converters['url'] = UrlConverter
 app.register_blueprint(idgen_api)
 app.register_blueprint(auth_api)
 app.debug = True
@@ -38,6 +42,7 @@ app.debug = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
 
 # config options
+CONFIG = 'config' # raw config object stored in app config object
 ANNOTATION_STORE = 'annotation_store'
 CATEGORIES = 'categories'
 ASSIGNMENT_STORE = 'assignment_store'
@@ -76,18 +81,29 @@ def create_annotations():
     my(ANNOTATION_STORE).create_annotations(annotations)
     return '{"status":"OK"}'
     
-@app.route('/fetch/annotation/<path:pid>')
+@app.route('/fetch/annotation/<url:pid>')
 def fetch_annotation(pid):
     return jsonr(my(ANNOTATION_STORE).fetch_annotation(pid))
 
-@app.route('/deprecate/annotation/<path:pid>')
+@app.route('/deprecate/annotation/<url:pid>')
 def deprecate_annotation(pid):
-   # return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
+    # return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
     my(ANNOTATION_STORE).deprecate_annotation(pid)
     return '{"status":"OK"}'
 
-@app.route('/list_annotations/image/<path:image_pid>')
-@app.route('/list_annotations/image/<path:image_pid>/assignment/<path:assignment_pid>')
+def hardcodeme(image_pid):
+    yield image_pid
+    with xa(app.config[CONFIG].psql_connect) as (connection, cursor):
+        cursor.execute("select image_id, scope_id, category_id, geometry_text, annotator_id, to_char(timestamp AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"hh:MI:ss\"Z\"') as timestamp, assignment_id, annotation_id, deprecated from annotations where image_id = %s",('http://habcam-data.whoi.edu/data/UNQ.20110608.072618109.03524.jpg',))
+        for ann in cursor.fetchall():
+            yield ann
+
+@app.route('/foobar_baz/image/<url:image_pid>')
+def foobar_baz(image_pid):
+    return jsonr([image_pid])
+
+@app.route('/list_annotations/image/<url:image_pid>')
+@app.route('/list_annotations/image/<url:image_pid>/assignment/<url:assignment_pid>')
 def list_annotations(image_pid,assignment_pid=None):
     if assignment_pid is not None:
         return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid,assignment=assignment_pid)))
@@ -201,6 +217,7 @@ class TestAnnotation(TestCase):
 
 def config_backend(config):
     try:
+        app.config[CONFIG] = config
         app.config[ANNOTATION_STORE] = HabcamAnnotationStore(config)
         app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
         app.config[CATEGORIES] = HabcamCategories(config)
