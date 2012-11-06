@@ -7,7 +7,7 @@ from oii.config import get_config
 
 class HabcamAuthentication(PsqlAuthentication):
     def __init__(self,config):
-        super(HabcamAuthentication,self).__init__(config,"select * from annotators where annotator_id=%s and passwd=md5(salt || %s)")
+        super(HabcamAuthentication,self).__init__(config,"select * from auth where annotator_id=%s and passwd=md5(salt || %s)")
     def add_user(self,username, password, **kvs):
         salt = gen_id() # generate salt
         kvs['annotator_id'] = username
@@ -18,15 +18,15 @@ class HabcamAuthentication(PsqlAuthentication):
         ss = ','.join(['%s' for _ in kvs])
         vs = [v for _,v in kvs]
         with xa(self.config.psql_connect) as (connection,cursor):
-            cursor.execute('insert into annotators (' + ks + ') values (' + ss + ')',vs)
+            cursor.execute('insert into auth (' + ks + ') values (' + ss + ')',vs)
             connection.commit()
     def delete_user(self,username):
         with xa(self.config.psql_connect) as (connection,cursor):
-            cursor.execute('delete from annotators where annotator_id = %s',(username,))
+            cursor.execute('delete from auth where annotator_id = %s',(username,))
             connection.commit()
     def list_users(self):
         with xa(self.config.psql_connect) as (connection,cursor):
-            cursor.execute('select * from annotators')
+            cursor.execute('select * from auth')
             return list(cursor.fetchall())
 
 if __name__=='__main__':
