@@ -317,7 +317,6 @@ function queueSubstrateAnnotation(categories, scope) {
     }
 }
 function qsa(categories, scope, dataKey) {
-    // FIXME implement
     // FIXME deal with fact that there can be more than one image per page
     $('#workspace').data(dataKey, {});
     // FIXME for now queue the substrate ann for all images on the page
@@ -340,35 +339,28 @@ function qsa(categories, scope, dataKey) {
 function commitSubstrate(continuation) {
     var as = [];
     var gi = {};
-    $('div.thumbnail').each(function(i, cell) {
-	var imagePid = $(cell).data('imagePid');
-	$.each($('#workspace').data('dominantSubstrate'), function(ignore, anns) {
-	    $.each(anns, function(ix, ann) {
-		ann.image = imagePid;
-		HOL.add(gi, imagePid, ann);
-		as.push(ann);
-		clog(ann.image+' is has dominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+    $('div.thumbnail').each(function(i, cell) { // for all cells
+	var imagePid = $(cell).data('imagePid'); // get the pid of the cell
+	// for a category of substrate/image annotations, queue an ann for this cell
+	function queueCategory(dataKey) {
+	    $.each($('#workspace').data(dataKey), function(ignore, anns) {
+		$.each(anns, function(ix, ann) {
+		    ann.image = imagePid;
+		    HOL.add(gi, imagePid, ann);
+		    as.push(ann);
+		    clog(ann.image+' is has '+dataKey+' '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
+		});
 	    });
-	});
-	$.each($('#workspace').data('subdominantSubstrate'), function(ignore, anns) {
-	    $.each(anns, function(ix, ann) {
-		ann.image = imagePid;
-		HOL.add(gi, imagePid, ann);
-		as.push(ann);
-		clog(ann.image+' is has subdominant substrate '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
-	    });
-	});
-	$.each($('#workspace').data('imageNotes'), function(ignore, anns) {
-	    $.each(anns, function(ix, ann) {
-		ann.image = imagePid;
-		HOL.add(gi, imagePid, ann);
-		as.push(ann);
-		clog(ann.image+' is has imagenotes '+ann.category+' at '+ann.timestamp+', ann_id='+ann.pid);
-	    });
-	});
+	}
+	// do each category for this cell
+	queueCategory('dominantSubstrate');
+	queueCategory('subdominantSubstrate');
+	queueCategory('imageNotes');
     });
+    // now we've queued all image-level (e.g., substrate) annotations for all cells.
     clog('there are '+as.length+' substrate annotations');
     if(as.length > 0) {
+	// generate IDs for all these annotations
 	generateIds(gi, function() {
 	    $.ajax({
 		url: '/create_annotations',
@@ -377,6 +369,7 @@ function commitSubstrate(continuation) {
 		dataType: 'json',
 		data: JSON.stringify(as),
 		success: function() {
+		    // we have the ids in hand
 		    continuation();
 		},
 		statusCode: {
@@ -387,6 +380,7 @@ function commitSubstrate(continuation) {
 	    });
 	});
     } else {
+	// no id generation necessary, nothing to do
 	continuation();
     }
 }
