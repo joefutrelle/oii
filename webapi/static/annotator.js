@@ -713,13 +713,15 @@ $(document).ready(function() {
 		'data-fgColor="#222222" data-bgColor="gray" ></div>')
 		.find('div:last').collapsing('Percent Cover',1);
 		
-		$('.percentKnob').knob({
-			"change": function(value) {
-				console.log(value);
-				$('.percentKnob').css('color','white');
-			}
-		});
-		
+    $('.percentKnob')
+	.knob({
+	    "change": function(value) {
+		console.log(value);
+		$('.percentKnob').css('color','white');
+	    }
+	}).find('input').bind('focus', function(event) { // if user selects the text label
+	    $(this).blur(); // clear focus
+	});
 		
 	$('#rightPanel').append('<div><select id="assignment"></select></div>')
         .find('div:last').collapsing('Assignment',1);
