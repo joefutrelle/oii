@@ -59,7 +59,7 @@ class HabcamAnnotationStore(AnnotationStore):
             return ann
     def deprecate_annotation(self,pid):
 	"Deprecate an annotation given the pid"
-        with xa(self.config_psql_connect) as (connection,cursor):
+        with xa(self.config.psql_connect) as (connection,cursor):
             cursor.execute("UPDATE annotations SET deprecated = true WHERE annotation_id = '{0}'".format(pid) )
             connection.commit()
     def create_annotations(self,annotations):
