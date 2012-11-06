@@ -13,7 +13,6 @@ from oii.annotation.psql import PsqlAnnotationStore
 from oii.annotation.categories import Categories
 from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
-from oii.utils import md5_string
 from utils import jsonr, UrlConverter
 import urllib
 
@@ -24,6 +23,7 @@ import urllib
 from oii.habcam.assignments import HabcamAssignmentStore
 from oii.habcam.categories import HabcamCategories
 from oii.habcam.annotation import HabcamAnnotationStore
+from oii.habcam.auth import HabcamAuthentication
 
 """Prototype annotation web API
 see https://beagle.whoi.edu/redmine/issues/948
@@ -43,18 +43,16 @@ CONFIG = 'config' # raw config object stored in app config object
 ANNOTATION_STORE = 'annotation_store'
 CATEGORIES = 'categories'
 ASSIGNMENT_STORE = 'assignment_store'
+AUTHENTICATION = 'authentication'
 
 # default config
 DEFAULT_CONFIG = {
-    ANNOTATION_STORE: DebugAnnotationStore(),
+    ANNOTATION_STORE: DebugAnnotationStore()
 }
+# FIXME not used
 
 def authme(u,p):
-    valid = [
-        ('joe','aa31baffe11ee1aa6ed1e00e87bae16e'),
-        ('yorksea','f477dcb057f22c8083b2aa00e45bbad8')
-        ]
-    return (u,md5_string(p)) in valid
+    return my(AUTHENTICATION).callback(u,p)
 
 auth_api.auth_callback = authme
 
@@ -207,6 +205,7 @@ def config_backend(config):
         app.config[ANNOTATION_STORE] = HabcamAnnotationStore(config)
         app.config[ASSIGNMENT_STORE] = HabcamAssignmentStore(config)
         app.config[CATEGORIES] = HabcamCategories(config)
+        app.config[AUTHENTICATION] = HabcamAuthentication(config)
     except KeyError:
         pass # FIXME log error
 
