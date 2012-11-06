@@ -727,12 +727,12 @@ $(document).ready(function() {
         .find('div:last').collapsing('Assignment',1);
 
     // add "quick info" panel showing image and assignment metadata
-    $('#rightPanel').append('<div><div id="quickinfo" ></div></div>')
+    $('#rightPanel').append('<div id="quickinfo" ></div>')
 	   .find('div:last').collapsing('Quick Info',1);
 
     // add "existing annotations" panel to right panel
-    $('#rightPanel').append('<div><div id="existingAnnotations" ></div></div>')
-	 .find('div:last').collapsing('Existing Annotations',1);
+    $('#rightPanel').append('<div id="existingAnnotations"><div id="existingTableContainer"></div></div>');
+    $('#rightPanel > div:last-child').collapsing('Existing Annotations',1);
 
 
     // when the user changes the assignment
@@ -766,6 +766,7 @@ $(document).ready(function() {
 	$('#deprecate-button').button();
 
 	// FIXME this is returning status:OK but does not actually deprecate.
+    // JF found this bug, reported as #1969, and fixed in r485
 	$('#deprecate-button').bind('click', function() {		
 	 	$("li.ui-selected ").each(function() {		
 			var pid = $(this).attr('id');

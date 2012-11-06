@@ -1,7 +1,6 @@
 function emptyExistingTable() {
-	    $('#existingTable').remove();
-	   // $('#existingAnnotations').append('<table id="existingTable" class="dataTable"></table>')
-	    $('#existingAnnotations').append('<table id="existingTable" class="dataTable"  cellpadding="0" ' + 
+    $('#existingTableContainer').empty();
+	    $('#existingTableContainer').append('<table id="existingTable" class="dataTable"  cellpadding="0" ' + 
 	    'cellspacing="0" border="0"></table>') ;
 
 	$('#existingTable').append('<thead><tr>'
