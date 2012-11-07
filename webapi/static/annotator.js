@@ -4,6 +4,7 @@ var TARGET_SCOPE=1;
 var IMAGE_SCOPE=2;
 var DOMINANT_SUBSTRATE_SCOPE=3;
 var SUBDOMINANT_SUBSTRATE_SCOPE=4;
+var PERCENT_COVER_SCOPE=5;
 // FIXME move to CSS
 var PENDING_COLOR='#00ff33';
 var EXISTING_COLOR='#ffff99';
@@ -314,6 +315,8 @@ function queueSubstrateAnnotation(categories, scope) {
 	qsa(categories,scope,'subdominantSubstrate');
     } else if(scope==IMAGE_SCOPE) {
 	qsa(categories,scope,'imageNotes');
+    } else if(scope==PERCENT_COVER_SCOPE) {
+	qsa(categories,scope,'percentCover');
     }
 }
 function qsa(categories, scope, dataKey) {
@@ -327,11 +330,13 @@ function qsa(categories, scope, dataKey) {
 		image: imagePid,
 		category: cat.pid,
 		geometry: {},
+		percent_cover: cat.percent_cover,
 		annotator: 'http://foobar',
 		scope: scope,
 		timestamp: iso8601(new Date()),
 		assignment: $('#workspace').data('assignment').pid
 	    };
+	    console.log('queueing annotation '+JSON.stringify(ann));//FIXME debug
 	    HOL.add($('#workspace').data(dataKey), imagePid, ann);
 	});
     });
@@ -356,6 +361,7 @@ function commitSubstrate(continuation) {
 	queueCategory('dominantSubstrate');
 	queueCategory('subdominantSubstrate');
 	queueCategory('imageNotes');
+	queueCategory('percentCover');
     });
     // now we've queued all image-level (e.g., substrate) annotations for all cells.
     clog('there are '+as.length+' substrate annotations');
@@ -540,6 +546,7 @@ function resetImageLevelPending() {
     $('#workspace').data('dominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('subdominantSubstrate',{}); // pending substrate annotations by pid
     $('#workspace').data('imageNotes',{});
+    $('#workspace').data('percentCover',{});
 }
 // FIXME make class selection a plugin
 function validateLabel() {
@@ -560,7 +567,7 @@ function changeImageStatus(status){
 		var imagePid = $(cell).data('imagePid');
 		var assignment = getWorkspace('assignment');
 		var assignment_pid = assignment.pid;
-		$.getJSON('/set_status/image/'+encodeURIComponent(imagePid)
+		$.getJSON('/set_status/image/'+imagePid
 			+'/status/' + status + '/assignment/'+assignment_pid,function(r) {
 		   clog('status changed to ' + status + ' for '+imagePid);
 		});
@@ -690,6 +697,10 @@ $(document).ready(function() {
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
     // FIXME lots of tiles
+
+    // assignment selector
+    $('#rightPanel').append('<div><select id="assignment"></select></div>')
+        .find('div:last').collapsing('Assignment',1);
     
     // add dominant substrate category picker
     // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
@@ -707,24 +718,11 @@ $(document).ready(function() {
      .find('div:last').collapsing('Image Notes',1)
 	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
 	
-	 // slider for percent cover.
-    $('#rightPanel').append('<div><input class="percentKnob" type="text" '+
-		'value="0" data-min="0" data-max="100" data-width="100" data-height="100" data-thickness=1 ' +
-		'data-fgColor="#222222" data-bgColor="gray" ></div>')
-		.find('div:last').collapsing('Percent Cover',1);
-		
-    $('.percentKnob')
-	.knob({
-	    "change": function(value) {
-		console.log(value);
-		$('.percentKnob').css('color','white');
-	    }
-	}).find('input').bind('focus', function(event) { // if user selects the text label
-	    $(this).blur(); // clear focus
-	});
-		
-	$('#rightPanel').append('<div><select id="assignment"></select></div>')
-        .find('div:last').collapsing('Assignment',1);
+    // percent cover
+    $('#rightPanel').append('<div class="categoryPicker"><div>&nbsp;</div></div>')
+	.find('div:last').collapsing('Percent Cover',1)
+	.categoryPicker(1, PERCENT_COVER_SCOPE, queueSubstrateAnnotation, 1);
+	//.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation, 1); // FIXME use PERCENT_COVER_SCOPE
 
     // add "quick info" panel showing image and assignment metadata
     $('#rightPanel').append('<div id="quickinfo" ></div>')

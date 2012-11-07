@@ -1,7 +1,7 @@
 // mmm mm some tasty jQuery extensibility
 (function($) {
     $.fn.extend({
-        categoryPicker: function(mode, scope, callback) {
+        categoryPicker: function(mode, scope, callback, showPercentCover) {
 	    return this.each(function() {
 		var $this = $(this);
 		$this.data('all_categories',[]); // stores the result of /list_categories call
@@ -13,8 +13,12 @@
 		    // for each SELECT node, figure out which category is selected
 		    $this.find('select').each(function(ix, elt) {
 			var pid = $(elt).val();
+			var percentCover = $(elt).parent().find('.percentKnob').val();
 			$.each($this.data('all_categories'), function(ix, c) {
 			    if(c.pid == pid) {
+				if(percentCover != undefined) {
+				    c.percent_cover = percentCover;
+				}
 				// push this on our list of selected categories
 				selectedCategories.push(c);
 				label += ' + ' + c.label; // and our text label
@@ -42,6 +46,10 @@
 			});
 		    // now add the "+" button to the last selector. its click handler is add_choice
 		    $this.find('div:last').append('<a href="#" class="button">+</a>').find('.button').button().click(add_choice);
+		    //
+		    if(showPercentCover) {
+			$this.find('div:last').percentPicker(compute_selected);
+		    }
 		    // the change handler for the select is compute_selected
 		    $(select).change(compute_selected);
 		}

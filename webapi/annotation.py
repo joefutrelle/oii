@@ -94,20 +94,20 @@ def list_annotations(image_pid,assignment_pid=None):
     else:
         return jsonr(list(my(ANNOTATION_STORE).list_annotations(image=image_pid)))
 
-@app.route('/fetch_assignment/<path:assignment_pid>')
+@app.route('/fetch_assignment/<url:assignment_pid>')
 def fetch_assignment(assignment_pid):
     return jsonr(my(ASSIGNMENT_STORE).fetch_assignment(assignment_pid))
 
-@app.route('/list_images/limit/<int:limit>/offset/<int:offset>/assignment/<path:assignment_pid>')
-@app.route('/list_images/limit/<int:limit>/offset/<int:offset>/status/<status>/assignment/<path:assignment_pid>')
+@app.route('/list_images/limit/<int:limit>/offset/<int:offset>/assignment/<url:assignment_pid>')
+@app.route('/list_images/limit/<int:limit>/offset/<int:offset>/status/<status>/assignment/<url:assignment_pid>')
 def list_images(limit,offset,assignment_pid,status=None):
     return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset,status)))
 
-@app.route('/find_image/offset/<int:offset>/status/<status>/assignment/<path:assignment_pid>')
+@app.route('/find_image/offset/<int:offset>/status/<status>/assignment/<url:assignment_pid>')
 def find_image(offset,status,assignment_pid):
     return jsonr(dict(offset=my(ASSIGNMENT_STORE).find_image(assignment_pid,offset,status)))
 
-@app.route('/set_status/image/<path:image_id>/status/<status>/assignment/<path:assignment_id>')
+@app.route('/set_status/image/<url:image_id>/status/<status>/assignment/<url:assignment_id>')
 def set_status(assignment_id,image_id,status):
     assignment_id = urllib.unquote(assignment_id)
     status = urllib.unquote_plus(status)

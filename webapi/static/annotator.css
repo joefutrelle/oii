@@ -34,22 +34,18 @@ img.thumbnail {
 
 #rightPanel {
     float: right;
-    display: block;
-    width:420px;
+    width: 420px;
     margin: auto;
-    border: 2px solid teal;
-	border-radius: 10px 5px;
-	border-radius: 10px; 
-    padding: 5px;
     margin-left: 5px;
+    border: 2px solid teal;
+    border-radius: 10px; 
+    padding: 5px;
     display: block;
-
 }
 
 .subpanel {
 border: 2px solid teal;
-border-top-left-radius: 10px 5px;
-border-top-right-radius: 10px; 
+border-radius: 10px;
 padding: 2px;
 padding-top: 0;
 padding-left: 4px;
