@@ -1,0 +1,10 @@
+.percentSlider {
+    float: left;
+    width: 150px;
+}
+.percentSlider .ui-slider-range {
+    background: #000000;
+}
+.percentValue {
+    padding-left: 5px;
+}
