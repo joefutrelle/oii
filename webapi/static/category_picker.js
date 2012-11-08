@@ -13,7 +13,7 @@
 		    // for each SELECT node, figure out which category is selected
 		    $this.find('select').each(function(ix, elt) {
 			var pid = $(elt).val();
-			var percentCover = $(elt).parent().find('.percentKnob').val();
+			var percentCover = $(elt).data('percentCover');
 			$.each($this.data('all_categories'), function(ix, c) {
 			    if(c.pid == pid) {
 				if(percentCover != undefined) {
@@ -48,7 +48,11 @@
 		    $this.find('div:last').append('<a href="#" class="button">+</a>').find('.button').button().click(add_choice);
 		    //
 		    if(showPercentCover) {
-			$this.find('div:last').percentPicker(compute_selected);
+			$this.find('div:last').percentPicker(function(pct) {
+			    // stash the value on the select element
+			    $(select).data('percentCover',pct);
+			    compute_selected();
+			});
 		    }
 		    // the change handler for the select is compute_selected
 		    $(select).change(compute_selected);
