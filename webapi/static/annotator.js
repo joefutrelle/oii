@@ -507,10 +507,12 @@ function categoryLabelForPid(pid) {
 }
 function resizeAll() {
     // resize the right panel
+    /*
     var rp = $('#rightPanel');
     if(rp.is(':visible')) {
         rp.height($(window).height() - ((rp.outerHeight() - rp.height()) + (rp.offset().top * 2)));
     }
+    */
 }
 
 function hasLabel(){
