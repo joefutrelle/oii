@@ -134,7 +134,7 @@ function showAnnotationGeometry(ctx,ann,color) {
         var g = ann.geometry;
         for(key in ann.geometry) { // this probably should not be a loop
             var g = ann.geometry[key];
-            if(g != undefined) {
+            if(g != undefined && !ann.deprecated) {
                 var sa = geometry[key].prepareForCanvas(ann.geometry[key]);
                 geometry[key].draw(ctx, sa, color);
             }
