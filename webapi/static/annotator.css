@@ -62,12 +62,15 @@ width:97%;
     color: black;
 }
 
+.lockcontrol{float:right;margin:3px;}
 
 #selectable .ui-selecting { background: #FECA40; }
 #selectable .ui-selected { background: #F39814; color: white; }
 
-#existingTable .ui-selecting { background: #FECA40; }
+tr.odd { background:  #E2E4FF; }
+tr.even  { background:  white;  }
 #existingTable .ui-selected { background: #F39814; color: white; }
+
 
 ​.lockcontrol {
     float: right;
