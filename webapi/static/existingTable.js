@@ -13,7 +13,8 @@ function emptyExistingTable() {
 }
 
 function addExistingRow(ann){
-	$('#existingTable tbody').append('<tr  class="ui-state-default">'
+	$('#existingTable tbody').append('<tr '
+				+ 'id="' +ann.pid + '" class="ui-state-default">'
 				+ '<td>' + categoryLabelForPid(ann.category)  + '</td>'
 				+ '<td>' + ann.annotator + '</td>'
 				+ '<td>' + ann.timestamp + '</td></tr>'
@@ -21,42 +22,43 @@ function addExistingRow(ann){
 }
 
 function updateExistingTable(){
-        $('#existingTable').dataTable({"sPaginationType": "full_numbers"});
-        $("table#existingTable tbody").selectable({
-    filter: 'tr',
-    cancel: 'td.sort'
-}).sortable({
-    delay: 100,
-    axis: 'y',
-    placeholder: 'ui-state-highlight',
-    handle: 'td.sort',
-    helper: function(e, ui) {
-        ui.children().each(function() {
-            $(this).width($(this).width());
-        });
-        
-        /*********************/
-        /* Do something here */
-        /*********************/
-        
-        return ui;
-    },
-    start: function(event, ui) {
-        ui.placeholder.html('<td colspan="99">&nbsp;</td>');
-    },
-    update: function(event, ui) {
-        document.body.style.cursor = 'wait';
-        //update stuff here                    
+			$('#existingTable').dataTable({"sPaginationType": "full_numbers"});
+			
+			$("table#existingTable tbody").selectable({
+				filter: 'tr',
+				cancel: 'td.sort'
+			}).sortable({
+				delay: 100,
+				axis: 'y',
+				placeholder: 'ui-state-highlight',
+				handle: 'td.sort',
+				helper: function(e, ui) {
+			ui.children().each(function() {
+				$(this).width($(this).width());
+			});
+			
+			/*********************/
+			/* Do something here */
+			/*********************/
+			
+			return ui;
+		},
+		start: function(event, ui) {
+			ui.placeholder.html('<td colspan="99">&nbsp;</td>');
+		},
+		update: function(event, ui) {
+			document.body.style.cursor = 'wait';
+			//update stuff here                    
 
-        // Ajax call to php file
-        // On success
-        document.body.style.cursor = 'default';
-    },
-    stop: function(event, ui) { /*  Reset and add odd and even classes     */
-        $("tr:even").removeClass("odd even").addClass("even");
-        $("tr:odd").removeClass("odd even").addClass("odd");
-    }
-}).disableSelection();
+			// Ajax call to php file
+			// On success
+			document.body.style.cursor = 'default';
+		},
+		stop: function(event, ui) { /*  Reset and add odd and even classes     */
+			$("tr:even").removeClass("odd even").addClass("even");
+			$("tr:odd").removeClass("odd even").addClass("odd");
+		}
+	}).disableSelection();
 
 }
 

@@ -772,7 +772,7 @@ $(document).ready(function() {
 	// FIXME this is returning status:OK but does not actually deprecate.
     // JF found this bug, reported as #1969, and fixed in r485
 	$('#deprecate-button').bind('click', function() {		
-	 	$("li.ui-selected ").each(function() {		
+	 	$("tr.ui-selected ").each(function() {		
 			var pid = $(this).attr('id');
 			clog('DEPRECATING:' +pid);
 			
