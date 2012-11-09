@@ -1,15 +1,14 @@
 function emptyExistingTable() {
     $('#existingTableContainer').empty();
 	    $('#existingTableContainer').append('<table id="existingTable"  style="width:100%; cellpadding="0" ' + 
-	    'cellspacing="0" border="0"></table>') ;
+	    'cellspacing="0" border="1"></table>') ;
 
 	$('#existingTable').append('<thead><tr class="ui-widget-header">'
 				+ '<th>Class Name</th>'
 				+ '<th>Annotator</th>'
 				+ '<th>Timestamp</th></tr></thead>'
 				+ '<tbody class="ui-widget-content"></tbody>'
-				);
-	
+				);	
 }
 
 function addExistingRow(ann){
