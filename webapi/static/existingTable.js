@@ -5,7 +5,7 @@ function emptyExistingTable() {
 
 	$('#existingTable').append('<thead><tr class="ui-widget-header">'
 				+ '<th>Class Name</th>'
-				+ '<th>Annotator</th>'
+				+ '<th>Username </th>'
 				+ '<th>Timestamp</th></tr></thead>'
 				+ '<tbody class="ui-widget-content"></tbody>'
 				);	

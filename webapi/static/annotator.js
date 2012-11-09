@@ -202,11 +202,11 @@ function gotoPage(pp,size) {
 
     var num_images = $('#workspace').data('assignment').num_images;
     var percent_done = 100*offset/num_images;
-    $("#quickOffset").html(offset);
+    $("#quickOffset").html(offset + '/');
     $("#quickNumImages").html(num_images);
     $("#quickProgress").html(Math.round(percent_done,1) + '%');
     $("#quickAssignment").html(
-		"</br>"  + $('#workspace').data('assignment').project_name 
+	 $('#workspace').data('assignment').project_name 
 		+ "</br>" + $('#workspace').data('assignment').site_description
 		+ "</br>" + $('#workspace').data('assignment').comment
     ) 
@@ -766,7 +766,7 @@ $(document).ready(function() {
 	$('#existingAnnotations').append('<span id="select-result" class="hidden"></span><ol class="selectable"></ol>') // FIXME remove fieldset selector
         .find('div:last');
 
-	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate</a>'); // FIXME remove fieldset selector
+	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate Selected</a>'); // FIXME remove fieldset selector
 	$('#deprecate-button').button();
 
 	// FIXME this is returning status:OK but does not actually deprecate.

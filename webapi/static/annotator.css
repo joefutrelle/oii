@@ -76,3 +76,7 @@ tr.even  { background:  white;  }
     float: right;
     margin:3px;
 }​
+
+legend { font-weight: bold}
+
+#deprecate-button{margin:3px; float:right}
