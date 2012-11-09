@@ -768,18 +768,17 @@ $(document).ready(function() {
 
 	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate Selected</a>'); // FIXME remove fieldset selector
 	$('#deprecate-button').button();
-
-	// FIXME this is returning status:OK but does not actually deprecate.
-    // JF found this bug, reported as #1969, and fixed in r485
 	$('#deprecate-button').bind('click', function() {		
 	 	$("tr.ui-selected ").each(function() {		
 			var pid = $(this).attr('id');
 			clog('DEPRECATING:' +pid);
 			
 		    $.getJSON('/deprecate/annotation/'+pid, function(r) {
-			clog('Deprecated - Response: ' + r );
+			clog('Deprecated - Response: ' + JSON.stringify(r) );
 		    });
 		});
+	    // FIXME need to wait for all deprecation endpoints to return before
+	    // redrawing
 	});
 
 
