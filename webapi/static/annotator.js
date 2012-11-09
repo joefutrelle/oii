@@ -118,10 +118,14 @@ function getExistingAnnotations(cell, callback) {
             existing(cell)[counter++] = ann;
 			addExistingRow(ann);
         });
-        $('#existingTable').dataTable({"sPaginationType": "full_numbers"});
+   
+   updateExistingTable();
+
 	callback();
     });
 }
+
+
 //cell - div with image in it
 //ann - annotation
 function showAnnotationGeometry(ctx,ann,color) {
