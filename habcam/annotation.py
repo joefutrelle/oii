@@ -58,13 +58,15 @@ class HabcamAnnotationStore(AnnotationStore):
                 yield ann
     def fetch_annotation(self,pid):
         "Fetch an annotation by its PID"
-        for ann in list_annotations(dict(pid=pid)):
+        pd = dict(pid=pid)
+        for ann in self.list_annotations(**pd):
             return ann
     def deprecate_annotation(self,pid):
 	"Deprecate an annotation given the pid"
         with xa(self.config.psql_connect) as (connection,cursor):
-            cursor.execute("UPDATE annotations SET deprecated = true WHERE annotation_id = '{0}'".format(pid) )
+            cursor.execute('update annotations set deprecated = true where annotation_id = %s',(pid,))
             connection.commit()
+        return self.fetch_annotation(pid)
     def create_annotations(self,annotations):
         tuples = []
         for d in annotations:

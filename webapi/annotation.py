@@ -82,9 +82,7 @@ def fetch_annotation(pid):
 
 @app.route('/deprecate/annotation/<url:pid>')
 def deprecate_annotation(pid):
-    # return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
-    my(ANNOTATION_STORE).deprecate_annotation(pid)
-    return '{"status":"OK"}'
+    return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
 
 @app.route('/list_annotations/image/<url:image_pid>')
 @app.route('/list_annotations/image/<url:image_pid>/assignment/<url:assignment_pid>')
