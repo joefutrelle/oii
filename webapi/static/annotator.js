@@ -768,15 +768,18 @@ $(document).ready(function() {
 
 	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate Selected</a>'); // FIXME remove fieldset selector
 	$('#deprecate-button').button();
-	$('#deprecate-button').bind('click', function() {		
+	$('#deprecate-button').bind('click', function() {	
+	    var deferreds = [];
 	 	$("tr.ui-selected ").each(function() {		
-			var pid = $(this).attr('id');
-			clog('DEPRECATING:' +pid);
-			
-		    $.getJSON('/deprecate/annotation/'+pid, function(r) {
-			clog('Deprecated - Response: ' + JSON.stringify(r) );
-		    });
+		    var pid = $(this).attr('id');
+		    deferreds.push($.ajax('/deprecate/annotation/'+pid));
 		});
+	    console.log(JSON.stringify(deferreds));
+	    var defer = $.when.apply($, deferreds).then(function(args) {
+		console.log('done deprecating: '+JSON.stringify(args));
+		gotoPage(page,1);//FIXME use size
+	    });
+					  
 	    // FIXME need to wait for all deprecation endpoints to return before
 	    // redrawing
 	});

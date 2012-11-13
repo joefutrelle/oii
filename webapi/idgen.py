@@ -11,9 +11,11 @@ import json
 # function: generate_ids
 # so the url_for call is url_for('idgen_api.generate_ids')
 
+# note this requires UrlConverter
+
 idgen_api = Blueprint('idgen_api', __name__)
 
 @idgen_api.route('/generate_ids/<int:n>')
-@idgen_api.route('/generate_ids/<int:n>/<path:ns>')
+@idgen_api.route('/generate_ids/<int:n>/<url:ns>')
 def generate_ids(n,ns=''):
     return json.dumps([ns + gen_id() for _ in range(n)])
