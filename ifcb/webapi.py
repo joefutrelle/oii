@@ -606,6 +606,7 @@ def bin2xml(template):
 
 def bin_zip(hit,targets,template):
     buffer = BytesIO()
+    (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
     with tempfile.SpooledTemporaryFile() as temp:
         z = ZipFile(temp,'w',ZIP_DEFLATED)
         z.writestr(hit.bin_lid + '.csv', bin2csv(hit,targets))
@@ -614,7 +615,7 @@ def bin_zip(hit,targets,template):
         for target in targets:
             buffer.seek(0)
             buffer.truncate()
-            im = get_stitched_roi(hit.bin_pid, target[TARGET_NUMBER])
+            im = get_roi_image_from_files(hit.schema_version, adc_path, roi_path, hit.bin_pid, target[TARGET_NUMBER])
             with tempfile.SpooledTemporaryFile() as imtemp:
                 im.save(imtemp,'PNG')
                 imtemp.seek(0)
@@ -667,6 +668,9 @@ def get_roi_image(bin_pid, target_no, fast_stitching=False):
     hit = resolve_pid(pid=bin_pid)
     schema_version = hit.schema_version
     (adc_path, roi_path) = resolve_files(bin_pid, (ADC, ROI))
+    return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching)
+
+def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False):
     if app.config[STITCH]:
         offset=max(1,target_no-1)
         limit=3 # read three targets, in case we need to stitch

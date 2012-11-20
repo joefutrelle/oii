@@ -48,27 +48,43 @@
     </match>
   </resolver>
   <resolver name="data_roots">
+    <!-- MVCO time series -->
     <match var="time_series" value="mvco">
-      <var name="root">
-	<value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
-	<value>/data/vol3</value>
-	<value>/data/vol1</value>
-	<value>/data/vol2</value>
-      </var>
-      <hit/>
+      <match var="product" value="raw">
+	<hit name="root">
+	  <value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
+	  <value>/data/vol3</value>
+	  <value>/data/vol1</value>
+	  <value>/data/vol2</value>
+	</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<hit name="root">/data/vol4/blobs</hit>
+      </match>
     </match>
+    <!-- Healy 1101 time series -->
     <match var="time_series" value="Healy1101">
-      <var name="root">/mnt/healy1101/data</var>
-      <hit/>
+      <match var="product" value="raw">
+	<hit name="root">/mnt/healy1101/data</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<hit name="root">/mnt/healy1101/blobs</hit>
+      </match>
     </match>
+    <!-- Salt Pond time series -->
     <match var="time_series" value="saltpond">
-      <var name="root">/mnt/saltpond</var>
-      <hit/>
+      <match var="product" value="raw">
+	<hit name="root">/mnt/saltpond</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<hit name="root">/data/vol4/blobs/saltpond</hit>
+      </match>
     </match>
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
     <import name="pid"/>
+    <var name="product">raw</var>
     <import name="data_roots"/>
     <var name="filename">
       <value>${lid}.${format}</value>
@@ -82,28 +98,19 @@
       <path match="${root}/D${year}/D${year}${day}/${filename}"/>
     </any>
   </resolver>
-  <resolver name="blob_roots">
-    <match var="time_series" value="mvco">
-      <var name="product_root">/data/vol4/blobs</var>
-      <hit/>
-    </match>
-    <match var="time_series" value="Healy1101">
-      <var name="product_root">/mnt/healy1101/blobs</var>
-      <hit/>
-    </match>
-    <match var="time_series" value="saltpond">
-      <var name="product_root">/data/vol4/blobs/saltpond</var>
-      <hit/>
-    </match>
+  <resolver name="blobs">
+    <import name="pid"/>
+    <import name="data_roots"/>
+    <var name="filename">${bin_lid}_blobs_v2.zip</var>
+    <hit>${root}/${year}/${yearday}/${filename}</hit>
   </resolver>
   <resolver name="mvco_blob">
-    <import name="pid"/>
-    <import name="blob_roots"/>
-    <var name="filename">${bin_lid}_blobs_v2.zip</var>
-    <path match="${product_root}/${year}/${yearday}/${filename}"/>
+    <import name="blobs"/>
+    <path match="${value}"/>
   </resolver>
   <resolver name="list_adcs">
     <!-- list all adc files. -->
+    <var name="product">raw</var>
     <import name="data_roots"/>
     <path var="day_dir" match="${root}/IFCB*"> <!-- FIXME v1-specific -->
       <path var="adc_file" match="IFCB*.adc">
