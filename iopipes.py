@@ -4,6 +4,7 @@ from zipfile import ZipFile
 import shutil
 import sys
 import os
+import tempfile
 
 """Source/sink model of I/O
 
@@ -137,7 +138,73 @@ def drain(source,sink):
     with source as input:
         with sink as output:
             shutil.copyfileobj(input, output)
-    
+
+class StagedFile(object):
+    """StagedFile provides "with" statement support for temporary files that
+    are created on the fly"""
+    def __init__(self,name=None):
+        self.name = name
+    def on_enter(self,file):
+        """Override this to take action after the temp file has been created
+        and before the "with" block"""
+        pass
+    def on_exit(self,file):
+        """Override this to take action after the "with" block and before the
+        temp file is deleted"""
+        pass
+    def __enter__(self):
+        # create a temporary location
+        if self.name is not None:
+            self.dir = tempfile.mkdtemp()
+            self.file = os.path.join(self.dir, self.name)
+        else:
+            self.dir = None
+            (fd, self.file) = tempfile.mkstemp()
+            # close the open file; caller is reponsible for opening it
+            os.close(fd)
+        # take action before the block
+        self.on_enter(self.file)
+        return self.file
+    def __exit__(self, type, value, traceback):
+        # take action after the block
+        try:
+            self.on_exit(self.file)
+        finally:
+            # remove temporary location
+            if self.dir is not None:
+                shutil.rmtree(self.dir)
+            else:
+                os.remove(self.file)
+
+class StagedInputFile(StagedFile):
+    """A staged file is read from a source to a temporary file, and then
+    the file is available by name for use, including use by an external process
+    that expects a local file. In a "with" statement,
+    the file is automatically deleted upon exiting the block."""
+    def __init__(self,source,name=None):
+        """If name is specified, a file with the given name will be created,
+        in a temporary directory; use this if the name matters to whatever
+        will be using the file"""
+        super(StagedInputFile,self).__init__(name)
+        self.source = source
+    def on_enter(self, file):
+        drain(self.source, LocalFileSink(file))
+
+class StagedOutputFile(StagedFile):
+    """Creates a temporary local filesystem location for output (e.g., from an external process)
+    and provides for writing the output to a sink prior to cleaning up temporary storage.
+    In a "with" statement, returns the file path (so that e.g., it can be used by the external
+    code on enter, and on exit drains the temporary file into the specified sink prior to deleting
+    it"""
+    def __init__(self,sink,name=None):
+        """If name is specified, a file with the given name will be created,
+        in a temporary directory; use this if the name matters to whatever
+        will be using the file"""
+        super(StagedOutputFile,self).__init__(name)
+        self.sink = sink
+    def on_exit(self, file):
+        drain(LocalFileSource(file), self.sink)
+
 """Store API"""
 
 class Store(object):

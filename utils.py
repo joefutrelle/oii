@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import platform
 import ctypes
 import hashlib
+import sys
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -268,6 +269,7 @@ def rpad(s,l,pad_string=' '):
     return s + (pad_string * (l - len(s)))
 
 def asciitable(dicts):
+    """produce an ASCII formatted columnar table from the dicts"""
     # set of all keys in dicts
     cols = sorted(list(set(reduce(lambda x,y: x+y, [d.keys() for d in dicts]))))
     # compute col widths. initially wide enough for the column label
