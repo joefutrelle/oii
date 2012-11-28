@@ -82,6 +82,8 @@ def fetch_annotation(pid):
 
 @app.route('/deprecate/annotation/<url:pid>')
 def deprecate_annotation(pid):
+    if not 'username' in session:
+        abort(401)
     return jsonr(my(ANNOTATION_STORE).deprecate_annotation(pid))
 
 @app.route('/list_annotations/image/<url:image_pid>')
