@@ -8,7 +8,7 @@
 		function updateSliderValue() {
 		    var val = $this.find('.percentSlider').slider('value');
 		    $this.find('.percentValue').html(val+'%');
-		    return val;
+		    callback(val);
 		}
 		$this.append('<div><span class="percentSlider"></span><span class="percentValue"></span></div>')
 		    .find('div').css('display','inline-block')
@@ -20,8 +20,7 @@
 			value: 50,
 			slide: updateSliderValue,
 			change: function() {
-			    var val = updateSliderValue();
-			    callback(val);
+			    updateSliderValue();
 			}
 		    });
 		updateSliderValue();
