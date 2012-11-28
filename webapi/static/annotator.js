@@ -769,7 +769,7 @@ $(document).ready(function() {
 	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate Selected</a>'); // FIXME remove fieldset selector
 	$('#deprecate-button').button();
 	$('#deprecate-button').bind('click', function() {	
-	    if($('#workspace').data('username') == undefined) {
+	    if($('#workspace').data('login') == undefined) {
 		alert('Please login');
 		return;
 	    }
