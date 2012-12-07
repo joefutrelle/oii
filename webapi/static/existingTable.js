@@ -10,14 +10,20 @@ function emptyExistingTable() {
 				+ '<tbody class="ui-widget-content"></tbody>'
 				);	
 }
-
+ 
 function addExistingRow(ann){
+	
 	$('#existingTable tbody').append('<tr '
-				+ 'id="' +ann.pid + '" class="ui-state-default">'
-				+ '<td>' + categoryLabelForPid(ann.category)  + '</td>'
+				+ 'id="' +ann.pid + '" class="ui-state-default" >'
+				+ '<td >' + categoryLabelForPid(ann.category)  + '</td>'
 				+ '<td>' + ann.annotator + '</td>'
 				+ '<td>' + ann.timestamp + '</td></tr>'
 				);		
+	if (ann.deprecated){
+		$('#existingTable').find('tr:last').addClass('strikethrough');
+		
+	}
+
 }
 
 function updateExistingTable(){

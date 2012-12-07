@@ -80,3 +80,5 @@ tr.even  { background:  white;  }
 legend { font-weight: bold}
 
 #deprecate-button{margin:3px; float:right}
+
+.strikethrough {text-decoration: line-through;}
