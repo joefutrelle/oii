@@ -20,6 +20,7 @@ from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
+from oii.ifcb import stitching
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
@@ -470,13 +471,10 @@ def resolve(pid):
     """Resolve a URL to some data endpoint in a time series, including bin and target metadata endpoints,
     and image endpoints"""
     # use the PID resolver (which also works for LIDs)
-    #app.logger.debug('attempting to resolve '+pid)
     hit = resolve_pid(pid)
     if hit is None:
         abort(404)
     # construct the namespace from the configuration and time series ID
-    #hit.namespace = '%s%s/' % (app.config[NAMESPACE], time_series)
-    #hit.bin_pid = hit.namespace + hit.bin_lid
     hit.date = iso8601(strptime(hit.date, hit.date_format))
     # determine extension
     if hit.extension is None: # default is .rdf
@@ -487,13 +485,17 @@ def resolve(pid):
     if mimetype is None:
         mimetype = 'application/octet-stream'
     # is this request for a product?
-    if hit.product is not None and re.match(r'blob.*',hit.product):
-        return serve_blob(hit.time_series,hit.pid)
+    if hit.product is not None:
+        if re.match(r'blob.*',hit.product):
+            return serve_blob(hit.time_series,hit.pid)
     # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
         if major_type(mimetype) == 'image': # need an image?
-            return serve_roi(hit) # serve it
+            mask = False
+            if hit.product == 'mask':
+                mask = True
+            return serve_roi(hit, mask=mask) # serve it, or its mask
         else:  # otherwise serve metadata
             hit.target_pid = hit.namespace + hit.lid # construct target pid
             return serve_target(hit,mimetype)
@@ -501,6 +503,7 @@ def resolve(pid):
         return serve_bin(hit,mimetype)
     # nothing recognized, so return Not Found
     abort(404)
+# FIXME control flow in above is convoluted
 
 @memoized
 def read_targets(adc_path, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
@@ -656,21 +659,21 @@ def image_types(hit):
     (mimetype, _) = mimetypes.guess_type(filename)
     return (pil_format, mimetype)
 
-def get_stitched_roi(bin_pid, target_no):
-    return get_roi_image(bin_pid, target_no)
+def get_stitched_roi(bin_pid, target_no, mask=False):
+    return get_roi_image(bin_pid, target_no, mask=mask)
 
 def get_fast_stitched_roi(bin_pid, target_no):
     return get_roi_image(bin_pid, target_no, True)
 
-def get_roi_image(bin_pid, target_no, fast_stitching=False):
+def get_roi_image(bin_pid, target_no, fast_stitching=False, mask=False):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
     hit = resolve_pid(pid=bin_pid)
     schema_version = hit.schema_version
     (adc_path, roi_path) = resolve_files(bin_pid, (ADC, ROI))
-    return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching)
+    return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching, mask)
 
-def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False):
+def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False, mask=False):
     if app.config[STITCH]:
         offset=max(1,target_no-1)
         limit=3 # read three targets, in case we need to stitch
@@ -692,7 +695,9 @@ def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target
             if b[TARGET_NUMBER] == target_no: # second of a pair?
                 return None
             images = list(read_rois((a,b),roi_file=roi_file)) # read the images
-            if fast_stitching:
+            if mask:
+                roi_image = stitching.mask((a,b))
+            elif fast_stitching:
                 roi_image = stitch_raw((a,b), images, background=180)
             else:
                 (roi_image, mask) = stitch((a,b), images) # stitch them
@@ -704,9 +709,9 @@ def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target
                     roi_image = images[0]
         return roi_image
 
-def serve_roi(hit):
+def serve_roi(hit,mask=False):
     """Serve a stitched ROI image given the output of the pid resolver"""
-    roi_image = get_stitched_roi(hit.bin_pid, hit.target_no)
+    roi_image = get_stitched_roi(hit.bin_pid, hit.target_no, mask=mask)
     if roi_image is None:
         abort(404)
     # now determine PIL format and MIME type
