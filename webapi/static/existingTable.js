@@ -1,4 +1,6 @@
 function emptyExistingTable() {
+	$("#existingTable").empty();
+     
     $('#existingTableContainer').empty();
 	    $('#existingTableContainer').append('<table id="existingTable"  style="width:100%; cellpadding="0" ' + 
 	    'cellspacing="0" border="1"></table>') ;
