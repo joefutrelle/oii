@@ -160,9 +160,11 @@ $(document).ready(function(){
     });
     
     //detect zoom button presses
-    $(document).bind('dblclick', function(evt) {
-	console.log('doubleclick, toggling zoom mode'); // FIXME debug
-	toggleZoomMode();
+    $(document).bind('click', function(evt) {
+	if(evt.shiftKey) {
+	    console.log('toggling zoom mode'); // FIXME debug
+	    toggleZoomMode();
+	}
     });
     $(document).bind('keydown', zoomMode, function(evt) {
         toggleZoomMode(); 
