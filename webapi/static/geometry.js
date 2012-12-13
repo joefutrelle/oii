@@ -19,6 +19,19 @@ geometry.line = {
         ctx.lineTo(mx,my);
         ctx.stroke();
     },
+    validate: function(line) {
+	if(line == undefined) {
+	    return false;
+	}
+	var ox = line[0][0];
+	var oy = line[0][1];
+	var mx = line[1][0];
+	var my = line[1][1];
+	if(ox==mx && oy==my) {
+	    return false; // line to nowhere
+	}
+	return true
+    },
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -38,6 +51,19 @@ geometry.boundingBox = {
 	//clog('bounding box color is '+color);
         ctx.strokeRect(left, top, right-left, bottom-top);
     },
+    validate: function(box) {
+	if(box == undefined) {
+	    return false;
+	}
+	var left = box[0][0];
+	var top = box[0][1];
+	var right = box[1][0];
+	var bottom = box[1][1];
+	if(left==right && bottom==top) {
+	    return false; // zerosize box
+	}
+	return true;
+    },
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -45,7 +71,23 @@ geometry.boundingBox = {
         return scaleAnnotation(this, annotation);
     }
 };
-
+function validatePath(path) {
+    // check for degenerate path with two identical points #2024
+    console.log('validating path: '+JSON.stringify(path))
+    if(path.length==1) {
+	return false;
+    }
+    if(path.length==2) {
+	var ox = path[0][0];
+	var oy = path[0][1];
+	var mx = path[1][0];
+	var my = path[1][1];
+	if(ox==mx && oy==my) {
+	    return false;
+	}
+    }
+    return true;
+}
 geometry.path = {
     label: 'Path',
     draw: function(ctx, line, color) {
@@ -64,6 +106,7 @@ geometry.path = {
 	});
         ctx.stroke();
     },
+    validate: validatePath,
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -84,6 +127,7 @@ geometry.closedPath = {
 geometry.polyline = { 
     label: 'Polyline',
     draw: geometry.path.draw,
+    validate: validatePath,
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -94,6 +138,7 @@ geometry.polyline = {
 geometry.closedPolyline = { 
     label: 'Closed polyline',
     draw: geometry.path.draw,
+    validate: validatePath,
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -115,6 +160,9 @@ geometry.point = {
         ctx.moveTo(x,y-size);
         ctx.lineTo(x,y+size);
         ctx.stroke();
+    },
+    validate: function() {
+	return true;
     },
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
@@ -154,6 +202,7 @@ geometry.circle = {
         ctx.arc(ox,oy,radius,0,Math.PI*2,true);
         ctx.stroke();
     },
+    validate: geometry.boundingBox.validate,
     prepareForStorage: function(annotation) {
         return unscaleAnnotation(this, annotation);
     },
@@ -309,6 +358,7 @@ function bindMeasurementTools(selector, env) {
         }
     });
 }
+
 geometry.boundingBox.tool = new MeasurementTool({
     mousedown: function(event) {
         var cell = event.data.cell;
@@ -344,10 +394,11 @@ geometry.boundingBox.tool = new MeasurementTool({
         $(cell).data('oy',-1);
         console.log($(cell).data('boundingBox'));
         var preppedBox = geometry.boundingBox.prepareForStorage($(cell).data('boundingBox'));
-        console.log(preppedBox);
-        
-        queueAnnotation(cell, { boundingBox: preppedBox });
-        select(cell,$('#label').val());
+	if(geometry.boundingBox.validate(preppedBox)) {
+            console.log(preppedBox);
+            queueAnnotation(cell, { boundingBox: preppedBox });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('boundingBox');
     }
 });
@@ -381,10 +432,11 @@ geometry.line.tool = new MeasurementTool({
         $(cell).data('oy',-1);
         console.log('pre-prepped line: '+$(cell).data('line'));
         var preppedLine = geometry.line.prepareForStorage($(cell).data('line'));
-        console.log('post-prepped line: '+preppedLine);
-        
-        queueAnnotation(cell, { line: preppedLine });
-        select(cell,$('#label').val());
+	if(geometry.line.validate(preppedLine)) {
+            console.log('post-prepped line: '+preppedLine);
+            queueAnnotation(cell, { line: preppedLine });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('line');
     }
 });
@@ -395,12 +447,11 @@ geometry.polyline.tool = new MeasurementTool({
         $(cell).data('py',-1);
 	var line = $(cell).data('polyline');
         var preppedLine = geometry.polyline.prepareForStorage(line);
-        queueAnnotation(cell, { polyline: preppedLine });
-        select(cell,$('#label').val());
-	$(cell).removeData('polyline');
-	// prevent doubleclick from toggling zoom mode
-	console.log('polyline is stopping doubleclick propagating'); // FIXME debug
-	event.stopPropagation();
+	if(geometry.polyline.validate(preppedLine)) {
+            queueAnnotation(cell, { polyline: preppedLine });
+            select(cell,$('#label').val());
+	    $(cell).removeData('polyline');
+	}
     },
     mousedown: function(event) {
         var cell = event.data.cell;
@@ -457,9 +508,11 @@ geometry.closedPolyline.tool = new MeasurementTool({
 	console.log('doubleclickclick while rubberbanding, line = '+JSON.stringify(line));
         console.log('pre-prepped line: '+line);
         var preppedLine = geometry.polyline.prepareForStorage(line);
-        console.log('post-prepped line: '+preppedLine);
-        queueAnnotation(cell, { polyline: preppedLine });
-        select(cell,$('#label').val());
+	if(geometry.closedPolyline.validate(preppedLine)) {
+            console.log('post-prepped line: '+preppedLine);
+            queueAnnotation(cell, { polyline: preppedLine });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('polyline');
 	console.log('closed polyline is stopping doubleclick propagating'); // FIXME debug
 	event.stopPropagation();
@@ -548,8 +601,10 @@ geometry.path.tool = new MeasurementTool({
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
         geometry.path.draw(ctx,simplePath,PENDING_COLOR);
         var preppedPath = geometry.path.prepareForStorage(simplePath);
-        queueAnnotation(cell, { path: preppedPath });
-        select(cell,$('#label').val());
+	if(geometry.path.validate(preppedPath)) {
+            queueAnnotation(cell, { path: preppedPath });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('path');
     }
 });
@@ -591,8 +646,10 @@ geometry.closedPath.tool = new MeasurementTool({
         ctx.clearRect(0,0,event.data.scaledWidth,event.data.scaledHeight);
         geometry.path.draw(ctx,simplePath,PENDING_COLOR);
         var preppedPath = geometry.path.prepareForStorage(simplePath);
-        queueAnnotation(cell, { path: preppedPath });
-        select(cell,$('#label').val());
+	if(geometry.path.validate(preppedPath)) {
+            queueAnnotation(cell, { path: preppedPath });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('path');
     }
 });
@@ -666,9 +723,11 @@ geometry.circle.tool = new MeasurementTool({
         
         //console.log($(cell).data('circle'));
         var preppedCircle = geometry.circle.prepareForStorage($(cell).data('circle'));
-        //console.log(preppedCircle);
-        queueAnnotation(cell, { circle: preppedCircle });
-        select(cell,$('#label').val());
+	if(geometry.circle.validate(preppedCircle)) {
+            //console.log(preppedCircle);
+            queueAnnotation(cell, { circle: preppedCircle });
+            select(cell,$('#label').val());
+	}
 	$(cell).removeData('circle');
     }
 });
