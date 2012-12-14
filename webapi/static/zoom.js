@@ -14,11 +14,11 @@ var is_zooming = false;
 var toolsPanel = '#rightPanel';
 var zoomToolName = 'zoomTool';
 var zoomTool = '#'+zoomToolName;
-var modalSelector = 'ctrl';
+var modalSelector = 'shift';
 //zoom tool modal button
 var zoomModalButtonName = 'zoomModalButton';
 var zoomModalButton = '#'+zoomModalButtonName;
-var zoomMode = modalSelector+'+f';
+var zoomMode = modalSelector+'+click';
 var zoomButtonText = 'ZOOM ('+zoomMode+')';
 //zoom tool reset button
 var resetZoomModalButtonName = 'resetZoomModalButton';
