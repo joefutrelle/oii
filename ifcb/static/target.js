@@ -14,7 +14,7 @@
 			.grayLoadingImage(urls[view], width, height)
 			.end().find('div.target_image_text').empty()
 		        .append('<div class="scale_bar_container"><div class="scale_bar"></div><div>10&#x3BC;m</div></div>')
-			.append('shown: '+labels[view]+'. click for '+labels[(view+1)%urls.length]+' &nbsp;');
+			.append('shown: <a href="'+urls[view]+'">'+labels[view]+'</a>. click for '+labels[(view+1)%urls.length]+' &nbsp;');
 		}
 		var e = $this.append('<div></div>').find('div:last');
 		$(e).append('<div></div>').find('div:last').addClass('target_image')
