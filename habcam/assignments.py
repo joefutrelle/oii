@@ -2,6 +2,7 @@ import psycopg2 as psql
 from oii.config import get_config
 import re
 from oii.annotation.assignments import AssignmentStore
+from oii.psql import xa
 
 class HabcamAssignmentStore(AssignmentStore):
     def __init__(self,config):
@@ -30,50 +31,49 @@ class HabcamAssignmentStore(AssignmentStore):
         d['label'] = '%s: %s @ %s' % (str(d['assignment_id']), d['project_name'], d['site_description'])
         return d
     def list_assignments(self):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        cursor.execute('select %s from assignments ORDER BY assignment_id desc' % (','.join(self.assignment_fields)))
-        for row in cursor.fetchall():
-            yield self.__row2assignment(row)
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor.execute('select %s from assignments ORDER BY assignment_id desc' % (','.join(self.assignment_fields)))
+            for row in cursor.fetchall():
+                yield self.__row2assignment(row)
     def fetch_assignment(self,pid):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        cursor.execute('select '+(','.join(self.assignment_fields))+' from assignments where assignment_id=%s', (self.lid(pid),))
-        for row in cursor.fetchall():
-            row = self.__row2assignment(row)
-            row['images'] = self.pid(row['assignment_id'])
-            return row
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor.execute('select '+(','.join(self.assignment_fields))+' from assignments where assignment_id=%s', (self.lid(pid),))
+            for row in cursor.fetchall():
+                row = self.__row2assignment(row)
+                row['images'] = self.pid(row['assignment_id'])
+                return row
     def list_images(self,pid,limit=None,offset=0,status=None):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        params = [self.lid(pid)]
-        if status is None:
-            status_clause = ''
-        else:
-            status_clause = 'and status = %s'
-            params += [status]
-        if limit is None:
-            limitclause = ''
-        else:
-            limitclause = 'limit %s '
-            params += [limit]
-        params += [offset]
-        cursor.execute('select imagename from imagelist where assignment_id=%s '+status_clause+' order by imagename '+limitclause+'offset %s', tuple(params))
-        for row in cursor.fetchall():
-            d = {}
-            d['pid'] = self.pid(row[0], self.config.image_namespace)
-            d['image'] = d['pid']
-            yield d
-    def find_image(self,pid,offset,status):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        cursor.execute('select imagename,status from imagelist where assignment_id=%s order by imagename offset %s',(self.lid(pid),offset))
-        i = offset
-        for row in cursor.fetchall():
-            if row[1]==status:
-                return i+1
-            i += 1
-        return offset
+        with xa(self.config.psql_connect) as (connection,cursor):
+            params = [self.lid(pid)]
+            if status is None:
+                status_clause = ''
+            else:
+                status_clause = 'and status = %s'
+                params += [status]
+            if limit is None:
+                limitclause = ''
+            else:
+                limitclause = 'limit %s '
+                params += [limit]
+            params += [offset]
+            cursor.execute('select imagename from imagelist where assignment_id=%s '+status_clause+' order by imagename '+limitclause+'offset %s', tuple(params))
+            for row in cursor.fetchall():
+                d = {}
+                d['pid'] = self.pid(row[0], self.config.image_namespace)
+                d['image'] = d['pid']
+                yield d
+    def find_image(self,pid,offset,status,post_status=None):
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor.execute('select imagename,status from imagelist where assignment_id=%s order by imagename offset %s',(self.lid(pid),offset))
+            i = offset
+            for row in cursor.fetchall():
+                if row[1]==status:
+                    if post_status is not None:
+                        cursor.execute('update imagelist set status=%s where imagename=%s',(post_status,row[0]))
+                        connection.commit()
+                    return i+1
+                i += 1
+            return offset
     def set_status(self,assignment_id,image_id,status):
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()

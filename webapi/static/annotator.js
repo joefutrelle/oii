@@ -187,7 +187,7 @@ function gotoPage(pp,size) {
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
 
-	    changeImageStatus('in+progress');
+	    //changeImageStatus('in+progress'); //this is now done in /find_image
 
         }); // loop over images
 
@@ -451,7 +451,7 @@ function findNewImage(callback) {
 
 clog('user is on assignment '+ass_pid + ' find status: ' + find_status);
 
-    $.getJSON('/find_image/offset/'+page+'/status/'+find_status+'/assignment/'+ass_pid, function(r) {
+    $.getJSON('/find_image/offset/'+page+'/status/'+find_status+'/post_status/in+progress/assignment/'+ass_pid, function(r) {
 	var newPage = r.offset;
 	callback(newPage);
     });

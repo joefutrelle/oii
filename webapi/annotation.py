@@ -104,11 +104,13 @@ def list_images(limit,offset,assignment_pid,status=None):
     return jsonr(list(my(ASSIGNMENT_STORE).list_images(assignment_pid,limit,offset,status)))
 
 @app.route('/find_image/offset/<int:offset>/status/<status>/assignment/<url:assignment_pid>')
-def find_image(offset,status,assignment_pid):
-    return jsonr(dict(offset=my(ASSIGNMENT_STORE).find_image(assignment_pid,offset,status)))
+@app.route('/find_image/offset/<int:offset>/status/<status>/post_status/<post_status>/assignment/<url:assignment_pid>')
+def find_image(offset,status,post_status=None,assignment_pid=None):
+    return jsonr(dict(offset=my(ASSIGNMENT_STORE).find_image(assignment_pid,offset,status,post_status)))
 
 @app.route('/set_status/image/<url:image_id>/status/<status>/assignment/<url:assignment_id>')
-def set_status(assignment_id,image_id,status):
+@app.route('/set_status/image/<url:image_id>/status/<status>/assignment/<url:assignment_id>')
+def set_status(assignment_id,image_id,status,post_status=None):
     assignment_id = urllib.unquote(assignment_id)
     status = urllib.unquote_plus(status)
     my(ASSIGNMENT_STORE).set_status(assignment_id,image_id,status)
