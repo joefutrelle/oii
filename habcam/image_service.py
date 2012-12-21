@@ -71,13 +71,14 @@ def image_response(image,format,mimetype):
     im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
+@app.route('/data/width/<int:width>/<imagename>')
 @app.route('/data/<imagename>')
-def serve_image(imagename):
+def serve_image(width=None,imagename=None):
     resolver = app.config[RESOLVER]
     app.logger.debug(imagename)
     # FIXME debug
     for s in resolver[IMAGE].resolve_all(pid=imagename):
-        app.logger.debug(str(s))
+        app.logger.debug(s)
     # end debug
     hit = resolver[IMAGE].resolve(pid=imagename)
     if hit is not None:
@@ -86,7 +87,12 @@ def serve_image(imagename):
         if mimetype == 'image/tiff':
             return Response(file(pathname), direct_passthrough=True, mimetype=mimetype)
         else:
-            return image_response(Image.open(pathname), format, mimetype)
+            im = Image.open(pathname)
+            if width is not None:
+                (w,h) = im.size
+                height = int((width/float(w)) * h)
+                im = im.resize((width,height),Image.BICUBIC)
+            return image_response(im, format, mimetype)
     else:
         abort(404)
 
