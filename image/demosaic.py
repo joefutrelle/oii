@@ -4,7 +4,7 @@ from scipy.ndimage.filters import convolve
 def demosaic_bilinear(cfa,pattern='rggb'):
     ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
     for c,(y,x) in zip(pattern,[(0,0),(1,0),(0,1),(1, 1)]):
-        ch[c][y::2,x::2] = im[y::2,x::2]
+        ch[c][y::2,x::2] = cfa[y::2,x::2]
     (r,g,b) = (ch[c] for c in 'rgb')
     (_,a,A) = (0., 0.25, 0.5)
     sintpl = [[a, A, a],
@@ -59,11 +59,13 @@ def demosaic_gradient(cfa,pattern='rggb'):
     for ch,(m,n) in rb_offsets:    
         c = np.zeros_like(cfa)
         c[m::2,n::2] = cfa[m::2,n::2]
-        d = np.where(c > 0, c - g, 0)
+        d = np.zeros_like(cfa)
+        cg = c - g
+        d[m::2,n::2] = cg[m::2,n::2]
         dc = convolve(d, weights=w)
         e = dc + g
         e[m::2,n::2] = c[m::2,n::2]
-        rb[ch] = e.clip(0.,1.)
+        rb[ch] = e
     
     return np.dstack((rb['r'], g, rb['b']))
 
