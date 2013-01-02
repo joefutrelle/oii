@@ -2,17 +2,22 @@ import numpy as np
 from scipy.ndimage.filters import convolve
 
 def demosaic_bilinear(cfa,pattern='rggb'):
+    # pull color channels
     ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
     for c,(y,x) in zip(pattern,[(0,0),(1,0),(0,1),(1, 1)]):
         ch[c][y::2,x::2] = cfa[y::2,x::2]
     (r,g,b) = (ch[c] for c in 'rgb')
+    # interpolate per-channel
     (_,a,A) = (0., 0.25, 0.5)
+    # kernel for sparsely-sampled channels (R and B)
     sintpl = [[a, A, a],
               [A, _, A],
               [a, A, a]]
+    # kernel for densely-sampled channel (G)
     dintpl = [[_, a, _],
               [a, _, a],
               [_, a, _]]
+    # convolve with channel-appropriate kernels
     r = np.where(r > 0, r, convolve(r, weights=sintpl))
     g = np.where(g > 0, g, convolve(g, weights=dintpl))
     b = np.where(b > 0, b, convolve(b, weights=sintpl))
@@ -20,9 +25,9 @@ def demosaic_bilinear(cfa,pattern='rggb'):
 
 def demosaic_gradient(cfa,pattern='rggb'):
     """Based on Laroche-Prescott"""
-    offsets = [(0,0),(1,0),(0,1),(1,1)]
 
     # pull G channel
+    offsets = [(0,0),(1,0),(0,1),(1,1)]
     g = np.zeros_like(cfa)
     for c,(m,n) in zip(pattern,offsets):
         if c == 'g':
@@ -47,24 +52,25 @@ def demosaic_gradient(cfa,pattern='rggb'):
         e = (o * h) + ((1 - o) * v)
         g[m::2,n::2] = e[m::2,n::2]
 
+    # interpolation kernel w for difference channel
     (a,A) = (0.25, 0.5)
     w = [[a, A, a],
          [A, 1, A],
          [a, A, a]]
 
     rb = {}
-
-    # estimate R and B channel C by as g + i(C - g)
-    # where i denotes interpolating into missing regions
-    for ch,(m,n) in rb_offsets:    
+    # estimate R and B channel C by as g + (C - g) * w
+    for ch,(m,n) in rb_offsets: # over R and B
+        # pull color channel C
         c = np.zeros_like(cfa)
         c[m::2,n::2] = cfa[m::2,n::2]
+        # generate difference channel C - g
         d = np.zeros_like(cfa)
-        cg = c - g
-        d[m::2,n::2] = cg[m::2,n::2]
-        dc = convolve(d, weights=w)
-        e = dc + g
-        e[m::2,n::2] = c[m::2,n::2]
+        d[m::2,n::2] = (c - g)[m::2,n::2]
+        # estimate C as g + (C - g) * w
+        e = g + convolve(d, weights=w)
+        # add back in originally sampled data
+        e[m::2,n::2] = cfa[m::2,n::2]
         rb[ch] = e
     
     return np.dstack((rb['r'], g, rb['b']))
