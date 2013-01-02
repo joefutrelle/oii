@@ -75,7 +75,73 @@ def demosaic_gradient(cfa,pattern='rggb'):
     
     return np.dstack((rb['r'], g, rb['b']))
 
-def demosaic(cfa,method='gradient',pattern='rggb'):
+def demosaic_hq_linear(cfa,pattern='rggb'):
+    # Malvar et al
+    # pull color channels
+    offsets = [(0,0),(1,0),(0,1),(1,1)]
+    ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
+    for c,(y,x) in zip(pattern,offsets):
+        ch[c][y::2,x::2] = cfa[y::2,x::2]
+    (r,g,b) = (ch[c] for c in 'rgb')
+    # compute offets of R and B channels
+    rb_offsets = [(c,(m,n)) for c,(m,n) in zip(pattern,offsets) if c in 'rb']
+    g_offsets = [(m,n) for c,(m,n) in zip(pattern,offsets) if c in 'g']
+    
+    # estimate green
+    ck = np.array([[0,  0, -1,  0,  0],
+                   [0,  0,  0,  0,  0],
+                   [-1, 0,  4,  0, -1],
+                   [0,  0,  0,  0,  0],
+                   [0,  0, -1,  0,  0]]) / 8.
+    gk = np.array([[0, 2, 0],
+                   [2, 0, 2],
+                   [0, 2, 0]]) / 8.;
+
+    gc = convolve(g,gk)
+    for c,(m,n) in rb_offsets:
+        g[m::2,n::2] = convolve(ch[c],weights=ck)[m::2,n::2] + gc[m::2,n::2]
+
+    # rb at br locations, other color
+    rbk = np.array([[   0, 0, -1.5, 0,    0],
+                    [   0, 0,    0, 0,    0],
+                    [-1.5, 0,    6, 0, -1.5],
+                    [   0, 0,    0, 0,    0],
+                    [   0, 0, -1.5, 0,    0]]) / 8.
+    # rb at br locations, same color
+    brk = np.array([[2, 0, 2],
+                    [0, 0, 0],
+                    [2, 0, 2]]) / 8.
+    # rb at g locations, other color (horizontal)
+    cgck = np.array([[4, 0, 4]]) / 8.
+    # rb at g locations, g (horizontal)
+    cgk = np.array([[ 0 , 0, 0.5,  0,  0],
+                    [ 0, -1,   0, -1,  0],
+                    [-1 , 0,   5,  0, -1],
+                    [ 0, -1,   0, -1,  0],
+                    [ 0,  0, 0.5,  0,  0]]) / 8.
+
+    for c,(i,j) in rb_offsets:
+        nc = np.copy(ch[c])
+        for (m,n) in g_offsets:
+            # RB at green pixel
+            if m==i:
+                nc[m::2,n::2] = convolve(ch[c],weights=cgck)[m::2,n::2] + convolve(g,weights=cgk)[m::2,n::2]
+            else:
+                nc[m::2,n::2] = convolve(ch[c],weights=np.rot90(cgck))[m::2,n::2] + convolve(g,weights=np.rot90(cgk))[m::2,n::2]
+        (k,l) = (1-i,1-j)
+        if c == 'r':
+            oc = 'b'
+        if c == 'b':
+            oc = 'r'
+        # R at B, B at R
+        nc[k::2,l::2] = convolve(ch[oc],weights=rbk)[k::2,l::2] + convolve(ch[c],weights=brk)[k::2,l::2]
+        ch[c] = nc
+    
+    return np.dstack((ch['r'], g, ch['b']))
+
+def demosaic(cfa,method='hq_linear',pattern='rggb'):
+    if method=='hq_linear':
+        return demosaic_hq_linear(cfa,pattern)
     if method=='gradient':
         return demosaic_gradient(cfa,pattern)
     elif method=='bilinear':
