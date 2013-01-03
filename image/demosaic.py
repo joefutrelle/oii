@@ -1,24 +1,6 @@
 import numpy as np
 from scipy.ndimage.filters import convolve
 
-def showim(im):
-    imsave('fn.png',im * 1.)
-    return display.Image(filename='fn.png')
-
-def gray_world(a):
-    (_,_,c) = a.shape
-    means = [np.mean(a[:,:,n]) for n in range(0,c)]
-    gray = np.mean(means)
-    return (a * (gray / means)).clip(0.,1.)
-
-def thumb(rgb,scale=0.5,gray=False):
-    (h,w,_) = rgb.shape
-    thumb = rgb
-    if gray:
-        thumb = gray_world(thumb)
-    thumb = resize(thumb,(int(h*scale),int(w*scale)))
-    return showim(thumb)
-
 def CONV(i,w):
     return convolve(i, weights=w, mode='nearest')
 
@@ -94,7 +76,7 @@ def demosaic_gradient(cfa,pattern='rggb'):
         e[m::2,n::2] = cfa[m::2,n::2]
         rb[ch] = e
     
-    return np.dstack((rb['r'], g, rb['b']))
+    return np.dstack((rb['r'], g, rb['b'])).clip(0.,1.)
 
 def demosaic_hq_linear(cfa,pattern='rggb'):
     # Malvar et al
@@ -107,20 +89,6 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
     # compute offets of R and B channels
     rb_offsets = [(c,(m,n)) for c,(m,n) in zip(pattern,offsets) if c in 'rb']
     g_offsets = [(m,n) for c,(m,n) in zip(pattern,offsets) if c in 'g']
-    
-    # estimate green
-    ck = np.array([[0,  0, -1,  0,  0],
-                   [0,  0,  0,  0,  0],
-                   [-1, 0,  4,  0, -1],
-                   [0,  0,  0,  0,  0],
-                   [0,  0, -1,  0,  0]]) / 8.
-    gk = np.array([[0, 2, 0],
-                   [2, 0, 2],
-                   [0, 2, 0]]) / 8.;
-
-    gc = CONV(ch[G],gk)
-    for c,(m,n) in rb_offsets:
-        ch[G][m::2,n::2] = CONV(ch[c],ck)[m::2,n::2] + gc[m::2,n::2]
 
     # rb at br locations, other color
     rbk = np.array([[   0, 0, -1.5, 0,    0],
@@ -144,18 +112,37 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
     cgk_90 = np.rot90(cgk)
 
     for c,(i,j) in rb_offsets:
-        cc = np.copy(ch[c])
         for (m,n) in g_offsets:
             # RB at green pixel
             wc, wg = (cgck,cgk) if m==i else (cgck_90,cgk_90)
-            cc[m::2,n::2] = CONV(ch[c],wc)[m::2,n::2] + CONV(ch[G],wg)[m::2,n::2]
+            ch[c][m::2,n::2] = CONV(ch[c],wc)[m::2,n::2] + CONV(ch[G],wg)[m::2,n::2]
         # R at B, B at R
         (k,l) = (1-i, 1-j) # other offsets
         d = {R:B,B:R}[c] # other channel
-        cc[k::2,l::2] = CONV(ch[d],rbk)[k::2,l::2] + CONV(ch[c],brk)[k::2,l::2]
-        ch[c] = cc
+        ch[c][k::2,l::2] = CONV(ch[d],rbk)[k::2,l::2] + CONV(ch[c],brk)[k::2,l::2]
+
+    # estimate green
+    ck = np.array([[0,  0, -1,  0,  0],
+                   [0,  0,  0,  0,  0],
+                   [-1, 0,  4,  0, -1],
+                   [0,  0,  0,  0,  0],
+                   [0,  0, -1,  0,  0]]) / 8.
+    gk = np.array([[0, 2, 0],
+                   [2, 0, 2],
+                   [0, 2, 0]]) / 8.;
     
-    rgb = np.dstack(ch[c] for c in 'rgb')
+    gc = CONV(ch[G],gk)
+    for c,(m,n) in rb_offsets:
+        ch[G][m::2,n::2] = CONV(ch[c],ck)[m::2,n::2] + gc[m::2,n::2]
+        
+    rgb = np.dstack(ch[c] for c in 'rgb').clip(0.,1.)
+    
+    # now correct edge artifacts
+    rgb[0:2,:] = demosaic_gradient(cfa[0:2,:],pattern)
+    rgb[-2:,:] = demosaic_gradient(cfa[-2:,:],pattern)
+    rgb[:,0:2] = demosaic_gradient(cfa[:,0:2],pattern)
+    rgb[:,-2:] = demosaic_gradient(cfa[:,-2:],pattern)
+    
     return rgb
 
 def demosaic(cfa,method='hq_linear',pattern='rggb'):
