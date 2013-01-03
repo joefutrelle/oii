@@ -137,11 +137,11 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
         
     rgb = np.dstack(ch[c] for c in 'rgb').clip(0.,1.)
     
-    # now correct edge artifacts
-    #rgb[0:2,:] = demosaic_gradient(cfa[0:2,:],pattern)
-    #rgb[-2:,:] = demosaic_gradient(cfa[-2:,:],pattern)
-    #rgb[:,0:2] = demosaic_gradient(cfa[:,0:2],pattern)
-    #rgb[:,-2:] = demosaic_gradient(cfa[:,-2:],pattern)
+    # now correct edge artifacts via linear interpolation
+    rgb[:2,:] = demosaic_gradient(cfa[:6,:],pattern)[:2,:]
+    rgb[-2:,:] = demosaic_gradient(cfa[-6:,:],pattern)[-2:,:]
+    rgb[:,:2] = demosaic_gradient(cfa[:,:6],pattern)[:,:2]
+    rgb[:,-2:] = demosaic_gradient(cfa[:,-6:],pattern)[:,-2:]
     
     return rgb
 
