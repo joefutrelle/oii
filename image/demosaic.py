@@ -19,6 +19,9 @@ def thumb(rgb,scale=0.5,gray=False):
     thumb = resize(thumb,(int(h*scale),int(w*scale)))
     return showim(thumb)
 
+def CONV(i,w):
+    return convolve(i, weights=w, mode='nearest')
+
 def demosaic_bilinear(cfa,pattern='rggb'):
     # pull color channels
     ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
@@ -36,9 +39,9 @@ def demosaic_bilinear(cfa,pattern='rggb'):
               [a, _, a],
               [_, a, _]]
     # convolve with channel-appropriate kernels
-    r = np.where(r > 0, r, convolve(r, weights=sintpl))
-    g = np.where(g > 0, g, convolve(g, weights=dintpl))
-    b = np.where(b > 0, b, convolve(b, weights=sintpl))
+    r = np.where(r > 0, r, CONV(r, sintpl))
+    g = np.where(g > 0, g, CONV(g, dintpl))
+    b = np.where(b > 0, b, CONV(b, sintpl))
     return np.dstack((r,g,b))
 
 def demosaic_gradient(cfa,pattern='rggb'):
@@ -58,14 +61,14 @@ def demosaic_gradient(cfa,pattern='rggb'):
         c = cfa[m::2,n::2] # pull color channel
         # detect edge orientation
         kernel = [[0.5, -1, 0.5]]
-        a = np.abs(convolve(c,weights=kernel))
-        b = np.abs(convolve(c,weights=np.rot90(kernel)))
+        a = np.abs(CONV(c,kernel))
+        b = np.abs(CONV(c,np.rot90(kernel)))
         o = np.zeros_like(cfa)
         o[m::2,n::2] = (a < b)
         # produce two luminance estimates, one for each axis
         kernel = [[0.5, 0, 0.5]]
-        h = convolve(cfa,weights=kernel)
-        v = convolve(cfa,weights=np.rot90(kernel))
+        h = CONV(cfa,kernel)
+        v = CONV(cfa,np.rot90(kernel))
         # weight luminance estimates according to edge orientation
         e = (o * h) + ((1 - o) * v)
         g[m::2,n::2] = e[m::2,n::2]
@@ -86,7 +89,7 @@ def demosaic_gradient(cfa,pattern='rggb'):
         d = np.zeros_like(cfa)
         d[m::2,n::2] = (c - g)[m::2,n::2]
         # estimate C as g + (C - g) * w
-        e = g + convolve(d, weights=w)
+        e = g + CONV(d, w)
         # add back in originally sampled data
         e[m::2,n::2] = cfa[m::2,n::2]
         rb[ch] = e
@@ -115,9 +118,9 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
                    [2, 0, 2],
                    [0, 2, 0]]) / 8.;
 
-    gc = convolve(ch[G],gk)
+    gc = CONV(ch[G],gk)
     for c,(m,n) in rb_offsets:
-        ch[G][m::2,n::2] = convolve(ch[c],weights=ck)[m::2,n::2] + gc[m::2,n::2]
+        ch[G][m::2,n::2] = CONV(ch[c],ck)[m::2,n::2] + gc[m::2,n::2]
 
     # rb at br locations, other color
     rbk = np.array([[   0, 0, -1.5, 0,    0],
@@ -145,11 +148,11 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
         for (m,n) in g_offsets:
             # RB at green pixel
             wc, wg = (cgck,cgk) if m==i else (cgck_90,cgk_90)
-            cc[m::2,n::2] = convolve(ch[c],weights=wc)[m::2,n::2] + convolve(ch[G],weights=wg)[m::2,n::2]
+            cc[m::2,n::2] = CONV(ch[c],wc)[m::2,n::2] + CONV(ch[G],wg)[m::2,n::2]
         # R at B, B at R
         (k,l) = (1-i, 1-j) # other offsets
         d = {R:B,B:R}[c] # other channel
-        cc[k::2,l::2] = convolve(ch[d],weights=rbk)[k::2,l::2] + convolve(ch[c],weights=brk)[k::2,l::2]
+        cc[k::2,l::2] = CONV(ch[d],rbk)[k::2,l::2] + CONV(ch[c],brk)[k::2,l::2]
         ch[c] = cc
     
     rgb = np.dstack(ch[c] for c in 'rgb')
