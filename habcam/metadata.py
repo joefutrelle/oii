@@ -2,6 +2,7 @@ import psycopg2 as psql
 from psycopg2.extras import RealDictCursor
 from oii.psql import xa
 import json
+import re
 
 DEC2FLOAT = psql.extensions.new_type(
     psql.extensions.DECIMAL.values,
@@ -13,9 +14,10 @@ class Metadata(object):
     def __init__(self,config):
         self.psql_connect = config.psql_connect
     def json(self,imagename):
+        imagename = re.sub(r'\.[a-z]+$','',imagename)
         with xa(self.psql_connect) as (c,_):
             db = c.cursor(cursor_factory=RealDictCursor)
-            db.execute('select * from web_service_image_metadata where imagename=%s',(imagename,))
+            db.execute('select * from web_service_image_metadata where imagename like %s',(imagename+'%',))
             return json.dumps(db.fetchone())
 
 import sys

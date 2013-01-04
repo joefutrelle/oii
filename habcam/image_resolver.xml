@@ -71,5 +71,8 @@
 	<match resolver="jpg"/>
       </any>
     </match>
+    <match var="extension" pattern="json">
+      <hit/>
+    </match>
   </resolver>
 </resolvers>

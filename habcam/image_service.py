@@ -16,6 +16,7 @@ from oii.utils import order_keys
 from oii.resolver import parse_stream
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
+from oii.habcam.metadata import Metadata
 import mimetypes
 from PIL import Image
 from werkzeug.contrib.cache import SimpleCache
@@ -31,6 +32,7 @@ CACHE='cache'
 CACHE_TTL='cache_ttl'
 RESOLVER='resolver'
 PORT='port'
+METADATA='psql_connect'
 
 # resolver names
 PID='pid'
@@ -52,6 +54,7 @@ def configure(config=None):
         app.config[PORT] = int(config.port)
     except:
         app.config[PORT] = 5061
+    app.config[METADATA] = Metadata(config)
 
 def major_type(mimetype):
     return re.sub(r'/.*','',mimetype)
@@ -81,7 +84,9 @@ def serve_image(width=None,imagename=None):
         app.logger.debug(s)
     # end debug
     hit = resolver[IMAGE].resolve(pid=imagename)
-    if hit is not None:
+    if hit.extension == 'json':
+        return Response(app.config[METADATA].json(imagename), mimetype='application/json')
+    elif hit is not None:
         pathname = hit.value
         (format, mimetype) = image_types(hit.filename)
         if mimetype == 'image/tiff':
@@ -91,7 +96,7 @@ def serve_image(width=None,imagename=None):
             if width is not None:
                 (w,h) = im.size
                 height = int((width/float(w)) * h)
-                im = im.resize((width,height),Image.BICUBIC)
+                im = im.resize((width,height),Image.ANTIALIAS)
             return image_response(im, format, mimetype)
     else:
         abort(404)
