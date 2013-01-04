@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage.filters import convolve
 
 def CONV(i,w):
-    return convolve(i, weights=w, mode='nearest')
+    return convolve(i, weights=w, mode='constant')
 
 def demosaic_bilinear(cfa,pattern='rggb'):
     # pull color channels
@@ -77,7 +77,7 @@ def demosaic_gradient(cfa,pattern='rggb'):
         rb[ch] = e
     
     return np.dstack((rb['r'], g, rb['b'])).clip(0.,1.)
-
+                  
 def demosaic_hq_linear(cfa,pattern='rggb'):
     # Malvar et al
     # pull color channels
@@ -134,21 +134,31 @@ def demosaic_hq_linear(cfa,pattern='rggb'):
     gc = CONV(ch[G],gk)
     for c,(m,n) in rb_offsets:
         ch[G][m::2,n::2] = CONV(ch[c],ck)[m::2,n::2] + gc[m::2,n::2]
-        
+    
     rgb = np.dstack(ch[c] for c in 'rgb').clip(0.,1.)
-    
-    # now correct edge artifacts via linear interpolation
-    rgb[:2,:] = demosaic_gradient(cfa[:6,:],pattern)[:2,:]
-    rgb[-2:,:] = demosaic_gradient(cfa[-6:,:],pattern)[-2:,:]
-    rgb[:,:2] = demosaic_gradient(cfa[:,:6],pattern)[:,:2]
-    rgb[:,-2:] = demosaic_gradient(cfa[:,-6:],pattern)[:,-2:]
-    
+
     return rgb
 
-def demosaic(cfa,method='hq_linear',pattern='rggb'):
+def enborder(cfa,n=2):
+    (h,w) = cfa.shape
+    e = np.zeros((2*n+h,2*n+w))
+    e[n:-n,n:-n] = cfa
+    # now fill border with repeated image edge
+    e[:n,n:-n] = cfa[:n,:]
+    e[-n:,n:-n] = cfa[-n:,:]
+    e[n:-n,:n] = cfa[:,:n]
+    e[n:-n,-n:] = cfa[:,-n:]
+    return e
+
+def deborder(rgb,n=2):
+    return rgb[n:-n,n:-n,:]
+
+def demosaic(cfa,pattern='rggb',method='hq_linear'):
+    cfa = enborder(cfa)
     if method=='hq_linear':
-        return demosaic_hq_linear(cfa,pattern)
+        rgb = demosaic_hq_linear(cfa,pattern)
     if method=='gradient':
-        return demosaic_gradient(cfa,pattern)
+        rgb = demosaic_gradient(cfa,pattern)
     elif method=='bilinear':
-        return demosaic_bilinear(cfa,pattern)
+        rgb = demosaic_bilinear(cfa,pattern)
+    return deborder(rgb)
