@@ -4,7 +4,7 @@ from skimage.color import gray2rgb, rgb2hsv, hsv2rgb, rgb2gray
 def gray_world(a):
     """Gray-world color balance"""
     (_,_,c) = a.shape
-    means = [np.mean(a[:,:,n] for n in range(c))]
+    means = [np.mean([a[:,:,n] for n in range(c)])]
     gray = np.mean(means)
     return a * (gray / means)
 
