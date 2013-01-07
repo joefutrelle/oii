@@ -84,9 +84,9 @@ def serve_image(width=None,imagename=None):
         app.logger.debug(s)
     # end debug
     hit = resolver[IMAGE].resolve(pid=imagename)
-    if hit.extension == 'json':
-        return Response(app.config[METADATA].json(imagename), mimetype='application/json')
-    elif hit is not None:
+    if hit is not None:
+        if hit.extension == 'json':
+            return Response(app.config[METADATA].json(imagename), mimetype='application/json')
         pathname = hit.value
         (format, mimetype) = image_types(hit.filename)
         if mimetype == 'image/tiff':
