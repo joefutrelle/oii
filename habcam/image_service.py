@@ -74,8 +74,8 @@ def image_response(image,format,mimetype):
     im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
-@app.route('/data/width/<int:width>/<imagename>')
-@app.route('/data/<imagename>')
+@app.route('/width/<int:width>/<imagename>')
+@app.route('/<imagename>')
 def serve_image(width=None,imagename=None):
     resolver = app.config[RESOLVER]
     app.logger.debug(imagename)
@@ -111,6 +111,6 @@ if __name__=='__main__':
     app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0',port=app.config[PORT])
 else:
-    config = get_config(os.environ['HABCAM_CONFIG_FILE'])
+    config = get_config(os.environ['IMAGE_SERVICE_CONFIG_FILE'])
     configure(config)
 
