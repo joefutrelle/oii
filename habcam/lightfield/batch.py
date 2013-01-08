@@ -189,18 +189,30 @@ def correct(bin_lid):
             print >> fout, 'scallop_eic'
             print >> fout, 'correct'
         # now correct
-        #logging.info('correcting %s' % bin_lid)
-        #learn = Process('"%s" "%s"' % (IC_EXEC, param))
-        #for line in learn.run():
+        logging.info('correcting %s' % bin_lid)
+        #correct = Process('"%s" "%s"' % (IC_EXEC, param))
+        #for line in correct.run():
         #    logging.info(line['message'])
         # now demosaic
-        for f in os.listdir(outdir):
-            png = os.path.join(rgbdir,re.sub(r'_[a-zA-Z_.]+$','.png',f))
-            p = os.path.join(outdir,f)
-            cfa = img_as_float(imread(p,plugin='freeimage'))
-            rgb = demosaic(cfa,PATTERN)
-            imsave(png,rgb)
-            logging.info('debayered %s' % png)
+        NUM_PROCS=12
+        imgs = os.listdir(outdir)
+        pids = []
+        for n in range(NUM_PROCS):
+            pid = os.fork()
+            if pid == 0:
+                for f in imgs[n::NUM_PROCS]:
+                    png = os.path.join(rgbdir,re.sub(r'_[a-zA-Z_.]+$','_rgb_illum_%s.png' % LR,f))
+                    p = os.path.join(outdir,f)
+                    cfa = img_as_float(imread(p,plugin='freeimage'))
+                    rgb = demosaic(cfa,PATTERN)
+                    imsave(png,rgb)
+                    logging.info('debayered %s' % png)
+                os._exit(0)
+            else:
+                pids += [pid]
+        for pid in pids:
+            os.waitpid(pid,0)
+            logging.info('joined process %d' % pid)
 
 if __name__=='__main__':
     bin_lid = sys.argv[1]
