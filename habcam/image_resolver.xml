@@ -7,6 +7,12 @@
       <hit/>
     </match>
   </resolver>
+  <resolver name="bin_pid">
+    <match var="pid" pattern="(([A-Z0-9]+\.\d{8}\.\d{3})\d).([a-zA-Z0-9]+)"
+	   groups="bin_lid prefix extension">
+      <hit/>
+    </match>
+  </resolver>
   <resolver name="jpg">
     <var name="root_suffix">
       <value>/mnt/nmfs-2/webdata/HabCam/data/Cruises,Images/Full</value>
@@ -38,6 +44,8 @@
       <value>/mnt/rose5/h/nmfs</value>
     </var>
     <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tif"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tiff"/>
   </resolver>
   <resolver name="png">
     <var name="root">
