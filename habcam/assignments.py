@@ -64,7 +64,7 @@ class HabcamAssignmentStore(AssignmentStore):
                 yield d
     def find_image(self,pid,offset,status,post_status=None):
         with xa(self.config.psql_connect) as (connection,cursor):
-            cursor.execute('select imagename,status from imagelist where assignment_id=%s order by imagename offset %s',(self.lid(pid),offset))
+            cursor.execute('select imagename,status from imagelist where assignment_id=%s order by imagename offset %s for update of imagelist',(self.lid(pid),offset))
             i = offset
             for row in cursor.fetchall():
                 if row[1]==status:
