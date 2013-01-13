@@ -8,6 +8,7 @@ import logging
 import numpy as np
 from skimage import img_as_float
 from skimage.io import imread, imsave
+from skimage.transform import resize
 
 from oii import resolver
 from oii.procutil import Process
@@ -19,15 +20,18 @@ SCRATCH='/scratch3/ic201301'
 PATTERN='rggb' # v4
 IC_EXEC='/home/jfutrelle/honig/ic-build/multi-image-correction/illum_correct_average'
 
+NUM_LEARN=1600
+NUM_PROCS=12
+NUM_THREADS=24
+
 DEFAULT_IC_CONFIG = {
     'delta': 0.1,
     'min_height': 1.0,
     'max_height': 4.0,
-    'num_to_process': -1,
     'img_min': 0.3,
     'img_max': 3.1,
     'smooth': 32,
-    'num_threads': 24
+    'num_threads': NUM_THREADS
 }
 lgfmt = '%(asctime)-15s %(message)s'
 logging.basicConfig(format=lgfmt,stream=sys.stdout,level=logging.DEBUG)
@@ -100,23 +104,45 @@ def split(bin_lid):
     outdirs = [scratch(bin_lid,bin_lid + suffix) for suffix in suffixes]
     for od in outdirs:
         mkdirs(od)
-    (h,w) = (None, None)
-    for imagename in list_images(bin_lid):
-        tiff = None
-        for outdir,suffix,offset in zip(outdirs,suffixes,[0,1]):
+    imagenames = list(list_images(bin_lid))
+    (h,w)=(None,None)
+    tiff = None
+    # read an image to determine h,w
+    for imagename in imagenames:
+        for outdir,suffix in zip(outdirs,suffixes):
             LRout = os.path.join(outdir,remove_extension(imagename) + suffix + '.tif')
-            if h is None or not os.path.exists(LRout):
+            if h is None:
                 if tiff is None:
                     tiff = as_tiff(imagename)
                     cfain = resolvers['image'].resolve(pid=as_tiff(imagename)).value
-                    logging.info('loading %s' % cfain)
-                    cfa = imread(cfain,plugin='freeimage')
-                    (h,w) = cfa.shape
-                if not os.path.exists(LRout):
-                    logging.info('splitting %s -> %s' % (cfain, LRout))
-                    half = w / 2
-                    off = offset * half
-                    imsave(LRout,cfa[:,off:off+half],plugin='freeimage')
+                    (h,w) = imread(cfain,plugin='freeimage').shape
+    # now fork
+    pids = []
+    for n in range(NUM_PROCS):
+        pid = os.fork()
+        if pid == 0:
+            for imagename in imagenames[n::NUM_PROCS]:
+                tiff = None
+                for outdir,suffix,offset in zip(outdirs,suffixes,[0,1]):
+                    LRout = os.path.join(outdir,remove_extension(imagename) + suffix + '.tif')
+                    if not os.path.exists(LRout):
+                        if tiff is None:
+                            tiff = as_tiff(imagename)
+                            cfain = resolvers['image'].resolve(pid=as_tiff(imagename)).value
+                            logging.info('loading %s' % cfain)
+                            cfa = imread(cfain,plugin='freeimage')
+                            (h,w) = cfa.shape
+                    if not os.path.exists(LRout):
+                        logging.info('splitting %s -> %s' % (cfain, LRout))
+                        half = w / 2
+                        off = offset * half
+                        imsave(LRout,cfa[:,off:off+half],plugin='freeimage')
+            os._exit(0)
+        else:
+            pids += [pid]
+    for pid in pids:
+        os.waitpid(pid,0)
+        logging.info('joined splitting process %d' % pid)
     return (h,w),outdirs
 
 def learn(bin_lid):
@@ -126,33 +152,47 @@ def learn(bin_lid):
     tenmin = get_tenmin(bin_lid)
     # split TIFFs into L and R
     ((h,w),LR_dirs) = split(bin_lid)
+    pids = []
     for LR,LR_dir in zip('LR',LR_dirs):
-        # fetch eic
-        eic = fetch_eic(bin_lid,suffix='_cfa_%s' % LR)
-        # construct param file
-        lightmap_dir = mkdirs(scratch(bin_lid,bin_lid + '_lightmap_' + LR))
-        lightmap = os.path.join(lightmap_dir,bin_lid+'_lightmap_' + LR)
-        learn_tmp =  mkdirs(scratch(bin_lid,bin_lid + '_lightmap_tmp_' + LR))
-        param = os.path.join(tmp,bin_lid + '_learn.txt')
-        # produce param file
-        logging.info('writing param file %s' % param)
-        with open(param,'w') as fout:
-            print >> fout, 'imagedir %s' % LR_dir
-            print >> fout, 'metafile %s' % re.sub(r'/([^/]+)$',r'/ \1',eic)
-            print >> fout, 'tmpdir %s' % learn_tmp
-            print >> fout, 'save %s' % lightmap 
-            for k,v in DEFAULT_IC_CONFIG.items():
-                print >> fout, '%s %s' % (k,str(v))
-            print >> fout, 'binary_format'
-            print >> fout, 'num_rows %d' % h
-            print >> fout, 'num_cols %d' % (w/2)
-            print >> fout, PATTERN
-            print >> fout, 'scallop_eic'
-            print >> fout, 'learn'
-        # now learn
-        learn = Process('"%s" "%s"' % (IC_EXEC, param))
-        for line in learn.run():
-            logging.info(line['message'])
+        pid = os.fork()
+        if pid == 0: # subprocess
+            # fetch eic
+            eic = fetch_eic(bin_lid,suffix='_cfa_%s' % LR)
+            # construct param file
+            lightmap_dir = mkdirs(scratch(bin_lid,bin_lid + '_lightmap_' + LR))
+            lightmap = os.path.join(lightmap_dir,bin_lid+'_lightmap_' + LR)
+            if os.path.exists(lightmap):
+                logging.info('lightmap exists: %s' % lightmap)
+            else: # lightmap doesn't exist
+                learn_tmp =  mkdirs(scratch(bin_lid,bin_lid + '_lightmap_tmp_' + LR))
+                param = os.path.join(tmp,bin_lid + '_learn.txt')
+                # produce param file
+                logging.info('writing param file %s' % param)
+                with open(param,'w') as fout:
+                    print >> fout, 'imagedir %s' % LR_dir
+                    print >> fout, 'metafile %s' % re.sub(r'/([^/]+)$',r'/ \1',eic)
+                    print >> fout, 'tmpdir %s' % learn_tmp
+                    print >> fout, 'save %s' % lightmap 
+                    for k,v in DEFAULT_IC_CONFIG.items():
+                        print >> fout, '%s %s' % (k,str(v))
+                    print >> fout, 'binary_format'
+                    print >> fout, 'num_to_process %d' % NUM_LEARN
+                    print >> fout, 'num_rows %d' % h
+                    print >> fout, 'num_cols %d' % (w/2)
+                    print >> fout, PATTERN
+                    print >> fout, 'scallop_eic'
+                    print >> fout, 'learn'
+                # now learn
+                learn = Process('"%s" "%s"' % (IC_EXEC, param))
+                for line in learn.run():
+                    logging.info(line['message'])
+            os._exit(0)
+        else:
+            pids += [pid]
+    # done
+    for pid in pids:
+        os.waitpid(pid,0)
+        logging.info('joined learn process %s' % pid)
 
 def correct(bin_lid):
     # provision temp space
@@ -180,6 +220,7 @@ def correct(bin_lid):
             print >> fout, 'metafile %s' % re.sub(r'/([^/]+)$',r'/ \1',eic)
             print >> fout, 'tmpdir %s' % learn_tmp
             print >> fout, 'load %s' % lightmap 
+            print >> fout, 'num_to_process -1'
             for k,v in DEFAULT_IC_CONFIG.items():
                 print >> fout, '%s %s' % (k,str(v))
             print >> fout, 'binary_format'
@@ -190,11 +231,10 @@ def correct(bin_lid):
             print >> fout, 'correct'
         # now correct
         logging.info('correcting %s' % bin_lid)
-        #correct = Process('"%s" "%s"' % (IC_EXEC, param))
-        #for line in correct.run():
-        #    logging.info(line['message'])
+        correct = Process('"%s" "%s"' % (IC_EXEC, param))
+        for line in correct.run():
+            logging.info(line['message'])
         # now demosaic
-        NUM_PROCS=12
         imgs = os.listdir(outdir)
         pids = []
         for n in range(NUM_PROCS):
@@ -207,15 +247,20 @@ def correct(bin_lid):
                     rgb = demosaic(cfa,PATTERN)
                     imsave(png,rgb)
                     logging.info('debayered %s' % png)
+                    (h,w,_) = rgb.shape
+                    aspect = 1. * w / h
+                    thumb = os.path.join(rgbdir,re.sub(r'_[a-zA-Z_.]+$','_rgb_illum_%s_thumb.jpg' % LR,f))
+                    imsave(thumb,resize(rgb,(480,int(480*aspect))))
+                    logging.info('saved thumbnail %s' % thumb)
                 os._exit(0)
             else:
                 pids += [pid]
         for pid in pids:
             os.waitpid(pid,0)
-            logging.info('joined process %d' % pid)
+            logging.info('joined debayering process %d' % pid)
 
 if __name__=='__main__':
     bin_lid = sys.argv[1]
-    #learn(bin_lid)
+    learn(bin_lid)
     correct(bin_lid)
     
