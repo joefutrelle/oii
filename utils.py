@@ -39,6 +39,14 @@ def order_keys(d,s):
 def decamel(s):
     return string.capwords(re.sub(r'([a-z])([A-Z]+)',r'\1 \2',s))
 
+def remove_extension(p):
+    """remove extension part of filename"""
+    return re.sub(r'\.[a-zA-Z]+$','',p)
+
+def change_extension(p,ext):
+    """modify extension part of filename"""
+    return remove_extension(p) + '.%s' % ext
+
 def sha1_string(data):
     """Compute the SHA-1 hash of a string"""
     m = hashlib.sha1()
