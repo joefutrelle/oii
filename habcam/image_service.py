@@ -5,6 +5,10 @@ import sys
 import os
 import tempfile
 from io import BytesIO
+from skimage import img_as_float
+from skimage.io import imread
+from skimage.color import rgb2gray
+from skimage.transform import resize
 import shutil
 from StringIO import StringIO
 from oii.config import get_config
@@ -12,11 +16,13 @@ from oii.times import iso8601
 from oii.webapi.utils import jsonr
 from oii.image.pil.utils import filename2format, thumbnail
 import urllib
-from oii.utils import order_keys
+from oii.utils import order_keys, change_extension, remove_extension
 from oii.resolver import parse_stream
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.habcam.metadata import Metadata
+from oii.image.demosaic import demosaic
+from oii.habcam.lightfield import quick
 import mimetypes
 from PIL import Image
 from werkzeug.contrib.cache import SimpleCache
@@ -37,6 +43,7 @@ METADATA='psql_connect'
 # resolver names
 PID='pid'
 IMAGE='image'
+BIN='bin_pid'
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -71,35 +78,70 @@ def image_types(filename):
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
     buf = StringIO()
-    im = image.save(buf,format)
+    if format == 'JPEG':
+        im = image.save(buf,format,quality=85)
+    else:
+        im = image.save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
+
+# product workflow
+def cfa_LR(fin):
+    return img_as_float(imread(fin,plugin='freeimage'))
+def rgb_LR(fin,pattern='rggb'):
+    return demosaic(cfa_LR(fin),pattern)
+def rgb_L(fin,**kw):
+    lr = rgb_LR(fin,**kw)
+    (_,w,_) = lr.shape
+    return lr[:,:w/2,:]
+def rgb_R(fin,**kw):
+    lr = rgb_LR(fin,**kw)
+    (_,w,_) = lr.shape
+    return lr[:,w/2:,:]
+def y_LR(fin,**kw):
+    return rgb2gray(rgb_LR(fin,**kw))
+def redcyan(fin,**kw):
+    return quick.redcyan(y_LR(fin,**kw))
+def flat_L(fin,**kw):
+    return quick.lightfield(rgb_L(fin,**kw))
+def flat_R(fin,**kw):
+    return quick.lightfield(rgb_R(fin,**kw))
 
 @app.route('/width/<int:width>/<imagename>')
 @app.route('/<imagename>')
 def serve_image(width=None,imagename=None):
     resolver = app.config[RESOLVER]
-    app.logger.debug(imagename)
-    # FIXME debug
-    for s in resolver[IMAGE].resolve_all(pid=imagename):
-        app.logger.debug(s)
-    # end debug
-    hit = resolver[IMAGE].resolve(pid=imagename)
+    (hit,out) = (resolver[IMAGE].resolve(pid=imagename), None)
     if hit is not None:
         if hit.extension == 'json':
             return Response(app.config[METADATA].json(imagename), mimetype='application/json')
-        pathname = hit.value
+        fin = hit.value
         (format, mimetype) = image_types(hit.filename)
         if mimetype == 'image/tiff':
-            return Response(file(pathname), direct_passthrough=True, mimetype=mimetype)
-        else:
-            im = Image.open(pathname)
-            if width is not None:
-                (w,h) = im.size
-                height = int((width/float(w)) * h)
-                im = im.resize((width,height),Image.ANTIALIAS)
-            return image_response(im, format, mimetype)
-    else:
-        abort(404)
+            return Response(file(fin), direct_passthrough=True, mimetype=mimetype)
+        if hit.product is None:
+            out = img_as_float(imread(fin))
+    if out is None:
+        hit = resolver[BIN].resolve(pid=imagename)
+        if hit is not None and hit.extension == 'json':
+            return Response(app.config[METADATA].json_bin(hit.bin_lid), mimetype='application/json')
+        hit = resolver[PID].resolve(pid=imagename)
+        (format, mimetype) = image_types(hit.filename)
+        if hit is None:
+            abort(404)
+        fin = resolver[IMAGE].resolve(pid=change_extension(hit.imagename,'tif')).value
+        if hit.product == 'redcyan':
+            out = redcyan(fin,pattern='rggb')
+        if hit.product == 'flat':
+            out = flat_L(fin,pattern='rggb')
+    if out is not None:
+        if width is not None:
+            (h,w) = (out.shape[0], out.shape[1])
+            height = int(1. * width / w * h) #int((width/float(w)) * h)
+            out = resize(out,(height,width))
+        img = Image.fromarray((out * 255).astype('uint8'))
+        return image_response(img, format, mimetype)
+    # nothing worked
+    abort(404)
 
 # utilities
 if __name__=='__main__':
