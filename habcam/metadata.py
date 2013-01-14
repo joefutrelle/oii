@@ -25,7 +25,7 @@ class Metadata(object):
         print pattern
         with xa(self.psql_connect) as (c,_):
             db = c.cursor(cursor_factory=RealDictCursor)
-            db.execute('select * from web_service_image_metadata where imagename like %s',(bin_lid+'%',))
+            db.execute('select * from web_service_image_metadata where imagename like %s',(pattern,))
             return db.fetchall()
     def json(self,imagename):
         return json.dumps(self.image(imagename))
