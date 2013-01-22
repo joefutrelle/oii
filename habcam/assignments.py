@@ -69,7 +69,7 @@ class HabcamAssignmentStore(AssignmentStore):
             for row in cursor.fetchall():
                 if row[1]==status:
                     if post_status is not None:
-                        cursor.execute('update imagelist set status=%s where imagename=%s',(post_status,row[0]))
+                        cursor.execute('update imagelist set status=%s where assignment_id=%s and imagename=%s',(post_status,self.lid(pid),row[0]))
                         connection.commit()
                     return i+1
                 i += 1
