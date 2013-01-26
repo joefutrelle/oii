@@ -10,8 +10,11 @@ from skimage import color
 from oii.image.demosaic import demosaic as debayer
 from oii.habcam.lightfield import quick
 
-# FIXME not sure how to configure this wrt decorators below
+class CONFIG:
+    CELERY_AMQP_TASK_RESULT_EXPIRES=30
+#memcached://127.0.0.1:11211/')
 celery = Celery('oii.habcam.workflow', broker='amqp://guest@localhost//', backend='amqp')
+celery.config_from_object(CONFIG)
 
 @celery.task
 def imread(fn):
@@ -72,3 +75,15 @@ def redcyan(cfa_LR,fout,pattern='rggb',gamma=1.2,brightness=1.2):
     cyan_R = split_R.s() | yx
     y_LR = imread.s(cfa_LR) | demosaic.s(pattern) | rgb2gray.s()
     return y_LR | group(red_L, cyan_R, align.s()) | merge.s() | imsave.s(fout)
+
+@celery.task
+def quick_redcyan(cfa_LR,fout,pattern='rggb',gamma=1.2,brightness=1.2):
+    y_LR = rgb2gray(demosaic(imread(cfa_LR),pattern))
+    def yx(img):
+        return multiply(power(img,gamma),brightness)
+    red_L = yx(split_L(y_LR))
+    cyan_R = yx(split_R(y_LR))
+    (dy, dx) = align(y_LR)
+    imsave(merge((red_L, cyan_R, (dy, dx))), fout)
+    return fout
+
