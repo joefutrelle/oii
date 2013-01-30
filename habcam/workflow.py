@@ -33,6 +33,9 @@ def demosaic(img,pattern):
     img = debayer(img,pattern)
     return img
 
+def cfa2y(cfa,pattern='rggb'):
+    return color.rgb2gray(demosaic(imread(cfa),pattern))
+
 @tasks.task
 def imsave(img,fn):
     io.imsave(fn,img)
@@ -49,18 +52,12 @@ def split_R(y_LR):
     return y_LR[:,w/2:]
 
 @tasks.task
-def rgb2gray(rgb):
-    return color.rgb2gray(rgb)
-
-@tasks.task
 def align(y_LR,size=64,n=6):
     return quick.align(y_LR,size,n)
 
-@tasks.task
 def power(img,gamma=1.0):
     return np.power(img,gamma)
 
-@tasks.task
 def multiply(img,brightness=1.0):
     return (img * brightness).clip(0.,1.)
 
@@ -73,17 +70,9 @@ def merge((red_L,cyan_R,(dy,dx))):
     out[dy:,dx:,2] = cyan_R[:-dy,:-dx]
     return out[dy:,dx:,:]
 
-def redcyan(cfa_LR,fout,pattern='rggb',gamma=1.2,brightness=1.2):
-    """Return a workflow that can be executed via the celery API"""
-    yx = power.s(gamma) | multiply.s(brightness)
-    red_L = split_L.s() | yx
-    cyan_R = split_R.s() | yx
-    y_LR = imread.s(cfa_LR) | demosaic.s(pattern) | rgb2gray.s()
-    return y_LR | group(red_L, cyan_R, align.s()) | merge.s() | imsave.s(fout)
-
 @tasks.task
 def quick_redcyan(cfa_LR,fout,pattern='rggb',gamma=1.2,brightness=1.2):
-    y_LR = rgb2gray(demosaic(imread(cfa_LR),pattern))
+    y_LR = cfa2y(cfa_LR, pattern)
     def yx(img):
         return multiply(power(img,gamma),brightness)
     red_L = yx(split_L(y_LR))
@@ -93,11 +82,24 @@ def quick_redcyan(cfa_LR,fout,pattern='rggb',gamma=1.2,brightness=1.2):
     return fout
 
 @tasks.task
-def stage_cfa_LR(cfa_LR, tmp_dir):
-    staged = relocate(cfa_LR, tmp_dir)
-    if not os.path.exists(staged):
-        logging.info('staging %s' % cfa_LR)
-        shutil.copy(cfa_LR, staged)
-    return staged
+def align_raw(cfa_LR,pattern='rggb',size=64,n=6):
+    """compute pixel offset from correspondence.
+    params:
+    - pattern = bayer pattern
+    - size = size of region to match
+    - n = number of regions to sample"""
+    y_LR = cfa2y(cfa_LR, pattern)
+    (dy, dx) = align(y_LR, size=size, n=n)
+    return (dy, dx)
 
+#@tasks.task
+#def stage_cfa_LR(cfa_LR, tmp_dir):
+#    staged = relocate(cfa_LR, tmp_dir)
+#    if not os.path.exists(staged):
+#        logging.info('staging %s' % cfa_LR)
+#        shutil.copy(cfa_LR, staged)
+#    return staged
 
+@tasks.task
+def dummy(offset):
+    print 'got %s' % str(offset)
