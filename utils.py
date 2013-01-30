@@ -292,10 +292,10 @@ def asciitable(dicts):
             if width > widths[col]:
                 widths[col] = width
     # now print rows
-    print ' | '.join([rpad(col,widths[col]) for col in cols])
-    print '-+-'.join(['-' * widths[col] for col in cols])
+    yield ' | '.join([rpad(col,widths[col]) for col in cols])
+    yield '-+-'.join(['-' * widths[col] for col in cols])
     for row in dicts:
-        print ' | '.join([rpad(str(row[col]),widths[col]) for col in cols])
+        yield ' | '.join([rpad(str(row[col]),widths[col]) for col in cols])
     
 ### tests
 
