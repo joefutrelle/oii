@@ -25,12 +25,12 @@ def debug(message):
     if debug:
         print message
 
-def declare_work_queue(qname,host='localhost'):
+def declare_work_queue(qname,host='localhost',durable=True):
     """Declare a "work queue"
     A work queue is a durable queue with a prefetch_count of 1"""
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
     channel = connection.channel()
-    channel.queue_declare(queue=qname, durable=True)
+    channel.queue_declare(queue=qname, durable=durable)
     channel.basic_qos(prefetch_count=1)
     return channel, connection
 
