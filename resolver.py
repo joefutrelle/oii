@@ -19,6 +19,7 @@ Any = namedtuple('Any', ['expressions'])
 All = namedtuple('All', ['expressions', 'hit'])
 Hit  = namedtuple('Hit', ['value', 'stop'])
 Import = namedtuple('Import', ['name'])
+First = namedtuple('First', ['expressions'])
 Log = namedtuple('Log', ['message'])
 
 # implicit terminal Hit on Match with subexpressions
@@ -68,6 +69,8 @@ def sub_parse(node):
                 yield All(expressions=list(sub_parse(child)), hit=hit)
             else:
                 yield All(expressions=list(sub_parse(child)), hit=None)
+        elif child.tag == 'first':
+            yield First(expressions=list(sub_parse(child)))
         elif child.tag == 'import':
             yield Import(name=child.get('name'))
         elif child.tag == 'hit':
@@ -290,6 +293,16 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
             # and do the rest of this resolver
             for subs in resolve(resolver[1:],local_bindings,cwd,namespace):
                 yield subs
+    elif isinstance(expr,First):
+        # first only yields the first hit of its subexpressions
+        for solution in resolve(expr.expressions,bindings,cwd,namespace):
+            # for the solution, use its bindings
+            local_bindings = solution.bindings.copy()
+            # and do the rest of this resolver
+            for subs in resolve(resolver[1:],local_bindings,cwd,namespace):
+                yield subs
+            # but that's it, don't use any successive solutions
+            return
     elif isinstance(expr,Path):
         # "path" is where the filesystem is searched for a matching file.
         # there are two variants of this expression. one looks for a file
