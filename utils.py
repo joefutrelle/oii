@@ -91,6 +91,12 @@ def md5_file(pathname):
     with open(pathname,'rb') as fl:
         return md5_filelike(fl)
 
+def relocate(path,new_dir,new_extension=None):
+    new_basename = os.path.basename(path)
+    if new_extension is not None:
+        new_basename = change_extension(os.path.basename(path),new_extension)
+    return os.path.join(new_dir, new_basename)
+
 # recursively map a function onto an item. if the item is a sequence,
 # descend into each item; if it's a dict, descend into each value.
 def mapr(function,item):
