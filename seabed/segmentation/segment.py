@@ -3,7 +3,8 @@ import Image
 import operator
 import glob
 import re
-import numpy as N
+import numpy as np
+
 from scipy.ndimage.filters import generic_filter, uniform_filter, minimum_filter, maximum_filter
 from scipy.ndimage import morphology
 
@@ -11,29 +12,29 @@ def disk_strel(radius): # For morphological operations.
   # Dimensions of (square) structuring element
   sz = 2*radius + 1
   # Return mask of points whose centers are no further away than 'radius'
-  x,y = N.mgrid[:sz,:sz]
-  return N.sqrt((x-radius)**2 + (y-radius)**2) <= radius
+  x,y = np.mgrid[:sz,:sz]
+  return np.sqrt((x-radius)**2 + (y-radius)**2) <= radius
 
 def rgb2ybr(rgb):
   """Convert uint8 (N x M x RGB) to uint8 (N x M x YCbCr) array.
   From wikipedia (sadly)."""
   # The 0.5 I'm adding is to allow floor() via cast, instead of rounding (fast)
-  y  = (N.dot(rgb, [0.25678824,   0.50412941,  0.09790588]) + 16.5).clip(0,255)
-  cb = (N.dot(rgb, [-0.14822353, -0.29099216,  0.43921569]) + 128.5).clip(0,255)
-  cr = (N.dot(rgb, [ 0.43921569, -0.36778824, -0.07142745]) + 128.5).clip(0,255)
-  return N.uint8(N.dstack((y,cb,cr)))
+  y  = (np.dot(rgb, [0.25678824,   0.50412941,  0.09790588]) + 16.5).clip(0,255)
+  cb = (np.dot(rgb, [-0.14822353, -0.29099216,  0.43921569]) + 128.5).clip(0,255)
+  cr = (np.dot(rgb, [ 0.43921569, -0.36778824, -0.07142745]) + 128.5).clip(0,255)
+  return np.uint8(np.dstack((y,cb,cr)))
 
 def ybr2rgb(ybr):
   """Convert uint8 (N x M x YCbCr) to uint8 (N x M x RGB) array.
   From wikipedia (sadly)."""
-  # Note that the offsets are 0.5 off from the recommended to allow rounding.
-  r = (N.dot(ybr, [ 1.16438281,   0.,          1.59602734]) - 222.421).clip(0,255)
-  g = (N.dot(ybr, [ 1.16438281,  -0.39176172, -0.81296875]) + 136.076).clip(0,255)
-  b = (N.dot(ybr, [ 1.16438281,   2.01723438,  0.        ]) - 276.336).clip(0,255)
-  return N.uint8(N.dstack((r,g,b)))
+  # npote that the offsets are 0.5 off from the recommended to allow rounding.
+  r = (np.dot(ybr, [ 1.16438281,   0.,          1.59602734]) - 222.421).clip(0,255)
+  g = (np.dot(ybr, [ 1.16438281,  -0.39176172, -0.81296875]) + 136.076).clip(0,255)
+  b = (np.dot(ybr, [ 1.16438281,   2.01723438,  0.        ]) - 276.336).clip(0,255)
+  return np.uint8(np.dstack((r,g,b)))
 
 def varfilt(a, size):
-  a = N.float32(a)
+  a = np.float32(a)
   sum = uniform_filter(a, (size, size, 1))
   mean = sum
   expdev = (a - mean)**2
@@ -58,7 +59,7 @@ def fill_shadows(classmap, is_shadow):
     choices = classmap[mny:mxy, mnx:mxx].flatten()
     choices = choices[choices != 0]
     if len(choices) == 0: continue
-    selected = choices[N.random.randint(len(choices))]
+    selected = choices[np.random.randint(len(choices))]
     classmap[yi, xi] = selected
   is_shadow[classmap != old_classmap] = False
   return is_shadow
@@ -77,7 +78,7 @@ def segment(rgbimage):
   
   is_shadow = (mean[:,:,0] < 30) & (local_variance[:,:,0] < 15) & ~is_coral & ~is_sand
   is_rubble = ~(is_coral | is_shadow | is_sand) & (local_variance[:,:,0] > 20)
-  classmap = N.uint8(is_rubble*1 + is_sand*2 + is_coral*3)
+  classmap = np.uint8(is_rubble*1 + is_sand*2 + is_coral*3)
   # Now fill shadow areas with somethin' else.
   #to_fill = classmap == 0
   #while to_fill.any():
@@ -88,7 +89,7 @@ if __name__=='__main__':
   #for imgfile in sorted(glob.glob("/media/spanky/thesis-revision/datasets/B-504/*.png")):
   for imgfile in sorted(glob.glob('coral_imagery/TIFF/*.tif')):
     print "Segmenting", imgfile.rpartition("/")[2]
-    img = N.asarray(Image.open(imgfile))
+    img = np.asarray(Image.open(imgfile))
     mask = segment(img)
     imgfile = re.sub(r'.*/','output/',imgfile)
     imgfile = imgfile.replace(".tif","-mask.png")
@@ -96,5 +97,5 @@ if __name__=='__main__':
     imgfile = imgfile.replace("png","gif")
     Image.fromarray(mask).save(imgfile)
     imgfile = imgfile.replace("gif","npy")
-    N.save(imgfile, mask)
+    np.save(imgfile, mask)
   
