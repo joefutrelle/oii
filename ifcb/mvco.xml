@@ -117,14 +117,19 @@
 	<!-- find the adc file -->
 	<match var="adc_file" groups="pid">.*(IFCB.*)\..*</match>
 	<!-- now resolve all three files separately as they may not be co-located -->
-	<var name="format">
-	  <value>adc</value>
-	  <value>roi</value>
-	  <value>hdr</value>
-	</var>
-	<!-- resolve using pid and format -->
-	<import name="binpid2path"/>
-	<hit>${day_dir}/${filename}</hit>
+	<first>
+	  <var name="format">roi</var>
+	  <import name="binpid2path"/>
+	  <var name="roi_path">${day_dir}/${filename}</var>
+	  <var name="format">hdr</var>
+	  <import name="binpid2path"/>
+	  <var name="hdr_path">${day_dir}/${filename}</var>
+	  <var name="format">adc</var>
+	  <import name="binpid2path"/>
+	  <var name="adc_path">${day_dir}/${filename}</var>
+	  <hit/>
+	</first>
+	<hit/>
       </path>
     </path>
   </resolver>
