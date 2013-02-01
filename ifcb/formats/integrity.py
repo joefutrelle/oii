@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 from glob import glob
 import logging
 
@@ -18,13 +19,23 @@ def check_hdr(hdr_source):
         raise IntegrityException('.hdr failed: ' + str(e)), None, sys.exc_info()[2]
 
 def check_adc(adc_source, schema_version=SCHEMA_VERSION_2):
-    try:
+    def gen_targets():
         (prev_bottom, prev_left, prev_trigger) = (None, None, None)
+        (pairs, colocated_pairs) = (0, 0)
         for target in read_adc(adc_source, schema_version=schema_version):
             (bottom, left, trigger) = (target[BOTTOM], target[LEFT], target[TRIGGER])
+            if trigger == prev_trigger:
+                pairs += 1
             if (bottom, left, trigger) == (prev_bottom, prev_left, prev_trigger):
-                logging.warn('.adc stitched pair co-located')
+                colocated_pairs += 1
             (prev_bottom, prev_left, prev_trigger) = (bottom, left, trigger)
+            yield target
+        if pairs > 0 and pairs == colocated_pairs:
+            raise IntegrityException('.adc stitching problem')
+    try:
+        # call list(gen_targets()) so that it can raise an exception
+        # before any target is yielded
+        for target in list(gen_targets()):
             yield target
     except Exception, e:
         raise IntegrityException('.adc failed: ' + str(e)), None, sys.exc_info()[2]
@@ -52,22 +63,31 @@ def check_roi(roi_source, targets):
             target_data = read_n(fin, target_size)
             pos += target_size
 
-def check_all(hdr_source, adc_source, roi_source, schema_version=SCHEMA_VERSION_2):
+def check_all(lid, hdr_source, adc_source, roi_source, schema_version=SCHEMA_VERSION_2):
     check_hdr(hdr_source)
-    logging.info('hdr check PASSED')
+    logging.info('%s PASS hdr' % lid)
     targets = list(check_adc(adc_source, schema_version=schema_version))
-    logging.info('adc check PASSED')
+    logging.info('%s PASS adc' % lid)
     check_roi(roi_source, targets)
-    logging.info('roi check PASSED')
+    logging.info('%s PASS roi' % lid)
 
 def doit():
     for hdr_file in sorted(glob('/data/vol3/IFCB1_2008_*/*.hdr')):
         lid = remove_extension(os.path.basename(hdr_file))
-        logging.info('checking %s' % lid)
         hdr_source = LocalFileSource(hdr_file)
-        adc_source = LocalFileSource(change_extension(hdr_file, 'adc'))
+        adc_file = change_extension(hdr_file, 'adc')
+        mod_file = re.sub('vol3','vol3/adcmod',adc_file) + '.mod'
+        adc_source = LocalFileSource(adc_file)
         roi_source = LocalFileSource(change_extension(hdr_file, 'roi'))
-        check_all(hdr_source, adc_source, roi_source, schema_version=SCHEMA_VERSION_1)
+        try:
+            check_all(lid, hdr_source, adc_source, roi_source, schema_version=SCHEMA_VERSION_1)
+            log.info('%s PASS ALL' % lid)
+            if os.path.exists(mod_file):
+                logging.info('EXTRA %s' % mod_file)
+        except IntegrityException, e:
+            logging.info('%s FAIL %s' % (lid, e))
+            if not os.path.exists(mod_file):
+                logging.info('MISSING %s' % mod_file)
 
 if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
