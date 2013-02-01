@@ -27,7 +27,7 @@
     </var>
     <match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
       <path var="cruise_dir" match="${root}/*">
-	<match var="cruise_dir">.*/[A-Z]{2}_\d+</match>
+	<match var="cruise_dir">.*/[A-Za-z]{2}_\d+</match>
 	<path match="${cruise_dir}/${suffix}/${img_dir}/${imagename}.jpg"/>
       </path>
     </match>
