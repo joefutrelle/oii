@@ -15,7 +15,7 @@ from oii.times import iso8601, rfc822
 import urllib
 from oii.utils import order_keys, jsons
 from oii.ifcb.formats.adc import read_adc, read_target, ADC
-from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_1
+from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_2
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
@@ -506,7 +506,7 @@ def resolve(pid):
 # FIXME control flow in above is convoluted
 
 @memoized
-def read_targets(adc_path, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
+def read_targets(adc_path, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_2):
     return list(read_adc(LocalFileSource(adc_path), target_no, limit, schema_version=schema_version))
 
 def add_bin_pid(targets, bin_pid):
@@ -533,22 +533,23 @@ def csv_quote(thing):
     else:
         return '"' + thing + '"'
 
-def bin2csv(hit,targets):
-    # get the ADC keys for this version of the ADC format
-    schema_keys = [k for k,_ in ADC_SCHEMA[hit.schema_version]]
-    def csv_iter():
-        first = True
-        for target in targets:
-            # now order all keys even the ones not in the schema
-            keys = order_keys(target, schema_keys)
-            # fetch all the data for this row as strings
-            row = [str(target[k]) for k in keys]
-            if first: # if this is the first row, emit the keys
-                yield ','.join(keys)
-                first = False
-            # now emit the row
-            yield ','.join(map(csv_quote,row))
-    return render_template('bin.csv',rows=csv_iter())
+def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
+    schema_keys = [k for k,_ in ADC_SCHEMA[schema_version]]
+    first = True
+    for target in targets:
+        # now order all keys even the ones not in the schema
+        keys = order_keys(target, schema_keys)
+        # fetch all the data for this row as strings
+        row = [str(target[k]) for k in keys]
+        if first: # if this is the first row, emit the keys
+            yield ','.join(keys)
+            first = False
+        # now emit the row
+        yield ','.join(map(csv_quote,row))
+
+def bin2csv_response(hit,targets):
+    csv_out = render_template('bin.csv',rows=bin2csv(targets, hit.schema_version))
+    return Response(csv_out, mimetype='text/plain', headers=max_age())
 
 def serve_bin(hit,mimetype):
     """Serve a sample bin in some format"""
@@ -579,7 +580,7 @@ def serve_bin(hit,mimetype):
     elif minor_type(mimetype) == 'rdf+xml':
         return template_response('bin.rdf', mimetype='text/xml', **template)
     elif minor_type(mimetype) == 'csv':
-        return Response(bin2csv(hit,targets), mimetype='text/plain', headers=max_age())
+        return bin2csv_response(hit, targets)
     elif mimetype == 'text/html':
         return template_response('bin.html', **template)
     elif mimetype == 'application/json':
@@ -605,7 +606,8 @@ def bin_zip(hit,targets,template):
     (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
     with tempfile.SpooledTemporaryFile() as temp:
         z = ZipFile(temp,'w',ZIP_DEFLATED)
-        z.writestr(hit.bin_lid + '.csv', bin2csv(hit,targets))
+        csv_out = render_template('bin.csv',rows=bin2csv(targets, hit.schema_version))
+        z.writestr(hit.bin_lid + '.csv', csv_out)
         # xml as well, including header info
         z.writestr(hit.bin_lid + '.xml', bin2xml(template))
         for target in targets:
