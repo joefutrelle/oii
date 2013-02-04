@@ -3,7 +3,7 @@ from numpy import convolve, median
 from scipy import interpolate
 from math import sqrt
 from PIL import Image, ImageChops, ImageDraw
-from oii.ifcb.formats.adc import TRIGGER, LEFT, BOTTOM, WIDTH, HEIGHT
+from oii.ifcb.formats.adc import TRIGGER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
 
 def overlaps(t1, t2):
     if t1[TRIGGER] == t2[TRIGGER]:
@@ -223,3 +223,19 @@ def stitch(targets,images):
     s.paste(noise,None,gaps_mask)
     return (s,rois_mask)
 
+def list_stitched_targets(targets):
+    """Adjust a list of targets for stitching"""
+    # in the stitching case we need to compute "stitched" flags based on pairs
+    # correct image metrics
+    Bs = []
+    for a,b in find_pairs(targets):
+        (a[LEFT], a[BOTTOM], a[WIDTH], a[HEIGHT]) = stitched_box([a,b])
+        a[STITCHED] = 1
+        b[STITCHED] = 0
+        Bs.append(b)
+    # exclude the second of each pair from the list of targets
+    targets = filter(lambda target: target not in Bs, targets)
+    for target in targets:
+        if not STITCHED in target:
+            target[STITCHED] = 0
+    return targets

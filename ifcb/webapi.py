@@ -21,7 +21,7 @@ from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
 from oii.ifcb import stitching
-from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw
+from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
@@ -509,6 +509,13 @@ def resolve(pid):
 def read_targets(adc_path, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
     return list(read_adc(LocalFileSource(adc_path), target_no, limit, schema_version=schema_version))
 
+def add_bin_pid(targets, bin_pid):
+    for target in targets:
+        # add a binID and pid what are the right keys for these?
+        target['binID'] = '%s' % bin_pid
+        target['pid'] = '%s_%05d' % (bin_pid, target[TARGET_NUMBER])
+    return targets
+
 def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None):
     if stitch_targets is None:
         stitch_targets = app.config[STITCH]
@@ -516,22 +523,8 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
         adc_path = resolve_adc(hit.bin_pid)
     targets = read_targets(adc_path, target_no, limit, hit.schema_version)
     if stitch_targets:
-        # in the stitching case we need to compute "stitched" flags based on pairs
-        # correct image metrics
-        Bs = []
-        for a,b in find_pairs(targets):
-            (a[LEFT], a[BOTTOM], a[WIDTH], a[HEIGHT]) = stitched_box([a,b])
-            a[STITCHED] = 1
-            b[STITCHED] = 0
-            Bs.append(b)
-        # exclude the second of each pair from the list of targets
-        targets = filter(lambda target: target not in Bs, targets)
-    for target in targets:
-        if not STITCHED in target:
-            target[STITCHED] = 0
-        # add a binID and pid what are the right keys for these?
-        target['binID'] = '%s' % hit.bin_pid
-        target['pid'] = '%s_%05d' % (hit.bin_pid, target[TARGET_NUMBER])
+        targets = list_stitched_targets(targets)
+    targets = add_bin_pid(targets, hit.bin_pid)
     return targets
 
 def csv_quote(thing):
