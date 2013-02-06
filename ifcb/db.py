@@ -16,6 +16,20 @@ class Psql(object):
         self.psql_connect = psql_connect
 
 class IfcbFeed(Psql):
+    def exists(self,lid):
+        """Determines whether or not a bin exists"""
+        with xa(self.psql_connect) as (c,db):
+            db.execute("select count(*) from bins where lid=%s",(lid,))
+            count = db.fetchone()[0]
+            return count != 0
+    def create(self,lid,ts,commit=False):
+        """Insert a bin into the time series.
+        ts must be the correct timestamp for the bin; this function
+        does not test that against the LID"""
+        with xa(self.psql_connect) as (c,db):
+            db.execute('insert into bins (lid, sample_time) values (%s, %s)',(lid,ts))
+            if commit:
+                c.commit()
     def latest_bins(self,date=None,n=25):
         """Return the LIDs of the n latest bins"""
         if date is None:
@@ -27,6 +41,7 @@ class IfcbFeed(Psql):
             for row in db.fetchall():
                 yield row[0]
     def nearest_bin(self,date=None):
+        """Return the LID of the bin nearest the given time (or now if no time provided)"""
         if date is None:
             date = time.gmtime()
         dt = utcdatetime(date)
@@ -36,6 +51,8 @@ class IfcbFeed(Psql):
             for row in db.fetchall():
                 yield row[0]
     def between(self,start=None,end=None):
+        """Return the LIDs of all bins in the given time range
+        (use None for start and/or end to leave the range open)"""
         if end is None:
             end = time.gmtime()
         if start is None:
@@ -48,11 +65,13 @@ class IfcbFeed(Psql):
             for row in db.fetchall():
                 yield row[0]
     def before(self,lid,n=1):
+        """Return the LIDs of n bins before the given one"""
         with xa(self.psql_connect) as (c,db):
             db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) order by sample_time desc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def after(self,lid,n=1):
+        """Return the LIDs of n bins after the given one"""
         with xa(self.psql_connect) as (c,db):
             db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) order by sample_time asc limit %s",(lid,n))
             for row in db.fetchall():
@@ -71,12 +90,22 @@ class IfcbFeed(Psql):
 class FixityError(Exception):
     pass
 
+def fixity(local_path):
+    """Compute fixity for a given file"""
+    filename = os.path.basename(local_path)
+    length = os.stat(local_path).st_size
+    fix_time = int(time.time())
+    sha1 = sha1_file(local_path)
+    return filename, length, sha1, fix_time
+
 class IfcbFixity(Psql):
     def __init__(self,psql_connect,resolvers=None):
         super(IfcbFixity,self).__init__(psql_connect)
         self.time_threshold = 0
         self.resolvers = resolvers
     def compare(self, filename, fix_local_path, fix_length, sha1, fix_time):
+        """Check a fixity entry against the current state of the data in the
+        filesystem"""
         try:
             local_path = fix_local_path
             if not os.path.exists(fix_local_path):
@@ -108,6 +137,8 @@ class IfcbFixity(Psql):
         except FixityError as e:
             print 'FAILED on %s: %s' % (local_path,e)
     def check_all(self):
+        """Check all fixity records in the time series. This can be a very time consuming
+        operation"""
         with xa(self.psql_connect) as (c,db):
             db.execute('select filename, local_path, length, sha1, extract(epoch from fix_time) from fixity')
             while True:
@@ -117,7 +148,14 @@ class IfcbFixity(Psql):
                 for row in batch:
                     (filename, local_path, length, sha1, fix_time) = row
                     self.compare(filename, local_path, length, sha1, fix_time)
+    def fix(self, lid, local_path, commit=False):
+        (filename, length, sha1, fix_time) = fixity(local_path)
+        with xa(self.psql_connect) as (c, db):
+            db.execute("insert into fixity (lid, length, filename, filetype, sha1, fix_time, local_path) values (%s,%s,%s,%s,%s,%s::abstime::timestamp with time zone at time zone 'GMT',%s)",values)
+            if commit:
+                c.commit()
     def summarize_data_volume(self):
+        """Summarize data volume by day"""
         query = """
 select
 date_trunc('day',b.sample_time) as day, count(*)/3, sum(f.length)/1073741824.0 as gb
@@ -129,6 +167,7 @@ order by day;
         with xa(self.psql_connect) as (c,db):
             db.execute(query)
             return [dict(day=day.strftime('%Y-%m-%d'), bin_count=bin_count, gb=float(gb)) for (day,bin_count,gb) in db.fetchall()]
+
 
 import sys
 from oii.config import get_config, Configuration
