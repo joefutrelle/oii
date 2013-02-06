@@ -1,5 +1,6 @@
 import time
 import calendar
+from datetime import datetime
 from unittest import TestCase
 from utils import Struct
 from math import floor
@@ -37,6 +38,10 @@ def rfc822(t=None):
 def timestamp(message,t=None,format=ISO_8601_FORMAT,separator=' '):
     if t is None: t=time.gmtime()
     return separator.join([time.strftime(format,t),message])
+
+def text2utcdatetime(string, format):
+    spt = time.strptime(string, format)
+    return datetime.utcfromtimestamp(calendar.timegm(spt))
 
 class test_formats(TestCase):
     def runTest(self):
