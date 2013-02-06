@@ -68,11 +68,8 @@ LATEST='latest'
 FORMAT='format'
 RESOLVER='resolver'
 
-#for hit in lister.resolve_all():
-#    print hit.value
-
 # FIXME don't use globals
-(rs,binpid2path,pid_resolver,blob_resolver,lister,ts_resolver) = ({},None,None,None,None,None)
+(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver) = ({},None,None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -606,8 +603,7 @@ def bin_zip(hit,targets,template):
     (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
     with tempfile.SpooledTemporaryFile() as temp:
         z = ZipFile(temp,'w',ZIP_DEFLATED)
-        csv_out = render_template('bin.csv',rows=bin2csv(targets, hit.schema_version))
-        z.writestr(hit.bin_lid + '.csv', csv_out)
+        z.writestr(hit.bin_lid + '.csv', bin2csv_response(hit, targets))
         # xml as well, including header info
         z.writestr(hit.bin_lid + '.xml', bin2xml(template))
         for target in targets:
@@ -733,7 +729,6 @@ rs = parse_stream(app.config[RESOLVER])
 binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
-lister = rs['list_adcs']
 ts_resolver = rs['time_series']
 all_series = rs['all_series']
 

@@ -124,20 +124,24 @@
     <path var="adc_file" match="${day_dir}/*IFCB*.adc">
       <!-- extract 'pid' from adc pathname -->
       <match var="adc_file" groups="pid">.*/(.*)\..*</match>
-      <!-- now resolve all three files separately as they may not be co-located -->
-      <first>
-	<var name="format">roi</var>
-	<import name="binpid2path"/>
-	<var name="roi_path">${day_dir}/${filename}</var>
-	<var name="format">hdr</var>
-	<import name="binpid2path"/>
-	<var name="hdr_path">${day_dir}/${filename}</var>
-	<var name="format">adc</var>
-	<import name="binpid2path"/>
-	<var name="adc_path">${day_dir}/${filename}</var>
-	<hit/>
-      </first>
+      <import name="pid"/>
       <hit/>
     </path>
+  </resolver>
+  <resolver name="fileset">
+    <!-- expects pid -->
+    <first>
+      <var name="format">roi</var>
+      <import name="binpid2path"/>
+      <var name="roi_path">${day_dir}/${filename}</var>
+      <var name="format">hdr</var>
+      <import name="binpid2path"/>
+      <var name="hdr_path">${day_dir}/${filename}</var>
+      <var name="format">adc</var>
+      <import name="binpid2path"/>
+      <var name="adc_path">${day_dir}/${filename}</var>
+      <hit/>
+    </first>
+    <hit/>
   </resolver>
 </resolvers>

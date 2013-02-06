@@ -41,7 +41,7 @@ def check_adc(adc_source, schema_version=SCHEMA_VERSION_2):
         raise IntegrityException('.adc failed: ' + str(e)), None, sys.exc_info()[2]
 
 def check_roi(roi_source, targets):
-    pos = 1
+    pos = -1
     def read_n(fin, n):
         try:
             r = fin.read(n)
@@ -52,10 +52,12 @@ def check_roi(roi_source, targets):
         return r
     with roi_source as fin:
         for target in targets:
+            if pos == -1:
+                pos = target[BYTE_OFFSET]
             # skip to next target
             skip = target[BYTE_OFFSET] - pos
             if skip < 0:
-                raise IntegrityException('.roi byte offsets non-monotonic')
+                raise IntegrityException('.roi byte offsets non-monotonic: %d < %d' % (target[BYTE_OFFSET], pos))
             read_n(fin, skip)
             pos += skip
             # now read the image data for this target
@@ -71,23 +73,22 @@ def check_all(lid, hdr_source, adc_source, roi_source, schema_version=SCHEMA_VER
     check_roi(roi_source, targets)
     logging.info('%s PASS roi' % lid)
 
+def check_fileset(hdr_file, schema_version=SCHEMA_VERSION_2):
+    lid = remove_extension(os.path.basename(hdr_file))
+    hdr_source = LocalFileSource(hdr_file)
+    adc_file = change_extension(hdr_file, 'adc')
+    adc_source = LocalFileSource(adc_file)
+    roi_source = LocalFileSource(change_extension(hdr_file, 'roi'))
+    try:
+        check_all(lid, hdr_source, adc_source, roi_source, schema_version=schema_version)
+        logging.info('%s PASS ALL' % lid)
+    except IntegrityException, e:
+        logging.info('%s FAIL %s' % (lid, e))
+        raise
+
 def doit():
     for hdr_file in sorted(glob('/data/vol3/IFCB1_2008_*/*.hdr')):
-        lid = remove_extension(os.path.basename(hdr_file))
-        hdr_source = LocalFileSource(hdr_file)
-        adc_file = change_extension(hdr_file, 'adc')
-        mod_file = re.sub('vol3','vol3/adcmod',adc_file) + '.mod'
-        adc_source = LocalFileSource(adc_file)
-        roi_source = LocalFileSource(change_extension(hdr_file, 'roi'))
-        try:
-            check_all(lid, hdr_source, adc_source, roi_source, schema_version=SCHEMA_VERSION_1)
-            log.info('%s PASS ALL' % lid)
-            if os.path.exists(mod_file):
-                logging.info('EXTRA %s' % mod_file)
-        except IntegrityException, e:
-            logging.info('%s FAIL %s' % (lid, e))
-            if not os.path.exists(mod_file):
-                logging.info('MISSING %s' % mod_file)
+        check_filset(hdr_file, schema_version=SCHEMA_VERSION_1)
 
 if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
