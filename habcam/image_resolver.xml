@@ -18,11 +18,11 @@
       <value>/mnt/rose5/g,jpg</value>
       <value>/mnt/nmfs-2/webdata/HabCam/data/Cruises,Images/Full</value>
       <value>/mnt/habcam-images/Images,</value>
-      <value>/mnt/rose6/RSA,jpg</value>
-      <value>/mnt/rose6/RSA,</value>
+      <value>/mnt/habcam-images3/Images,jpg</value>
       <value>/mnt/habcam-images3/Images,jpg/Full</value>
       <value>/mnt/habcam-images3/Images,Full</value>
-      <value>/mnt/habcam-images3/Images,jpg</value>
+      <value>/mnt/rose6/RSA,jpg</value>
+      <value>/mnt/rose6/RSA,</value>
       <value>/mnt/rose6/mosaics,</value>
     </var>
     <match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
