@@ -108,29 +108,36 @@
     <import name="blobs"/>
     <path match="${value}"/>
   </resolver>
+  <resolver name="list_day_dirs">
+    <var name="product">raw</var>
+    <import name="data_roots"/>
+    <any>
+      <path var="day_dir" match="${root}/D*/D*"><hit/></path>
+      <path var="day_dir" match="${root}/IFCB*"><hit/></path>
+    </any>
+  </resolver>
   <resolver name="list_adcs">
     <!-- list all adc files. -->
     <var name="product">raw</var>
     <import name="data_roots"/>
-    <path var="day_dir" match="${root}/IFCB*"> <!-- FIXME v1-specific -->
-      <path var="adc_file" match="IFCB*.adc">
-	<!-- find the adc file -->
-	<match var="adc_file" groups="pid">.*(IFCB.*)\..*</match>
-	<!-- now resolve all three files separately as they may not be co-located -->
-	<first>
-	  <var name="format">roi</var>
-	  <import name="binpid2path"/>
-	  <var name="roi_path">${day_dir}/${filename}</var>
-	  <var name="format">hdr</var>
-	  <import name="binpid2path"/>
-	  <var name="hdr_path">${day_dir}/${filename}</var>
-	  <var name="format">adc</var>
-	  <import name="binpid2path"/>
-	  <var name="adc_path">${day_dir}/${filename}</var>
-	  <hit/>
-	</first>
+    <import name="list_day_dirs"/>
+    <path var="adc_file" match="${day_dir}/*IFCB*.adc">
+      <!-- extract 'pid' from adc pathname -->
+      <match var="adc_file" groups="pid">.*/(.*)\..*</match>
+      <!-- now resolve all three files separately as they may not be co-located -->
+      <first>
+	<var name="format">roi</var>
+	<import name="binpid2path"/>
+	<var name="roi_path">${day_dir}/${filename}</var>
+	<var name="format">hdr</var>
+	<import name="binpid2path"/>
+	<var name="hdr_path">${day_dir}/${filename}</var>
+	<var name="format">adc</var>
+	<import name="binpid2path"/>
+	<var name="adc_path">${day_dir}/${filename}</var>
 	<hit/>
-      </path>
+      </first>
+      <hit/>
     </path>
   </resolver>
 </resolvers>
