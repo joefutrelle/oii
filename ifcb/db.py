@@ -22,14 +22,17 @@ class IfcbFeed(Psql):
             db.execute("select count(*) from bins where lid=%s",(lid,))
             count = db.fetchone()[0]
             return count != 0
-    def create(self,lid,ts,commit=False):
+    def create(self,lid,ts,cursor=None):
         """Insert a bin into the time series.
         ts must be the correct timestamp for the bin; this function
-        does not test that against the LID"""
-        with xa(self.psql_connect) as (c,db):
-            db.execute('insert into bins (lid, sample_time) values (%s, %s)',(lid,ts))
-            if commit:
+        does not test that against the LID. it must be a datetime"""
+        q = 'insert into bins (lid, sample_time) values (%s, %s)'
+        if cursor is None:
+            with xa(self.psql_connect) as (c,db):
+                db.execute(q,(lid,ts))
                 c.commit()
+        else:
+            cursor.execute(q,(lid,ts))
     def latest_bins(self,date=None,n=25):
         """Return the LIDs of the n latest bins"""
         if date is None:
@@ -148,12 +151,16 @@ class IfcbFixity(Psql):
                 for row in batch:
                     (filename, local_path, length, sha1, fix_time) = row
                     self.compare(filename, local_path, length, sha1, fix_time)
-    def fix(self, lid, local_path, commit=False):
+    def fix(self, lid, local_path, cursor=None):
         (filename, length, sha1, fix_time) = fixity(local_path)
-        with xa(self.psql_connect) as (c, db):
-            db.execute("insert into fixity (lid, length, filename, filetype, sha1, fix_time, local_path) values (%s,%s,%s,%s,%s,%s::abstime::timestamp with time zone at time zone 'GMT',%s)",values)
-            if commit:
+        values = (lid, length, filename, '', sha1, fix_time, local_path)
+        q = "insert into fixity (lid, length, filename, filetype, sha1, fix_time, local_path) values (%s,%s,%s,%s,%s,%s::abstime::timestamp with time zone at time zone 'GMT',%s)"
+        if cursor is None:
+            with xa(self.psql_connect) as (c, db):
+                db.execute(q,values)
                 c.commit()
+        else:
+            cursor.execute(q,values)
     def summarize_data_volume(self):
         """Summarize data volume by day"""
         query = """
