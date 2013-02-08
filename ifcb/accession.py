@@ -5,13 +5,17 @@ import datetime
 
 from oii.psql import xa
 from oii.iopipes import LocalFileSource
-from oii.ifcb.db import IfcbFeed, IfcbFixity, fixity
+from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
 from oii.ifcb.formats import integrity
 from oii.times import text2utcdatetime
 
+from celery import Celery
+
+celery = Celery('oii.ifcb.accession')
+
 RESOLVER_FILE='oii/ifcb/mvco.xml'
-PSQL_CONNECT='**************************************'
+PSQL_CONNECT='user=testing password=********* dbname=ditylum'
 
 def list_adcs(time_series,after_year=2012):
     r = parse_stream(RESOLVER_FILE) # FIXME hardcoded
@@ -36,36 +40,45 @@ def list_new_filesets(time_series,after_year=2012):
             else:
                 yield fs
 
-def check_integrity(fileset):
-    integrity.check_hdr(LocalFileSource(s.hdr_path))
-    logging.info('%s PASS integrity check' % s.hdr_path)
-    targets = list(integrity.check_adc(LocalFileSource(s.adc_path), schema_version=s.schema_version))
-    logging.info('%s PASS integrity check' % s.adc_path)
-    integrity.check_roi(LocalFileSource(s.roi_path), targets)
-    logging.info('%s PASS integrity check' % s.roi_path)
+def check_integrity(pid, hdr_path, adc_path, roi_path, schema_version):
+    integrity.check_hdr(LocalFileSource(hdr_path))
+    logging.info('%s PASS integrity check %s' % (pid, hdr_path))
+    targets = list(integrity.check_adc(LocalFileSource(adc_path), schema_version=schema_version))
+    logging.info('%s PASS integrity check %s' % (pid, adc_path))
+    integrity.check_roi(LocalFileSource(roi_path), targets)
+    logging.info('%s PASS integrity check %s' % (pid, roi_path))
 
 if __name__=='__main__':
-    time_series='saltpond'
+    time_series='ditylum'
     logging.basicConfig(level=logging.INFO)
     fx = IfcbFixity(PSQL_CONNECT) # FIXME
     feed = IfcbFeed(PSQL_CONNECT) # FIXME hardcoded
     with xa(PSQL_CONNECT) as (c, db):
         for s in list_new_filesets(time_series,after_year=2011):
             try:
-                check_integrity(s)
+                check_integrity(s.pid, s.hdr_path, s.adc_path, s.roi_path, s.schema_version)
             except Exception, e:
                 logging.warn('%s FAIL integrity checks: %s' % (s.pid, e))
+                break
             # hot diggity, we've got some good data
             # compute fixity
-            fx.fix(s.pid, s.hdr_path, cursor=db)
-            logging.info('computed fixity for %s' % s.hdr_path)
-            fx.fix(s.pid, s.adc_path, cursor=db)
-            logging.info('computed fixity for %s' % s.adc_path)
-            fx.fix(s.pid, s.roi_path, cursor=db)
-            logging.info('computed fixity for %s' % s.roi_path)
+            try:
+                fx.fix(s.pid, s.hdr_path, cursor=db, filetype='hdr')
+                logging.info('%s FIXITY computed for %s' % (s.pid, s.hdr_path))
+                fx.fix(s.pid, s.adc_path, cursor=db, filetype='adc')
+                logging.info('%s FIXITY computed for %s' % (s.pid, s.adc_path))
+                fx.fix(s.pid, s.roi_path, cursor=db, filetype='roi')
+                logging.info('%s FIXITY computed for %s' % (s.pid, s.roi_path))
+            except:
+                logging.error('%s FAIL fixity cannot be computed!' % s.pid)
+                c.rollback()
+                break
             # register bin
-            ts = text2utcdatetime(s.date, s.date_format)
-            feed.create(s.pid, ts, cursor=db)
-            logging.info('recorded timestamp for %s' % s.pid)
-        logging.info('committing changes to database...')
-        db.commit()
+            try:
+                ts = text2utcdatetime(s.date, s.date_format)
+                feed.create(s.pid, ts, cursor=db)
+                c.commit()
+                logging.info('%s DONE' % s.pid)
+            except:
+                logging.error('%s FAILED' % s.pid)
+                break

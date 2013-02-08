@@ -25,7 +25,7 @@ class IfcbFeed(Psql):
     def create(self,lid,ts,cursor=None):
         """Insert a bin into the time series.
         ts must be the correct timestamp for the bin; this function
-        does not test that against the LID. it must be a datetime"""
+        does not test that against the LID. it must be a datetime in UTC"""
         q = 'insert into bins (lid, sample_time) values (%s, %s)'
         if cursor is None:
             with xa(self.psql_connect) as (c,db):
@@ -93,7 +93,7 @@ class IfcbFeed(Psql):
 class FixityError(Exception):
     pass
 
-def fixity(local_path):
+def compute_fixity(local_path):
     """Compute fixity for a given file"""
     filename = os.path.basename(local_path)
     length = os.stat(local_path).st_size
@@ -151,9 +151,10 @@ class IfcbFixity(Psql):
                 for row in batch:
                     (filename, local_path, length, sha1, fix_time) = row
                     self.compare(filename, local_path, length, sha1, fix_time)
-    def fix(self, lid, local_path, cursor=None):
-        (filename, length, sha1, fix_time) = fixity(local_path)
-        values = (lid, length, filename, '', sha1, fix_time, local_path)
+    def fix(self, lid, local_path, cursor=None, filetype='', fixity=None):
+        if fixity is None:
+            (filename, length, sha1, fix_time) = compute_fixity(local_path)
+        values = (lid, length, filename, filetype, sha1, fix_time, local_path)
         q = "insert into fixity (lid, length, filename, filetype, sha1, fix_time, local_path) values (%s,%s,%s,%s,%s,%s::abstime::timestamp with time zone at time zone 'GMT',%s)"
         if cursor is None:
             with xa(self.psql_connect) as (c, db):
