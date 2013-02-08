@@ -4,6 +4,7 @@ from datetime import datetime
 from unittest import TestCase
 from utils import Struct
 from math import floor
+import pytz
 
 """Utilities for working with timestamps"""
 
@@ -41,7 +42,7 @@ def timestamp(message,t=None,format=ISO_8601_FORMAT,separator=' '):
 
 def text2utcdatetime(string, format):
     spt = time.strptime(string, format)
-    return datetime.utcfromtimestamp(calendar.timegm(spt))
+    return datetime.fromtimestamp(calendar.timegm(spt), pytz.utc)
 
 class test_formats(TestCase):
     def runTest(self):
