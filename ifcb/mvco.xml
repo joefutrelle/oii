@@ -4,6 +4,7 @@
       <value>mvco,MVCO</value>
       <value>Healy1101,Healy 1101</value>
       <value>saltpond,Salt Pond</value>
+      <value>ditylum,Ditylum lab</value>
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
@@ -26,6 +27,11 @@
     <match var="time_series" value="saltpond">
       <var name="title">${bot_name} @ Salt Pond</var>
       <var name="dbname">saltpond</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="ditylum">
+      <var name="title">${bot_name} @ Olson lab</var>
+      <var name="dbname">ditylum</var>
       <hit/>
     </match>
   </resolver>
@@ -80,6 +86,15 @@
 	<hit name="root">/data/vol4/blobs/saltpond</hit>
       </match>
     </match>
+    <!-- Ditylum lab series -->
+    <match var="time_series" value="ditylum">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/rob2/proposals/NASA_2012/Ditylum_temperature/data</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<!--hit name="root">/data/vol4/blobs/saltpond</hit-->
+      </match>
+    </match>
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
@@ -114,6 +129,8 @@
     <any>
       <path var="day_dir" match="${root}/D*/D*"><hit/></path>
       <path var="day_dir" match="${root}/IFCB*"><hit/></path>
+      <!-- degenerate case: no day dirs -->
+      <path var="day_dir" match="${root}"><hit/></path>
     </any>
   </resolver>
   <resolver name="list_adcs">
