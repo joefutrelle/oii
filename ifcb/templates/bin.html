@@ -33,16 +33,12 @@ $(document).ready(function() {
   <th class="tbl">#/trigger</th>
   <th class="tbl">pid</th>
   <th class="tbl">size</th>
-  <th class="tbl">fl. L/H</th>
-  <th class="tbl">scat. L/H</th>
 </tr>
 {% for target in targets %}
   <tr class="tbl">
     <td class="tbl">{{target.targetNumber}}/{{target.trigger}}</td>
     <td class="tbl"><a href="{{target.pid}}.html">{{target.pid}}</a></td>
     <td class="tbl">{{target.width}}x{{target.height}}</td>
-    <td class="tbl">{{"%.2f/%.2f"|format(target.fluorescenceLow,target.fluorescenceHigh)}}</td>
-    <td class="tbl">{{"%.2f/%.2f"|format(target.scatteringLow,target.scatteringHigh)}}</td>
   </tr>
 {% endfor %}
 </table>

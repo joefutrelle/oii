@@ -546,7 +546,7 @@ def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
         yield ','.join(map(csv_quote,row))
 
 def bin2csv_response(hit,targets):
-    csv_out = render_template('bin.csv',rows=bin2csv(targets, hit.schema_version))
+    csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
     return Response(csv_out, mimetype='text/plain', headers=max_age())
 
 def serve_bin(hit,mimetype):
@@ -604,7 +604,8 @@ def bin_zip(hit,targets,template):
     (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
     with tempfile.SpooledTemporaryFile() as temp:
         z = ZipFile(temp,'w',ZIP_DEFLATED)
-        z.writestr(hit.bin_lid + '.csv', bin2csv_response(hit, targets))
+        csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
+        z.writestr(hit.bin_lid + '.csv', csv_out)
         # xml as well, including header info
         z.writestr(hit.bin_lid + '.xml', bin2xml(template))
         for target in targets:
