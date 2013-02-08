@@ -4,7 +4,7 @@
       <value>mvco,MVCO</value>
       <value>Healy1101,Healy 1101</value>
       <value>saltpond,Salt Pond</value>
-      <value>ditylum,Ditylum lab</value>
+      <value>ditylum,Ditylum</value>
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
