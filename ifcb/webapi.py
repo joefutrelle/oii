@@ -69,7 +69,7 @@ FORMAT='format'
 RESOLVER='resolver'
 
 # FIXME don't use globals
-(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver) = ({},None,None,None,None,None)
+(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver) = ({},None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -98,6 +98,7 @@ def minor_type(mimetype):
 def get_psql_connect(time_series):
     hit = ts_resolver.resolve(time_series=time_series)
     if hit is None:
+        app.logger.debug('cannot resolve time series "%s"' % time_series)
         abort(404)
     return '%s dbname=%s' % (app.config[PSQL_CONNECT], hit.dbname)
 
