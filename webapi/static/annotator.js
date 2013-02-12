@@ -727,7 +727,7 @@ $(document).ready(function() {
     // percent cover
     $('#rightPanel').append('<div class="categoryPicker"><div>&nbsp;</div></div>')
 	.find('div:last').collapsing('Percent Cover',1)
-	.categoryPicker(1, PERCENT_COVER_SCOPE, queueSubstrateAnnotation, 1);
+	.categoryPicker(5, PERCENT_COVER_SCOPE, queueSubstrateAnnotation, 1);
 	//.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation, 1); // FIXME use PERCENT_COVER_SCOPE
 
     // add "quick info" panel showing image and assignment metadata
