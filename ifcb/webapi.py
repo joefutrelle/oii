@@ -69,7 +69,7 @@ FORMAT='format'
 RESOLVER='resolver'
 
 # FIXME don't use globals
-(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver) = ({},None,None,None,None)
+(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver,fea_resolver) = ({},None,None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -425,6 +425,13 @@ def serve_blob(time_series,pid):
                 blob_image = ImageChops.multiply(roi_image, blob_image)
             return image_response(blob_image, pil_format, mimetype)
 
+@app.route('/<time_series>/api/features/pid/<path:pid>')
+def serve_features(time_series, pid):
+    hit = fea_resolver.resolve(pid=pid,time_series=time_series)
+    if hit is None:
+        abort(404)
+    return Response(file(hit.value), direct_passthrough=True, mimetype='text/csv', headers=max_age())
+
 @app.route('/<time_series>/api/<path:ignore>')
 def api_error(time_series,ignore):
     abort(404)
@@ -486,6 +493,8 @@ def resolve(pid):
     if hit.product is not None:
         if re.match(r'blob.*',hit.product):
             return serve_blob(hit.time_series,hit.pid)
+        if re.match(r'features',hit.product):
+            return serve_features(hit.time_series,hit.pid)
     # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
@@ -731,6 +740,7 @@ rs = parse_stream(app.config[RESOLVER])
 binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
+fea_resolver = rs['features']
 ts_resolver = rs['time_series']
 all_series = rs['all_series']
 

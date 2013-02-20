@@ -67,6 +67,11 @@
       <match var="product" pattern="blob.*">
 	<hit name="root">/data/vol4/blobs</hit>
       </match>
+      <match var="product" pattern="features">
+	<hit name="root">
+	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
+	</hit>
+      </match>
     </match>
     <!-- Healy 1101 time series -->
     <match var="time_series" value="Healy1101">
@@ -92,7 +97,7 @@
 	<hit name="root">/mnt/rob2/proposals/NASA_2012/Ditylum_temperature/data</hit>
       </match>
       <match var="product" pattern="blob.*">
-	<!--hit name="root">/data/vol4/blobs/saltpond</hit-->
+	<hit name="root">/data/vol4/blobs/ditylum</hit>
       </match>
     </match>
   </resolver>
@@ -122,6 +127,11 @@
   <resolver name="mvco_blob">
     <import name="blobs"/>
     <path match="${value}"/>
+  </resolver>
+  <resolver name="features">
+    <import name="pid"/>
+    <import name="data_roots"/>
+    <path match="${root}/features${year}_v2/${lid}_fea_v2.csv"/>
   </resolver>
   <resolver name="list_day_dirs">
     <var name="product">raw</var>
