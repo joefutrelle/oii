@@ -37,11 +37,11 @@ def parse_hdr(lines):
         props = { CONTEXT: [lines[0]] } # FIXME parse
     else:
         # "context" is what the text on lines 2-4 is called in the header file
-        props = { CONTEXT: [lines[n].strip('"') for n in range(3)] }
+        props = { CONTEXT: [line.strip('"') for line in lines[:-2]] }
         # now handle format variants
         if len(lines) >= 6: # don't fail on original header format
-            columns = re.split(' +',re.sub('"','',lines[4])) # columns of metadata in CSV format
-            values = re.split(' +',re.sub(r'[",]',' ',lines[5]).strip()) # values of those columns in CSV format
+            columns = re.split(' +',re.sub('"','',lines[-2])) # columns of metadata in CSV format
+            values = re.split(' +',re.sub(r'[",]',' ',lines[-1]).strip()) # values of those columns in CSV format
             # for each column take the string and cast it to the schema's column type
             for (column, (name, cast), value) in zip(HDR_COLUMNS, HDR_SCHEMA, values):
                 props[name] = cast(value)
