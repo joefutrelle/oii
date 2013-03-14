@@ -541,16 +541,11 @@ def csv_quote(thing):
         return '"' + thing + '"'
 
 def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
-    schema_keys = [k for k,_ in ADC_SCHEMA[schema_version]]
-    first = True
+    keys = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
+    yield ','.join(keys)
     for target in targets:
-        # now order all keys even the ones not in the schema
-        keys = order_keys(target, schema_keys)
         # fetch all the data for this row as strings
         row = [str(target[k]) for k in keys]
-        if first: # if this is the first row, emit the keys
-            yield ','.join(keys)
-            first = False
         # now emit the row
         yield ','.join(map(csv_quote,row))
 
