@@ -541,17 +541,15 @@ def csv_quote(thing):
         return '"' + thing + '"'
 
 def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
-    keys = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
-    yield ','.join(keys)
+    ks = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
+    yield ','.join(ks)
     for target in targets:
-        # fetch all the data for this row as strings
-        row = [str(target[k]) for k in keys]
-        # now emit the row
-        yield ','.join(map(csv_quote,row))
+        # fetch all the data for this row as strings, emit
+        yield ','.join(csv_quote(str(target[k])) for k in ks)
 
 def bin2csv_response(hit,targets):
     csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
-    return Response(csv_out, mimetype='text/plain', headers=max_age())
+    return Response(csv_out + '\n', mimetype='text/plain', headers=max_age())
 
 def serve_bin(hit,mimetype):
     """Serve a sample bin in some format"""
