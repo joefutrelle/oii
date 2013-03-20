@@ -2,6 +2,7 @@
   <resolver name="all_series">
     <var name="ignore">
       <value>mvco,MVCO</value>
+      <value>mvco_beads,beads</value>
       <value>Healy1101,Healy 1101</value>
       <value>saltpond,Salt Pond</value>
       <value>ditylum,Ditylum</value>
@@ -32,6 +33,11 @@
     <match var="time_series" value="ditylum">
       <var name="title">${bot_name} @ Olson lab</var>
       <var name="dbname">ditylum</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="mvco_beads">
+      <var name="title">${bot_name}</var>
+      <var name="dbname">mvco_beads</var>
       <hit/>
     </match>
   </resolver>
@@ -71,6 +77,15 @@
 	<hit name="root">
 	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
 	</hit>
+      </match>
+    </match>
+    <!-- MVCO beads series -->
+    <match var="time_series" value="mvco_beads">
+      <match var="product" value="raw">
+	<hit name="root">/data/vol1/beads</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<hit name="root">/data/vol4/blobs/mvco_beads</hit>
       </match>
     </match>
     <!-- Healy 1101 time series -->
@@ -137,8 +152,12 @@
     <var name="product">raw</var>
     <import name="data_roots"/>
     <any>
-      <path var="day_dir" match="${root}/D*/D*"><hit/></path>
-      <path var="day_dir" match="${root}/IFCB*"><hit/></path>
+      <path var="day_dir" match="${root}/D*/D*">
+	<match var="day_dir" pattern=".*/D${year_pattern}.*"><hit/></match>
+      </path>
+      <path var="day_dir" match="${root}/IFCB*">
+	<match var="day_dir" pattern=".*/IFCB._${year_pattern}.*"><hit/></match>
+      </path>
       <!-- degenerate case: no day dirs -->
       <path var="day_dir" match="${root}"><hit/></path>
     </any>
