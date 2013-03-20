@@ -20,8 +20,6 @@ MODULE='oii.ifcb.workflow.accession'
 celery = Celery(MODULE, broker='amqp://guest@localhost//', backend='amqp')
 
 logger = logging.getLogger(MODULE)
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.INFO)
 
 def celery_logging(**kw):
     logger = logging.getLogger(MODULE)
@@ -35,19 +33,16 @@ after_setup_task_logger.connect(celery_logging)
 # [ditylum]
 # psql_connect = user=foobar password=bazquux dbname=ditylum
 
-def list_adcs(time_series,resolver,after_year=2012):
+def list_adcs(time_series,resolver,year_pattern='....'):
     r = parse_stream(resolver)
-    for s in r['list_adcs'].resolve_all(time_series=time_series): # FIXME hardcoded
+    for s in r['list_adcs'].resolve_all(time_series=time_series,year_pattern=year_pattern): # FIXME hardcoded
         date = time.strptime(s.date, s.date_format)
-        if date.tm_year > after_year:
-            yield s
-        else:
-            logger.info('%s SKIP, out of date range' % s.pid)
+        yield s
 
-def list_new_filesets(time_series,psql_connect,resolver,after_year=2012):
+def list_new_filesets(time_series,psql_connect,resolver,year_pattern='....'):
     feed = IfcbFeed(psql_connect)
     r = parse_stream(resolver)
-    for s in list_adcs(time_series,resolver,after_year):
+    for s in list_adcs(time_series,resolver,year_pattern):
         if feed.exists(s.pid):
             logger.info('%s EXISTS in time series %s' % (s.pid, time_series))
         else:
@@ -71,8 +66,12 @@ def accede(config_file, time_series):
     config = get_config(config_file, time_series)
     fx = IfcbFixity(config.psql_connect)
     feed = IfcbFeed(config.psql_connect)
+    try:
+        year_pattern = config.year_pattern
+    except:
+        year_pattern = '....'
     with xa(config.psql_connect) as (c, db):
-        for s in list_new_filesets(time_series,config.psql_connect,config.resolver,after_year=2005): # FIXME hardcoded
+        for s in list_new_filesets(time_series,config.psql_connect,config.resolver,year_pattern=year_pattern): # FIXME hardcoded
             try:
                 check_integrity(s.pid, s.hdr_path, s.adc_path, s.roi_path, s.schema_version)
             except Exception, e:
