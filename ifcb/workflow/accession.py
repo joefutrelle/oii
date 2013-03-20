@@ -101,6 +101,11 @@ def accede(config_file, time_series):
                 logger.error('%s FAILED' % s.pid)
                 continue
 
+# when running this as a worker use a queue name like {time series}_accession
+# and set concurrency to 1
+# so:
+# celery -A oii.ifcb.workflow.accession worker -c 1 --queue=ditylum_accession
+
 if __name__=='__main__':
     try:
         config_file = sys.argv[1]
@@ -108,4 +113,4 @@ if __name__=='__main__':
     except:
         sys.stderr.write('usage: [python] oii/ifcb/workflow/accession.py [config file] [time series name]\n')
         sys.exit(-1)
-    accede.apply_async((config_file, time_series))
+    accede.apply_async((config_file, time_series), queue=time_series+'_accession')
