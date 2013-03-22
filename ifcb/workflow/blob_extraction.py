@@ -1,84 +1,103 @@
-import sys
-import re
 import os
-from oii.ifcb import client
-from oii.workflow.rabbit import Job, WIN, PASS, FAIL, SKIP
-from oii.matlab import Matlab
+import sys
 import shutil
+import re
+import time
 
-MATLAB_PATH=[
-'/home/ifcb/trunk/feature_extraction',
-'/home/ifcb/trunk/feature_extraction/blob_extraction',
-'/home/ifcb/trunk/webservice_tools',
-'/home/ifcb/trunk/dipum_toolbox_2.0.1'
+from oii.ifcb.workflow.blob_deposit import BlobDeposit
+
+from oii.utils import gen_id
+from oii.config import get_config
+from oii.matlab import Matlab
+
+CHECK_EVERY=200
+
+MATLAB_DIRS=[
+'feature_extraction',
+'feature_extraction/blob_extraction',
+'webservice_tools',
+'dipum_toolbox_2.0.1'
 ]
 
-tmp_dir='/home/ifcb/test_out'
-blob_years='/data/vol4/blobs'
+SKIP='skip'
+DIE='die'
+WIN='win'
+FAIL='fail'
 
-# FIXME use ifcb.io.pids
-# FIXME only supports <=MVCO id format
-def lid(pid):
-    return re.sub(r'.*/','',pid)
+def zipname(url):
+    return re.sub(r'.*/([^.]+).*',r'\1_blobs_v2.zip',url)
 
-def year(pid):
-    (t,i,y,j) = re.split(r'[:/_]+',pid)[2:6]
-    return y
-
-def year_day(pid):
-    (t,i,y,j) = re.split(r'[:/_]+',pid)[2:6]
-    return '%s_%s' % (y,j)
-
-def zipname(pid):
-    return lid(pid)+'_blobs_v2.zip'
-
-def dest(pid):
-    return os.path.join(blob_years,year(pid),year_day(pid),zipname(pid))
-
-class BlobExtraction(Job):
-    def run_callback(self,message):
+class BlobExtraction(object):
+    def __init__(self, config):
+        self.configure(config)
+    def configure(self, config):
+        self.config = config
+        self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
+        self.deposit = BlobDeposit(self.config.blob_deposit)
+    def exists(self,bin_pid):
+        return self.deposit.exists(bin_pid)
+    def preflight(self):
+        for p in self.config.matlab_path:
+            if not os.path.exists(p):
+                raise
+        if not os.path.exists(self.config.tmp_dir):
+            raise
+        tempfile = os.path.join(self.config.tmp_dir,gen_id()+'.txt')
+        with open(tempfile,'w') as tf:
+            tf.write('test')
+            tf.flush()
+        if not os.path.exists(tempfile):
+            raise
+        os.remove(tempfile)
+        if os.path.exists(tempfile):
+            raise
+    def log(self,message):
+        print message
+    def extract_blobs(self,bin_pid):
+        jobid = gen_id()[:5]
         def selflog(line):
-            self.log(line)
-        bin_pid = message
-        dest_file = dest(bin_pid)
-        if os.path.exists(dest_file):
-            self.log('SKIPPING %s - already present in destination directory' % bin_pid)
+            self.log('%s %s' % (jobid, line))
+        def self_check_log(line,bin_pid):
+            selflog(line)
+            self.output_check -= 1
+            if self.output_check <= 0:
+                if self.exists(bin_pid):
+                    selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
+                    return SKIP
+                self.output_check = CHECK_EVERY
+        if self.exists(bin_pid):
+            selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
-        tmp_file = os.path.join(tmp_dir, zipname(bin_pid))
-        matlab = Matlab('/usr/bin/matlab',MATLAB_PATH,output_callback=selflog)
-        cmd = 'bin_blobs(\'%s\',\'%s\')' % (bin_pid, tmp_dir)
-        matlab.run(cmd)
-        selflog('staging completed blob zip to %s' % dest_file)
+        job_dir = os.path.join(self.config.tmp_dir, gen_id())
         try:
-            os.makedirs(os.path.dirname(dest_file))
+            os.makedirs(job_dir)
+            selflog('CREATED temporary directory %s' % job_dir)
         except:
-            pass
-        shutil.move(tmp_file,dest_file)
-    def enqueue_feed(self,namespace,n=4):
-        feed = client.list_bins(namespace=namespace,n=n)
-        for bin in feed:
-            bin_pid = bin['pid']
-            dest_file = dest(bin_pid)
-            work_dir = os.path.join(tmp_dir, lid(bin_pid))
-            if os.path.exists(work_dir):
-                print 'SKIPPING %s - found temporary files at %s' % (bin_pid, work_dir)
-            elif os.path.exists(dest_file):
-                print 'SKIPPING %s - found completed blob zip at %s' % (bin_pid, dest_file)
+            selflog('WARNING cannot create temporary directory %s' % job_dir)
+        tmp_file = os.path.join(job_dir, zipname(bin_pid))
+        matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
+        cmd = 'bin_blobs(\'%s\',\'%s\')' % (bin_pid, job_dir)
+        try:
+            self.output_check = CHECK_EVERY
+            matlab.run(cmd)
+            if not os.path.exists(tmp_file):
+                selflog('WARNING bin_blobs succeeded but no output file found at %s' % tmp_file)
+            elif not self.exists(bin_pid): # check to make sure another worker hasn't finished it in the meantime
+                selflog('DEPOSITING blob zip for %s to deposit service' % bin_pid)
+                self.deposit.deposit(bin_pid,tmp_file)
             else:
-                print 'queueing %s' % bin_pid
-                self.enqueue(bin_pid)
+                selflog('NOT SAVING - blobs for %s already present at output destination' % bin_pid)
+        except KeyboardInterrupt:
+            selflog('KeyboardInterrupt, exiting')
+            return DIE
+        finally:
+            try:
+                shutil.rmtree(job_dir)
+            except:
+                selflog('WARNING cannot remove temporary directory %s' % job_dir)
+
 
 if __name__=='__main__':
-    job = BlobExtraction('blob_extraction',host='demi.whoi.edu')
-    command = sys.argv[1]
-    if command == 'q':
-        for pid in sys.argv[2:]:
-            job.enqueue(pid)
-    elif command == 'log':
-        job.consume_log()
-    elif command == 'w':
-        job.work(True)
-    elif command == 'r':
-        job.retry_failed()
-    elif command == 'cron':
-        job.enqueue_feed(namespace='http://ifcb-data.whoi.edu/mvco/')
+    bin_pid = sys.argv[1]
+    be = BlobExtraction(get_config('./blob.conf','mvco'))
+    be.extract_blobs(bin_pid)
