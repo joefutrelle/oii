@@ -3,12 +3,29 @@ import sys
 import shutil
 import re
 import time
+import logging
+
+from celery import Celery
+from celery.signals import after_setup_task_logger
 
 from oii.ifcb.workflow.blob_deposit import BlobDeposit
 
 from oii.utils import gen_id
 from oii.config import get_config
 from oii.matlab import Matlab
+
+MODULE='oii.ifcb.workflow.blob_extraction'
+
+celery = Celery(MODULE)
+
+logger = logging.getLogger(MODULE)
+
+def celery_logging(**kw):
+    logger = logging.getLogger(MODULE)
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.INFO)
+
+after_setup_task_logger.connect(celery_logging)
 
 CHECK_EVERY=200
 
@@ -96,8 +113,7 @@ class BlobExtraction(object):
             except:
                 selflog('WARNING cannot remove temporary directory %s' % job_dir)
 
-
-if __name__=='__main__':
-    bin_pid = sys.argv[1]
-    be = BlobExtraction(get_config('./blob.conf','mvco'))
+@celery.task
+def extract_blobs(config_file, time_series, bin_pid):
+    be = BlobExtraction(get_config(config_file, time_series))
     be.extract_blobs(bin_pid)
