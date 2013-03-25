@@ -17,7 +17,7 @@ from celery.signals import after_setup_task_logger
 
 MODULE='oii.ifcb.workflow.accession'
 
-celery = Celery(MODULE, broker='amqp://guest@localhost//', backend='amqp')
+celery = Celery(MODULE)
 
 logger = logging.getLogger(MODULE)
 
@@ -105,11 +105,6 @@ def accede(config_file, time_series):
 # so:
 # celery -A oii.ifcb.workflow.accession worker -c 1 --queue=ditylum_accession
 
-if __name__=='__main__':
-    try:
-        config_file = sys.argv[1]
-        time_series=sys.argv[2]
-    except:
-        sys.stderr.write('usage: [python] oii/ifcb/workflow/accession.py [config file] [time series name]\n')
-        sys.exit(-1)
-    accede.apply_async((config_file, time_series), queue=time_series+'_accession')
+# to check a time series and allow all bins to accede:
+#
+# celery --config={celery config file} call oii.ifcb.workflow.accession.accede --args='["{accession config file}", "{time series name}"]' --queue=ditylum_accession 
