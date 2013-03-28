@@ -540,12 +540,18 @@ def csv_quote(thing):
     else:
         return '"' + thing + '"'
 
+def csv_str(v):
+    try:
+        return re.sub(r'\.$','',('%.12f' % v).rstrip('0'))
+    except:
+        return str(v)
+
 def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
     ks = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
     yield ','.join(ks)
     for target in targets:
         # fetch all the data for this row as strings, emit
-        yield ','.join(csv_quote(str(target[k])) for k in ks)
+        yield ','.join(csv_quote(csv_str(target[k])) for k in ks)
 
 def bin2csv_response(hit,targets):
     csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
