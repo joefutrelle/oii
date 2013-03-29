@@ -23,6 +23,9 @@ def utc_to_local(t=None):
     secs = calendar.timegm(t)
     return time.localtime(secs)
 
+def utc(format=ISO_8601_FORMAT):
+    return time.strftime(format, time.gmtime())
+
 def iso8601(t=None):
     if t is None: t=time.gmtime()
     return time.strftime(ISO_8601_FORMAT,t)
