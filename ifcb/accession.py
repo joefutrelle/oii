@@ -63,7 +63,7 @@ if __name__=='__main__':
     fx = IfcbFixity(config.psql_connect)
     feed = IfcbFeed(config.psql_connect)
     with xa(config.psql_connect) as (c, db):
-        for s in list_new_filesets(time_series,config.psql_connect,config.resolver,after_year=2011): # FIXME hardcoded
+        for s in list_new_filesets(time_series,config.psql_connect,config.resolver,after_year=2005): # FIXME hardcoded
             try:
                 check_integrity(s.pid, s.hdr_path, s.adc_path, s.roi_path, s.schema_version)
             except Exception, e:

@@ -119,7 +119,6 @@
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
     <import name="pid"/>
-    <var name="product">raw</var>
     <import name="data_roots"/>
     <var name="filename">
       <value>${lid}.${format}</value>
@@ -135,6 +134,7 @@
   </resolver>
   <resolver name="blobs">
     <import name="pid"/>
+    <var name="product">blob</var>
     <import name="data_roots"/>
     <var name="filename">${bin_lid}_blobs_v2.zip</var>
     <hit>${root}/${year}/${yearday}/${filename}</hit>
