@@ -215,8 +215,8 @@ class Job(object):
         ch,_ = declare_work_queue(self.qname, self.host)
         ch.basic_consume(requeue_callback, queue=self.qname+'_fail')
         ch.start_consuming()
-    def consume_log(self,out=sys.stdout):
-        """Consume the log and send it to the given output stream.
+    def consume_log(self,out=sys.stdout,callback=None):
+        """Consume the log and send it to the given output stream, or callback.
         Will not return as it blocks for incoming log messages"""
         ename = self.qname + '_log'
         ch, _ = declare_log_exchange(ename,self.host)
@@ -226,7 +226,9 @@ class Job(object):
         def printer(ch,m,p,b):
             out.write(b.rstrip()+'\n')
             out.flush()
-        ch.basic_consume(printer,queue=qname,no_ack=True)
+        if callback is None:
+            callback = printer
+        ch.basic_consume(callback,queue=qname,no_ack=True)
         ch.start_consuming()
     def trigger(self,other_queue,filter=lambda x: True):
         """Copy messages from win queue to other queue.
