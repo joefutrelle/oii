@@ -8,7 +8,7 @@ import logging
 from celery import Celery
 from celery.signals import after_setup_task_logger
 
-from oii.ifcb.workflow.blob_deposit import BlobDeposit
+from oii.ifcb.workflow.deposit_client import Deposit
 
 from oii.utils import gen_id
 from oii.config import get_config
@@ -50,7 +50,7 @@ class BlobExtraction(object):
     def configure(self, config):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
-        self.deposit = BlobDeposit(self.config.blob_deposit)
+        self.deposit = Deposit(self.config.blob_deposit)
     def exists(self,bin_pid):
         return self.deposit.exists(bin_pid)
     def preflight(self):
