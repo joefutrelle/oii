@@ -40,6 +40,10 @@ def deposit_impl(product,pid):
         abort(404)
     product_data = request.data
     destpath_part = '%s_%s.part' % (destpath, gen_id())
+    try:
+        os.makedirs(os.path.dirname(destpath))
+    except:
+        pass
     with open(destpath_part,'w') as out:
         shutil.copyfileobj(StringIO(product_data), out)
     os.rename(destpath_part, destpath)
