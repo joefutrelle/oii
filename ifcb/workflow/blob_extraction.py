@@ -123,14 +123,3 @@ def extract_blobs(time_series, bin_pid):
     be = BlobExtraction(get_config(CONFIG_FILE, time_series))
     be.extract_blobs(bin_pid)
 
-@celery.task
-def enqueue_blobs(time_series):
-    """config needs psql_connect, resolver"""
-    config = get_config(CONFIG_FILE, time_series)
-    feed = IfcbFeed(config.psql_connect)
-    r = parse_stream(config.resolver)
-    blob_resolver = r['mvco_blob']
-    for lid in feed.latest_bins(n=1000):
-        if blob_resolver.resolve(pid=lid,time_series=time_series) is None:
-            logging.info('No blobs found for %s, enqueuing' % lid)
-            extract_blobs.apply_async(args=[time_series, lid])
