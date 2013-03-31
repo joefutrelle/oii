@@ -29,7 +29,7 @@ def celery_logging(**kw):
 
 after_setup_task_logger.connect(celery_logging)
 
-CHECK_EVERY=200
+CHECK_EVERY=15
 
 MATLAB_DIRS=[
 'feature_extraction',
@@ -81,20 +81,17 @@ class BlobExtraction(object):
             selflog(line)
             self.output_check -= 1
             if self.output_check <= 0:
-                try:
-                    if self.exists(bin_pid):
-                        selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
-                        raise
-                    self.output_check = CHECK_EVERY
-                except:
-                    return FAIL
+                if self.exists(bin_pid):
+                    selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
+                    raise
+                self.output_check = CHECK_EVERY
         if self.exists(bin_pid):
             selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
         job_dir = os.path.join(self.config.tmp_dir, gen_id())
         try:
             os.makedirs(job_dir)
-            selflog('CREATED temporary directory %s' % job_dir)
+            selflog('CREATED temporary directory %s for %s' % (job_dir, bin_pid))
         except:
             selflog('WARNING cannot create temporary directory %s' % job_dir)
         tmp_file = os.path.join(job_dir, zipname(bin_pid))
