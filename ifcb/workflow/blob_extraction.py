@@ -110,7 +110,7 @@ class BlobExtraction(object):
             if not os.path.exists(tmp_file):
                 selflog('WARNING bin_blobs succeeded but no output file found at %s' % tmp_file)
             elif not self.exists(bin_pid): # check to make sure another worker hasn't finished it in the meantime
-                selflog('DEPOSITING blob zip for %s to deposit service at ' % (bin_pid, self.config.blob_deposit))
+                selflog('DEPOSITING blob zip for %s to deposit service at %s' % (bin_pid, self.config.blob_deposit))
                 self.deposit.deposit(bin_pid,tmp_file)
                 selflog('DEPOSITED blob zip for %s ' % bin_pid)
             else:
