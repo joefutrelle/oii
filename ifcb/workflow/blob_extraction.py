@@ -29,7 +29,7 @@ def celery_logging(**kw):
 
 after_setup_task_logger.connect(celery_logging)
 
-CHECK_EVERY=15
+CHECK_EVERY=25
 
 MATLAB_DIRS=[
 'feature_extraction',
@@ -46,13 +46,19 @@ FAIL='fail'
 def zipname(url):
     return re.sub(r'.*/([^.]+).*',r'\1_blobs_v2.zip',url)
 
+class JobExit(Exception):
+    def __init__(self, message, ret):
+        self.message = message
+        self.ret = ret
+    def __str__(self):
+        return '%s - %s' % (self.message, self.ret)
+
 class BlobExtraction(object):
     def __init__(self, config):
         self.configure(config)
     def configure(self, config):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
-        print 'deposit is configged as ' + self.config.blob_deposit
         self.deposit = Deposit(self.config.blob_deposit)
     def exists(self,bin_pid):
         return self.deposit.exists(bin_pid)
@@ -76,14 +82,15 @@ class BlobExtraction(object):
     def extract_blobs(self,bin_pid):
         jobid = gen_id()[:5]
         def selflog(line):
-            self.log('%s %s' % (jobid, line))
+            self.log('[%s] %s' % (jobid, line))
         def self_check_log(line,bin_pid):
             selflog(line)
             self.output_check -= 1
             if self.output_check <= 0:
                 if self.exists(bin_pid):
-                    selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
-                    raise
+                    msg = 'STOPPING JOB - %s completed by another worker' % bin_pid
+                    selflog(msg)
+                    raise JobExit(msg, SKIP)
                 self.output_check = CHECK_EVERY
         if self.exists(bin_pid):
             selflog('SKIPPING %s - already completed' % bin_pid)
@@ -93,7 +100,7 @@ class BlobExtraction(object):
             os.makedirs(job_dir)
             selflog('CREATED temporary directory %s for %s' % (job_dir, bin_pid))
         except:
-            selflog('WARNING cannot create temporary directory %s' % job_dir)
+            selflog('WARNING cannot create temporary directory %s for %s' % (job_dir, bin_pid))
         tmp_file = os.path.join(job_dir, zipname(bin_pid))
         matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
         cmd = 'bin_blobs(\'%s\',\'%s\')' % (bin_pid, job_dir)
@@ -103,20 +110,21 @@ class BlobExtraction(object):
             if not os.path.exists(tmp_file):
                 selflog('WARNING bin_blobs succeeded but no output file found at %s' % tmp_file)
             elif not self.exists(bin_pid): # check to make sure another worker hasn't finished it in the meantime
-                selflog('DEPOSITING blob zip for %s to deposit service' % bin_pid)
+                selflog('DEPOSITING blob zip for %s to deposit service at ' % (bin_pid, self.config.blob_deposit))
                 self.deposit.deposit(bin_pid,tmp_file)
-                selflog('DEPOSITED blob zip for %s to deposit service' % bin_pid)
+                selflog('DEPOSITED blob zip for %s ' % bin_pid)
             else:
                 selflog('NOT SAVING - blobs for %s already present at output destination' % bin_pid)
         except KeyboardInterrupt:
             selflog('KeyboardInterrupt, exiting')
             return DIE
-
         finally:
             try:
                 shutil.rmtree(job_dir)
+                selflog('DELETED temporary directory %s for %s' % (job_dir, bin_pid))
             except:
-                selflog('WARNING cannot remove temporary directory %s' % job_dir)
+                selflog('WARNING cannot remove temporary directory %s for %s' % (job_dir, bin_pid))
+            selflog('DONE - no more actions for %s' % bin_pid)
 
 CONFIG_FILE = './blob.conf' # FIXME hardcoded
 
