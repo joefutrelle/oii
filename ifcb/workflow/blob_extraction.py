@@ -52,6 +52,7 @@ class BlobExtraction(object):
     def configure(self, config):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
+        print 'deposit is configged as ' + self.config.blob_deposit
         self.deposit = Deposit(self.config.blob_deposit)
     def exists(self,bin_pid):
         return self.deposit.exists(bin_pid)
@@ -80,10 +81,13 @@ class BlobExtraction(object):
             selflog(line)
             self.output_check -= 1
             if self.output_check <= 0:
-                if self.exists(bin_pid):
-                    selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
-                    return SKIP
-                self.output_check = CHECK_EVERY
+                try:
+                    if self.exists(bin_pid):
+                        selflog('STOPPING JOB - %s completed by another worker' % bin_pid)
+                        raise
+                    self.output_check = CHECK_EVERY
+                except:
+                    return FAIL
         if self.exists(bin_pid):
             selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
@@ -104,11 +108,13 @@ class BlobExtraction(object):
             elif not self.exists(bin_pid): # check to make sure another worker hasn't finished it in the meantime
                 selflog('DEPOSITING blob zip for %s to deposit service' % bin_pid)
                 self.deposit.deposit(bin_pid,tmp_file)
+                selflog('DEPOSITED blob zip for %s to deposit service' % bin_pid)
             else:
                 selflog('NOT SAVING - blobs for %s already present at output destination' % bin_pid)
         except KeyboardInterrupt:
             selflog('KeyboardInterrupt, exiting')
             return DIE
+
         finally:
             try:
                 shutil.rmtree(job_dir)

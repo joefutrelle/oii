@@ -8,7 +8,8 @@ class Deposit(object):
         self.product_type = product_type
 
     def exists(self,pid):
-        req = urllib.Request('%s/exists/%s/%s' % (self.url_base, self.product_type, pid))
+        req_url = '%s/exists/%s/%s' % (self.url_base, self.product_type, pid)
+        req = urllib.Request(req_url)
         resp = json.loads(urllib.urlopen(req).read())
         return resp['exists']
 
