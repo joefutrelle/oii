@@ -29,7 +29,7 @@ def celery_logging(**kw):
 
 after_setup_task_logger.connect(celery_logging)
 
-CHECK_EVERY=25
+CHECK_EVERY=30
 
 MATLAB_DIRS=[
 'feature_extraction',
@@ -60,6 +60,7 @@ class BlobExtraction(object):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
         self.deposit = Deposit(self.config.blob_deposit)
+        self.last_check = time.time()
     def exists(self,bin_pid):
         return self.deposit.exists(bin_pid)
     def preflight(self):
@@ -85,13 +86,14 @@ class BlobExtraction(object):
             self.log('[%s] %s' % (jobid, line))
         def self_check_log(line,bin_pid):
             selflog(line)
-            self.output_check -= 1
-            if self.output_check <= 0:
+            now = time.time()
+            elapsed = now - self.last_check
+            self.last_check = now
+            if elapsed > CHECK_EVERY:
                 if self.exists(bin_pid):
                     msg = 'STOPPING JOB - %s completed by another worker' % bin_pid
                     selflog(msg)
                     raise JobExit(msg, SKIP)
-                self.output_check = CHECK_EVERY
         if self.exists(bin_pid):
             selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
