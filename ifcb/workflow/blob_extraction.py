@@ -118,6 +118,8 @@ class BlobExtraction(object):
         except KeyboardInterrupt:
             selflog('KeyboardInterrupt, exiting')
             return DIE
+        except JobExit:
+            pass
         finally:
             try:
                 shutil.rmtree(job_dir)
