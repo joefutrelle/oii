@@ -143,10 +143,15 @@
     <import name="blobs"/>
     <path match="${value}"/>
   </resolver>
-  <resolver name="features">
+  <resolver name="features_destination">
     <import name="pid"/>
+    <var name="product">features</var>
     <import name="data_roots"/>
-    <path match="${root}/features${year}_v2/${lid}_fea_v2.csv"/>
+    <hit>${root}/features${year}_v2/${lid}_fea_v2.csv</hit>
+  </resolver>
+  <resolver name="features">
+    <import name="features_destination"/>
+    <path match="${value}"/>
   </resolver>
   <resolver name="list_day_dirs">
     <var name="product">raw</var>
