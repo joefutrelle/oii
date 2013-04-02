@@ -61,10 +61,10 @@ class FeatureExtraction(object):
     def configure(self, config):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
-        self.deposit = Deposit(self.config.blob_deposit, product_type='features')
+        self.deposit = Deposit(self.config.features_deposit, product_type='features')
         self.last_check = time.time()
     def complete(self,bin_pid):
-        return False # FIXME check deposit service
+        return self.deposit.exists(bin_pid)
     def preflight(self):
         for p in self.config.matlab_path:
             if not os.path.exists(p):
@@ -135,7 +135,7 @@ class FeatureExtraction(object):
                 selflog('WARNING cannot remove temporary directory %s for %s' % (job_dir, bin_pid))
             selflog('DONE - no more actions for %s' % bin_pid)
 
-CONFIG_FILE = './blob.conf' # FIXME hardcoded
+CONFIG_FILE = './features.conf' # FIXME hardcoded
 
 @celery.task
 def extract_features(time_series, bin_pid):
