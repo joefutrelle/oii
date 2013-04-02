@@ -29,15 +29,19 @@ def iso8601utcnow():
 blob_resolver = None # configged below
 blob_destination = None # configged below
 
-@app.route('/deposit/<product>/<path:pid>',methods=['POST'])
-def deposit_impl(product,pid):
+def get_destpath(product,pid):
     if product == 'blobs':
-        try:
-            destpath = blob_destination.resolve(pid=pid).value
-        except:
-            abort(500)
+        resolver = blob_destination
+    elif product == 'features':
+        resolver = features_destination
     else:
         abort(404)
+    destpath = resolver.resolve(pid=pid).value
+    return destpath
+
+@app.route('/deposit/<product>/<path:pid>',methods=['POST'])
+def deposit_impl(product,pid):
+    destpath = get_destpath(product, pid)
     product_data = request.data
     destpath_part = '%s_%s.part' % (destpath, gen_id())
     try:
@@ -59,15 +63,8 @@ def deposit_impl(product,pid):
 
 @app.route('/exists/<product>/<path:pid>')
 def exists_impl(product,pid):
-    if product == 'blobs':
-        exists = False
-        try:
-            destpath = blob_destination.resolve(pid=pid).value
-        except:
-            abort(500)
-        exists = os.path.exists(destpath)
-    else:
-        abort(404)
+    destpath = get_destpath(product, pid)
+    exists = os.path.exists(destpath)
     if exists:
         message = '%s %s FOUND at %s' % (iso8601utcnow(), pid, destpath)
     else:
@@ -104,6 +101,7 @@ else:
 rs = parse_stream(app.config[RESOLVER])
 blob_resolver = rs['mvco_blob']
 blob_destination = rs['blobs']
+features_destination = rs['features_destination']
 
 if __name__=='__main__':
     app.run(host='0.0.0.0',port=app.config[PORT])
