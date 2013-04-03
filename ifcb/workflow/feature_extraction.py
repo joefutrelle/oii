@@ -12,7 +12,7 @@ from oii.ifcb.workflow.deposit_client import Deposit
 
 from oii.resolver import parse_stream
 from oii.ifcb.db import IfcbFeed
-from oii.utils import gen_id
+from oii.utils import gen_id, retry
 from oii.config import get_config
 from oii.matlab import Matlab
 
@@ -55,6 +55,10 @@ class JobExit(Exception):
 def csvname(url):
     return re.sub(r'.*/([^.]+).*',r'\1_fea_v2.csv',url)
 
+@retry(IOError, tries=4, delay=1, backoff=2)
+def exists(deposit,bin_pid):
+    return deposit.exists(bin_pid)
+
 class FeatureExtraction(object):
     def __init__(self, config):
         self.configure(config)
@@ -64,7 +68,7 @@ class FeatureExtraction(object):
         self.deposit = Deposit(self.config.features_deposit, product_type='features')
         self.last_check = time.time()
     def complete(self,bin_pid):
-        return self.deposit.exists(bin_pid)
+        return exists(self.deposit, bin_pid)
     def preflight(self):
         for p in self.config.matlab_path:
             if not os.path.exists(p):
@@ -109,7 +113,7 @@ class FeatureExtraction(object):
         matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
         namespace = os.path.dirname(bin_pid) + '/'
         lid = os.path.basename(bin_pid) + '.zip'
-        cmd = 'bin_features(\'%s\',\'%s\',\'%s\')' % (namespace, lid, job_dir + '/')
+        cmd = 'bin_features(\'%s\',\'%s\',\'%s\',\'chatty\')' % (namespace, lid, job_dir + '/')
         selflog('RUNNING %s' % cmd)
         try:
             self.output_check = CHECK_EVERY
