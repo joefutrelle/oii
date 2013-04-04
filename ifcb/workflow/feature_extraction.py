@@ -55,6 +55,9 @@ class JobExit(Exception):
 def csvname(url):
     return re.sub(r'.*/([^.]+).*',r'\1_fea_v2.csv',url)
 
+def multiblobname(url):
+    return re.sub(r'.*/([^.]+).*',r'\1_multiblob_v2.csv',url)
+
 @retry(IOError, tries=4, delay=1, backoff=2)
 def exists(deposit,bin_pid):
     return deposit.exists(bin_pid)
@@ -66,9 +69,10 @@ class FeatureExtraction(object):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
         self.deposit = Deposit(self.config.features_deposit, product_type='features')
+        self.multiblob_deposit = Deposit(self.config.features_deposit, product_type='multiblob')
         self.last_check = time.time()
     def complete(self,bin_pid):
-        return exists(self.deposit, bin_pid)
+        return exists(self.deposit, bin_pid) and exists(self.multiblob_deposit, bin_pid)
     def preflight(self):
         for p in self.config.matlab_path:
             if not os.path.exists(p):
@@ -109,7 +113,8 @@ class FeatureExtraction(object):
             selflog('CREATED temporary directory %s for %s' % (job_dir, bin_pid))
         except:
             selflog('WARNING cannot create temporary directory %s for %s' % (job_dir, bin_pid))
-        tmp_file = os.path.join(job_dir, csvname(bin_pid))
+        feature_csv = os.path.join(job_dir, csvname(bin_pid))
+        multiblob_csv = os.path.join(job_dir, 'multiblob', multiblobname(bin_pid))
         matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
         namespace = os.path.dirname(bin_pid) + '/'
         lid = os.path.basename(bin_pid) + '.zip'
@@ -118,12 +123,21 @@ class FeatureExtraction(object):
         try:
             self.output_check = CHECK_EVERY
             matlab.run(cmd)
-            if not os.path.exists(tmp_file):
-                selflog('WARNING bin_features succeeded but no output file found at %s' % tmp_file)
-            elif not self.complete(bin_pid): # check to make sure another worker hasn't finished it in the meantime
-                selflog('DEPOSITING features zip for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
-                self.deposit.deposit(bin_pid,tmp_file)
-                selflog('DEPOSITED features zip for %s ' % bin_pid)
+            if not os.path.exists(feature_csv):
+                msg = 'WARNING bin_features succeeded but no output file found at %s' % feature_csv
+                selflog(msg)
+                raise JobExit(msg,FAIL)
+            if not os.path.exists(multiblob_csv):
+                msg = 'WARNING bin_features succeeded but no output file found at %s' % multiblob_csv
+                selflog(msg)
+                raise JobExit(msg,FAIL)
+            if not self.complete(bin_pid): # check to make sure another worker hasn't finished it in the meantime
+                selflog('DEPOSITING features csv for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
+                self.deposit.deposit(bin_pid,feature_csv)
+                selflog('DEPOSITED features csv for %s ' % bin_pid)
+                selflog('DEPOSITING multiblob csv for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
+                self.multiblob_deposit.deposit(bin_pid,multiblob_csv)
+                selflog('DEPOSITED multiblob csv for %s ' % bin_pid)
             else:
                 selflog('NOT SAVING - features for %s already present at output destination' % bin_pid)
         except KeyboardInterrupt:
@@ -145,4 +159,11 @@ CONFIG_FILE = './features.conf' # FIXME hardcoded
 def extract_features(time_series, bin_pid):
     """config needs matlab_base, matlab_exec_path, tmp_dir, blob_deposit"""
     be = FeatureExtraction(get_config(CONFIG_FILE, time_series))
+    be.extract_features(bin_pid)
+
+if __name__=='__main__':
+    config_file = sys.argv[1]
+    time_series = sys.argv[2]
+    bin_pid = sys.argv[3]
+    be = FeatureExtraction(get_config(config_file, time_series))
     be.extract_features(bin_pid)
