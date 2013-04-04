@@ -34,6 +34,8 @@ def get_destpath(product,pid):
         resolver = blob_destination
     elif product == 'features':
         resolver = features_destination
+    elif product == 'multiblob':
+        resolver = multiblob_destination
     else:
         abort(404)
     destpath = resolver.resolve(pid=pid).value
@@ -102,6 +104,7 @@ rs = parse_stream(app.config[RESOLVER])
 blob_resolver = rs['mvco_blob']
 blob_destination = rs['blobs']
 features_destination = rs['features_destination']
+multiblob_destination = rs['multiblob_destination']
 
 if __name__=='__main__':
     app.run(host='0.0.0.0',port=app.config[PORT])
