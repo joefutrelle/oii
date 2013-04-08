@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for, abort, session, Response, render_template
+from flask import Flask, request, url_for, abort, session, Response, render_template, render_template_string
 from unittest import TestCase
 import json
 import re
@@ -604,12 +604,22 @@ def serve_bin(hit,mimetype):
     else:
         abort(404)
 
+BIN_XML_TEMPLATE = """
+<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#">
+  <dc:identifier>{{hit.bin_pid}}</dc:identifier>
+  <dc:date>{{hit.date}}</dc:date>{% for v in context %}
+<context>{{v}}</context>{% endfor %}{% for k,v in properties %}
+  <{{k}}>{{v}}</{{k}}>{% endfor %}{% for target_pid in target_pids %}
+  <Target dc:identifier="{{target_pid}}"/>{% endfor %}
+</Bin>
+"""
+
 def bin2xml(template):
-    return render_template('bin.xml',**template)
+    return render_template_string(BIN_XML_TEMPLATE,**template)
 
 def bin_zip(hit,targets,template):
-    buffer = BytesIO()
     (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
+    buffer = BytesIO()
     with tempfile.SpooledTemporaryFile() as temp:
         z = ZipFile(temp,'w',ZIP_DEFLATED)
         csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
