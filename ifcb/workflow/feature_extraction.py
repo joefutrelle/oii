@@ -15,6 +15,8 @@ from oii.ifcb.db import IfcbFeed
 from oii.utils import gen_id, retry
 from oii.config import get_config
 from oii.matlab import Matlab
+from oii.ifcb import represent
+from oii.iopipes import UrlSource, LocalFileSink, drain
 
 MODULE='oii.ifcb.workflow.feature_extraction'
 
@@ -58,6 +60,9 @@ def csvname(url):
 def multiblobname(url):
     return re.sub(r'.*/([^.]+).*',r'\1_multiblob_v2.csv',url)
 
+def binzipname(url):
+    return re.sub(r'.*/([^.]+).*',r'\1.zip',url)
+
 @retry(IOError, tries=4, delay=1, backoff=2)
 def exists(deposit,bin_pid):
     return deposit.exists(bin_pid)
@@ -70,9 +75,10 @@ class FeatureExtraction(object):
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
         self.deposit = Deposit(self.config.features_deposit, product_type='features')
         self.multiblob_deposit = Deposit(self.config.features_deposit, product_type='multiblob')
+        self.resolver = parse_stream(self.config.resolver)
         self.last_check = time.time()
     def complete(self,bin_pid):
-        return exists(self.deposit, bin_pid) and exists(self.multiblob_deposit, bin_pid)
+        return exists(self.deposit, bin_pid)
     def preflight(self):
         for p in self.config.matlab_path:
             if not os.path.exists(p):
@@ -108,16 +114,30 @@ class FeatureExtraction(object):
             selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
         job_dir = os.path.join(self.config.tmp_dir, gen_id())
+        zip_dir = os.path.join(self.config.tmp_dir, gen_id())
+        bin_zip_path = os.path.join(zip_dir, binzipname(bin_pid))
         try:
             os.makedirs(job_dir)
             selflog('CREATED temporary directory %s for %s' % (job_dir, bin_pid))
         except:
             selflog('WARNING cannot create temporary directory %s for %s' % (job_dir, bin_pid))
+        try:
+            os.makedirs(zip_dir)
+            selflog('CREATED temporary directory %s for %s' % (zip_dir, bin_pid))
+        except:
+            selflog('WARNING cannot create temporary directory %s for %s' % (zip_dir, bin_pid))
+        selflog('LOADING and STITCHING %s' % bin_pid)
+        with open(bin_zip_path,'wb') as binzip:
+            represent.binpid2zip(bin_pid, binzip, resolver=self.resolver)
+        blobzipurl = bin_pid + '_blob.zip'
+        blobzipfile = re.sub(r'\.zip','_blob.zip',bin_zip_path)
+        selflog('LOADING blob zip from %s -> %s' % (blobzipurl, blobzipfile))
+        drain(UrlSource(blobzipurl), LocalFileSink(blobzipfile))
         feature_csv = os.path.join(job_dir, csvname(bin_pid))
         multiblob_csv = os.path.join(job_dir, 'multiblob', multiblobname(bin_pid))
         matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
-        namespace = os.path.dirname(bin_pid) + '/'
-        lid = os.path.basename(bin_pid) + '.zip'
+        namespace = os.path.dirname(bin_zip_path) + '/'
+        lid = os.path.basename(bin_zip_path)
         cmd = 'bin_features(\'%s\',\'%s\',\'%s\',\'chatty\')' % (namespace, lid, job_dir + '/')
         selflog('RUNNING %s' % cmd)
         try:
@@ -127,17 +147,14 @@ class FeatureExtraction(object):
                 msg = 'WARNING bin_features succeeded but no output file found at %s' % feature_csv
                 selflog(msg)
                 raise JobExit(msg,FAIL)
-            if not os.path.exists(multiblob_csv):
-                msg = 'WARNING bin_features succeeded but no output file found at %s' % multiblob_csv
-                selflog(msg)
-                raise JobExit(msg,FAIL)
             if not self.complete(bin_pid): # check to make sure another worker hasn't finished it in the meantime
                 selflog('DEPOSITING features csv for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
                 self.deposit.deposit(bin_pid,feature_csv)
                 selflog('DEPOSITED features csv for %s ' % bin_pid)
-                selflog('DEPOSITING multiblob csv for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
-                self.multiblob_deposit.deposit(bin_pid,multiblob_csv)
-                selflog('DEPOSITED multiblob csv for %s ' % bin_pid)
+                if os.path.exists(multiblob_csv):
+                    selflog('DEPOSITING multiblob csv for %s to deposit service at %s' % (bin_pid, self.config.features_deposit))
+                    self.multiblob_deposit.deposit(bin_pid,multiblob_csv)
+                    selflog('DEPOSITED multiblob csv for %s ' % bin_pid)
             else:
                 selflog('NOT SAVING - features for %s already present at output destination' % bin_pid)
         except KeyboardInterrupt:
@@ -151,6 +168,11 @@ class FeatureExtraction(object):
                 selflog('DELETED temporary directory %s for %s' % (job_dir, bin_pid))
             except:
                 selflog('WARNING cannot remove temporary directory %s for %s' % (job_dir, bin_pid))
+            try:
+                shutil.rmtree(zip_dir)
+                selflog('DELETED temporary directory %s for %s' % (zip_dir, bin_pid))
+            except:
+                selflog('WARNING cannot remove temporary directory %s for %s' % (zip_dir, bin_pid))
             selflog('DONE - no more actions for %s' % bin_pid)
 
 CONFIG_FILE = './features.conf' # FIXME hardcoded
