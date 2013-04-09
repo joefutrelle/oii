@@ -116,7 +116,6 @@ class BlobExtraction(object):
         except:
             selflog('WARNING cannot create temporary directory %s for %s' % (zip_dir, bin_pid))
         selflog('LOADING and STITCHING %s' % bin_pid)
-        bin_zip_path = './' + binzipname(bin_pid)
         with open(bin_zip_path,'wb') as binzip:
             represent.binpid2zip(bin_pid, binzip, resolver=self.resolver)
         tmp_file = os.path.join(job_dir, zipname(bin_pid))
