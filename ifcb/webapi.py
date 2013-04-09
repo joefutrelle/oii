@@ -21,6 +21,7 @@ from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity
 from oii.resolver import parse_stream
 from oii.ifcb import stitching
+from oii.ifcb import represent
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
@@ -534,25 +535,6 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
     targets = add_bin_pid(targets, hit.bin_pid)
     return targets
 
-def csv_quote(thing):
-    if re.match(r'^-?[0-9]+(\.[0-9]+)?$',thing):
-        return thing
-    else:
-        return '"' + thing + '"'
-
-def csv_str(v):
-    try:
-        return re.sub(r'\.$','',('%.12f' % v).rstrip('0'))
-    except:
-        return str(v)
-
-def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
-    ks = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
-    yield ','.join(ks)
-    for target in targets:
-        # fetch all the data for this row as strings, emit
-        yield ','.join(csv_quote(csv_str(target[k])) for k in ks)
-
 def bin2csv_response(hit,targets):
     csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
     return Response(csv_out + '\n', mimetype='text/plain', headers=max_age())
@@ -604,45 +586,11 @@ def serve_bin(hit,mimetype):
     else:
         abort(404)
 
-BIN_XML_TEMPLATE = """
-<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#">
-  <dc:identifier>{{hit.bin_pid}}</dc:identifier>
-  <dc:date>{{hit.date}}</dc:date>{% for v in context %}
-<context>{{v}}</context>{% endfor %}{% for k,v in properties %}
-  <{{k}}>{{v}}</{{k}}>{% endfor %}{% for target_pid in target_pids %}
-  <Target dc:identifier="{{target_pid}}"/>{% endfor %}
-</Bin>
-"""
-
-def bin2xml(template):
-    return render_template_string(BIN_XML_TEMPLATE,**template)
-
 def bin_zip(hit,targets,template):
-    (adc_path, roi_path) = resolve_files(hit.bin_pid, (ADC, ROI))
+    (hdr_path, adc_path, roi_path) = resolve_files(hit.bin_pid, (HDR, ADC, ROI))
     buffer = BytesIO()
-    with tempfile.SpooledTemporaryFile() as temp:
-        z = ZipFile(temp,'w',ZIP_DEFLATED)
-        csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
-        z.writestr(hit.bin_lid + '.csv', csv_out)
-        # xml as well, including header info
-        z.writestr(hit.bin_lid + '.xml', bin2xml(template))
-        for target in targets:
-            buffer.seek(0)
-            buffer.truncate()
-            im = get_roi_image_from_files(hit.schema_version, adc_path, roi_path, hit.bin_pid, target[TARGET_NUMBER])
-            with tempfile.SpooledTemporaryFile() as imtemp:
-                im.save(imtemp,'PNG')
-                imtemp.seek(0)
-                shutil.copyfileobj(imtemp, buffer)
-            # need LID here
-            target_lid = re.sub(r'.*/','',target[PID]) # FIXME resolver should do this
-            z.writestr(target_lid + '.png', buffer.getvalue())
-        z.close()
-        temp.seek(0)
-        buffer.seek(0)
-        buffer.truncate()
-        shutil.copyfileobj(temp, buffer)
-        return buffer.getvalue()
+    represent.bin_zip(hit, hdr_path, adc_path, roi_path, buffer)
+    return buffer.getvalue()
 
 def serve_target(hit,mimetype):
     target = get_target(hit) # read the target from the ADC file
@@ -685,7 +633,8 @@ def get_roi_image(bin_pid, target_no, fast_stitching=False, mask=False):
     return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching, mask)
 
 def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False, mask=False):
-    if app.config[STITCH]:
+    to_stitch = app.config[STITCH]
+    if to_stitch:
         offset=max(1,target_no-1)
         limit=3 # read three targets, in case we need to stitch
     else:
@@ -696,7 +645,7 @@ def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target
         return None
     # open the ROI file as we may need to read more than one
     with open(roi_path,'rb') as roi_file:
-        if app.config[STITCH]:
+        if to_stitch:
             pairs = list(find_pairs(targets)) # look for stitched pairs
         else:
             pairs = targets
