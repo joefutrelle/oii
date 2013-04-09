@@ -15,6 +15,7 @@ from oii.ifcb.db import IfcbFeed
 from oii.utils import gen_id
 from oii.config import get_config
 from oii.matlab import Matlab
+from oii.ifcb import represent
 
 MODULE='oii.ifcb.workflow.blob_extraction'
 
@@ -46,6 +47,9 @@ FAIL='fail'
 def zipname(url):
     return re.sub(r'.*/([^.]+).*',r'\1_blobs_v2.zip',url)
 
+def binzipname(url):
+    return re.sub(r'.*/([^.]+).*',r'\1.zip',url)
+
 class JobExit(Exception):
     def __init__(self, message, ret):
         self.message = message
@@ -60,6 +64,7 @@ class BlobExtraction(object):
         self.config = config
         self.config.matlab_path = [os.path.join(self.config.matlab_base, md) for md in MATLAB_DIRS]
         self.deposit = Deposit(self.config.blob_deposit)
+        self.resolver = parse_stream(self.config.resolver)
         self.last_check = time.time()
     def exists(self,bin_pid):
         return self.deposit.exists(bin_pid)
@@ -98,14 +103,25 @@ class BlobExtraction(object):
             selflog('SKIPPING %s - already completed' % bin_pid)
             return SKIP
         job_dir = os.path.join(self.config.tmp_dir, gen_id())
+        zip_dir = os.path.join(self.config.tmp_dir, gen_id())
+        bin_zip_path = os.path.join(zip_dir, binzipname(bin_pid))
         try:
             os.makedirs(job_dir)
             selflog('CREATED temporary directory %s for %s' % (job_dir, bin_pid))
         except:
             selflog('WARNING cannot create temporary directory %s for %s' % (job_dir, bin_pid))
+        try:
+            os.makedirs(zip_dir)
+            selflog('CREATED temporary directory %s for %s' % (zip_dir, bin_pid))
+        except:
+            selflog('WARNING cannot create temporary directory %s for %s' % (zip_dir, bin_pid))
+        selflog('LOADING and STITCHING %s' % bin_pid)
+        bin_zip_path = './' + binzipname(bin_pid)
+        with open(bin_zip_path,'wb') as binzip:
+            represent.binpid2zip(bin_pid, binzip, resolver=self.resolver)
         tmp_file = os.path.join(job_dir, zipname(bin_pid))
         matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
-        cmd = 'bin_blobs(\'%s\',\'%s\')' % (bin_pid, job_dir)
+        cmd = 'bin_blobs(\'%s\',\'%s\',\'%s\')' % (bin_pid, bin_zip_path, job_dir)
         try:
             self.output_check = CHECK_EVERY
             matlab.run(cmd)
@@ -128,6 +144,11 @@ class BlobExtraction(object):
                 selflog('DELETED temporary directory %s for %s' % (job_dir, bin_pid))
             except:
                 selflog('WARNING cannot remove temporary directory %s for %s' % (job_dir, bin_pid))
+            try:
+                shutil.rmtree(zip_dir)
+                selflog('DELETED temporary directory %s for %s' % (zip_dir, bin_pid))
+            except:
+                selflog('WARNING cannot remove temporary directory %s for %s' % (zip_dir, bin_pid))
             selflog('DONE - no more actions for %s' % bin_pid)
 
 CONFIG_FILE = './blob.conf' # FIXME hardcoded
