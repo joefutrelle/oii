@@ -158,3 +158,7 @@ def extract_blobs(time_series, bin_pid):
     be = BlobExtraction(get_config(CONFIG_FILE, time_series))
     be.extract_blobs(bin_pid)
 
+if __name__=='__main__':
+    time_series = sys.argv[1]
+    bin_lid = sys.argv[2]
+    extract_blobs(time_series, bin_lid)
