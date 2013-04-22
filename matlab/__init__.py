@@ -6,7 +6,7 @@ from traceback import print_exc
 import os
 
 def reset_tty():
-    subprocess.call(['stty','echo'])
+    pass
 
 def message(msg='WARNING'):
     return ' '.join([iso8601(),str(msg)])
@@ -32,23 +32,26 @@ class Matlab:
                 ]
             p = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)#,env=env)
             seen_separator = False
-            while p.poll() is None:
-                while True:
-                    line = p.stdout.readline()
-                    if not line:
-                        break
-                    line = line.rstrip()
-                    if seen_separator:
-                        try:
-                            self.output_callback(line)
-                        except:
-                            self.log_callback('Output callback raised exception; killing Matlab process %d' % p.pid)
-                            reset_tty()
-                            p.kill()
-                            raise
-                    elif not seen_separator and line == self.output_separator:
-                        seen_separator = True
-            if p.returncode != 0 and self.fail_fast:
+            try:
+                while p.poll() is None:
+                    while True:
+                        line = p.stdout.readline()
+                        if not line:
+                            break
+                        line = line.rstrip()
+                        if seen_separator:
+                            try:
+                                self.output_callback(line)
+                            except:
+                                self.log_callback('Output callback raised exception; killing Matlab process %d' % p.pid)
+                                reset_tty()
+                                p.kill()
+                                raise
+                        elif not seen_separator and line == self.output_separator:
+                            seen_separator = True
+            except:
+                self.log_callback('Matlab exited')
+            if p.returncode is not None and p.returncode != 0 and self.fail_fast:
                 self.log_callback('Matlab return code is %d' % p.returncode)
                 raise RuntimeError('Nonzero return code (%d) from Matlab process %d' % (p.pid, p.returncode))
         except KeyboardInterrupt:
@@ -57,8 +60,11 @@ class Matlab:
             p.kill()
             raise
         except:
-            reset_tty()
-            p.kill()
             print_exc()
+            reset_tty()
+            try:
+                p.kill()
+            except OSError:
+                print('did not kill, no such process')
             if self.fail_fast:
                 raise
