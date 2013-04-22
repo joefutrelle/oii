@@ -401,6 +401,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 @app.route('/<time_series>/api/blob/pid/<path:pid>')
 def serve_blob(time_series,pid):
     """Serve blob zip or image"""
+    pid_hit = pid_resolver.resolve(pid=pid)
     hit = blob_resolver.resolve(pid=pid,time_series=time_series)
     zip_path = hit.value
     if hit.target is None: # bin, not target?
@@ -414,12 +415,12 @@ def serve_blob(time_series,pid):
         blobzip.close()
         # now determine PIL format and MIME type
         (pil_format, mimetype) = image_types(hit)
-        if hit.product == 'blob' and mimetype == 'image/png':
+        if pid_hit.product == 'blob' and mimetype == 'image/png':
             return Response(png, mimetype='image/png', headers=max_age())
         else:
             # FIXME support more imaage types
             blob_image = Image.open(StringIO(png))
-            if hit.product == 'blob_outline':
+            if pid_hit.product == 'blob_outline':
                 blob_image = blob_image.convert('RGB').filter(FIND_EDGES)
                 blob_image = ImageOps.colorize(blob_image.convert('L'),(255,255,255),(255,0,0))
                 roi_image = get_stitched_roi(hit.bin_pid, int(hit.target)).convert('RGB')
