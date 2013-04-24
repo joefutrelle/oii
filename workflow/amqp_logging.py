@@ -1,36 +1,32 @@
 import logging
 import pika
 import sys
+import re
 
-def configure(host='localhost',port=5672):
-    return pika.ConnectionParameters(host=host,port=port)
+DEFAULT_BROKER_URL='amqp://guest:guest@localhost:5672/%2f'
 
-def declare_log_exchange(exchange,routing_key='',config=None):
+def declare_log_exchange(exchange,routing_key='',broker_url=DEFAULT_BROKER_URL):
     """Declare a "log exchange"
     A log exchange is a fanout exchange. Should be consumed with no_ack=True"""
-    if config is None:
-        config = configure()
-    connection = pika.BlockingConnection(config)
+    connection = pika.BlockingConnection(pika.URLParameters(broker_url))
     channel = connection.channel()
-    channel.exchange_declare(exchange=exchange,type='fanout')
+    channel.exchange_declare(exchange=exchange,exchange_type='fanout')
     return channel, connection
 
 class RabbitLogHandler(logging.Handler):
-    def __init__(self,level=logging.NOTSET,exchange='logs',routing_key='',config=None):
+    def __init__(self,level=logging.NOTSET,exchange='logs',routing_key='',broker_url=DEFAULT_BROKER_URL):
         logging.Handler.__init__(self,level=level) # old-style superclass chaining
-        self.config = config
-        if self.config is None:
-            self.config = configure()
+        self.broker_url = broker_url
         self.exchange = exchange
         self.routing_key = routing_key
         self.channel = None
     def emit(self,record):
         formatted = self.format(record)
         if self.channel is None:
-            self.channel, _ = declare_log_exchange(self.exchange, self.routing_key)
+            self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
         self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
     def consume(self,out=sys.stdout,callback=None):
-        ch, _ = declare_log_exchange(self.exchange,self.routing_key,config=self.config)
+        ch, _ = declare_log_exchange(self.exchange,self.routing_key,self.broker_url)
         result = ch.queue_declare(exclusive=True)
         qname = result.method.queue
         ch.queue_bind(exchange=self.exchange,queue=qname)
@@ -47,8 +43,8 @@ import time
 
 if __name__=='__main__':
     logger = logging.getLogger('foobaz')
-    config = configure()
-    handler = RabbitLogHandler(config=config)
+    broker_url = 'amqp://guest:guest@demi.whoi.edu:5672/%2f'
+    handler = RabbitLogHandler(broker_url=broker_url)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     if sys.argv[1] == 'produce':
