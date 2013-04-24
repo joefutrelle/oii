@@ -14,7 +14,7 @@ from oii.ifcb.workflow.deposit_client import Deposit
 
 from oii.resolver import parse_stream
 from oii.ifcb.db import IfcbFeed
-from oii.utils import gen_id
+from oii.utils import gen_id, retry
 from oii.config import get_config
 from oii.matlab import Matlab
 from oii.ifcb import represent
@@ -59,6 +59,10 @@ class JobExit(Exception):
     def __str__(self):
         return '%s - %s' % (self.message, self.ret)
 
+@retry(IOError, tries=4, delay=1, backoff=2)
+def exists(deposit,bin_pid):
+    return deposit.exists(bin_pid)
+
 class BlobExtraction(object):
     def __init__(self, config):
         self.configure(config)
@@ -69,7 +73,7 @@ class BlobExtraction(object):
         self.resolver = parse_stream(self.config.resolver)
         self.last_check = time.time()
     def exists(self,bin_pid):
-        return self.deposit.exists(bin_pid)
+        return exists(self.deposit, bin_pid)
     def preflight(self):
         for p in self.config.matlab_path:
             if not os.path.exists(p):

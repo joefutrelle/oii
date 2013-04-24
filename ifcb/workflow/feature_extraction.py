@@ -19,13 +19,10 @@ from oii.config import get_config
 from oii.matlab import Matlab
 from oii.ifcb import represent
 from oii.iopipes import UrlSource, LocalFileSink, drain
-from oii.workflow.amqp_logging import RabbitLogHandler
 
 MODULE='oii.ifcb.workflow.feature_extraction'
 
 celery = Celery(MODULE)
-
-logger = logging.getLogger(MODULE)
 
 def celery_logging(logger, format, **kw):
     broker_url = celery.conf.BROKER_URL
