@@ -6,7 +6,9 @@ import time
 import logging
 
 from celery import Celery
-from celery.signals import after_setup_task_logger
+from celery.utils.log import get_task_logger
+from celery.signals import after_setup_logger, after_setup_task_logger
+from oii.workflow.amqp_logging import RabbitLogHandler
 
 from oii.ifcb.workflow.deposit_client import Deposit
 
@@ -17,6 +19,7 @@ from oii.config import get_config
 from oii.matlab import Matlab
 from oii.ifcb import represent
 from oii.iopipes import UrlSource, LocalFileSink, drain
+from oii.workflow.amqp_logging import RabbitLogHandler
 
 MODULE='oii.ifcb.workflow.feature_extraction'
 
@@ -24,11 +27,13 @@ celery = Celery(MODULE)
 
 logger = logging.getLogger(MODULE)
 
-def celery_logging(**kw):
-    logger = logging.getLogger(MODULE)
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel(logging.INFO)
+def celery_logging(logger, format, **kw):
+    broker_url = celery.conf.BROKER_URL
+    lopear = RabbitLogHandler(broker_url=broker_url)
+    lopear.setFormatter(logging.Formatter(format))
+    logger.addHandler(lopear)
 
+after_setup_logger.connect(celery_logging)
 after_setup_task_logger.connect(celery_logging)
 
 CHECK_EVERY=30
@@ -95,7 +100,7 @@ class FeatureExtraction(object):
         if os.path.exists(tempfile):
             raise
     def log(self,message):
-        print message
+        get_task_logger(MODULE).info(message)
     def extract_features(self,bin_pid):
         jobid = gen_id()[:5]
         def selflog(line):
