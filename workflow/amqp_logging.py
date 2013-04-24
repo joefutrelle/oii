@@ -43,7 +43,7 @@ import time
 
 if __name__=='__main__':
     logger = logging.getLogger('foobaz')
-    broker_url = 'amqp://guest:guest@demi.whoi.edu:5672/%2f'
+    broker_url = 'amqp://guest:guest@localhost:5672/%2f'
     handler = RabbitLogHandler(broker_url=broker_url)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
