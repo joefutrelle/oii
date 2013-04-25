@@ -90,9 +90,12 @@ class BlobExtraction(object):
         if os.path.exists(tempfile):
             raise
     def log(self,message):
-        get_task_logger(MODULE).info(message)
+        print message # this will be sent to AMQP via Celery root logging
     def extract_blobs(self,bin_pid):
-        jobid = gen_id()[:5]
+        try:
+            jobid = self.config.task_id
+        except:
+            jobid = gen_id()[:5]
         def selflog(line):
             self.log('[%s] %s' % (jobid, line))
         def self_check_log(line,bin_pid):
@@ -161,7 +164,9 @@ CONFIG_FILE = './blob.conf' # FIXME hardcoded
 @celery.task
 def extract_blobs(time_series, bin_pid):
     """config needs matlab_base, matlab_exec_path, tmp_dir, blob_deposit"""
-    be = BlobExtraction(get_config(CONFIG_FILE, time_series))
+    c = get_config(CONFIG_FILE, time_series)
+    c.task_id = extract_blobs.request.id
+    be = BlobExtraction(c)
     be.extract_blobs(bin_pid)
 
 if __name__=='__main__':

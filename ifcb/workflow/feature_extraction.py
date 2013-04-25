@@ -97,7 +97,7 @@ class FeatureExtraction(object):
         if os.path.exists(tempfile):
             raise
     def log(self,message):
-        get_task_logger(MODULE).info(message)
+        print message # will be posted to AMQP
     def extract_features(self,bin_pid):
         jobid = gen_id()[:5]
         def selflog(line):
