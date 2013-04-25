@@ -14,6 +14,8 @@ def declare_log_exchange(exchange,routing_key='',broker_url=DEFAULT_BROKER_URL):
     channel.exchange_declare(exchange=exchange,exchange_type='fanout')
     return channel, connection
 
+CHANNEL_DEAD='dead'
+
 class RabbitLogHandler(logging.Handler):
     def __init__(self,level=logging.NOTSET,exchange='logs',routing_key='',broker_url=DEFAULT_BROKER_URL):
         logging.Handler.__init__(self,level=level) # old-style superclass chaining
@@ -29,9 +31,14 @@ class RabbitLogHandler(logging.Handler):
         try:
             formatted = '[%s] %s' % (self.hostname, self.format(record))
             if self.channel is None:
-                self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
-            self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
+                try:
+                    self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
+                except:
+                    self.channel = CHANNEL_DEAD # channel is DOA, cannot be acquired
+            if self.channel != CHANNEL_DEAD: # do not attempt to log if the channel cannot be acquired
+                self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
         except:
+            self.channel = None # channel has likely died and will need to be reestablished
             pass # fail silently, to prevent infinite logging loop
     def consume(self,out=sys.stdout,callback=None):
         ch, _ = declare_log_exchange(self.exchange,self.routing_key,self.broker_url)
