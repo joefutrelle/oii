@@ -2,6 +2,7 @@ import logging
 import pika
 import sys
 import re
+import socket
 
 DEFAULT_BROKER_URL='amqp://guest:guest@localhost:5672/%2f'
 
@@ -20,9 +21,13 @@ class RabbitLogHandler(logging.Handler):
         self.exchange = exchange
         self.routing_key = routing_key
         self.channel = None
+        try:
+            self.hostname = socket.gethostname()
+        except:
+            self.hostname = 'localhost'
     def emit(self,record):
         try:
-            formatted = self.format(record)
+            formatted = '[%s] %s' % (self.hostname, self.format(record))
             if self.channel is None:
                 self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
             self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
