@@ -29,13 +29,10 @@ class RabbitLogHandler(logging.Handler):
             self.hostname = 'localhost'
     def emit(self,record):
         try:
-            formatted = '[%s] %s' % (self.hostname, self.format(record))
             if self.channel is None:
-                try:
-                    self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
-                except:
-                    self.channel = CHANNEL_DEAD # channel is DOA, cannot be acquired
-            if self.channel != CHANNEL_DEAD: # do not attempt to log if the channel cannot be acquired
+                self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
+            if self.channel is not None:
+                formatted = '[%s] %s' % (self.hostname, self.format(record))
                 self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
         except:
             self.channel = None # channel has likely died and will need to be reestablished
