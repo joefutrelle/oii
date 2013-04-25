@@ -5,8 +5,6 @@ import re
 
 DEFAULT_BROKER_URL='amqp://guest:guest@localhost:5672/%2f'
 
-STOP='stop'
-
 def declare_log_exchange(exchange,routing_key='',broker_url=DEFAULT_BROKER_URL):
     """Declare a "log exchange"
     A log exchange is a fanout exchange. Should be consumed with no_ack=True"""
@@ -23,12 +21,13 @@ class RabbitLogHandler(logging.Handler):
         self.routing_key = routing_key
         self.channel = None
     def emit(self,record):
-        formatted = self.format(record)
-        if self.channel is None:
-            self.channel = STOP
-            self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
-        elif self.channel != STOP:
+        try:
+            formatted = self.format(record)
+            if self.channel is None:
+                self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
             self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
+        except:
+            pass # fail silently, to prevent infinite logging loop
     def consume(self,out=sys.stdout,callback=None):
         ch, _ = declare_log_exchange(self.exchange,self.routing_key,self.broker_url)
         result = ch.queue_declare(exclusive=True)
@@ -41,9 +40,6 @@ class RabbitLogHandler(logging.Handler):
             callback = printer
             ch.basic_consume(callback,queue=qname,no_ack=True)
         ch.start_consuming()
-
-import random
-import time
 
 if __name__=='__main__':
     broker_url = sys.argv[1]
