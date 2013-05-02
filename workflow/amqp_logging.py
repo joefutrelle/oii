@@ -14,29 +14,34 @@ def declare_log_exchange(exchange,routing_key='',broker_url=DEFAULT_BROKER_URL):
     channel.exchange_declare(exchange=exchange,exchange_type='fanout')
     return channel, connection
 
-CHANNEL_DEAD='dead'
-
 class RabbitLogHandler(logging.Handler):
     def __init__(self,level=logging.NOTSET,exchange='logs',routing_key='',broker_url=DEFAULT_BROKER_URL):
         logging.Handler.__init__(self,level=level) # old-style superclass chaining
         self.broker_url = broker_url
         self.exchange = exchange
         self.routing_key = routing_key
+        self.connection = None
         self.channel = None
         try:
             self.hostname = socket.gethostname()
         except:
             self.hostname = 'localhost'
     def emit(self,record):
+        if self.connection is not None and self.connection.is_closed:
+            self.connection = None
+            self.channel = None
         try:
             if self.channel is None:
-                self.channel, _ = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
+                self.channel, self.connection = declare_log_exchange(self.exchange, self.routing_key, self.broker_url)
             if self.channel is not None:
                 formatted = '[%s] %s' % (self.hostname, self.format(record))
                 self.channel.basic_publish(exchange=self.exchange,routing_key=self.routing_key,body=formatted)
-        except:
+        except pika.exceptions.ChannelClosed:
             self.channel = None # channel has likely died and will need to be reestablished
-            pass # fail silently, to prevent infinite logging loop
+            self.connection = None
+        except pika.exceptions.ConnectionClosed:
+            self.channel = None # channel has likely died and will need to be reestablished
+            self.connection = None
     def consume(self,out=sys.stdout,callback=None):
         ch, _ = declare_log_exchange(self.exchange,self.routing_key,self.broker_url)
         result = ch.queue_declare(exclusive=True)
