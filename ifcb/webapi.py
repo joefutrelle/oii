@@ -40,7 +40,7 @@ from lxml import html
 # TODO JSON on everything
 
 app = Flask(__name__)
-#app.debug = True
+app.debug = True
 
 # importantly, set max-age on static files (e.g., javascript) to something really short
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30
@@ -250,6 +250,24 @@ def feed_response(time_series,dicts,format='json'):
     elif format == 'rss':
         #return template_response('feed.rss', mimetype='application/xml+rss', ttl=feed_ttl, **context)
         return template_response('feed.rss', **context)
+
+# external access to resolver services
+@app.route('/resolve/<name>',methods=['POST'])
+def rest_resolve(name):
+    context = json.loads(request.data)
+    R = rs # FIXME global!
+    hit = R[name].resolve(**context)
+    if hit is None:
+        return jsonr({})
+    else:
+        return jsonr(hit.bindings)
+
+@app.route('/resolve_all/<name>',methods=['POST'])
+def rest_resolve_all(name):
+    context = json.loads(request.data)
+    R = rs # FIXME global!
+    hits = [hit.bindings for hit in R[name].resolve_all(**context)]
+    return jsonr(hits)
 
 @app.route('/<time_series>/api/feed/format/<format>')
 @app.route('/<time_series>/api/feed/date/<date>')
