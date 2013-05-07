@@ -500,7 +500,10 @@ def resolve(pid):
     if hit is None:
         abort(404)
     # construct the namespace from the configuration and time series ID
-    hit.date = iso8601(strptime(hit.date, hit.date_format))
+    try:
+        hit.date = iso8601(strptime(hit.date, hit.date_format))
+    except:
+        abort(404) # if the name is malformed, then it there's no resource to serve
     # determine extension
     if hit.extension is None: # default is .rdf
         hit.extension = 'rdf'
