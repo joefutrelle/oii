@@ -421,6 +421,8 @@ def serve_blob(time_series,pid):
     """Serve blob zip or image"""
     pid_hit = pid_resolver.resolve(pid=pid)
     hit = blob_resolver.resolve(pid=pid,time_series=time_series)
+    if hit is None:
+        abort(404)
     zip_path = hit.value
     if hit.target is None: # bin, not target?
         if hit.extension != 'zip':
