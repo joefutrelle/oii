@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from numpy.random import randint
+from numpy.random import RandomState
 from skimage import img_as_float
 from skimage.io import imread, imsave
 from skimage.color import rgb2gray
@@ -57,7 +57,7 @@ def lightfield_stereo(rgb_LR):
     flat_LR[:,w/2:,:] = lightfield(rgb_LR[:,w/2:,:])
     return flat_LR
 
-def align(y_LR,size=64,n=6):
+def align(y_LR,size=64,n=12):
     (h,w) = y_LR.shape
     # pull half-size LR images
     y_L = y_LR[::2,:w/2:2]
@@ -67,10 +67,11 @@ def align(y_LR,size=64,n=6):
     s = size / 2
     # now find n offsets
     R = np.zeros((n,2))
+    rand = RandomState(0)
     for i in range(n): # to find each offset
         # at a random locations in y_L
-        y = randint(h/4,h*3/4)
-        x = randint(w/4,w*3/4)
+        y = rand.randint(h/4,h*3/4)
+        x = rand.randint(w/4,w*3/4)
         it = y_L[y:y+s,x:x+s] # take an s x s chunk there
         tm = match_template(y_R,it) # match it against y_R
         ry, rx = maximum_position(tm) # max value is location
