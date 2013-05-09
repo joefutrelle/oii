@@ -59,10 +59,9 @@ def lightfield_stereo(rgb_LR):
 
 def align(y_LR,size=64,n=12):
     (h,w) = y_LR.shape
-    # pull half-size LR images
-    y_L = y_LR[::2,:w/2:2]
-    y_R = y_LR[::2,w/2::2]
-    # downscale metrics
+    # split image
+    y_L = y_LR[:,:w/2]
+    y_R = y_LR[:,w/2:]
     (h,w) = y_L.shape
     s = size / 2
     # now find n offsets
@@ -76,8 +75,8 @@ def align(y_LR,size=64,n=12):
         tm = match_template(y_R,it) # match it against y_R
         ry, rx = maximum_position(tm) # max value is location
         R[i,:] = ((y-ry), (x-rx)) # accumulatea
-    # take the median, scaled back up
-    dy, dx = np.median(R,axis=0).astype(int) * 2
+    # take the median
+    dy, dx = np.median(R,axis=0).astype(int)
     return dy, dx
 
 def redcyan(y_LR,gamma=1.2,brightness=1.2,**kw):
