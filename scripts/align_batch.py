@@ -59,5 +59,6 @@ for bin_pid in bins:
             x *= 2
             m = p2m(x)
             print '%s,%d,%d,%.2f' % (imagename,x,y,m) 
+            sys.stdout.flush()
             #imsave('redcyan/%s.tif' % imagename, redcyan(y_LR))
 
