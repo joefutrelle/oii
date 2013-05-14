@@ -7,7 +7,8 @@ apt-get update
 
 # upgrade gcc so we can build numpy
 
-apt-get upgrade -y gcc
+#apt-get upgrade -y gcc
+# FIXME this is the wrong way to do that.
 
 # install required aptitude packages
 
