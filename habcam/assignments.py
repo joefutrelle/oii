@@ -8,6 +8,7 @@ class HabcamAssignmentStore(AssignmentStore):
     def __init__(self,config):
         self.config = config
         self.assignment_fields = ['assignment_id','idmode_id','site_description','project_name','priority','initials','date','num_images','comment']
+	self.idmode_fields = ['idmode_id','idmode_name'];
     def lid(self,pid,namespace=None):
         return re.sub('.*/','',pid)
     def pid(self,lid,namespace=None):
@@ -30,11 +31,21 @@ class HabcamAssignmentStore(AssignmentStore):
         d['mode'] = d['idmode_id']
         d['label'] = '%s: %s @ %s' % (str(d['assignment_id']), d['project_name'], d['site_description'])
         return d
+    def __row2idmode(self,row):
+        d = dict(zip(self.idmode_fields, row))
+	#d['pid'] = d['idmode_id'];
+        #d['label'] = d['idmode_name']
+        return d
     def list_assignments(self):
         with xa(self.config.psql_connect) as (connection,cursor):
             cursor.execute('select %s from assignments ORDER BY assignment_id desc' % (','.join(self.assignment_fields)))
             for row in cursor.fetchall():
                 yield self.__row2assignment(row)
+    def list_idmodes(self):
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor.execute('select distinct idmode_id,idmode_name from idmodes where idmode_name is not null order by idmode_id')
+            for row in cursor.fetchall():
+                yield self.__row2idmode(row)
     def fetch_assignment(self,pid):
         with xa(self.config.psql_connect) as (connection,cursor):
             cursor.execute('select '+(','.join(self.assignment_fields))+' from assignments where assignment_id=%s', (self.lid(pid),))

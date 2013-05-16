@@ -118,6 +118,10 @@ def set_status(assignment_id,image_id,status,post_status=None):
 def list_assignments():
     return jsonr({'assignments': my(ASSIGNMENT_STORE).list_assignments()})
 
+@app.route('/list_idmodes')
+def list_idmodes():
+    return jsonr({'idmodes': my(ASSIGNMENT_STORE).list_idmodes()})
+
 def stem_search(stem,mode,scope=None):
     for c in my(CATEGORIES).list_categories(mode,scope):
         if re.match(r'.*\b'+stem,c['label'],re.I):

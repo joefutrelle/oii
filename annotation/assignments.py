@@ -13,7 +13,12 @@ class AssignmentStore(object):
                  "pid": "http://foo.bar/images/abcdef",
                  "image": "http://foo.bar/images/abcdef.jpg"
             }]
+	}]
+        self.idmodes = [{
+            "idmode_id": "http://foo.bar/assignments/1",
+            "idmode_name": "fish,scallops,highlights"
         }]
+        
     def list_assignments(self):
         for ass in self.assignments:
             yield dict_slice(ass,'pid,label,annotator,status,mode,images')
@@ -27,3 +32,6 @@ class AssignmentStore(object):
         return '0'
     def set_status(self,assignment_id,image_id,status):
         pass
+    def list_idmodes(self):
+        for idmode in self.idmodes:
+            yield dict_slice(idmode,'idmode_id,idmode_name')
