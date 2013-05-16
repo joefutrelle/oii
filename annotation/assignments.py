@@ -32,6 +32,4 @@ class AssignmentStore(object):
         return '0'
     def set_status(self,assignment_id,image_id,status):
         pass
-    def list_idmodes(self):
-        for idmode in self.idmodes:
-            yield dict_slice(idmode,'idmode_id,idmode_name')
+
