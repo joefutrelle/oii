@@ -41,6 +41,21 @@ def my(d,k):
     except KeyError:
         return CONFIG_DEFAULTS[k]
 
+def p2m(offset,config):
+    """offset: pixel parallax offset
+    config: config with the following keys:
+    - CAMERA_SEPARATION
+    - FOCAL_LENGTH
+    - H2O_ADJUSTMENT
+    - PIXEL_SEPARATION
+    all of which have defaults.
+    returns: distance to target in m"""
+    camera_separation = my(config,CAMERA_SEPARATION)
+    focal_length = my(config,FOCAL_LENGTH)
+    h2o_adjustment = my(config,H2O_ADJUSTMENT)
+    pixel_separation = my(config,PIXEL_SEPARATION)
+    return (camera_separation * focal_length * h2o_adjustment) / (offset * pixel_separation)
+
 @celery.task(name='oii.habcam.altitude_from_stereo')
 def altitude_from_stereo(cfa_LR,config={}):
     """cfa_LR: bayer-pattern stereo pair filename or open file,
@@ -56,12 +71,6 @@ def altitude_from_stereo(cfa_LR,config={}):
     all of which have defaults.
     returns: (x offset, y offset, altitude in m)"""
     bayer_pattern = my(config,BAYER_PATTERN)
-    camera_separation = my(config,CAMERA_SEPARATION)
-    focal_length = my(config,FOCAL_LENGTH)
-    h2o_adjustment = my(config,H2O_ADJUSTMENT)
-    pixel_separation = my(config,PIXEL_SEPARATION)
-    def p2m(offset):
-        return (camera_separation * focal_length * h2o_adjustment) / (offset * pixel_separation)
     align_patch_size = my(config,ALIGN_PATCH_SIZE)
     align_n = my(config,ALIGN_N)
     align_downscale = my(config,ALIGN_DOWNSCALE)
@@ -77,7 +86,7 @@ def altitude_from_stereo(cfa_LR,config={}):
     (y,x) = align(y_LR,size=align_patch_size/align_downscale,n=align_n)
     y *= align_downscale
     x *= align_downscale
-    m = p2m(x)
+    m = p2m(x,config)
     print 'altitude = (%d,%d,%.2f)' % (x,y,m) # FIXME debug
     return (x,y,m)
 
