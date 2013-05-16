@@ -10,8 +10,6 @@ from oii.webapi.idgen import idgen_api
 from oii.webapi.auth import auth_api
 from oii.annotation.storage import DebugAnnotationStore
 from oii.annotation.psql import PsqlAnnotationStore
-from oii.annotation.categories import Categories
-from oii.annotation.assignments import AssignmentStore
 from oii.times import iso8601
 from utils import jsonr, UrlConverter
 import urllib
