@@ -1,0 +1,130 @@
+<resolvers>
+  <resolver name="all_series">
+    <var name="ignore">
+      <value>@TIME_SERIES@,@TIME_SERIES@</value>
+    </var>
+    <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="time_series">
+    <var name="base_url">http://demi.whoi.edu/</var>
+    <var name="namespace">${base_url}${time_series}/</var>
+    <var name="bot_name">&lt;a href="/about"&gt;Imaging FlowCytobot&lt;a&gt;</var>
+    <match var="time_series" value="mvco">
+      <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/mvco/"&gt;MVCO&lt;a&gt; 2006-present</var>
+      <var name="dbname">ifcb</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="@TIME_SERIES@">
+      <var name="title">${bot_name}</var>
+      <var name="dbname">@TIME_SERIES@</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="pid">
+    <match var="pid" groups="namespace time_series lid bin_lid instrument date yearday year day time - target - product - extension"
+	   pattern="(.*?\b(\w+)?)/?(((IFCB\d+)_(((\d{4})_(\d{3}))_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
+      <import name="time_series"/>
+      <var name="date_format">%Y_%j_%H%M%S</var>
+      <var name="schema_version">v1</var>
+      <var name="bin_pid">${namespace}${bin_lid}</var>
+      <hit/>
+    </match>
+    <match var="pid" groups="namespace time_series lid bin_lid date yearday year day time instrument - target - product - extension"
+	   pattern="(.*?\b(\w+)?)/?((D(((\d{4})(\d{4}))T(\d{6}))_(IFCB\d+))(_(\d{5}))?)(_(\w+))?(\.(\w+))?">
+      <import name="time_series"/>
+      <var name="date_format">%Y%m%dT%H%M%S</var>
+      <var name="schema_version">v2</var>
+      <var name="bin_pid">${namespace}${bin_lid}</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="data_roots">
+    <!-- MVCO time series -->
+    <match var="time_series" value="@TIME_SERIES@">
+      <match var="product" value="raw">@RAW_ROOTS@</match>
+      <match var="product" pattern="blob.*">@BLOB_ROOTS@</match>
+      <match var="product" pattern="features">@FEATURE_ROOTS@</match>
+    </match>
+  </resolver>
+  <resolver name="binpid2path">
+    <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
+    <import name="pid"/>
+    <import name="data_roots"/>
+    <var name="filename">
+      <value>${lid}.${format}</value>
+      <value>${lid}.${format}.mod</value>
+    </var>
+    <any>
+      <path match="${root}/${instrument}_${year}_${day}/${filename}"/>
+      <!-- in some cases there aren't year/day directories -->
+      <path match="${root}/${filename}"/>
+      <!-- try v2 patterns -->
+      <path match="${root}/D${year}/D${year}${day}/${filename}"/>
+    </any>
+  </resolver>
+  <resolver name="blobs">
+    <import name="pid"/>
+    <var name="product">blob</var>
+    <import name="data_roots"/>
+    <var name="filename">${bin_lid}_blobs_v2.zip</var>
+    <hit>${root}/${year}/${yearday}/${filename}</hit>
+  </resolver>
+  <resolver name="mvco_blob">
+    <import name="blobs"/>
+    <path match="${value}"/>
+  </resolver>
+  <resolver name="features_destination">
+    <import name="pid"/>
+    <var name="product">features</var>
+    <import name="data_roots"/>
+    <hit>${root}/features${year}_v2/${lid}_fea_v2.csv</hit>
+  </resolver>
+  <resolver name="features">
+    <import name="features_destination"/>
+    <path match="${value}"/>
+  </resolver>
+  <resolver name="list_day_dirs">
+    <var name="product">raw</var>
+    <import name="data_roots"/>
+    <any>
+      <path var="day_dir" match="${root}/D*/D*">
+	<match var="day_dir" pattern=".*/D${year_pattern}.*"><hit/></match>
+      </path>
+      <path var="day_dir" match="${root}/IFCB*">
+	<match var="day_dir" pattern=".*/IFCB._${year_pattern}.*"><hit/></match>
+      </path>
+      <!-- degenerate case: no day dirs -->
+      <path var="day_dir" match="${root}"><hit/></path>
+    </any>
+  </resolver>
+  <resolver name="list_adcs">
+    <!-- list all adc files. -->
+    <var name="product">raw</var>
+    <import name="data_roots"/>
+    <import name="list_day_dirs"/>
+    <path var="adc_file" match="${day_dir}/*IFCB*.adc">
+      <!-- extract 'pid' from adc pathname -->
+      <match var="adc_file" groups="pid">.*/(.*)\..*</match>
+      <import name="pid"/>
+      <hit/>
+    </path>
+  </resolver>
+  <resolver name="fileset">
+    <!-- expects pid -->
+    <first>
+      <var name="format">roi</var>
+      <import name="binpid2path"/>
+      <var name="roi_path">${day_dir}/${filename}</var>
+      <var name="format">hdr</var>
+      <import name="binpid2path"/>
+      <var name="hdr_path">${day_dir}/${filename}</var>
+      <var name="format">adc</var>
+      <import name="binpid2path"/>
+      <var name="adc_path">${day_dir}/${filename}</var>
+      <hit/>
+    </first>
+    <hit/>
+  </resolver>
+</resolvers>
