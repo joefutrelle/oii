@@ -1,0 +1,4 @@
+BROKER_URL='amqp://guest@localhost//'
+CELERY_RESULT_BACKEND='amqp'
+CELERY_TASK_RESULT_EXPIRES=10
+

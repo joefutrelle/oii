@@ -1,0 +1,13 @@
+#!/bin/bash
+TIME_SERIES=mvco_test
+DATABASE_PASSWORD=ifcb
+DATA_DIRS="/home/ifcb/data"
+
+# these should default to ifcb
+SYSTEM_USER=ifcb
+DATABASE_USER=ifcb
+
+. deps.sh
+. user_db.sh
+. config.sh
+#. test.sh
