@@ -56,6 +56,13 @@ def p2m(offset,config):
     pixel_separation = my(config,PIXEL_SEPARATION)
     return (camera_separation * focal_length * h2o_adjustment) / (offset * pixel_separation)
 
+def read_image(url_or_filename,plugin='freeimage'):
+    try:
+        return imread(url_or_filename,plugin=plugin)
+    except:
+        with StagedInputFile(UrlSource(url_or_filename)) as imfile:
+            return imread(imfile,plugin=plugin)
+            
 @celery.task(name='oii.habcam.altitude_from_stereo')
 def altitude_from_stereo(cfa_LR,config={}):
     """cfa_LR: bayer-pattern stereo pair filename or open file,
@@ -75,7 +82,7 @@ def altitude_from_stereo(cfa_LR,config={}):
     align_n = my(config,ALIGN_N)
     align_downscale = my(config,ALIGN_DOWNSCALE)
     # now read the image data from the file
-    cfa_LR = imread(cfa_LR,plugin='freeimage')
+    cfa_LR = read_image(cfa_LR,plugin='freeimage')
     # now downscale the green channel
     if re.match('.gg.',bayer_pattern):
         (xo, yo) = (1, 0)
@@ -89,9 +96,4 @@ def altitude_from_stereo(cfa_LR,config={}):
     m = p2m(x,config)
     print 'altitude = (%d,%d,%.2f)' % (x,y,m) # FIXME debug
     return (x,y,m)
-
-@celery.task(name='oii.habcam.altitude_from_stereo_url')
-def altitude_from_stereo_url(url,config={}):
-    with StagedInputFile(UrlSource(url)) as open_cfa_LR:
-        return altitude_from_stereo(open_cfa_LR,config)
 
