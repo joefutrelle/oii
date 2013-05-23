@@ -2,6 +2,8 @@ echo 'Checking out code ...'
 svn co --non-interactive --trust-server-cert https://beagle.whoi.edu/svn/ibt/trunk/oii /home/$SYSTEM_USER/oii
 
 echo 'Configuring local data resolver ...'
+
+# FIXME per-time-series
 RAW_ROOTS=''
 for DATA_DIR in $DATA_DIRS; do
     RAW_ROOTS="$RAW_ROOTS <hit name=\"root\">$DATA_DIR</hit>"
@@ -12,16 +14,19 @@ cat /home/$SYSTEM_USER/oii/ifcb/resolver_template.txt | \
 > /home/$SYSTEM_USER/resolver.xml
 
 echo "Creating configuration files..."
+
+# FIXME per-time-series
 cat > /etc/supervisor/conf.d/supervisor_accession.conf <<EOF
 [program:${TIME_SERIES}_accession]
 user=$SYSTEM_USER
 umask=002
 directory=/home/$SYSTEM_USER
 environment=PYTHONPATH="/home/$SYSTEM_USER"
-command=celery --config=celery_config worker -A oii.ifcb.workflow.accession -c 1 --queue=mvco_test_accession --purge
+command=celery --config=celery_config worker -A oii.ifcb.workflow.accession -c 1 --queue=${TIME_SERIES}_accession --purge
 autorestart=true
 EOF
 
+# FIXME per-time-series
 cat > /home/$SYSTEM_USER/accession.conf <<EOF
 resolver = /home/$SYSTEM_USER/resolver.xml
 [$TIME_SERIES]
@@ -57,6 +62,7 @@ cat > /home/$SYSTEM_USER/apache_conf <<EOF
  </Directory>
 EOF
 
+# FIXME per-time-series
 cat > /home/$SYSTEM_USER/accession.sh <<EOF
 #!/bin/sh
 cd /home/$SYSTEM_USER
@@ -73,6 +79,8 @@ echo 'Starting accession workers ...'
 supervisorctl update
 
 echo 'Adding scheduled task ...'
+
+# FIXME per-time-series
 tmp=/tmp/cronmod$$
 echo "*/8 * * * * /bin/bash /home/$SYSTEM_USER/accession.sh $TIME_SERIES > /dev/null" > $tmp
 sudo -u $SYSTEM_USER crontab $tmp
