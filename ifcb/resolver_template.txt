@@ -51,7 +51,7 @@
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
     <import name="pid"/>
-    <var name="procuct">raw</var>
+    <var name="product">raw</var>
     <import name="data_roots"/>
     <var name="filename">
       <value>${lid}.${format}</value>
