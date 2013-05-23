@@ -29,6 +29,34 @@ psql_connect = user=$DATABASE_USER password=$DATABASE_PASSWORD dbname=$TIME_SERI
 year_pattern = ....
 EOF
 
+cat > /home/$SYSTEM_USER/dashboard.conf <<EOF
+resolver = /home/$SYSTEM_USER/resolver.xml
+psql_connect = user=$DATABASE_USER password=$DATABASE_PASSWORD
+EOF
+
+cat > /home/$SYSTEM_USER/dashboard.wsgi <<EOF
+import os
+import sys
+
+sys.path.insert(0,'/home/$SYSTEM_USER')
+
+os.environ['IFCB_CONFIG_FILE'] = '/home/$SYSTEM_USER/dashboard.conf'
+
+from oii.ifcb.webapi import app as application
+EOF
+
+cat > /home/$SYSTEM_USER/apache_conf <<EOF
+  WSGIDaemonProcess ifcb_dashboard threads=6
+  WSGIScriptAlias / /home/$SYSTEM_USER/dashboard.wsgi
+
+  <Directory "/home/$SYSTEM_USER/">
+     WSGIProcessGroup ifcb_dashboard
+     WSGIApplicationGroup %{GLOBAL}
+     Order deny,allow
+     Allow from all
+ </Directory>
+EOF
+
 cat > /home/$SYSTEM_USER/accession.sh <<EOF
 #!/bin/sh
 cd /home/$SYSTEM_USER
