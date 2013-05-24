@@ -8,7 +8,7 @@ DATABASE_PASSWORD=ifcb
 . user_db.sh
 . config.sh
 
-. add_time_series mvco_test "/home/ifcb/data"
+. add_time_series.sh mvco_test "/home/ifcb/data"
 
 . start.sh
 
