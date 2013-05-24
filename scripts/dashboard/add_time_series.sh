@@ -21,6 +21,7 @@ EOF
 sed -i /home/$SYSTEM_USER/resolver.xml -e "/INSERT dbname/ r $tmp"
 
 cat > $tmp <<EOF
+    <match var="time_series" value="$TIME_SERIES">
       <match var="product" value="raw">
 EOF
 for RAW_ROOT in $RAW_ROOTS; do
