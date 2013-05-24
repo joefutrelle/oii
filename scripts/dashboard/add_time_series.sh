@@ -1,5 +1,7 @@
 TIME_SERIES=$1
 RAW_ROOTS=$2
+BLOB_ROOTS=$3
+FEATURE_ROOTS=$4
 
 echo "Adding time series $TIME_SERIES ..."
 
@@ -32,8 +34,25 @@ EOF
 done
 cat >> $tmp <<EOF
       </match>
-      <match var="product" pattern="blob.*">@BLOB_ROOTS@</match>
-      <match var="product" pattern="features">@FEATURE_ROOTS@</match>
+      <match var="product" pattern="blob.*">
+EOF
+for BLOB_ROOT in $BLOB_ROOTS; do
+echo "Adding data directory BLOB_ROOT ..."
+cat >> $tmp <<EOF
+        <hit name="root">$BLOB_ROOT</hit>
+EOF
+done
+cat >> $tmp <<EOF
+      </match>
+      <match var="product" pattern="features">
+EOF
+for FEATURE_ROOT in $FEATURE_ROOTS; do
+echo "Adding data directory $FEATURE_ROOT ..."
+cat >> $tmp <<EOF
+        <hit name="root">$FEATURE_ROOT</hit>
+EOF
+cat >> $tmp <<EOF
+      </match>
     </match>
 EOF
 sed -i /home/$SYSTEM_USER/resolver.xml -e "/INSERT data_roots/ r $tmp"

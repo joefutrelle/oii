@@ -10,8 +10,8 @@ BASE_URL=http://localhost:5061/
 . user_db.sh
 . config.sh
 
-. add_time_series.sh mvco_test "/home/ifcb/data"
-. add_time_series.sh saltpond_test "/home/ifcb/data2 /home/ifcb/data3"
+. add_time_series.sh mvco_test "/home/ifcb/data" "/home/ifcb/data/blobs" "/home/ifcb/data/features"
+. add_time_series.sh saltpond_test "/home/ifcb/data2 /home/ifcb/data3" "/home/ifcb/data2/blobs" "/home/ifcb/data2/features"
 
 . start.sh
 
