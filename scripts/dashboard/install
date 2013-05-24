@@ -4,6 +4,8 @@ SYSTEM_USER=ifcb
 DATABASE_USER=ifcb
 DATABASE_PASSWORD=ifcb
 
+BASE_URL=http://localhost:5061/
+
 . deps.sh
 . user_db.sh
 . config.sh
