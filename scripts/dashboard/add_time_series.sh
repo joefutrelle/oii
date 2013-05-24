@@ -60,3 +60,11 @@ cat >> /home/$SYSTEM_USER/accession.sh <<EOF
 TIME_SERIES=\$1
 /usr/local/bin/celery --config=celery_config call oii.ifcb.workflow.accession.accede --args="[\"/home/$SYSTEM_USER/accession.conf\", \"\${TIME_SERIES}\"]" --queue=\${TIME_SERIES}_accession
 EOF
+
+echo "Creating database for $TIME_SERIES ..."
+
+sudo -u postgres createdb $TIME_SERIES
+sudo -u postgres psql -c "grant all privileges on database $TIME_SERIES to $DATABASE_USER"
+
+echo "Creating database tables and indexes ..."
+sudo -u postgres psql $TIME_SERIES -f ifcb_schema.sql
