@@ -37,7 +37,7 @@ cat >> $tmp <<EOF
       <match var="product" pattern="blob.*">
 EOF
 for BLOB_ROOT in $BLOB_ROOTS; do
-echo "Adding data directory BLOB_ROOT ..."
+echo "Adding data directory $BLOB_ROOT ..."
 cat >> $tmp <<EOF
         <hit name="root">$BLOB_ROOT</hit>
 EOF
@@ -51,6 +51,7 @@ echo "Adding data directory $FEATURE_ROOT ..."
 cat >> $tmp <<EOF
         <hit name="root">$FEATURE_ROOT</hit>
 EOF
+done
 cat >> $tmp <<EOF
       </match>
     </match>
