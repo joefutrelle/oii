@@ -4,7 +4,7 @@ svn co --non-interactive --trust-server-cert https://beagle.whoi.edu/svn/ibt/tru
 echo 'Writing configuration templates ...'
 
 cp /home/$SYSTEM_USER/oii/ifcb/resolver_template.txt /home/$SYSTEM_USER/resolver.xml
-sed -i /home/$SYSTEM_USER/resolver.xml -e "s/{{base_url}}/$BASE_URL/"
+sed -i /home/$SYSTEM_USER/resolver.xml -e "s#{{base_url}}#$BASE_URL#"
 
 cat > /home/$SYSTEM_USER/accession.conf <<EOF
 resolver = /home/$SYSTEM_USER/resolver.xml
