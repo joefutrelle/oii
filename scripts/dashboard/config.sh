@@ -14,6 +14,8 @@ cat > /home/$SYSTEM_USER/accession.sh <<EOF
 #!/bin/sh
 cd /home/$SYSTEM_USER
 export PYTHONPATH=.
+TIME_SERIES=\$1
+/usr/local/bin/celery --config=celery_config call oii.ifcb.workflow.accession.accede --args="[\"/home/$SYSTEM_USER/accession.conf\", \"\${TIME_SERIES}\"]" --queue=\${TIME_SERIES}_accession
 EOF
 
 echo 'Configuring web application ...'
