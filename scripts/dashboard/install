@@ -11,7 +11,7 @@ BASE_URL=http://localhost:5061/
 . config.sh
 
 . add_time_series.sh mvco_test "/home/ifcb/data"
-. add_time_series.sh saltpond_test "/home/ifcb/data2"
+. add_time_series.sh saltpond_test "/home/ifcb/data2 /home/ifcb/data3"
 
 . start.sh
 
