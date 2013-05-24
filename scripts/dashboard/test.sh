@@ -41,7 +41,7 @@ DATA_DIR=/home/$SYSTEM_USER/data2/$YEAR/$DAY
 
 mkdir -p $DATA_DIR
 for f in hdr adc roi; do
-    curl http://ifcb-data.whoi.edu/mvco/${BIN}.${f} > $DATA_DIR/${BIN}.${f}
+    curl http://ifcb-data.whoi.edu/saltpond/${BIN}.${f} > $DATA_DIR/${BIN}.${f}
 done
 
 chown -R $SYSTEM_USER:$SYSTEM_USER /home/$SYSTEM_USER/data2
