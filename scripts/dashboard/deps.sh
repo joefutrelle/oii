@@ -10,6 +10,7 @@ echo "Installing dependencies ..."
 apt-get install -y build-essential postgresql rabbitmq-server
 apt-get install -y python-dev python-lxml python-psycopg2 supervisor
 apt-get install -y python-imaging python-numpy python-scipy python-flask
+apt-get install -y apache2 libapache2-mod-wsgi
 
 sudo apt-get install -y python-pip 
 

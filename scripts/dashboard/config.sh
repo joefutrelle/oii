@@ -22,7 +22,7 @@ echo 'Configuring web application ...'
 
 cat > /home/$SYSTEM_USER/dashboard.conf <<EOF
 resolver = /home/$SYSTEM_USER/resolver.xml
-psql_connect = user=$DATABASE_USER password=$DATABASE_PASSWORD
+psql_connect = host=localhost user=$DATABASE_USER password=$DATABASE_PASSWORD
 EOF
 
 cat > /home/$SYSTEM_USER/dashboard.wsgi <<EOF
