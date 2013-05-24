@@ -1,26 +1,24 @@
 <resolvers>
   <resolver name="all_series">
     <var name="ignore">
-      <value>@TIME_SERIES@,@TIME_SERIES@</value>
+      <!-- <value>{{ts.label}},{{ts.title}}</value> -->
+      <!-- INSERT title -->
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
     </match>
   </resolver>
   <resolver name="time_series">
-    <var name="base_url">http://demi.whoi.edu/</var>
+    <var name="base_url">{{base_url}}</var>
     <var name="namespace">${base_url}${time_series}/</var>
     <var name="bot_name">&lt;a href="/about"&gt;Imaging FlowCytobot&lt;a&gt;</var>
-    <match var="time_series" value="mvco">
-      <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/mvco/"&gt;MVCO&lt;a&gt; 2006-present</var>
-      <var name="dbname">ifcb</var>
-      <hit/>
-    </match>
-    <match var="time_series" value="@TIME_SERIES@">
+    <!--
+    <match var="time_series" value="{{ts.label}}">
       <var name="title">${bot_name}</var>
-      <var name="dbname">@TIME_SERIES@</var>
+      <var name="dbname">{{ts.label}}</var>
       <hit/>
-    </match>
+    </match> -->
+    <!-- INSERT dbname -->
   </resolver>
   <resolver name="pid">
     <match var="pid" groups="namespace time_series lid bin_lid instrument date yearday year day time - target - product - extension"
@@ -41,12 +39,14 @@
     </match>
   </resolver>
   <resolver name="data_roots">
-    <!-- MVCO time series -->
-    <match var="time_series" value="@TIME_SERIES@">
-      <match var="product" value="raw">@RAW_ROOTS@</match>
+    <!-- <match var="time_series" value="{{ts.label}}">
+      <match var="product" value="raw">{% for root in ts.roots %}
+        <hit name="root">{{root}}</hit>{% endfor %}
+      </match>
       <match var="product" pattern="blob.*">@BLOB_ROOTS@</match>
       <match var="product" pattern="features">@FEATURE_ROOTS@</match>
-    </match>
+    </match> -->
+    <!-- INSERT data_roots -->
   </resolver>
   <resolver name="binpid2path">
     <!-- pid = pid of sample bin; format = adc,roi, or hdr -->
