@@ -20,12 +20,13 @@ from oii.procutil import Process
 from oii.image.demosaic import demosaic
 from oii.utils import remove_extension, change_extension
 
-DATA_NAMESPACE='http://pixel.whoi.edu:7722/'
-
-RESOLVER='/home/habcam/ic/resolver.xml'
+RESOLVER='/home/habcam/ic/oii/scripts/habcam_atsea.xml'
 SCRATCH='/habcam/nmfs/proc'
 PATTERN='rggb' # v4
 IC_EXEC='/home/habcam/ic/IlluminationCorrection/multi-image-correction/illum_correct_average'
+RECT_EXEC='/home/habcam/ic/stereoRectify/stereoRectify'
+
+CALIBRATION_DIR='/home/habcam/ic/cal'
 
 NUM_LEARN=40
 NUM_CORRECT=40
@@ -258,7 +259,7 @@ def correct(bin_lid,learn_lid=None):
         for line in correct.run():
             logging.info(line['message'])
 
-def merge(bin_lid,side='L'):
+def merge(bin_lid):
     LR_dir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
     # now demosaic
     L_dir = scratch(bin_lid,bin_lid + '_cfa_illum_L')
@@ -284,6 +285,34 @@ def merge(bin_lid,side='L'):
         os.waitpid(pid,0)
         logging.info('joined merging process %d' % pid)
 
+def rectify_list(inlist):
+    rect = Process('"%s" -v -s -l "%s" -c "%s"' % (RECT_EXEC, inlist, CALIBRATION_DIR))
+    for line in rect.run():
+        logging.info(line['message'])
+
+def rectify(bin_lid):
+    illum_dir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
+    rect_dir = mkdirs(scratch(bin_lid,bin_lid + '_rgb_illum_LR'))
+    tmp = mkdirs(os.path.join(scratch(bin_lid),'tmp'))
+    imgs = sorted(os.listdir(illum_dir))
+    pids = []
+    for n in range(NUM_PROCS):
+        pid = os.fork()
+        if pid == 0:
+            listfile = os.path.join(tmp, 'rect_list_%d' % n)
+            with open(listfile,'w') as fout:
+                for f in imgs[n::NUM_PROCS]:
+                    intif = os.path.join(illum_dir,f)
+                    outtif = os.path.join(rect_dir,re.sub(r'_?[a-zA-Z_.]+$','_rgb_illum_LR.tif',f))
+                    print >> fout, '%s %s' % (intif, outtif)
+            rectify_list(listfile)
+            os._exit(0)
+        else:
+            pids += [pid]
+    for pid in pids:
+        os.waitpid(pid,0)
+        logging.info('joined rectification process %d' % pid)
+
 if __name__=='__main__':
     bin_lid = sys.argv[1]
     learn_lid = None
@@ -297,4 +326,5 @@ if __name__=='__main__':
     #    learn_lid = bin_lid
     #correct(bin_lid,learn_lid)
     merge(bin_lid)
+    rectify(bin_lid)
 

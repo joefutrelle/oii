@@ -1,0 +1,43 @@
+<resolvers>
+  <resolver name="pid">
+    <match var="pid" pattern="([A-Z0-9]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
+	   groups="imagename ymd ym y ts tenmin h - product extension">
+      <var name="filename">${imagename}.${extension}</var>
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="bin_pid">
+    <match var="pid" pattern="(\d{6})\.(((\d{4})\d{2})\d{2})\.((\d{2})\d)\d"
+	   groups="pfx ymd ym y tenmin h">
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="cfa_LR">
+    <!-- param: pid - imagename. finds the tif -->
+    <import name="pid"/>
+    <var name="root">
+      <value>/habcam/nmfs</value>
+    </var>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tif"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tiff"/>
+  </resolver>
+  <resolver name="img"><!-- ".img" metadata files -->
+    <import name="bin_pid"/>
+    <var name="root">
+      <value>/habcam/nmfs/imgdata</value>
+    </var>
+    <path match="${root}/${img_dir}.img"/>
+  </resolver>
+  <resolver name="image_product">
+    <!-- params:
+    pid - imagename
+    product - (e.g., rgb_illum_L)
+    extension - (e.g., png) -->
+    <import name="pid"/>
+    <var name="root">/habcam/nmfs/products</var>
+    <hit>${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}_${product}/${imagename}_${product}.${extension}</hit>
+  </resolver>
+</resolvers>
