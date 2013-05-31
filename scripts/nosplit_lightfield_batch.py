@@ -287,6 +287,12 @@ def merge(bin_lid):
                 cfa_L_path = os.path.join(L_dir,f)
                 cfa_R_path = os.path.join(R_dir,f)
                 merge_one(cfa_L_path, cfa_R_path, cfa_LR_path);
+                if os.path.exists(cfa_LR_path):
+                    # if the output file exists, assume that it worked and delete L/R files
+                    os.remove(cfa_L_path)
+                    logging.info('DELETED %s' % cfa_L_path)
+                    os.remove(cfa_R_path)
+                    logging.info('DELETED %s' % cfa_R_path)
             os._exit(0)
         else:
             pids += [pid]
