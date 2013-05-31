@@ -49,7 +49,7 @@ def p2m(offset,config):
     pixel_separation = my(config,PIXEL_SEPARATION)
     return (camera_separation * focal_length * h2o_adjustment) / (offset * pixel_separation)
             
-def stereo2altitude(cfa_LR,config={}):
+def stereo2altitude(cfa_LR,**config):
     """cfa_LR: bayer-pattern stereo pair single-channel image
     config: config with the following keys:
     - BAYER_PATTERN
