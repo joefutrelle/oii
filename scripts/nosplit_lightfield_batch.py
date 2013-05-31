@@ -25,6 +25,7 @@ SCRATCH='/habcam/nmfs/proc'
 PATTERN='rggb' # v4
 IC_EXEC='/home/habcam/ic/IlluminationCorrection/multi-image-correction/illum_correct_average'
 RECT_EXEC='/home/habcam/ic/stereoRectify/stereoRectify'
+MERGE_EXEC='/home/habcam/ic/stereoRectify/merge_cfa_LR'
 
 CALIBRATION_DIR='/home/habcam/ic/cal'
 
@@ -33,7 +34,7 @@ NUM_CORRECT=40
 NUM_PROCS=12
 NUM_THREADS=24
 
-IMAGELIST_STEP=3
+IMAGELIST_STEP=1
 
 DEFAULT_IC_CONFIG = {
     'delta': 0.1,
@@ -259,6 +260,18 @@ def correct(bin_lid,learn_lid=None):
         for line in correct.run():
             logging.info(line['message'])
 
+def internal_merge_one(cfa_L_path, cfa_R_path, cfa_LR_path):
+    cfa_L = imread(cfa_L_path, plugin='freeimage')
+    cfa_R = imread(cfa_R_path, plugin='freeimage')
+    cfa_LR = np.concatenate((cfa_L, cfa_R), axis=1)
+    imsave(cfa_LR_path,cfa_LR, plugin='freeimage')
+    logging.info('merged %s' % cfa_LR_path)
+
+def merge_one(cfa_L, cfa_R, cfa_LR):
+    merge = Process('"%s" -l "%s" -r "%s" -o "%s" -v' % (MERGE_EXEC, cfa_L, cfa_R, cfa_LR))
+    for line in merge.run():
+        logging.info(line['message'])
+
 def merge(bin_lid):
     LR_dir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
     # now demosaic
@@ -270,14 +283,10 @@ def merge(bin_lid):
         pid = os.fork()
         if pid == 0:
             for f in imgs[n::NUM_PROCS]:
-                tif = os.path.join(LR_dir,re.sub(r'_?[a-zA-Z_.]+$','_cfa_illum_LR.tif',f))
+                cfa_LR_path = os.path.join(LR_dir,re.sub(r'_?[a-zA-Z_.]+$','_cfa_illum_LR.tif',f))
                 cfa_L_path = os.path.join(L_dir,f)
                 cfa_R_path = os.path.join(R_dir,f)
-                cfa_L = imread(cfa_L_path, plugin='freeimage')
-                cfa_R = imread(cfa_R_path, plugin='freeimage')
-                cfa_LR = np.concatenate((cfa_L, cfa_R), axis=1)
-                imsave(tif,cfa_LR, plugin='freeimage')
-                logging.info('merged %s' % tif)
+                merge_one(cfa_L_path, cfa_R_path, cfa_LR_path);
             os._exit(0)
         else:
             pids += [pid]
@@ -315,11 +324,11 @@ def rectify(bin_lid):
 
 if __name__=='__main__':
     bin_lid = sys.argv[1]
-    learn_lid = None
-    try:
-        learn_lid = sys.argv[2]
-    except:
-        pass
+    #learn_lid = None
+    #try:
+    #    learn_lid = sys.argv[2]
+    #except:
+    #    pass
     #alt(bin_lid)
     #if learn_lid is None:
     #    learn(bin_lid)
