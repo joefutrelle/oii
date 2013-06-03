@@ -1,7 +1,7 @@
 <resolvers>
   <resolver name="pid">
-    <match var="pid" pattern="([A-Z0-9]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
-	   groups="imagename ymd ym y ts tenmin h - product extension">
+    <match var="pid" pattern="(([A-Za-z0-9_]+)\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
+	   groups="imagename cruise_id ymd ym y ts tenmin h - product extension">
       <var name="filename">${imagename}.${extension}</var>
       <var name="img_dir">${ymd}_${tenmin}0</var>
       <hit/>
