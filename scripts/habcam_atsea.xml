@@ -8,8 +8,8 @@
     </match>
   </resolver>
   <resolver name="bin_pid">
-    <match var="pid" pattern="(\d{6})\.(((\d{4})\d{2})\d{2})\.((\d{2})\d)\d"
-	   groups="pfx ymd ym y tenmin h">
+    <match var="pid" pattern="(((\d{4})\d{2})\d{2})_((\d{2})\d)\d"
+	   groups="ymd ym y tenmin h">
       <var name="img_dir">${ymd}_${tenmin}0</var>
       <hit/>
     </match>

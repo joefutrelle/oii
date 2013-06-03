@@ -99,7 +99,7 @@ def metadata2eic(parallax):
         except KeyError:
             pass
 
-def fetch_eic(bin_lid,suffix='',tmp=None):
+def fetch_eic(bin_lid,suffix='',tmp=None,skip=[]):
     """Fetch bin image metadata and write CSV to file"""
     if tmp is None:
         tmp = mkdirs(os.path.join(scratch(bin_lid),'tmp'))
@@ -107,8 +107,10 @@ def fetch_eic(bin_lid,suffix='',tmp=None):
     eic = os.path.join(tmp,'%s%s.eic' % (bin_lid, suffix))
     with open(eic,'w') as fout:
         for tup in metadata2eic(parallax):
-            tup[0] = remove_extension(tup[0]) + suffix
-            print >> fout, ' '.join(tup)
+            imagename = remove_extension(tup[0])
+            if imagename not in skip:
+                tup[0] = imagename + suffix
+                print >> fout, ' '.join(tup)
     return eic
 
 def as_tiff(imagename):
@@ -119,23 +121,30 @@ def alt(bin_lid):
     tmp = mkdirs(scratch(bin_lid))
     csv_filename = os.path.join(tmp,bin_lid+'_alt.csv')
     logging.info('listing images for %s' % bin_lid)
-    imagenames = list(list_images(bin_lid))
-    logging.info('emptying CSV file ...')
-    with open(csv_filename,'w') as csv_out:
-        pass
+    imagenames = [remove_extension(i) for i in list_images(bin_lid)]
+    logging.info('looking for existing altitude data...')
+    already_done = []
+    if os.path.exists(csv_filename):
+        for row in read_csv(LocalFileSource(csv_filename)):
+            already_done += [row[0]]
+    if len(already_done) == -1:
+        logging.info('emptying CSV file ...')
+        with open(csv_filename,'w') as csv_out:
+            pass
     pids = []
     for n in range(NUM_PROCS):
         pid = os.fork()
         if pid == 0:
             for imagename in imagenames[n::NUM_PROCS]: # FIXME remove n+20
-                tif = read_image(imagename)
-                logging.info('[%d] START aligning %s' % (n, imagename))
-                x,y,m = stereo2altitude(tif, align_patch_size=256) # FIXME remove patch size get a good default
-                line = '%s,%d,%d,%.2f' % (remove_extension(imagename),x,y,m) 
-                logging.info('[%d] DONE aligned %s' % (n, line))
-                with open(csv_filename,'a') as csv_out:
-                    print >>csv_out, line
-                    csv_out.flush()
+                if imagename not in already_done:
+                    tif = read_image(imagename+'.tif')
+                    logging.info('[%d] START aligning %s' % (n, imagename))
+                    x,y,m = stereo2altitude(tif, align_patch_size=256) # FIXME remove patch size get a good default
+                    line = '%s,%d,%d,%.2f' % (imagename,x,y,m) 
+                    logging.info('[%d] DONE aligned %s' % (n, line))
+                    with open(csv_filename,'a') as csv_out:
+                        print >>csv_out, line
+                        csv_out.flush()
             os._exit(0)
         else:
             logging.info('spawned process %d' % pid)
@@ -223,14 +232,29 @@ def correct(bin_lid,learn_lid=None):
     # provision temp space
     tmp = mkdirs(scratch(bin_lid,'tmp'))
     for LR in 'LR':
-        # fetch eic
-        eic = fetch_eic(bin_lid)
-        # construct param file
+        # check for lightmap existence
         lightmap_dir = mkdirs(scratch(learn_lid,learn_lid + '_lightmap_' + LR))
         lightmap = os.path.join(lightmap_dir,learn_lid+'_lightmap_' + LR)
-        assert os.path.exists(lightmap)
-        correct_tmp =  mkdirs(scratch(bin_lid,bin_lid + '_correct_tmp_' + LR))
+        if not os.path.exists(lightmap):
+            logging.info('requested lightmap does not exist, skipping correct phase')
+            return
+        # check for existing output
+        logging.info('checking for existing corrected images...')
+        merged_outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
+        skip = []
+        for fn in os.listdir(merged_outdir):
+            imagename = re.sub('_cfa_illum_LR.tif','',fn)
+            skip += [imagename]
+        logging.info('found %d existing corrected images ...' % len(skip))
         outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_' + LR))
+        # fetch eic
+        eic = fetch_eic(bin_lid,skip=skip)
+        # now see if that file is empty
+        if os.stat(eic)[6] == 0:
+            logging.info('no images to correct, skipping %s/%s' % (bin_lid, LR))
+            continue
+        # construct param file
+        correct_tmp = mkdirs(scratch(bin_lid,bin_lid + '_correct_tmp_' + LR))
         param = os.path.join(tmp,bin_lid + '_correct.txt')
         # produce param file
         logging.info('writing param file %s' % param)
@@ -284,6 +308,8 @@ def merge(bin_lid):
         if pid == 0:
             for f in imgs[n::NUM_PROCS]:
                 cfa_LR_path = os.path.join(LR_dir,re.sub(r'_?[a-zA-Z_.]+$','_cfa_illum_LR.tif',f))
+                if os.path.exists(cfa_LR_path):
+                    logging.info('merged image exists, skipping %s' % f)
                 cfa_L_path = os.path.join(L_dir,f)
                 cfa_R_path = os.path.join(R_dir,f)
                 merge_one(cfa_L_path, cfa_R_path, cfa_LR_path);
@@ -315,12 +341,16 @@ def rectify(bin_lid):
         pid = os.fork()
         if pid == 0:
             listfile = os.path.join(tmp, 'rect_list_%d' % n)
+            count = 0
             with open(listfile,'w') as fout:
                 for f in imgs[n::NUM_PROCS]:
                     intif = os.path.join(illum_dir,f)
                     outtif = os.path.join(rect_dir,re.sub(r'_?[a-zA-Z_.]+$','_rgb_illum_LR.tif',f))
-                    print >> fout, '%s %s' % (intif, outtif)
-            rectify_list(listfile)
+                    if not os.path.exists(outtif):
+                        print >> fout, '%s %s' % (intif, outtif)
+                        count += 1
+            if count > 0:
+                rectify_list(listfile)
             os._exit(0)
         else:
             pids += [pid]
@@ -330,16 +360,15 @@ def rectify(bin_lid):
 
 if __name__=='__main__':
     bin_lid = sys.argv[1]
-    #learn_lid = None
-    #try:
-    #    learn_lid = sys.argv[2]
-    #except:
-    #    pass
-    #alt(bin_lid)
-    #if learn_lid is None:
-    #    learn(bin_lid)
-    #    learn_lid = bin_lid
-    #correct(bin_lid,learn_lid)
+    learn_lid = None
+    try:
+        learn_lid = sys.argv[2]
+    except:
+        pass
+    alt(bin_lid)
+    if learn_lid is None:
+        learn(bin_lid)
+        learn_lid = bin_lid
+    correct(bin_lid,learn_lid)
     merge(bin_lid)
     rectify(bin_lid)
-
