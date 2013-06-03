@@ -1,0 +1,44 @@
+Illumination Correction at-sea impl 2013
+
+All code is in /home/habcam/ic
+
+The 10-minute bin to use as a lightmap is specified in /home/habcam/ic/learn_bin.conf
+
+The bin is specified on a line by itself, with nothing else in the file. For example:
+
+START OF learn_bin.conf
+20130603_1820
+END OF learn_bin.conf
+
+It is critical that this be in the correct format of YYYYMMDD_HHM0.
+
+If a lightmap does not exist for the specified bin it will be created.
+
+Lightfield processing will produce output for all bins after the one specified in /home/habcam/ic/start_bin.conf
+
+The bin is specified on a line by itself, with nothing else in the file. For example:
+
+START OF start_bin.conf
+20130603_1850
+END OF start_bin.conf
+
+Lightfield correction runs continuously and processes all images that have not yet been processed.
+
+All output is deposited in /habcam/nmfs/proc in the appropriate subdirectory structure.
+
+For example the output for 20130603_1820 is located at
+
+/habcam/nmfs/proc/20130603_1820
+
+RGB stereo pairs are written to the {bin_lid}_rgb_illum_LR subdirectory, for example
+
+/habcam/nmfs/proc/20130603_1820/20130603_1820_rgb_illum_LR
+
+if you want to reprocess images (they were not processed with the desired lightmap, etc) simpoly
+delete the output directory, for example /habcam/nmfs/proc/20130603_1820. Do not delete input data!
+
+Logs are written to /habcam/nmfs/proc/logs. There will be multiple logs per bin representing
+every attempt to process images, and most of them will simply indicate that the bin was skipped.
+Especially long ones are the interesting ones as they are a record of processing.
+
+Logs are compressed and can be decompressed with gunzip.
