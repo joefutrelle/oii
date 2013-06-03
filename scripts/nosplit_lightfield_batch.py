@@ -29,8 +29,8 @@ MERGE_EXEC='/home/habcam/ic/stereoRectify/merge_cfa_LR'
 
 CALIBRATION_DIR='/home/habcam/ic/cal'
 
-NUM_LEARN=40
-NUM_CORRECT=40
+NUM_LEARN=160
+NUM_CORRECT=3000
 NUM_PROCS=12
 NUM_THREADS=24
 
@@ -127,6 +127,7 @@ def alt(bin_lid):
     if os.path.exists(csv_filename):
         for row in read_csv(LocalFileSource(csv_filename)):
             already_done += [row[0]]
+    logging.info('found %d existing altitude records' % len(already_done))
     if len(already_done) == -1:
         logging.info('emptying CSV file ...')
         with open(csv_filename,'w') as csv_out:
@@ -301,6 +302,12 @@ def merge(bin_lid):
     # now demosaic
     L_dir = scratch(bin_lid,bin_lid + '_cfa_illum_L')
     R_dir = scratch(bin_lid,bin_lid + '_cfa_illum_R')
+    if not os.path.exists(L_dir):
+        logging.info('no left image directory to merge, skipping')
+        return
+    if not os.path.exists(R_dir):
+        logging.info('no right image directory to merge, skipping')
+        return
     imgs = sorted(os.listdir(L_dir))
     pids = []
     for n in range(NUM_PROCS):
@@ -363,7 +370,10 @@ if __name__=='__main__':
     learn_lid = None
     try:
         learn_lid = sys.argv[2]
-    except:
+        logging.info('using lightmap %s' % learn_lid)
+        alt(learn_lid)
+        learn(learn_lid)
+    except KeyError:
         pass
     alt(bin_lid)
     if learn_lid is None:
