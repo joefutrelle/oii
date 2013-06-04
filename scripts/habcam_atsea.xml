@@ -31,13 +31,14 @@
     </var>
     <path match="${root}/${img_dir}.img"/>
   </resolver>
-  <resolver name="image_product">
+  <resolver name="scratch">
     <!-- params:
-    pid - imagename
-    product - (e.g., rgb_illum_L)
-    extension - (e.g., png) -->
-    <import name="pid"/>
-    <var name="root">/habcam/nmfs/products</var>
-    <hit>${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}_${product}/${imagename}_${product}.${extension}</hit>
+    bin_lid - bin ID
+    suffix - additional path component -->
+    <import name="bin_pid"/>
+    <var name="root">
+      <value>/habcam/nmfs/proc</value>
+    </var>
+    <hit>${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${suffix}</hit>
   </resolver>
 </resolvers>

@@ -20,31 +20,8 @@ from oii.procutil import Process
 from oii.image.demosaic import demosaic
 from oii.utils import remove_extension, change_extension
 
-RESOLVER='/home/habcam/ic/oii/scripts/habcam_atsea.xml'
-SCRATCH='/habcam/nmfs/proc'
-PATTERN='rggb' # v4
-IC_EXEC='/home/habcam/ic/IlluminationCorrection/multi-image-correction/illum_correct_average'
-RECT_EXEC='/home/habcam/ic/stereoRectify/stereoRectify'
-MERGE_EXEC='/home/habcam/ic/stereoRectify/merge_cfa_LR'
+from lightfield_config import *
 
-CALIBRATION_DIR='/home/habcam/ic/cal'
-
-NUM_LEARN=160
-NUM_CORRECT=3000
-NUM_PROCS=12
-NUM_THREADS=24
-
-IMAGELIST_STEP=1
-
-DEFAULT_IC_CONFIG = {
-    'delta': 0.1,
-    'min_height': 1.0,
-    'max_height': 4.0,
-    'img_min': 0.3,
-    'img_max': 3.1,
-    'smooth': 32,
-    'num_threads': NUM_THREADS
-}
 lgfmt = '%(asctime)-15s %(message)s'
 logging.basicConfig(format=lgfmt,stream=sys.stdout,level=logging.DEBUG)
 
@@ -61,7 +38,8 @@ def mkdirs(d):
 
 def scratch(bin_lid,suffix=''):
     """Compute path to scratch space"""
-    return os.path.join(SCRATCH,bin_lid,suffix)
+    return resolver['scratch'].resolve(pid=bin_lid,suffix=suffix).value
+    #return os.path.join(SCRATCH,bin_lid,suffix)
 
 def list_images(bin_lid):
     """List all images in a bin by LID"""
@@ -76,7 +54,7 @@ def read_image(imagename):
     logging.info('completed reading %s in %.3f s' % (pathname, time.time() - then))
     return img
 
-def metadata2eic(parallax):
+def metadata2eic(bin_lid,parallax):
     """Convert bin image metadata to CSV"""
     #imagename,lat,lon,head,pitch,roll,alt1,alt2,depth,s,t,o2,cdom,chlorophyll,backscatter,therm
     (PITCH_COL, ROLL_COL) = (4, 5)
@@ -106,7 +84,7 @@ def fetch_eic(bin_lid,suffix='',tmp=None,skip=[]):
     parallax = os.path.join(scratch(bin_lid),bin_lid+'_alt.csv')
     eic = os.path.join(tmp,'%s%s.eic' % (bin_lid, suffix))
     with open(eic,'w') as fout:
-        for tup in metadata2eic(parallax):
+        for tup in metadata2eic(bin_lid,parallax):
             imagename = remove_extension(tup[0])
             if imagename not in skip:
                 tup[0] = imagename + suffix
@@ -377,6 +355,7 @@ if __name__=='__main__':
         pass
     alt(bin_lid)
     if learn_lid is None:
+        logging.info('no learn bin specified, using %s' % bin_lid)
         learn(bin_lid)
         learn_lid = bin_lid
     correct(bin_lid,learn_lid)

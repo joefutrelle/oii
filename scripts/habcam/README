@@ -35,10 +35,46 @@ RGB stereo pairs are written to the {bin_lid}_rgb_illum_LR subdirectory, for exa
 /habcam/nmfs/proc/20130603_1820/20130603_1820_rgb_illum_LR
 
 if you want to reprocess images (they were not processed with the desired lightmap, etc) simpoly
-delete the output directory, for example /habcam/nmfs/proc/20130603_1820. Do not delete input data!
+delete the output directory, for example /habcam/nmfs/proc/20130603_1820.
+
+Be very careful when deleting processed images. DO NOT DELETE RAW IMAGES BY MISTAKE!!!!!
 
 Logs are written to /habcam/nmfs/proc/logs. There will be multiple logs per bin representing
 every attempt to process images, and most of them will simply indicate that the bin was skipped.
-Especially long ones are the interesting ones as they are a record of processing.
+Very small ones will be automatically deleted to save space. Especially long ones are the
+interesting ones as they are a record of processing.
 
 Logs are compressed and can be decompressed with gunzip.
+
+Configuration of the lightfield workflow is in lightfield_config.py. BE VERY CAREFUL editing this
+file as syntax errors will halt processing, and parameter changes may have dramatic effects on
+performance and quality of output. Some important parameters in that file include:
+
+SCRATCH - location of output. do not change this as it will cause all images to be reprocessed.
+CALIBRATION_DIR - location of camera calibration.
+
+NUM_LEARN - number of images to use when producing a lightmap. raising this value can prevent
+ completely or partially blackened output images, but will increase the time required to create
+ a lightmap
+NUM_CORRECT - number of images to process per bin - set this as high as you want
+NUM_PROCS - number of processes to use for multiprocessing. leave this at 12 = number of CPUs
+NUM_THREADS - number of threads to use when correcting. leave this at 24 = number of hardware threads
+
+IMAGELIST_STEP - set to 2 to process every other image, 3 for every third, etc. applies to
+ both building the lightmap and processing images
+
+DEFAULT_IC_CONFIG - some parameters for the Rock/Honig algorithm. Do not change.
+
+Important files:
+
+/home/habcam/ic/learn_bin.conf - file containing ID of bin to compute/use lightmap from
+/home/habcam/ic/start_bin.conf - file containing ID of bin, will not process this bin or earlier bins
+/home/habcam/ic/lightfield_config.py - lightfield workflow parameters
+
+/home/habcam/ic/cron.sh - called by cron every five minutes to keep process running
+/home/habcam/ic/doitall.sh - called by cron.sh to process all unprocessed data
+/home/habcam/ic/oii/scripts/nosplit_lightfield_batch.py - workflow batch script that does the work
+/home/habcam/ic/oii/scripts/habcam_atsea.xml - resolver that finds data and configures paths
+
+/habcam/nmfs/proc - all processed images and lightmaps live here
+/habcam/nmfs/proc/logs - all logs live here
