@@ -351,7 +351,7 @@ if __name__=='__main__':
         logging.info('using lightmap %s' % learn_lid)
         alt(learn_lid)
         learn(learn_lid)
-    except KeyError:
+    except IndexError:
         pass
     alt(bin_lid)
     if learn_lid is None:

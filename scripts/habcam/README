@@ -78,3 +78,9 @@ Important files:
 
 /habcam/nmfs/proc - all processed images and lightmaps live here
 /habcam/nmfs/proc/logs - all logs live here
+
+In each processed directory:
+
+{bin ID}_cfa_illum_LR - corrected RAW 16-bit stereo pairs
+{bin ID}_rgb_illum_LR - corrected RGB 8-bit/channel stereo pairs
+{bin ID}_alt.csv - altitudes computed from parallax
