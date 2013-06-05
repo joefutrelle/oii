@@ -79,8 +79,12 @@ def align(y_LR,size=64,n=12):
     dy, dx = np.median(R,axis=0).astype(int)
     return dy, dx
 
-def redcyan(y_LR,gamma=1.2,brightness=1.2,**kw):
-    dy, dx = align(y_LR,**kw)
+def redcyan(y_LR,gamma=1.2,brightness=1.2,dx=None,dy=None,downscale=1,**kw):
+    if dx is None or dy is None:
+        y_LR_ds = y_LR[::downscale,::downscale]
+        dy, dx = align(y_LR_ds,**kw)
+        dy *= downscale
+        dx *= downscale
     (h,w) = y_LR.shape
     w /= 2
     # gamma-correct and brighten while splitting stereo

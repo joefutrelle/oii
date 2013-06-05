@@ -102,7 +102,7 @@ def rgb_illum_R(fin):
 def y_illum_LR(fin):
     return rgb2gray(rgb_illum_LR(fin))
 def redcyan(fin):
-    return quick.redcyan(y_illum_LR(fin))
+    return quick.redcyan(y_illum_LR(fin),downscale=4)
 
 @app.route('/width/<int:width>/<imagename>')
 @app.route('/<imagename>')
