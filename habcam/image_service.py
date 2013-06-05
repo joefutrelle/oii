@@ -87,24 +87,22 @@ def image_response(image,format,mimetype):
 # product workflow
 def cfa_LR(fin):
     return img_as_float(imread(fin,plugin='freeimage'))
-def rgb_LR(fin,pattern='rggb'):
-    return demosaic(cfa_LR(fin),pattern)
-def rgb_L(fin,**kw):
-    lr = rgb_LR(fin,**kw)
+def cfa_illum_LR(fin):
+    return img_as_float(imread(fin,plugin='freeimage'))
+def rgb_illum_LR(fin):
+    return img_as_float(imread(fin,plugin='freeimage'))
+def rgb_illum_L(fin,pattern='rggb'):
+    lr = rgb_illum_LR(fin)
     (_,w,_) = lr.shape
     return lr[:,:w/2,:]
-def rgb_R(fin,**kw):
-    lr = rgb_LR(fin,**kw)
+def rgb_illum_R(fin):
+    lr = rgb_illum_LR(fin)
     (_,w,_) = lr.shape
     return lr[:,w/2:,:]
-def y_LR(fin,**kw):
-    return rgb2gray(rgb_LR(fin,**kw))
-def redcyan(fin,**kw):
-    return quick.redcyan(y_LR(fin,**kw))
-def flat_L(fin,**kw):
-    return quick.lightfield(rgb_L(fin,**kw))
-def flat_R(fin,**kw):
-    return quick.lightfield(rgb_R(fin,**kw))
+def y_illum_LR(fin):
+    return rgb2gray(rgb_illum_LR(fin))
+def redcyan(fin):
+    return quick.redcyan(y_illum_LR(fin))
 
 @app.route('/width/<int:width>/<imagename>')
 @app.route('/<imagename>')
@@ -121,6 +119,15 @@ def serve_image(width=None,imagename=None):
         if hit.product is None:
             out = img_as_float(imread(fin))
     if out is None:
+        if hit.product == 'rgb_illum_LR':
+            out = rgb_illum_LR(fin)
+        if hit.product == 'rgb_illum_L':
+            out = rgb_illum_L(fin)
+        if hit.product == 'rgb_illum_R':
+            out = rgb_illum_R(fin)
+        if hit.product == 'redcyan':
+            out = redcyan(fin)
+    if out is None:
         hit = resolver[BIN].resolve(pid=imagename)
         if hit is not None and hit.extension == 'json':
             return Response(app.config[METADATA].json_bin(hit.bin_lid), mimetype='application/json')
@@ -131,8 +138,6 @@ def serve_image(width=None,imagename=None):
         fin = resolver[IMAGE].resolve(pid=change_extension(hit.imagename,'tif')).value
         if hit.product == 'redcyan':
             out = redcyan(fin,pattern='rggb')
-        if hit.product == 'flat':
-            out = flat_L(fin,pattern='rggb')
     if out is not None:
         if width is not None:
             (h,w) = (out.shape[0], out.shape[1])

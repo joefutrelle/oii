@@ -1,0 +1,60 @@
+<resolvers>
+  <resolver name="pid">
+    <match var="pid" pattern="([A-Z0-9a-z_]+\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
+	   groups="imagename ymd ym y ts tenmin h - product extension">
+      <var name="filename">${imagename}.${extension}</var>
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="bin_pid">
+    <match var="pid" pattern="(([A-Za-z0-9_]+\.\d{8}\.\d{3})\d).([a-zA-Z0-9]+)"
+	   groups="bin_lid prefix extension">
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="jpg">
+    <var name="root_suffix">
+      <!-- there are no jpgs on this deployment -->
+    </var>
+    <match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
+      <path var="cruise_dir" match="${root}/*">
+	<match var="cruise_dir">.*/[A-Za-z]{2}_\d+</match>
+	<path match="${cruise_dir}/${suffix}/${img_dir}/${imagename}.jpg"/>
+      </path>
+    </match>
+  </resolver>
+  <resolver name="tiff">
+    <!-- raw tiffs -->
+    <var name="root">
+      <value>/habcam/nmfs</value>
+    </var>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${filename}"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tif"/>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tiff"/>
+  </resolver>
+  <resolver name="rgb_illum_LR">
+    <var name="root">
+      <value>/habcam/nmfs/proc</value>
+    </var>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${img_dir}_rgb_illum_LR/${imagename}_rgb_illum_LR.tif"/>
+  </resolver>
+  <resolver name="png">
+    <var name="root">
+      <!-- no pngs on this installation -->
+    </var>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.png"/>
+  </resolver>
+  <resolver name="image">
+    <import name="pid"/>
+    <match var="extension" pattern="^(jpg|png|gif|bmp|tiff?)$">
+      <any>
+	<match resolver="tiff"/>
+	<match resolver="rgb_illum_LR"/>
+      </any>
+    </match>
+    <match var="extension" pattern="json">
+      <hit/>
+    </match>
+  </resolver>
+</resolvers>
