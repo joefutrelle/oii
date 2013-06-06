@@ -41,9 +41,11 @@ PORT='port'
 METADATA='psql_connect'
 
 # resolver names
-PID='pid'
-IMAGE='image'
-BIN='bin_pid'
+PID='pid' # splits id into parts
+IMAGE='image' # finds image data for a given imagename
+BIN='bin_pid' # parses bin pids
+IMGDATA='imgdata' # finds .img files
+PID2RGB='pid2rgb' # finds _rgb_illum_LRs (used in localpath endpoint)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -104,6 +106,28 @@ def y_illum_LR(fin):
 def redcyan(fin):
     return quick.redcyan(y_illum_LR(fin),downscale=4)
 
+@app.route('/localpath/<imagename>')
+def serve_localpath(imagename=None):
+    resolver = app.config[RESOLVER]
+    hit = resolver[PID2RGB].resolve(pid=imagename)
+    if hit is None:
+        abort(404)
+    return Response(hit.value+'\n', mimetype='text/plain')
+
+@app.route('/imgdata/<imagename>')
+def serve_imgdata(imagename=None):
+    resolver = app.config[RESOLVER]
+    hit = resolver[IMGDATA].resolve(pid=imagename)
+    imagename = remove_extension(imagename)
+    if hit is None:
+        abort(404)
+    with open(hit.value,'r') as csvin:
+        for line in csvin:
+            imgname = remove_extension(re.split(',',line)[0].strip())
+            if imgname == imagename:
+                return Response(line, mimetype='text/plain')
+    abort(404)
+
 @app.route('/width/<int:width>/<imagename>')
 @app.route('/<imagename>')
 def serve_image(width=None,imagename=None):
@@ -114,8 +138,6 @@ def serve_image(width=None,imagename=None):
             return Response(app.config[METADATA].json(imagename), mimetype='application/json')
         fin = hit.value
         (format, mimetype) = image_types(hit.filename)
-        if mimetype == 'image/tiff':
-            return Response(file(fin), direct_passthrough=True, mimetype=mimetype)
         if hit.product is None:
             out = img_as_float(imread(fin))
     if out is None:
