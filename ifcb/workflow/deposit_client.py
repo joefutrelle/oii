@@ -4,12 +4,14 @@ from urllib2 import urlopen, Request, HTTPError
 import json
 
 class Deposit(object):
-    def __init__(self,product_type='blobs',extension='zip'):
+    def __init__(self,url_base,product_type='blobs',extension='zip'):
+        self.url_base = url_base
         self.product_type = product_type
         self.extension = extension
 
     def exists(self,pid):
         url = '%s_%s.%s' % (pid, self.product_type, self.extension)
+        print 'attempting to fetch %s' % url
         req = urllib2.Request(url)
         req.get_method = lambda: 'HEAD'
         try:
