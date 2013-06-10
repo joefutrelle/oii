@@ -560,7 +560,7 @@ def list_targets(hit, target_no=1, limit=-1, adc_path=None, stitch_targets=None)
     return targets
 
 def bin2csv_response(hit,targets):
-    csv_out = '\n'.join(bin2csv(targets, hit.schema_version))
+    csv_out = '\n'.join(represent.bin2csv(targets, hit.schema_version))
     return Response(csv_out + '\n', mimetype='text/plain', headers=max_age())
 
 def serve_bin(hit,mimetype):
