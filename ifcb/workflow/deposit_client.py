@@ -1,24 +1,31 @@
 import sys
-import urllib2 as urllib
+import urllib2
+from urllib2 import urlopen, Request, HTTPError
 import json
 
 class Deposit(object):
-    def __init__(self,url_base='http://localhost:5000',product_type='blobs'):
-        self.url_base = url_base
+    def __init__(self,product_type='blobs',extension='zip'):
         self.product_type = product_type
+        self.extension = extension
 
     def exists(self,pid):
-        req_url = '%s/exists/%s/%s' % (self.url_base, self.product_type, pid)
-        req = urllib.Request(req_url)
-        resp = json.loads(urllib.urlopen(req).read())
-        return resp['exists']
+        url = '%s_%s.%s' % (pid, self.product_type, self.extension)
+        req = urllib2.Request(url)
+        req.get_method = lambda: 'HEAD'
+        try:
+            resp = urllib2.urlopen(req)
+            return True
+        except urllib2.HTTPError, e:
+            if e.code == 404:
+                return False
+            raise
 
     def deposit(self,pid,product_file):
         with open(product_file,'r') as inproduct:
             product_data = inproduct.read()
-            req = urllib.Request('%s/deposit/%s/%s' % (self.url_base, self.product_type, pid), product_data)
+            req = Request('%s/deposit/%s/%s' % (self.url_base, self.product_type, pid), product_data)
             req.add_header('Content-type','application/x-ifcb-blobs')
-            resp = json.loads(urllib.urlopen(req).read())
+            resp = json.loads(urlopen(req).read())
             return resp
         
 if __name__=='__main__':
