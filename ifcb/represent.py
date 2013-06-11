@@ -5,6 +5,8 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from io import BytesIO
 import tempfile
 from copy import deepcopy
+import numpy as np
+from scipy.io import loadmat
 
 from jinja2 import Environment
 
@@ -118,3 +120,19 @@ def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=Non
                 roi_path = roi.name
                 drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
                 bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
+
+def featuremat2csv(matfile, bin_lid):
+    mat = loadmat(matfile)
+
+    scores = mat['TBscores'] # score matrix (roi x scores)
+    labels = mat['class2useTB'] # class labels
+    roinum = mat['roinum'] # roi num for each row
+
+    def matlabels2strs(labels):
+        return [l.astype(str)[0] for l in labels[:,0]]
+
+    yield ','.join(['lid'] + matlabels2strs(labels))
+
+    for roi, row in zip(roinum[:,0], scores[:]):
+        row = ['%s_%05d' % (bin_lid, roi)] + row.tolist()
+        yield ','.join(csv_quote(csv_str(k)) for k in row)

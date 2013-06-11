@@ -78,6 +78,11 @@
 	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
 	</hit>
       </match>
+      <match var="product" pattern="class">
+	<hit name="root">
+	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
+	</hit>
+      </match>
     </match>
     <!-- MVCO beads series -->
     <match var="time_series" value="mvco_beads">
@@ -162,6 +167,16 @@
   </resolver>
   <resolver name="multiblob">
     <import name="multiblob_destination"/>
+    <path match="${value}"/>
+  </resolver>
+  <resolver name="class_destination">
+    <import name="pid"/>
+    <var name="product">features</var>
+    <import name="data_roots"/>
+    <hit>${root}/class${year}_v1/${lid}_class_v1.mat</hit>
+  </resolver>
+  <resolver name="class">
+    <import name="class_destination"/>
     <path match="${value}"/>
   </resolver>
   <resolver name="list_day_dirs">
