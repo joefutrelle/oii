@@ -70,7 +70,7 @@ FORMAT='format'
 RESOLVER='resolver'
 
 # FIXME don't use globals
-(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver,fea_resolver) = ({},None,None,None,None,None)
+(rs,binpid2path,pid_resolver,blob_resolver,ts_resolver,fea_resolver,class_resolver) = ({},None,None,None,None,None,None)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
@@ -454,6 +454,14 @@ def serve_features(time_series, pid):
         abort(404)
     return Response(file(hit.value), direct_passthrough=True, mimetype='text/csv', headers=max_age())
 
+@app.route('/<time_series>/api/class/pid/<path:pid>')
+def serve_class(time_series, pid):
+    hit = class_resolver.resolve(pid=pid,time_series=time_series)
+    if hit is None:
+        abort(404)
+    csv_out = '\n'.join(represent.classmat2csv(hit.value, hit.bin_pid))
+    return Response(csv_out + '\n', mimetype='text/plain', headers=max_age())
+
 @app.route('/<time_series>/api/<path:ignore>')
 def api_error(time_series,ignore):
     abort(404)
@@ -520,6 +528,8 @@ def resolve(pid):
             return serve_blob(hit.time_series,hit.pid)
         if re.match(r'features',hit.product):
             return serve_features(hit.time_series,hit.pid)
+        if re.match(r'class',hit.product):
+            return serve_class(hit.time_series,hit.pid)
     # is the request for a single target?
     if hit.target is not None:
         hit.target_no = int(hit.target) # parse target number
@@ -717,12 +727,12 @@ else:
 
 # FIXME don't use globals
 # FIXME do this in config
-# FIXME this should be selected by time series somehow
 rs = parse_stream(app.config[RESOLVER])
 binpid2path = rs['binpid2path']
 pid_resolver = rs['pid']
 blob_resolver = rs['mvco_blob']
 fea_resolver = rs['features']
+class_resolver = rs['class']
 ts_resolver = rs['time_series']
 all_series = rs['all_series']
 

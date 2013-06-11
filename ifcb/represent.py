@@ -121,7 +121,7 @@ def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=Non
                 drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
                 bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
 
-def featuremat2csv(matfile, bin_lid):
+def classmat2csv(matfile, bin_lid):
     mat = loadmat(matfile)
 
     scores = mat['TBscores'] # score matrix (roi x scores)
@@ -131,8 +131,8 @@ def featuremat2csv(matfile, bin_lid):
     def matlabels2strs(labels):
         return [l.astype(str)[0] for l in labels[:,0]]
 
-    yield ','.join(['lid'] + matlabels2strs(labels))
+    yield ','.join(['pid'] + matlabels2strs(labels))
 
     for roi, row in zip(roinum[:,0], scores[:]):
-        row = ['%s_%05d' % (bin_lid, roi)] + row.tolist()
-        yield ','.join(csv_quote(csv_str(k)) for k in row)
+        fmt = ['"%s_%05d"' % (bin_lid, roi)] + [re.sub(r'000$','','%.4f' % c) for c in row.tolist()]
+        yield ','.join(fmt)
