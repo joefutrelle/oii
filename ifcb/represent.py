@@ -121,7 +121,7 @@ def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=Non
                 drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
                 bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
 
-def classmat2csv(matfile, bin_lid):
+def class_scoresmat2csv(matfile, bin_lid):
     mat = loadmat(matfile)
 
     scores = mat['TBscores'] # score matrix (roi x scores)
