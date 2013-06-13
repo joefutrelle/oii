@@ -18,6 +18,9 @@ from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 
+"""This module provides representations of various IFCB data types, mostly for the purpose
+of serializing that data to a web client."""
+
 PID='pid'
 
 def add_bin_pid(targets, bin_pid):
@@ -28,6 +31,7 @@ def add_bin_pid(targets, bin_pid):
     return targets
 
 def im2bytes(im):
+    """Convert a PIL Image to a bytearray"""
     buf = BytesIO()
     with tempfile.SpooledTemporaryFile() as imtemp:
         im.save(imtemp,'PNG')
@@ -36,24 +40,28 @@ def im2bytes(im):
     return buf.getvalue()
 
 def csv_quote(thing):
+    """For a given string that is to appear in CSV output, quote it if it is non-numeric"""
     if re.match(r'^-?[0-9]+(\.[0-9]+)?$',thing):
         return thing
     else:
         return '"' + thing + '"'
 
 def csv_str(v):
+    """For a given value, produce a CSV representation of it"""
     try:
         return re.sub(r'\.$','',('%.12f' % v).rstrip('0'))
     except:
         return str(v)
 
 def bin2csv(targets,schema_version=SCHEMA_VERSION_2):
+    """Given targets, produce a CSV representation in the specified schema"""
     ks = [k for k,_ in ADC_SCHEMA[schema_version]] + ['binID','pid','stitched','targetNumber']
     yield ','.join(ks)
     for target in targets:
         # fetch all the data for this row as strings, emit
         yield ','.join(csv_quote(csv_str(target[k])) for k in ks)
 
+# XML template for rendering a bin of targets
 BIN_XML_TEMPLATE = """
 <Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#">
   <dc:identifier>{{hit.bin_pid}}</dc:identifier>
@@ -65,6 +73,7 @@ BIN_XML_TEMPLATE = """
 """
 
 def bin2xml(template):
+    """Generate the XML representation of a bin given appropriate template variables"""
     return Environment().from_string(BIN_XML_TEMPLATE).render(**template)
 
 def bin_zip(hit, hdr_path, adc_path, roi_path, outfile):
@@ -107,6 +116,7 @@ def bin_zip(hit, hdr_path, adc_path, roi_path, outfile):
         shutil.copyfileobj(temp, outfile)
 
 def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=None):
+    """Generate a zip file given a pid (using a resolver) to find the files"""
     if resolver is None:
         resolver = parse_stream(resolver_file)
     hit = resolver['pid'].resolve(pid=bin_pid)
@@ -122,6 +132,7 @@ def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=Non
                 bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
 
 def class_scoresmat2csv(matfile, bin_lid):
+    """Convert a class score .mat file into a CSV representation"""
     mat = loadmat(matfile)
 
     scores = mat['TBscores'] # score matrix (roi x scores)
