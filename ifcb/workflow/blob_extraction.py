@@ -23,14 +23,14 @@ MODULE='oii.ifcb.workflow.blob_extraction'
 
 celery = Celery(MODULE)
 
-def celery_logging(logger, format, **kw):
-    broker_url = celery.conf.BROKER_URL
-    lopear = RabbitLogHandler(broker_url=broker_url)
-    lopear.setFormatter(logging.Formatter(format))
-    logger.addHandler(lopear)
+#def celery_logging(logger, format, **kw):
+#    broker_url = celery.conf.BROKER_URL
+#    lopear = RabbitLogHandler(broker_url=broker_url)
+#    lopear.setFormatter(logging.Formatter(format))
+#    logger.addHandler(lopear)
 
-after_setup_logger.connect(celery_logging)
-after_setup_task_logger.connect(celery_logging)
+#after_setup_logger.connect(celery_logging)
+#after_setup_task_logger.connect(celery_logging)
 
 CHECK_EVERY=30
 
