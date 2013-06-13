@@ -171,7 +171,7 @@
   </resolver>
   <resolver name="class_scores_destination">
     <import name="pid"/>
-    <var name="product">features</var>
+    <var name="product">class_scores</var>
     <import name="data_roots"/>
     <hit>${root}/class${year}_v1/${lid}_class_v1.mat</hit>
   </resolver>
