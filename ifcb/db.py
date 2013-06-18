@@ -176,6 +176,26 @@ order by day;
             db.execute(query)
             return [dict(day=day.strftime('%Y-%m-%d'), bin_count=bin_count, gb=float(gb)) for (day,bin_count,gb) in db.fetchall()]
 
+class IfcbAutoclass(Psql):
+    def rois_of_class(self, class_label, start=None, end=None):
+        if end is None:
+            end = time.gmtime()
+        if start is None:
+            start = time.gmtime(0)
+        start_dt = utcdatetime(start)
+        end_dt = utcdatetime(end)
+        with xa(self.psql_connect) as (c,db):
+            db.execute("set session time zone 'UTC'")
+            query = """
+select bin_lid, roinums from autoclass
+where bin_lid in (select lid from bins where sample_time >= %s and sample_time <= %s)
+and class_label = %s
+"""
+            db.execute(query,(start_dt, end_dt,class_label))
+            for row in db.fetchall():
+                (bin_lid, roinums) = row
+                for roinum in roinums:
+                    yield '%s_%05d' % (bin_lid, roinum)
 
 import sys
 from oii.config import get_config, Configuration
@@ -189,5 +209,8 @@ if __name__=='__main__':
         resolvers = resolver.parse_stream(config.resolver)
     except:
         resolvers = None
-    fixity = IfcbFixity(config.psql_connect, resolvers)
-    fixity.check_all()
+    #fixity = IfcbFixity(config.psql_connect, resolvers)
+    #fixity.check_all()
+    autoclass = IfcbAutoclass(config.psql_connect)
+    for roc in autoclass.rois_of_class('tintinnid'):
+        print roc

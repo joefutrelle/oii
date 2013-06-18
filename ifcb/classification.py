@@ -1,30 +1,62 @@
 from scipy.io import loadmat
 
-def class_scores_mat2dicts(matfile, bin_lid):
-    """Convert a class score .mat file into dicts"""
-    mat = loadmat(matfile)
+def load_class_scores(matfile):
+    return loadmat(matfile)
 
-    scores = mat['TBscores'] # score matrix (roi x scores)
+def class_scores_labels(mat):
     labels = mat['class2useTB'] # class labels
+    return [l.astype(str)[0] for l in labels[:,0]]
+
+def class_scores_mat2dicts(mat):
+    """Convert a class score mat structure into dicts"""
+    scores = mat['TBscores'] # score matrix (roi x scores)
     roinum = mat['roinum'] # roi num for each row
 
-    label_strs = [l.astype(str)[0] for l in labels[:,0]]
+    label_strs = class_scores_labels(mat)
 
     for roi, row in zip(roinum[:,0], scores[:]):
         d = dict(zip(label_strs,row.tolist()))
-        d['pid'] = '%s_%05d' % (bin_lid, roi)
+        d['roinum'] = int(roi)
         yield d
 
-def class_scores_mat2class_labels(matfile, bin_lid, threshold=0.0):
-    for d in class_scores_mat2dicts(matfile, bin_lid):
-        roi_lid = d['pid']
-        del d['pid']
-        v=list(d.values())
-        k=list(d.keys())
+def max_interpretation(scores, threshold=0.0):
+    """This intepretation chooses the class with the maximum score,
+    as long as the score is over a given threshold. If no scores
+    were over the threshold, returns -1"""
+    m = max(scores)
+    if m > threshold:
+        return scores.index(max(scores))
+    else:
+        return -1 # no scores were over the threshold
+
+def class_scores_mat2class_labels(mat, threshold=0.0):
+    for d in class_scores_mat2dicts(mat):
+        roinum = d['roinum']
+        del d['roinum']
+        c = max_interpretation(list(d.values()))
+        k = list(d.keys())
+        if c == -1:
+            yield roinum, 'unclassified'
+        else:
+            yield roinum, k[c]
+
+def class_scores_mat2class_numbers(mat, threshold=0.0):
+    scores = mat['TBscores'] # score matrix (roi x scores)
+    roinum = mat['roinum'] # roi num for each row
+
+    label_strs = class_scores_labels(mat)
+
+    max_roinum = roinum[-1,0]
+
+    class_numbers = [0 for n in range(max_roinum+1)] # there has GOT to be a better way!
+
+    for roi, row in zip(roinum[:,0], scores[:]):
+        v = row.tolist()
         m=max(v)
         if m > threshold:
-            yield roi_lid, k[v.index(m)]
+            class_numbers[roi] = v.index(m)
         else:
-            yield roi_lid, 'other' # not sure what to call this?
+            class_numbers[roi] = -1  # not sure what to call this?
 
-        
+    return class_numbers
+    
