@@ -18,7 +18,7 @@ from oii.ifcb.formats.adc import read_adc, read_target, ADC
 from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_2
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
-from oii.ifcb.db import IfcbFeed, IfcbFixity
+from oii.ifcb.db import IfcbFeed, IfcbFixity, IfcbAutoclass
 from oii.resolver import parse_stream
 from oii.ifcb import stitching
 from oii.ifcb import represent
@@ -104,10 +104,13 @@ def get_psql_connect(time_series):
     return '%s dbname=%s' % (app.config[PSQL_CONNECT], hit.dbname)
 
 def get_feed(time_series):
-    return IfcbFeed(get_psql_connect(time_series));
+    return IfcbFeed(get_psql_connect(time_series))
 
 def get_fixity(time_series):
-    return IfcbFixity(get_psql_connect(time_series));
+    return IfcbFixity(get_psql_connect(time_series))
+
+def get_autoclass(time_series):
+    return IfcbAutoclass(get_psql_connect(time_series))
 
 # simple memoization decorator using Werkzeug's caching support
 def memoized(func):
@@ -345,6 +348,27 @@ def get_volume(time_series):
 @app.route('/<time_series>/api/volume')
 def serve_volume(time_series):
     return jsonr(get_volume(time_series))
+
+def get_namespace(time_series):
+    hit = ts_resolver.resolve(time_series=time_series)
+    return hit.namespace
+
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/start/<start>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/start/<start>/end/<end>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/end/<end>')
+def autoclass_rois_of_class(time_series,class_label,start=None,end=None):
+    if start is not None:
+        start = parse_date_param(start)
+    if end is not None:
+        end = parse_date_param(end)
+    ns = get_namespace(time_series)
+    def doit():
+        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end):
+            yield ns + roi_lid
+    return jsonr(list(doit()))
+
+### mosaicing
 
 @app.route('/<time_series>/api/mosaic/pid/<path:pid>')
 def serve_mosaic(time_series=None,pid=None):
