@@ -181,7 +181,7 @@ class IfcbAutoclass(Psql):
         with xa(self.psql_connect) as (c,db):
             db.execute('select distinct class_label from autoclass order by class_label')
             return [c[0] for c in db.fetchall()]
-    def rois_of_class(self, class_label, start=None, end=None, threshold=0.0):
+    def rois_of_class(self, class_label, start=None, end=None, threshold=0.0, limit=2000):
         if end is None:
             end = time.gmtime()
         if start is None:
@@ -196,8 +196,9 @@ from exploded_autoclass
 where bin_lid in (select lid from bins where sample_time >= %s and sample_time <= %s)
 and class_label = %s
 and score > %s
+limit %s
 """
-            db.execute(query,(start_dt, end_dt, class_label, threshold))
+            db.execute(query,(start_dt, end_dt, class_label, threshold, limit))
             for row in db.fetchall():
                 (bin_lid, roinum) = row
                 yield '%s_%05d' % (bin_lid, roinum)

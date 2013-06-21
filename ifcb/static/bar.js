@@ -39,7 +39,7 @@ function showit() {
 	$('#images').empty();
 	$.each(r, function(ix, roi_pid) {
 	    if(ix < 1000) {
-		$('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html"></a></div>')
+		$('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank"></a></div>')
 		    .find('div:last')
 		    .addClass('roi_image_unloaded')
 		    .data('img_src',roi_pid+'.png');
@@ -50,6 +50,17 @@ function showit() {
 }
 var EPOCH = (new Date(2006,0,1)).getTime();
 var NOW = (new Date()).getTime();
+function showThreshVal() {
+    $('#thresh_val').empty().append('' + $('#threshold').slider('value') / 100.0);
+}
+function showDateVal() {
+    var values = $('#date_range').slider('values');
+    var startDate = new Date(EPOCH + ((values[0] / 1000) * (NOW - EPOCH)));
+    var endDate = new Date(EPOCH + ((values[1] / 1000) * (NOW - EPOCH)));
+    $('#date_range').data('startDate',startDate);
+    $('#date_range').data('endDate',endDate);
+    $('#date_range_val').empty().append(startDate.toISOString() + ' - ' + endDate.toISOString());
+}
 $(document).ready(function() {
     $('#main').append('<select id="class_select"></select>');
     $('#main').append('<div style="display: inline-block; width: 300px" id="threshold">').find('#threshold')
@@ -58,7 +69,7 @@ $(document).ready(function() {
 	    max: 99,
 	    value: 99,
 	    change: function () {
-		$('#thresh_val').empty().append('' + $('#threshold').slider('value') / 100.0);
+		showThreshVal();
 		showit();
 	    }
 	});
@@ -70,12 +81,7 @@ $(document).ready(function() {
 	    max: 1000,
 	    values: [800, 900],
 	    change: function() {
-		var values = $('#date_range').slider('values');
-		var startDate = new Date(EPOCH + ((values[0] / 1000) * (NOW - EPOCH)));
-		var endDate = new Date(EPOCH + ((values[1] / 1000) * (NOW - EPOCH)));
-		$('#date_range').data('startDate',startDate);
-		$('#date_range').data('endDate',endDate);
-		$('#date_range_val').empty().append(startDate.toISOString() + ' - ' + endDate.toISOString());
+		showDateVal();
 		showit();
 	    }
 	});
@@ -86,6 +92,8 @@ $(document).ready(function() {
 	    $('#class_select').append('<option value="'+class_label+'">'+class_label+'</option>');
 	});
 	$('#class_select').change(showit);
+	showThreshVal();
+	showDateVal();
     });
     $(window).scroll(loadImages);
 });
