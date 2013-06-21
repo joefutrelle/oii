@@ -177,7 +177,11 @@ order by day;
             return [dict(day=day.strftime('%Y-%m-%d'), bin_count=bin_count, gb=float(gb)) for (day,bin_count,gb) in db.fetchall()]
 
 class IfcbAutoclass(Psql):
-    def rois_of_class(self, class_label, start=None, end=None):
+    def list_classes(self):
+        with xa(self.psql_connect) as (c,db):
+            db.execute('select distinct class_label from autoclass order by class_label')
+            return [c[0] for c in db.fetchall()]
+    def rois_of_class(self, class_label, start=None, end=None, threshold=0.0):
         if end is None:
             end = time.gmtime()
         if start is None:
@@ -187,15 +191,16 @@ class IfcbAutoclass(Psql):
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
             query = """
-select bin_lid, roinums from autoclass
+select bin_lid, roinum
+from exploded_autoclass
 where bin_lid in (select lid from bins where sample_time >= %s and sample_time <= %s)
 and class_label = %s
+and score > %s
 """
-            db.execute(query,(start_dt, end_dt,class_label))
+            db.execute(query,(start_dt, end_dt, class_label, threshold))
             for row in db.fetchall():
-                (bin_lid, roinums) = row
-                for roinum in roinums:
-                    yield '%s_%05d' % (bin_lid, roinum)
+                (bin_lid, roinum) = row
+                yield '%s_%05d' % (bin_lid, roinum)
 
 import sys
 from oii.config import get_config, Configuration

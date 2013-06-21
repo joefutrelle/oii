@@ -2,8 +2,8 @@
   <channel xmlns:atom="http://www.w3.org/2005/Atom">
     <title>Imaging FlowCytobot data</title>
     <description>Marine phytoplankton cytometry with imagery</description>
-    <link>http://ifcb-data.whoi.edu/{{time_series}}/feed.rss</link>
-    <atom:link href="http://ifcb-data.whoi.edu/{{time_series}}/feed.rss" rel="self"/>
+    <link>{{namespace}}feed.rss</link>
+    <atom:link href="{{namespace}}feed.rss" rel="self"/>
     <pubDate>{{max_date}}</pubDate>
     <ttl>20</ttl>{% for item in feed %}
     <item>

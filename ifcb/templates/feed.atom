@@ -4,8 +4,8 @@
   <author>
     <name>Imaging FlowCytobot</name>
   </author>
-  <link href="http://ifcb-data.whoi.edu/{{time_series}}/feed.atom" rel="self"/>
-  <id>http://ifcb-data.whoi.edu/{{time_series}}/feed.atom</id>
+  <link href="{{namespace}}feed.atom" rel="self"/>
+  <id>{{namespace}}feed.atom</id>
   <updated>{{max_date}}</updated>{% for entry in feed %}
   <entry>
     <title>Sample @ {{entry.date}}</title>

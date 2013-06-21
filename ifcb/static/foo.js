@@ -1,22 +1,34 @@
-$(document).ready(function() {
-    var width=640;
-    var height=480;
-    $.getJSON('/api/feed/format/json', function(r) {
-	var center_column = $('#main').empty().append('<div/>').find('div:last').css('float','left');
-	var right_column = $('#main').append('<div/>').find('div:last').css('float','right');
-	$.each(r, function(ix, bin) {
-	    if(ix < 7) {
-		var images = []
-		var mosaic_scale = ix == 0 ? 1.0 : 0.25;
-		var roi_scale = 0.333 * mosaic_scale;
-		var s_width = Math.floor(width * mosaic_scale);
-		var s_height = Math.floor(height * mosaic_scale);
-		var elt = ix == 0 ? center_column : right_column;
-		for(page=1; page <= 30; page++) {
-		    images.push('/api/mosaic/size/'+s_width+'x'+s_height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+bin.lid+'.jpg');
-		}
-		$(elt).append('<div/><p class="bin_label">'+bin.lid+'</p>').find('div:last').imagePager(images, s_width, s_height);
+function showit() {
+    var class_label = $('#class_select').val();
+    var threshold = $('#threshold').slider('value') / 100.0;
+    //$.getJSON('/mvco/api/autoclass/rois_of_class/'+class_label+'/threshold/'+threshold+'/start/2012-07-04/end/2012-07-05', function(r) {
+    $('#images').empty().append('please wait...');
+    $.getJSON('/mvco/api/autoclass/rois_of_class/'+class_label+'/threshold/'+threshold, function(r) {
+	$('#images').empty();
+	$.each(r, function(ix, roi_pid) {
+	    if(ix < 100) {
+		$('#images').append('<a href="'+roi_pid+'.html"><img src="'+roi_pid+'.png"></a>');
 	    }
 	});
+    });
+}
+$(document).ready(function() {
+    $('#main').append('<select id="class_select"></select>').find('#class_select');
+    $('#main').append('<div style="display: inline-block; width: 300px" id="threshold">').find('#threshold')
+	.slider({
+	    min: 1,
+	    max: 99,
+	    change: function () {
+		$('#threshval').empty().append('' + $('#threshold').slider('value') / 100.0);
+		showit();
+	    }
+	});
+    $('#main').append('<span id="threshval"></span>');
+    $('#main').append('<div id="images"></div>').find('#images');
+    $.getJSON('/mvco/api/autoclass/list_classes', function(r) {
+	$.each(r, function(ix, class_label) {
+	    $('#class_select').append('<option value="'+class_label+'">'+class_label+'</option>');
+	});
+	$('#class_select').change(showit);
     });
 });

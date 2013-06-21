@@ -242,7 +242,8 @@ def feed_response(time_series,dicts,format='json'):
         max_date = max([entry['date'] for entry in dicts]) # FIXME doesn't work for RFC822
     else:
         max_date = iso8601() # now
-    context = dict(max_date=max_date, time_series=time_series, feed=dicts)
+    ns = get_namespace(time_series)
+    context = dict(max_date=max_date, namespace=ns, feed=dicts)
     if format == 'json':
         return jsonr(dicts)
     if format == 'html':
@@ -353,18 +354,26 @@ def get_namespace(time_series):
     hit = ts_resolver.resolve(time_series=time_series)
     return hit.namespace
 
+@app.route('/<time_series>/api/autoclass/list_classes')
+def autoclass_list_classes(time_series):
+    return jsonr(get_autoclass(time_series).list_classes())
+
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/start/<start>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/start/<start>/end/<end>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/end/<end>')
-def autoclass_rois_of_class(time_series,class_label,start=None,end=None):
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/start/<start>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/start/<start>/end/<end>')
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/end/<end>')
+def autoclass_rois_of_class(time_series,class_label,start=None,end=None,threshold=0.0):
     if start is not None:
         start = parse_date_param(start)
     if end is not None:
         end = parse_date_param(end)
     ns = get_namespace(time_series)
     def doit():
-        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end):
+        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end,threshold):
             yield ns + roi_lid
     return jsonr(list(doit()))
 

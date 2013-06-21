@@ -25,7 +25,7 @@ def max_interpretation(scores, threshold=0.0):
     were over the threshold, returns -1"""
     m = max(scores)
     if m > threshold:
-        return scores.index(max(scores))
+        return scores.index(m)
     else:
         return -1 # no scores were over the threshold
 
@@ -39,6 +39,20 @@ def class_scores_mat2class_labels(mat, threshold=0.0):
             yield roinum, 'unclassified'
         else:
             yield roinum, k[c]
+
+def class_scores_mat2class_label_score(mat):
+    """return roinum, class label and score of max scoring class per roi"""
+    for d in class_scores_mat2dicts(mat):
+        roinum = d['roinum']
+        del d['roinum']
+        scores = list(d.values())
+        s = max(scores)
+        c = scores.index(max(scores))
+        k = list(d.keys())
+        if c == -1:
+            yield roinum, 'unclassified', s
+        else:
+            yield roinum, k[c], s
 
 def class_scores_mat2class_numbers(mat, threshold=0.0):
     scores = mat['TBscores'] # score matrix (roi x scores)
