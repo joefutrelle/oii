@@ -10,8 +10,6 @@ CREATE TABLE bins
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE bins
-  OWNER TO ifcb;;
 
 -- Index: ix_bins_lid
 
@@ -57,8 +55,6 @@ CREATE TABLE fixity
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE fixity
-  OWNER TO ifcb;
 
 -- Index: ix_fixity_length
 
