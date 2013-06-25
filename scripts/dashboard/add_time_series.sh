@@ -85,4 +85,4 @@ sudo -u postgres psql -c "grant all privileges on database $TIME_SERIES to $DATA
 echo "Creating database tables and indexes ..."
 sudo -u postgres psql $TIME_SERIES -f ifcb_schema.sql
 sudo -u postgres psql $TIME_SERIES -c "alter table bins owner to $DATABASE_USER"
-sudo -u postgrel psql $TIME_SERIES -c "alter table fixity owner to $DATABASE_USER"
+sudo -u postgres psql $TIME_SERIES -c "alter table fixity owner to $DATABASE_USER"
