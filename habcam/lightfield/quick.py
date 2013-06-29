@@ -79,6 +79,34 @@ def align(y_LR,size=64,n=12):
     dy, dx = np.median(R,axis=0).astype(int)
     return dy, dx
 
+def align_converge(y_LR,size=64):
+    """iterate until offsets converge"""
+    (h,w) = y_LR.shape
+    # split image
+    y_L = y_LR[:,:w/2]
+    y_R = y_LR[:,w/2:]
+    (h,w) = y_L.shape
+    s = size / 2
+    # now find n offsets
+    rand = RandomState(0)
+    prev_dx, prev_dy = 0, 0
+    series = []
+    while True:
+        # at a random locations in y_L
+        y = rand.randint(h/4,h*3/4)
+        x = rand.randint(w/4,w*3/4)
+        it = y_L[y:y+s,x:x+s] # take an s x s chunk there
+        tm = match_template(y_R,it) # match it against y_R
+        ry, rx = maximum_position(tm) # max value is location
+        series += [((y-ry), (x-rx))] # accumulatea
+        n = len(series)
+        if n % 6 == 0:
+            # take the median
+            dy, dx = np.median(np.asarray(series),axis=0).astype(int)
+            if n > 100 or (abs(dy-prev_dy) == 0 and abs(dx-prev_dx) == 0):
+                return dy, dx
+            prev_dy, prev_dx = dy, dx
+
 def redcyan(y_LR,gamma=1.2,brightness=1.2,dx=None,dy=None,downscale=1,**kw):
     if dx is None or dy is None:
         y_LR_ds = y_LR[::downscale,::downscale]
