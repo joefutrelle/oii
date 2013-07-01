@@ -358,6 +358,14 @@ def get_namespace(time_series):
 def autoclass_list_classes(time_series):
     return jsonr(get_autoclass(time_series).list_classes())
 
+@app.route('/<time_series>/api/autoclass/count_by_day/<class_label>/start/<start>/end/<end>')
+def autoclass_count_by_day(time_series,class_label,start=None,end=None):
+    if start is not None:
+        start = parse_date_param(start)
+    if end is not None:
+        end = parse_date_param(end)
+    return jsonr(list(get_autoclass(time_series).rough_count_by_day(class_label,start,end)))
+
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/start/<start>')

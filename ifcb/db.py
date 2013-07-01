@@ -176,18 +176,22 @@ order by day;
             db.execute(query)
             return [dict(day=day.strftime('%Y-%m-%d'), bin_count=bin_count, gb=float(gb)) for (day,bin_count,gb) in db.fetchall()]
 
+def time_range(start=None, end=None):
+    if end is None:
+        end = time.gmtime()
+    if start is None:
+        start = time.gmtime(0)
+    start_dt = utcdatetime(start)
+    end_dt = utcdatetime(end)
+    return (start_dt, end_dt)
+
 class IfcbAutoclass(Psql):
     def list_classes(self):
         with xa(self.psql_connect) as (c,db):
             db.execute('select distinct class_label from autoclass order by class_label')
             return [c[0] for c in db.fetchall()]
     def rois_of_class(self, class_label, start=None, end=None, threshold=0.0, limit=2000):
-        if end is None:
-            end = time.gmtime()
-        if start is None:
-            start = time.gmtime(0)
-        start_dt = utcdatetime(start)
-        end_dt = utcdatetime(end)
+        start_dt, end_dt = time_range(start, end)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
             query = """
@@ -202,6 +206,27 @@ limit %s
             for row in db.fetchall():
                 (bin_lid, roinum) = row
                 yield '%s_%05d' % (bin_lid, roinum)
+    def rough_count_by_day(self, class_label, start=None, end=None):
+        query = """
+select date_trunc('day',b.sample_time) as day,
+sum(array_length(roinums,1))
+from autoclass a, bins b
+where a.bin_lid = b.lid
+and sample_time >= %s and sample_time <= %s
+and class_label = %s
+group by day order by day
+"""
+        start_dt, end_dt = time_range(start, end)
+        with xa(self.psql_connect) as (c,db):
+            db.execute("set session time zone 'UTC'")
+            db.execute(query,(start_dt, end_dt, class_label))
+            while True:
+                batch = db.fetchmany()
+                if len(batch) == 0:
+                    break
+                for row in batch:
+                    (day, count) = row
+                    yield {'day': day.strftime('%Y-%m-%d'), 'count': count }
 
 import sys
 from oii.config import get_config, Configuration
