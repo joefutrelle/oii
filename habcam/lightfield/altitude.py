@@ -72,12 +72,15 @@ def stereo2altitude(cfa_LR,**config):
         (xo, yo) = (0, 0)
     y_LR = cfa_LR[xo::align_downscale,yo::align_downscale]
     # now perform alignment
-    (y,x) = align_converge(y_LR,size=align_patch_size/align_downscale)
-    y *= align_downscale
-    x *= align_downscale
-    # now do a sanity check on the alignment results
-    if x <= 0: # in this case we have to either skip the image or emit a bogus value
-        # emit a bogus value of 2m but retain alignment results to show it was done
-        return (x,y,2.0)
-    m = p2m(x,config)
-    return (x,y,m)
+    try:
+        (y,x) = align_converge(y_LR,size=align_patch_size/align_downscale)
+        y *= align_downscale
+        x *= align_downscale
+        # now do a sanity check on the alignment results
+        if x <= 0: # in this case we have to either skip the image or emit a bogus value
+            # emit a bogus value of 2m but retain alignment results to show it was done
+            return (x,y,2.0)
+        m = p2m(x,config)
+        return (x,y,m)
+    except:
+        return (0,0,2.0) # emit bogus value
