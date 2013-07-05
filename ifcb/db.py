@@ -190,19 +190,19 @@ class IfcbAutoclass(Psql):
         with xa(self.psql_connect) as (c,db):
             db.execute('select distinct class_label from autoclass order by class_label')
             return [c[0] for c in db.fetchall()]
-    def rois_of_class(self, class_label, start=None, end=None, threshold=0.0, limit=2000):
+    def rois_of_class(self, class_label, start=None, end=None, threshold=0.0, page=1):
+        PAGE_SIZE=10 # number of bins per page
         start_dt, end_dt = time_range(start, end)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
             query = """
-select bin_lid, roinum
-from exploded_autoclass
-where bin_lid in (select lid from bins where sample_time >= %s and sample_time <= %s)
-and class_label = %s
-and score > %s
-limit %s
+select bin_lid, roinum from
+(select bin_lid, unnest(roinums) as roinum, unnest(scores) as score from autoclass where bin_lid in
+  (select lid from bins where sample_time >= %s and sample_time <= %s limit %s offset %s)
+and class_label = %s) exploded
+where score > %s
 """
-            db.execute(query,(start_dt, end_dt, class_label, threshold, limit))
+            db.execute(query,(start_dt, end_dt, PAGE_SIZE, (page-1)*PAGE_SIZE, class_label, threshold))
             for row in db.fetchall():
                 (bin_lid, roinum) = row
                 yield '%s_%05d' % (bin_lid, roinum)

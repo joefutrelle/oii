@@ -21,12 +21,37 @@ function loadImages() {
     $.each($('#main').find('.roi_image_unloaded'),function(ix,elt) {
 	if(elementInViewport(elt)) {
 	    img_src = $(elt).data('img_src');
-	    console.log(img_src+' in viewport');
 	    $(elt).find('a').append('<img src="'+img_src+'" width="50%" alt="'+img_src+'">');
 	    $(elt).removeClass('roi_image_unloaded').addClass('roi_image');
 	    $(elt).css('width','auto');
 	    $(elt).css('height','auto');
 	}
+    });
+    $.each($('#main').find('.last_image'),function(ix,elt) {
+	if(elementInViewport(elt)) {
+	    $(elt).removeClass('last_image');
+	    var queryString = $(elt).data('queryString');
+	    var page = $(elt).data('page');
+	    console.log('loading next page');
+	    addPage(queryString, page);
+	}
+    });
+}
+function addPage(queryString, page) {
+    $.getJSON(queryString + page, function(r) {
+	$.each(r, function(ix, roi_pid) {
+	    $('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank"></a></div>')
+		.find('div:last')
+		.addClass('roi_image_unloaded')
+		.data('img_src',roi_pid+'.png');
+	});
+	if(r.length > 0) { // FIXME sometimes intermediate pages have zero rois
+	    $('#images').find('div:last')
+		.addClass('last_image')
+		.data('queryString',queryString)
+		.data('page',page+1);
+	}
+	loadImages();
     });
 }
 function showit() {
@@ -34,19 +59,9 @@ function showit() {
     var threshold = $('#threshold').slider('value') / 100.0;
     var startDate = $('#date_range').data('startDate');
     var endDate = $('#date_range').data('endDate');
-    $('#images').empty().append('please wait...');
-    $.getJSON('/mvco/api/autoclass/rois_of_class/'+class_label+'/threshold/'+threshold+'/start/'+startDate+'/end/'+endDate, function(r) {
-	$('#images').empty();
-	$.each(r, function(ix, roi_pid) {
-	    if(ix < 1000) {
-		$('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank"></a></div>')
-		    .find('div:last')
-		    .addClass('roi_image_unloaded')
-		    .data('img_src',roi_pid+'.png');
-	    }
-	});
-	loadImages();
-    });
+    $('#images').empty();
+    var queryString = '/mvco/api/autoclass/rois_of_class/'+class_label+'/threshold/'+threshold+'/start/'+startDate+'/end/'+endDate+'/page/';
+    addPage(queryString, 1);
 }
 function showThreshVal() {
     $('#thresh_val').empty().append('' + $('#threshold').slider('value') / 100.0);

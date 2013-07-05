@@ -374,14 +374,15 @@ def autoclass_count_by_day(time_series,class_label,start=None,end=None):
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/start/<start>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/start/<start>/end/<end>')
 @app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/end/<end>')
-def autoclass_rois_of_class(time_series,class_label,start=None,end=None,threshold=0.0):
+@app.route('/<time_series>/api/autoclass/rois_of_class/<class_label>/threshold/<float:threshold>/start/<start>/end/<end>/page/<int:page>')
+def autoclass_rois_of_class(time_series,class_label,start=None,end=None,threshold=0.0,page=1):
     if start is not None:
         start = parse_date_param(start)
     if end is not None:
         end = parse_date_param(end)
     ns = get_namespace(time_series)
     def doit():
-        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end,threshold):
+        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end,threshold,page):
             yield ns + roi_lid
     return jsonr(list(doit()))
 
