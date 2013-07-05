@@ -21,7 +21,7 @@ function loadImages() {
     $.each($('#main').find('.roi_image_unloaded'),function(ix,elt) {
 	if(elementInViewport(elt)) {
 	    img_src = $(elt).data('img_src');
-	    $(elt).find('a').append('<img src="'+img_src+'" width="50%" alt="'+img_src+'">');
+	    $(elt).find('a').empty().append('<img src="'+img_src+'">');
 	    $(elt).removeClass('roi_image_unloaded').addClass('roi_image');
 	    $(elt).css('width','auto');
 	    $(elt).css('height','auto');
@@ -40,7 +40,7 @@ function loadImages() {
 function addPage(queryString, page) {
     $.getJSON(queryString + page, function(r) {
 	$.each(r, function(ix, roi_pid) {
-	    $('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank"></a></div>')
+	    $('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank">&nbsp;</a></div>')
 		.find('div:last')
 		.addClass('roi_image_unloaded')
 		.data('img_src',roi_pid+'.png');
@@ -156,6 +156,9 @@ function gb_day_timeline_add(e, timeseries) {
 	};
 	// now tell the timeline plugin to draw it
 	$('#timeline').trigger('showdata', [data, timeline_options]);
+	$('#timeline').getTimeline(function(t) {
+	    updateRange(t);
+	});
     });
 }
 (function($) {
