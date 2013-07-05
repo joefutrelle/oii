@@ -2,7 +2,7 @@ import re
 
 from skimage.io import imread, imsave
 
-from oii.habcam.lightfield.quick import align_converge
+from oii.habcam.lightfield.quick import align_better
 
 # configuration keys for tasks, and their defaults
 BAYER_PATTERN = 'bayer_pattern'
@@ -24,7 +24,7 @@ CONFIG_DEFAULTS = {
     PIXEL_SEPARATION: 0.00000645, # distance between pixels in m
     ALIGN_PATCH_SIZE: 256, # size of patches to compare for alignment (before downscaling)
     ALIGN_N: 6, # number of sample patches to match during alignment
-    ALIGN_DOWNSCALE: 4, # how much to downscale image for alignment (must be multiple of 2)
+    ALIGN_DOWNSCALE: 2, # how much to downscale image for alignment (must be multiple of 2)
 }
 
 def my(d,k):
@@ -73,7 +73,7 @@ def stereo2altitude(cfa_LR,**config):
     y_LR = cfa_LR[xo::align_downscale,yo::align_downscale]
     # now perform alignment
     try:
-        (y,x) = align_converge(y_LR,size=align_patch_size/align_downscale)
+        (y,x) = align_better(y_LR,n=10)
         y *= align_downscale
         x *= align_downscale
         # now do a sanity check on the alignment results

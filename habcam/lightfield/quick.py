@@ -99,13 +99,51 @@ def align_converge(y_LR,size=64):
         tm = match_template(y_R,it) # match it against y_R
         ry, rx = maximum_position(tm) # max value is location
         series += [((y-ry), (x-rx))] # accumulatea
+        print series
         n = len(series)
-        if n % 6 == 0:
+        if n % 2 == 0:
             # take the median
             dy, dx = np.median(np.asarray(series),axis=0).astype(int)
             if n > 100 or (abs(dy-prev_dy) == 0 and abs(dx-prev_dx) == 0):
                 return dy, dx
             prev_dy, prev_dx = dy, dx
+
+def align_better(y_LR,n=4,max_dy=10):
+    # copy
+    y_LR = np.copy(y_LR)
+    # normalize
+    y_LR /= y_LR.max()
+    # unsharp mask
+    us = 3
+    um = gaussian_filter(y_LR,30)
+    y_LR = ((us / (us - 1)) * (y_LR - um / us)).clip(0.,1.)
+    size = 256
+    (h,w) = y_LR.shape
+    # split image
+    y_L = y_LR[:,:w/2]
+    y_R = y_LR[:,w/2:]
+    (h,w) = y_L.shape
+    s = size / 2
+    # align n times
+    rand = RandomState(0)
+    R = np.zeros((n,2))
+    i,j = 0,n*10 # give up if you can't get good offsets
+    while n > 0 and j > 0:
+        y = rand.randint(h/3,h*2/3)
+        x = rand.randint(w/3,w*2/3)
+        it = y_L[y:y+s,x:x+s] # take an s x s chunk there
+        tm = match_template(y_R,it,pad_input=True) # match it against y_R
+        ry, rx = maximum_position(tm)
+        dy = y - (ry - s/2)
+        dx = x - (rx - s/2)
+        if dy > 0 and dx > 0 and dy < max_dy:
+            R[i,:] = (dy, dx) # accumulate
+            i += 1
+            n -= 1
+        j -= 1
+    # take the median
+    dy, dx = np.median(R,axis=0).astype(int)
+    return dy, dx
 
 def redcyan(y_LR,gamma=1.2,brightness=1.2,dx=None,dy=None,downscale=1,**kw):
     if dx is None or dy is None:
