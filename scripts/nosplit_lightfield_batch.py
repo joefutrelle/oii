@@ -50,7 +50,7 @@ def list_images(bin_lid):
 def read_image(imagename):
     pathname = resolver['cfa_LR'].resolve(pid=imagename).value
     then = time.time()
-    img = imread(pathname,plugin='freeimage')
+    img = img_as_float(imread(pathname,plugin='freeimage'))
     logging.info('completed reading %s in %.3f s' % (pathname, time.time() - then))
     return img
 
