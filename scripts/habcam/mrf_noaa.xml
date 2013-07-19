@@ -1,0 +1,46 @@
+<resolvers>
+  <resolver name="pid">
+    <match var="pid" pattern="(([A-Za-z0-9_]+)\.(((\d{4})\d{2})\d{2})\.(((\d{2})\d)\d{6})\.\d+)(_(\w+))?\.([a-zA-Z0-9]+)"
+	   groups="imagename cruise_id ymd ym y ts tenmin h - product extension">
+      <var name="filename">${imagename}.${extension}</var>
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="bin_pid">
+    <match var="pid" pattern="(((\d{4})\d{2})\d{2})_((\d{2})\d)\d"
+	   groups="ymd ym y tenmin h">
+      <var name="img_dir">${ymd}_${tenmin}0</var>
+      <hit/>
+    </match>
+  </resolver>
+  <resolver name="cfa_LR">
+    <!-- param: pid - imagename. finds the tif -->
+    <import name="pid"/>
+    <var name="root">
+      <value>/habcamserver/assignments</value>
+    </var>
+    <path match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${imagename}.tif"/>
+  </resolver>
+  <resolver name="list_images">
+    <import name="bin_pid"/>
+    <var name="root">
+      <value>/habcamserver/assignments</value>
+    </var>
+    <path var="p" match="${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/*.tif">
+      <match var="p" pattern=".*/(.*.tif)" groups="lid">
+	<hit>${lid}</hit>
+      </match>
+    </path>
+  </resolver>
+  <resolver name="scratch">
+    <!-- params:
+    bin_lid - bin ID
+    suffix - additional path component -->
+    <import name="bin_pid"/>
+    <var name="root">
+      <value>/habcamserver/assignments/proc</value>
+    </var>
+    <hit>${root}/${ym}/${ymd}/${ymd}_${h}/${img_dir}/${suffix}</hit>
+  </resolver>
+</resolvers>
