@@ -43,9 +43,8 @@ def scratch(bin_lid,suffix=''):
 
 def list_images(bin_lid):
     """List all images in a bin by LID"""
-    imgdata = resolver['img'].resolve(pid=bin_lid).value
-    rows = list(read_csv(LocalFileSource(imgdata)))
-    return [r[0] for r in rows[::IMAGELIST_STEP]][:NUM_CORRECT]
+    rows = [hit.value for hit in resolver['list_images'].resolve_all(pid=bin_lid)]
+    return [r for r in rows[::IMAGELIST_STEP]][:NUM_CORRECT]
 
 def read_image(imagename):
     pathname = resolver['cfa_LR'].resolve(pid=imagename).value
@@ -54,26 +53,32 @@ def read_image(imagename):
     logging.info('completed reading %s in %.3f s' % (pathname, time.time() - then))
     return img
 
-def metadata2eic(bin_lid,parallax):
+def metadata2eic(bin_lid,parallax,merge=False):
     """Convert bin image metadata to CSV"""
     #imagename,lat,lon,head,pitch,roll,alt1,alt2,depth,s,t,o2,cdom,chlorophyll,backscatter,therm
-    (PITCH_COL, ROLL_COL) = (4, 5)
-    fields = ['imagename', 'alt', 'pitch','roll']
-    imgdata = resolver['img'].resolve(pid=bin_lid).value
-    logging.info('reading CSV data from .img file %s' % imgdata)
-    (pitch,roll) = ({}, {})
-    for row in read_csv(LocalFileSource(imgdata)):
-        imagename = remove_extension(row[0])
-        try:
-            pitch[imagename] = row[PITCH_COL]
-            roll[imagename] = row[ROLL_COL]
-        except KeyError:
-            pass
-    logging.info('merging with parallax-based altitude from %s' % parallax)
+    if merge:
+        (PITCH_COL, ROLL_COL) = (4, 5)
+        fields = ['imagename', 'alt', 'pitch','roll']
+        imgdata = resolver['img'].resolve(pid=bin_lid).value
+        logging.info('reading CSV data from .img file %s' % imgdata)
+        (pitch,roll) = ({}, {})
+        for row in read_csv(LocalFileSource(imgdata)):
+            imagename = remove_extension(row[0])
+            try:
+                pitch[imagename] = row[PITCH_COL]
+                roll[imagename] = row[ROLL_COL]
+            except KeyError:
+                pass
+        logging.info('merging with parallax-based altitude from %s' % parallax)
+    else:
+        logging.info('reading parallax-based altitude from %s' % parallax)
     for l in open(parallax):
         (imagename, _, _, alt) = re.split(r',',l.rstrip())
         try:
-            yield [imagename, alt, pitch[imagename], roll[imagename]]
+            if merge:
+                yield [imagename, alt, pitch[imagename], roll[imagename]]
+            else:
+                yield [imagename, alt, '0.0', '0.0']
         except KeyError:
             pass
 
@@ -87,7 +92,7 @@ def fetch_eic(bin_lid,suffix='',tmp=None,skip=[]):
         for tup in metadata2eic(bin_lid,parallax):
             imagename = remove_extension(tup[0])
             if imagename not in skip:
-                tup[0] = imagename + '.tif'
+                tup[0] = imagename
                 print >> fout, ' '.join(tup)
     return eic
 
@@ -114,7 +119,7 @@ def alt(bin_lid):
     for n in range(NUM_PROCS):
         pid = os.fork()
         if pid == 0:
-            for imagename in imagenames[n::NUM_PROCS]: # FIXME remove n+20
+            for imagename in imagenames[n::NUM_PROCS]:
                 if imagename not in already_done:
                     tif = img_as_float(read_image(imagename+'.tif'))
                     logging.info('[%d] START aligning %s' % (n, imagename))
