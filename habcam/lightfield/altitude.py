@@ -1,7 +1,5 @@
 import re
 
-from skimage.io import imread, imsave
-
 from oii.habcam.lightfield.quick import align_better
 
 # configuration keys for tasks, and their defaults
