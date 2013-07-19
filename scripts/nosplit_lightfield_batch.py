@@ -109,7 +109,7 @@ def alt(bin_lid):
     already_done = []
     if os.path.exists(csv_filename):
         for row in read_csv(LocalFileSource(csv_filename)):
-            already_done += [row[0]]
+            already_done += [remove_extension(row[0])]
     logging.info('found %d existing altitude records' % len(already_done))
     if len(already_done) == -1:
         logging.info('emptying CSV file ...')
@@ -228,6 +228,10 @@ def correct(bin_lid,learn_lid=None):
         skip = []
         for fn in os.listdir(outdir):
             imagename = re.sub('_cfa_illum_' + LR + '.tif','',fn)
+            skip += [remove_extension(imagename)]
+        mergedir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
+        for fn in os.listdir(mergedir):
+            imagename = re.sub('_cfa_illum_LR.tif','',fn)
             skip += [remove_extension(imagename)]
         logging.info('found %d existing corrected images ...' % len(skip))
         outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_' + LR))
