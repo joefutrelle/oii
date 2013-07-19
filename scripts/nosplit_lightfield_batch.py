@@ -50,7 +50,7 @@ def list_images(bin_lid):
 def read_image(imagename):
     pathname = resolver['cfa_LR'].resolve(pid=imagename).value
     then = time.time()
-    img = img_as_float(imread(pathname,plugin='freeimage'))
+    img = imread(pathname,plugin='freeimage')
     logging.info('completed reading %s in %.3f s' % (pathname, time.time() - then))
     return img
 
@@ -87,7 +87,7 @@ def fetch_eic(bin_lid,suffix='',tmp=None,skip=[]):
         for tup in metadata2eic(bin_lid,parallax):
             imagename = remove_extension(tup[0])
             if imagename not in skip:
-                tup[0] = imagename + suffix
+                tup[0] = imagename + '.tif'
                 print >> fout, ' '.join(tup)
     return eic
 
@@ -116,9 +116,9 @@ def alt(bin_lid):
         if pid == 0:
             for imagename in imagenames[n::NUM_PROCS]: # FIXME remove n+20
                 if imagename not in already_done:
-                    tif = read_image(imagename+'.tif')
+                    tif = img_as_float(read_image(imagename+'.tif'))
                     logging.info('[%d] START aligning %s' % (n, imagename))
-                    x,y,m = stereo2altitude(tif, align_patch_size=256) # FIXME remove patch size get a good default
+                    x,y,m = stereo2altitude(tif)
                     line = '%s,%d,%d,%.2f' % (imagename,x,y,m) 
                     logging.info('[%d] DONE aligned %s' % (n, line))
                     with open(csv_filename,'a') as csv_out:
@@ -219,15 +219,15 @@ def correct(bin_lid,learn_lid=None):
             return
         # check for existing output
         logging.info('checking for existing corrected images...')
-        merged_outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_LR'))
+        outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_' + LR))
         skip = []
-        for fn in os.listdir(merged_outdir):
-            imagename = re.sub('_cfa_illum_LR.tif','',fn)
-            skip += [imagename]
+        for fn in os.listdir(outdir):
+            imagename = re.sub('_cfa_illum_' + LR + '.tif','',fn)
+            skip += [remove_extension(imagename)]
         logging.info('found %d existing corrected images ...' % len(skip))
         outdir = mkdirs(scratch(bin_lid,bin_lid + '_cfa_illum_' + LR))
         # fetch eic
-        eic = fetch_eic(bin_lid,skip=skip)
+        eic = fetch_eic(bin_lid,suffix='_'+LR,skip=skip)
         # now see if that file is empty
         if os.stat(eic)[6] == 0:
             logging.info('no images to correct, skipping %s/%s' % (bin_lid, LR))
