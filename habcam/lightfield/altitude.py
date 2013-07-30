@@ -32,7 +32,7 @@ def my(d,k):
     except KeyError:
         return CONFIG_DEFAULTS[k]
 
-def p2m(offset,config):
+def p2m(offset,config={}):
     """offset: pixel parallax offset
     config: config with the following keys:
     - CAMERA_SEPARATION
@@ -71,7 +71,7 @@ def stereo2altitude(cfa_LR,**config):
     y_LR = cfa_LR[xo::align_downscale,yo::align_downscale]
     # now perform alignment
     try:
-        (y,x) = align_better(y_LR,n=10)
+        (y,x) = align_better(y_LR,n=10,size=align_patch_size)
         y *= align_downscale
         x *= align_downscale
         # now do a sanity check on the alignment results
