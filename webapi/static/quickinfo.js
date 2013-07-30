@@ -7,7 +7,11 @@ $(document).ready(function() {
 		+ '<span id="quickNumImages"></span></fieldset>'
 		+ '<fieldset style="width:20%; float:left;"><legend>Progress</legend><span id="quickProgress"></span></fieldset>'
 		 
-	)
+	);
+	   $('#quickinfo').append('<div><a href="#" id="view3D" class="button">view 3D image</a></div>')
+	.find('#view3D')
+	.button()
+	.hide();
 
 });
 

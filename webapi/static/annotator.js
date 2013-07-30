@@ -187,6 +187,11 @@ function gotoPage(pp,size) {
             addImage(cell,imageUrl,scalingFactor);
 	    $("#quickImagename").html(imagePid);
 
+	    if (imagePid.match(/illum_L/)){			
+			var imagePid3d = imagePid.replace('rgb_illum_L','redcyan');
+	        $('#view3D').attr("href",imagePid3d).attr("target","_blank");
+	        $('#view3D').show(100);
+		}
 	    //changeImageStatus('in+progress'); //this is now done in /find_image
 
         }); // loop over images
