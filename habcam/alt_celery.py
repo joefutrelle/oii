@@ -81,7 +81,7 @@ def queue_bin(bin_lid,config):
     psql_connect = config.psql_connect
     for hit in R['list_images'].resolve_all(pid=bin_lid):
         (imagename, cfa_LR_path) = hit.lid, hit.p
-        do_alt.s(imagename, cfa_LR_path, psql_connect).apply_async()
+        do_alt.s(imagename, cfa_LR_path, psql_connect).apply_async(queue='alt') # FIXME hardcoded queue name
 
 # when running this as a worker use a queue name like leg1_alt
 # and set concurrency to number of hardware threads
@@ -91,4 +91,28 @@ def queue_bin(bin_lid,config):
 # to enqueue all images from bin do this:
 #
 # celery --config={celery config file} call oii.habcam.alt_celery.queue_bin --args='["{bin lid}" "{alt config file}"]' --queue=leg1_alt
+
+
+if __name__=='__main__':
+    config = get_config('alt_celery.conf')
+    R = parse_stream(config.resolver)
+    psql_connect = config.psql_connect
+    with xa(psql_connect) as (c,db):
+        db.execute("""
+select imageid || '.tif'
+from burton_alts
+where parallax_alt is null
+""")
+        while True:
+            rows = db.fetchmany(100)
+            if len(rows) == 0:
+                break
+            else:
+                for row in rows:
+                    imagename = row[0]
+                    hit = R['cfa_LR'].resolve(pid=imagename)
+                    if hit is not None:
+                        cfa_LR_path = hit.value
+                        print 'queueing %s %s' % (imagename, cfa_LR_path)
+                        do_alt.s(imagename, cfa_LR_path, psql_connect).apply_async(queue='alt') # FIXME hardcoded queue name
 

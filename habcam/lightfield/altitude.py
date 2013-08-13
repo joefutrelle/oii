@@ -1,5 +1,10 @@
 import re
 
+import numpy as np
+
+from skimage.exposure import equalize
+from skimage.feature import match_template
+
 from oii.habcam.lightfield.quick import align_better
 
 # configuration keys for tasks, and their defaults
@@ -9,10 +14,6 @@ FOCAL_LENGTH = 'focal_length'
 H2O_ADJUSTMENT = 'h2o_adjustment' # there has got to be a better name for this
 PIXEL_SEPARATION = 'pixel_separation'
 
-ALIGN_PATCH_SIZE = 'align_patch_size'
-ALIGN_N = 'align_n'
-ALIGN_DOWNSCALE = 'align_downscale'
-
 CONFIG_DEFAULTS = {
     # these camera params are for the V4 camera
     BAYER_PATTERN: 'rggb', #
@@ -20,9 +21,6 @@ CONFIG_DEFAULTS = {
     FOCAL_LENGTH: 0.012, # cameras' focal length (12mm)
     H2O_ADJUSTMENT: 1.25, # dimensionless
     PIXEL_SEPARATION: 0.00000645, # distance between pixels in m
-    ALIGN_PATCH_SIZE: 256, # size of patches to compare for alignment (before downscaling)
-    ALIGN_N: 6, # number of sample patches to match during alignment
-    ALIGN_DOWNSCALE: 2, # how much to downscale image for alignment (must be multiple of 2)
 }
 
 def my(d,k):
@@ -31,6 +29,45 @@ def my(d,k):
         return d[k]
     except KeyError:
         return CONFIG_DEFAULTS[k]
+
+def align(cfa_LR,config={}):
+    # configure
+    bayer_pattern = my(config,BAYER_PATTERN)
+    # average green channels together to estimate y_LR
+    # this also downscales image 2x
+    if re.match('.gg.',bayer_pattern,re.I):
+        g_LR = (cfa_LR[::2,1::2] + cfa_LR[1::2,::2]) / 2.
+    else:
+        g_LR = (cfa_LR[::2,::2] + cfa_LR[1::2,1::2]) / 2.
+    # jack up contrast to exaggerate texture
+    g_LR = equalize(g_LR)
+    # gather metrics
+    (h,w) = g_LR.shape
+    h2 = h/2 # half the height (center of image)
+    w2 = w/2 # half the width (split between image pair)
+    w4 = w/4 # 1/4 the width (center of left image)
+    w34 = w2 + w4 # 3/4 the width (center of right image)
+    template_size = 32
+    ts = template_size
+    ts2 = template_size / 2
+    out = np.zeros((h,w2)) # FIXME
+    for ox in [0,ts,0-ts]:
+        for i in range(h/ts):
+            y = (i * ts)
+            # select the center pixels of the left image
+            template = g_LR[y:y+ts,(w4+ox)-ts2:(w4+ox)+ts2]
+            # now match the template to the corresponding horizontal strip of the right image
+            # and accumulate into an output "strips" image
+            strip = g_LR[y:y+ts,w2:]
+            out[y:y+ts,:] += np.roll(match_template(strip,template,pad_input=True),0-ox,axis=1)
+    # sum to horizontal scanline
+    scanline = np.sum(out,axis=0)
+    padding = w2/8 # ignore image edges
+    max_x = np.argmax(scanline[padding:-padding]) + padding
+    # offset is difference from half the width of each image in the pair
+    # upscaled by a factor of 2
+    dx = (w4 - max_x) * 2
+    return dx
 
 def p2m(offset,config={}):
     """offset: pixel parallax offset
@@ -55,30 +92,17 @@ def stereo2altitude(cfa_LR,**config):
     - FOCAL_LENGTH
     - H2O_ADJUSTMENT
     - PIXEL_SEPARATION
-    - ALIGN_PATCH_SIZE
-    - ALIGN_N
-    - ALIGN_DOWNSCALE
     all of which have defaults.
     returns: (x offset, y offset, altitude in m)"""
     bayer_pattern = my(config,BAYER_PATTERN)
-    align_patch_size = my(config,ALIGN_PATCH_SIZE)
-    align_downscale = my(config,ALIGN_DOWNSCALE)
-    # now downscale the green channel
-    if re.match('.gg.',bayer_pattern):
-        (xo, yo) = (1, 0)
-    else:
-        (xo, yo) = (0, 0)
-    y_LR = cfa_LR[xo::align_downscale,yo::align_downscale]
     # now perform alignment
     try:
-        (y,x) = align_better(y_LR,n=10,size=align_patch_size)
-        y *= align_downscale
-        x *= align_downscale
+        x = align(cfa_LR,config)
         # now do a sanity check on the alignment results
         if x <= 0: # in this case we have to either skip the image or emit a bogus value
-            # emit a bogus value of 2m but retain alignment results to show it was done
-            return (x,y,2.0)
+            raise UserWarning()
         m = p2m(x,config)
-        return (x,y,m)
+        return (x,0,m)
     except:
-        return (0,0,2.0) # emit bogus value
+        # emit a bogus value of 1.6m and indicate with -1,-1
+        return (-1,-1,1.6) # emit bogus value
