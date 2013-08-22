@@ -163,13 +163,12 @@ class CorrectRgb(object):
         self.avg_lightmap = np.dstack([np.average(self.lightmap[:,:,c]) for c in range(3)])
         self.color_balance = color_balance
         self.brightness = brightness
-        if self.color_balance:
-            self.gray_lightmap = gray_value(self.lightmap)
     def correct_image(self,image):
         new_rgb = (image - self.lightmap)
         new_rgb += self.avg_lightmap
         if self.color_balance:
-            new_rgb = gray_world(new_rgb,gray=self.gray_lightmap)
+            # here we balance to the local image rather than against the lightmap's gray value
+            new_rgb = gray_world(new_rgb)
         return ((new_rgb - np.min(new_rgb)) * self.brightness).clip(0.,1.)
 
 def average_image(infiles):
