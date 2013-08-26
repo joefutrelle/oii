@@ -41,7 +41,7 @@ def smooth_cfa(cfa,footprint=8,stereo=False):
 
 def smooth_color(image,footprint=8,stereo=False):
     """
-    Smooth a multi-channel image with a uniform filter.
+    Smooth a multi-channel image with a uniform filter. Applies same filter to all channels.
 
     Parameters
     ----------
@@ -104,7 +104,9 @@ class LearnLightmap(object):
     stereo : boolean
         Whether images are side-by-side stereo pairs
     raw : boolean
-        Whether images are RAW (Bayer-patterned). If not they are assumed to be multi-channel.
+        Whether images are RAW (Bayer-patterned). If not they are assumed to be multichannel
+        and the same smoothing is applied to all channels. Note that for RAW images it does not
+        matter which Bayer pattern is in use as each CFA element is averaged independently.
     """
     def __init__(self,stereo=False,raw=False):
         self.sum_image = None
@@ -139,17 +141,39 @@ class LearnLightmap(object):
         if self.raw:
             avg_image = smooth_cfa(avg_image,stereo=self.stereo,footprint=smooth)
         else:
-            avg_image = smooth_rgb(avg_image,stereo=self.stereo,footprint=smooth)
+            avg_image = smooth_color(avg_image,stereo=self.stereo,footprint=smooth)
         return avg_image
 
 class CorrectRaw(object):
+    """
+    Given a lightmap computed by LearnLightmap(raw=True), correct new images.
+    """
     def __init__(self,cfa_lightmap):
+        """
+        Parameters
+        ------
+        cfa_lightmap : ndarray
+            Bayer-patterned lightmap returned by average_image in LearnLightmap.
+        """
         self.lightmap = cfa_lightmap
         self.avg_lightmap_00 = np.average(self.lightmap[::2,::2])
         self.avg_lightmap_01 = np.average(self.lightmap[::2,1::2])
         self.avg_lightmap_10 = np.average(self.lightmap[1::2,::2])
         self.avg_lightmap_11 = np.average(self.lightmap[1::2,1::2])
     def correct_image(self,image):
+        """
+        Correct an image with the lightmap.
+
+        Parameters
+        ----------
+        image : ndarray
+            Bayer-patterned image to correct. Should be floating-point
+
+        Returns
+        -------
+        corrected image : ndarray
+            Bayer-patterend corrected image.
+        """
         new_cfa = (image - self.lightmap)
         new_cfa[::2,::2] += self.avg_lightmap_00
         new_cfa[::2,1::2] += self.avg_lightmap_01
@@ -158,18 +182,50 @@ class CorrectRaw(object):
         return (new_cfa - np.min(new_cfa)).clip(0.,1.)
 
 class CorrectRgb(object):
-    def __init__(self,rgb_lightmap,color_balance=True,brightness=1.5):
+    """
+    Given a lightmap computed by LearnLightmap(raw=False), correct new images.
+    """
+    def __init__(self,rgb_lightmap,color_balance=True,brightness=0.0):
+        """
+        Parameters
+        ----------
+        rgb_lightmap : ndarray
+            RGB lightmap returned from average_image in LearnLightmap
+        color_balance : boolean
+            Whether to apply gray world color balancing to corrected images
+        brightness : float
+            How much to scale brightness. Default of 0.0 means to adadptively brighten
+            based on average intensity. 1.0 means not to brighten.
+        """
         self.lightmap = rgb_lightmap
         self.avg_lightmap = np.dstack([np.average(self.lightmap[:,:,c]) for c in range(3)])
         self.color_balance = color_balance
         self.brightness = brightness
     def correct_image(self,image):
+        """
+        Correct an RGB image.
+
+        Parameters
+        ----------
+        image : ndarray
+            3-channel color (RGB) image
+
+        Returns
+        -------
+        corrected image : ndarray
+            corrected image (corrected for illumination and/or color balance and/or brightness
+        """
         new_rgb = (image - self.lightmap)
         new_rgb += self.avg_lightmap
         if self.color_balance:
             # here we balance to the local image rather than against the lightmap's gray value
             new_rgb = gray_world(new_rgb)
-        return ((new_rgb - np.min(new_rgb)) * self.brightness).clip(0.,1.)
+        if self.brightness == 0: # adaptive
+            avg = np.average(new_rgb - np.min(new_rgb))
+            factor = 0.5 / avg
+        else:
+            factor = self.brightness
+        return ((new_rgb - np.min(new_rgb)) * factor).clip(0.,1.)
 
 def average_image(infiles):
     learn = LearnLightmap()
