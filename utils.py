@@ -84,7 +84,7 @@ def decamel(s):
 
 def remove_extension(p):
     """remove extension part of filename"""
-    return re.sub(r'\.[a-zA-Z]+$','',p)
+    return re.sub(r'\.[a-zA-Z][a-zA-Z0-9]*$','',p)
 
 def change_extension(p,ext):
     """modify extension part of filename"""
