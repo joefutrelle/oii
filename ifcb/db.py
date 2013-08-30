@@ -166,7 +166,7 @@ class IfcbFixity(Psql):
         """Summarize data volume by day"""
         query = """
 select
-date_trunc('day',b.sample_time) as day, count(*)/3, sum(f.length)/1073741824.0 as gb
+date_trunc('day',b.sample_time) as day, count(*)/3, (sum(f.length)/1073741824.0)::numeric(3,2) as gb
 from bins b, fixity f
 where b.lid=f.lid
 group by day
@@ -195,6 +195,11 @@ class IfcbAutoclass(Psql):
         start_dt, end_dt = time_range(start, end)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
+#            count_bins = "select count(*) from bins where sample_time >= %s and sample_time <= %s"
+#            db.execute(count_bins,(start_dt,end_dt))
+#            c = db.fetchall()[0][0]
+#            if c == 0:
+#                yield None
             query = """
 select bin_lid, roinum from
 (select bin_lid, unnest(roinums) as roinum, unnest(scores) as score from autoclass where bin_lid in
