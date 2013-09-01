@@ -82,7 +82,7 @@ def remove_small_objects(img,min_area,structure=EIGHT):
     (labeled,objects,areas) = _ro_find(img,structure)
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area < min_area:
-            labeled[o] = labeled[o] * (labeled[o] != label)
+            labeled[labeled == label] = 0
     return labeled > 0
 
 def remove_smallest_objects(img,structure=np.ones((3,3),np.bool)):
@@ -90,14 +90,14 @@ def remove_smallest_objects(img,structure=np.ones((3,3),np.bool)):
     min_area = min(areas)
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area <= min_area:
-            labeled[o] = labeled[o] * (labeled[o] != label)
+            labeled[labeled == label] = 0
     return labeled > 0
 
 def remove_large_objects(img,max_area,structure=EIGHT):
     (labeled,objects,areas) = _ro_find(img,structure)
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area > max_area:
-            labeled[o] = labeled[o] * (labeled[o] != label)
+            labeled[labeled == label] = 0
     return labeled > 0
 
 def remove_largest_objects(img,structure=EIGHT):
@@ -105,6 +105,6 @@ def remove_largest_objects(img,structure=EIGHT):
     max_area = max(areas)
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area >= max_area:
-            labeled[o] = labeled[o] * (labeled[o] != label)
+            labeled[labeled == label] = 0
     return labeled > 0
 
