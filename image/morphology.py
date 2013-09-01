@@ -66,3 +66,12 @@ def bwmorph_thin(img,n_iter=0):
 
     return skeleton
 
+def remove_small_objects(img,min_area,structure=EIGHT):
+    (labeled,_) = measurements.label(blob,structure=structure)
+    objects = measurements.find_objects(labeled)
+    for o in objects:
+        area = len(np.where(labeled[o] > 0)[0])
+        if area < min_area:
+            labeled[o] = np.where(labeled[o] > 0,0,labeled[o])
+    return np.where(labeled > 0,1,0)
+
