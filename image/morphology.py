@@ -1,6 +1,7 @@
 import numpy as np
 
 from scipy import ndimage
+from scipy.ndimage import measurements
 from skimage.morphology import binary_dilation
 
 EIGHT = np.ones((3,3))
@@ -67,7 +68,7 @@ def bwmorph_thin(img,n_iter=0):
     return skeleton
 
 def remove_small_objects(img,min_area,structure=EIGHT):
-    (labeled,_) = measurements.label(blob,structure=structure)
+    (labeled,_) = measurements.label(img,structure=structure)
     objects = measurements.find_objects(labeled)
     for o in objects:
         area = len(np.where(labeled[o] > 0)[0])
