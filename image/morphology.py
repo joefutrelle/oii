@@ -8,10 +8,9 @@ EIGHT = np.ones((3,3))
 
 def hysthresh(img,T1,T2):
     T2,T1 = sorted([T1,T2])
-    c = np.ones((3,3))
-    edges = np.where(img > T1,1,0)
-    bd = np.where((binary_dilation(edges,EIGHT) - edges) * img > T2,1,0)
-    return np.where(edges + bd > 0,1,0)
+    edges = img > T1
+    bd = (binary_dilation(edges,EIGHT) - edges) * img > T2
+    return edges | bd
 
 def bwmorph_thin(img,n_iter=0):
     # http://www.mathworks.com/help/images/ref/bwmorph.html#f1-500491
@@ -67,12 +66,45 @@ def bwmorph_thin(img,n_iter=0):
 
     return skeleton
 
-def remove_small_objects(img,min_area,structure=EIGHT):
+def _ro_find(img,structure=EIGHT):
     (labeled,_) = measurements.label(img,structure=structure)
     objects = measurements.find_objects(labeled)
-    for o in objects:
-        area = len(np.where(labeled[o] > 0)[0])
+    areas = [len(np.where(labeled[o] > 0)[0]) for o in objects]
+    return (labeled,objects,areas)
+
+def _ro_del(labeled,objects,areas,key=lambda a: False):
+    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
+        if key(area):
+            labeled[o] = labeled[o] * (labeled[o] != label)
+    return labeled > 0
+
+def remove_small_objects(img,min_area,structure=EIGHT):
+    (labeled,objects,areas) = _ro_find(img,structure)
+    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area < min_area:
-            labeled[o] = np.where(labeled[o] > 0,0,labeled[o])
-    return np.where(labeled > 0,1,0)
+            labeled[o] = labeled[o] * (labeled[o] != label)
+    return labeled > 0
+
+def remove_smallest_objects(img,structure=np.ones((3,3),np.bool)):
+    (labeled,objects,areas) = _ro_find(img,structure)
+    min_area = min(areas)
+    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
+        if area <= min_area:
+            labeled[o] = labeled[o] * (labeled[o] != label)
+    return labeled > 0
+
+def remove_large_objects(img,max_area,structure=EIGHT):
+    (labeled,objects,areas) = _ro_find(img,structure)
+    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
+        if area > max_area:
+            labeled[o] = labeled[o] * (labeled[o] != label)
+    return labeled > 0
+
+def remove_largest_objects(img,structure=EIGHT):
+    (labeled,objects,areas) = _ro_find(img,structure)
+    max_area = max(areas)
+    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
+        if area >= max_area:
+            labeled[o] = labeled[o] * (labeled[o] != label)
+    return labeled > 0
 
