@@ -73,26 +73,43 @@ def align(g_LR,template_size=64):
     dx = w4 - max_x
     return dx
 
-def redcyan(g_LR,dx=None):
+def redcyan(y_LR,dx=None,correct_y=False):
     """
     Convert a side-by-side grayscale image into a red/cyan image.
 
     Parameters
     ----------
-    g_LR : ndarray
+    y_LR : ndarray
         side-by-side grayscale image
-    dx : int
+    dx : int (None)
         x offset (if None, compute x offset with align())
+    correct_y : boolean (False)
+        compute a y offset. This is obv. not needed for
+        calibrated images.
 
     Returns
     -------
     redcyan : ndarray
         RGB image containing red/cyan composite
     """
+    (h,w2) = y_LR.shape
+    w = w2/2
     if dx is None:
-        dx = align(g_LR)
-    (h,w) = g_LR.shape
-    cw = w/2-dx
-    red = g_LR[:,dx:w/2]
-    cyan = g_LR[:,w/2+dx:]
+        dx = align(y_LR)
+    if correct_y:
+        y_LR90 = np.zeros((w,h*2))
+        y_LR90[:,:h] = np.rot90(y_LR[:,:w])
+        y_LR90[:,h:] = np.rot90(y_LR[:,w:])
+        dy = align(y_LR90)
+    else:
+        dy = 0
+    # align x
+    y_LR = y_LR[:,dx/2:w2-dx/2]
+    (h,w2) = y_LR.shape
+    w = w2/2
+    red = y_LR[:,:w]
+    cyan = y_LR[:,w:]
+    # align y
+    if dy != 0:
+        cyan = np.roll(cyan,dy,axis=0)
     return np.dstack([red,cyan,cyan])
