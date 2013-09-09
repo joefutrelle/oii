@@ -4,7 +4,18 @@ from scipy import ndimage
 from scipy.ndimage import measurements
 from skimage.morphology import binary_dilation
 
+from scikits.learn.mixture import GMM
+
 EIGHT = np.ones((3,3))
+
+def gmm_threshold(gray):
+    """
+    Compute GMM model with two gaussians,
+    then threshold halfway between the two means
+    """
+    samples = gray.reshape((gray.size, 1))
+    model = GMM(n_states=2, cvtype='full').fit(samples)
+    return gray > np.mean(model.means)
 
 def hysthresh(img,T1,T2):
     T2,T1 = sorted([T1,T2])
@@ -71,12 +82,6 @@ def _ro_find(img,structure=EIGHT):
     objects = measurements.find_objects(labeled)
     areas = [len(np.where(labeled[o] > 0)[0]) for o in objects]
     return (labeled,objects,areas)
-
-def _ro_del(labeled,objects,areas,key=lambda a: False):
-    for label,o,area in zip(range(1,len(objects)+1),objects,areas):
-        if key(area):
-            labeled[o] = labeled[o] * (labeled[o] != label)
-    return labeled > 0
 
 def remove_small_objects(img,min_area,structure=EIGHT):
     (labeled,objects,areas) = _ro_find(img,structure)
