@@ -3,6 +3,8 @@ This is to avoid using the cumbersome matplotlib API"""
 import os
 from tempfile import mkstemp
 
+import numpy as np
+
 from scipy.ndimage import measurements
 from skimage.io import imsave
 from skimage.color import hsv2rgb
