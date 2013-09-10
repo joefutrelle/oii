@@ -6,6 +6,7 @@ from tempfile import mkstemp
 import numpy as np
 
 from scipy.ndimage import measurements
+from skimage import img_as_float
 from skimage.io import imsave
 from skimage.color import hsv2rgb
 from skimage.exposure import rescale_intensity
