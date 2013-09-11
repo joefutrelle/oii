@@ -24,11 +24,14 @@ def show_image(image):
     imsave(f,image)
     return display.Image(filename=f)
 
-def show_spectrum(gray):
+def as_spectrum(gray):
     One = np.ones_like(gray)
-    HSV = np.dstack([(1-gray)*0.66,One,One])
-    RGB = hsv2rgb(HSV)
-    return show_image(RGB)
+    Y = 1 - rescale_intensity(gray,out_range=(0,1))
+    HSV = np.dstack([Y*0.66,One,One])
+    return hsv2rgb(HSV)
+
+def show_spectrum(gray):
+    return show_image(as_spectrum(gray))
 
 def show_masked(rgb,mask,outline=False):
     copy = img_as_float(rgb,force_copy=True)
