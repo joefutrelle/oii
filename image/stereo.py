@@ -73,6 +73,59 @@ def align(g_LR,template_size=64):
     dx = w4 - max_x
     return dx
 
+def rot90_LR(y_LR,dx=0):
+    """
+    Rotate each half of a side-by-side stereo L/R image
+
+    Parameters
+    ------
+    y_LR : ndimage
+        The stereo pair
+    dx : (optional, default 0)
+        x offset to apply first
+    """
+    (h,w2) = y_LR.shape
+    w = w2/2
+    y_LR90 = np.zeros((w,h*2))
+    y_LR90[:,:h] = np.rot90(y_LR[:,:w])
+    y_LR90[:,h:] = np.rot90(np.roll(y_LR[:,w:],dx,axis=1))
+    return y_LR90
+
+def align_yx(y_LR):
+    """Align in both the x and y dimensions.
+
+    Parameters
+    ----------
+    y_LR : ndimage
+        Grayscale stereo pair
+
+    Returns
+    -------
+    (dy, dx) : int
+        Y and X offsets
+    """
+    dx = align(y_LR)
+    dy = align(rot90_LR(y_LR,dx))
+    return (dy,dx)
+
+def roll2d(image,(dy,dx)):
+    """Roll an image in two dimensions by the given offset.
+
+    Equivalent to np.roll(np.roll(image,dx,axis=1),dy,axis=0)
+
+    Parameters
+    ----------
+    image : ndimage
+        The image (can be one or multi-channeled)
+    (dy, dx) : int
+        The y and x offsets to roll by
+
+    Returns
+    -------
+    The rolled image
+    """
+    return np.roll(np.roll(image,dx,axis=1),dy,axis=0)
+
 def redcyan(y_LR,dx=None,correct_y=False):
     """
     Convert a side-by-side grayscale image into a red/cyan image.
@@ -97,10 +150,7 @@ def redcyan(y_LR,dx=None,correct_y=False):
     if dx is None:
         dx = align(y_LR)
     if correct_y:
-        y_LR90 = np.zeros((w,h*2))
-        y_LR90[:,:h] = np.rot90(y_LR[:,:w])
-        y_LR90[:,h:] = np.rot90(y_LR[:,w:])
-        dy = align(y_LR90)
+        dy = align(rot90_LR(y_LR,dx))
     else:
         dy = 0
     # align x
