@@ -2,6 +2,10 @@ import numpy as np
 
 from scipy import ndimage
 from scipy.ndimage import measurements
+from scipy.ndimage.filters import maximum_filter
+from scipy.interpolate import griddata
+
+from skimage.segmentation import find_boundaries
 from skimage.morphology import binary_dilation
 
 from scikits.learn.mixture import GMM
@@ -112,4 +116,23 @@ def remove_largest_objects(img,structure=EIGHT):
         if area >= max_area:
             labeled[labeled == label] = 0
     return labeled > 0
+
+def inpaint(img,mask):
+    """Inpaint masked regions in an image via linear and
+    nearest-neighbor interpolation"""
+    def _interp(img,mask,method):
+        xi = np.where(mask)
+        if len(xi[0])==0:
+            return img
+        edges = maximum_filter(find_boundaries(mask),3)
+        edges[xi] = 0
+        points = np.where(edges)
+        values = seed[points]
+        fill = griddata(points,values,xi,method=method)
+        img[xi] = fill
+        return img
+    seed = img.copy()
+    seed = _interp(seed,mask,'linear')
+    seed = _interp(seed,np.isnan(seed),'nearest')
+    return seed
 
