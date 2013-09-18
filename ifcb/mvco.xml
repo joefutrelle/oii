@@ -4,6 +4,7 @@
       <value>mvco,MVCO</value>
       <value>mvco_beads,beads</value>
       <value>Healy1101,Healy 1101</value>
+      <value>Healy1001,Healy 1001</value>
       <value>saltpond,Salt Pond</value>
       <value>ditylum,Ditylum</value>
     </var>
@@ -23,6 +24,11 @@
     <match var="time_series" value="Healy1101">
       <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1101&lt;a&gt;</var>
       <var name="dbname">healy1101</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="Healy1001">
+      <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1001&lt;a&gt;</var>
+      <var name="dbname">healy1001</var>
       <hit/>
     </match>
     <match var="time_series" value="saltpond">
@@ -100,6 +106,15 @@
       </match>
       <match var="product" pattern="blob.*">
 	<hit name="root">/mnt/healy1101/blobs</hit>
+      </match>
+    </match>
+    <!-- Healy 1001 time series -->
+    <match var="time_series" value="Healy1001">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/healy1001/data</hit>
+      </match>
+      <match var="product" pattern="blob.*">
+	<hit name="root">/mnt/healy1001/blobs</hit>
       </match>
     </match>
     <!-- Salt Pond time series -->
