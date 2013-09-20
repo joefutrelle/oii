@@ -6,7 +6,9 @@
 	    return this.each(function() {
 		var $this = $(this);
 		function updateSliderValue() {
+		   // var valMAP = [0,10,25,50,75,90,100];
 		    var val = $this.find('.percentSlider').slider('value');
+			//val = valMAP[val];
 		    $this.find('.percentValue').html(val+'%');
 		    callback(val);
 		}
@@ -17,7 +19,8 @@
 			orientation: 'horizontal',
 			range: 'min',
 			max: 100,
-			value: 50,
+			value: 0,
+			step: 10,
 			slide: updateSliderValue,
 			change: function() {
 			    updateSliderValue();
