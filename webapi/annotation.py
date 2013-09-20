@@ -132,9 +132,9 @@ def stem_search(stem,mode,scope=None):
             }
 
 @app.route('/list_categories/<mode>')
-@app.route('/list_categories/<mode>/<scope>')
-def list_categories(mode,scope=None):
-    return jsonr(list(my(CATEGORIES).list_categories(mode,scope)))
+@app.route('/list_categories/<mode>/<facet>')
+def list_categories(mode,facet=None):
+    return jsonr(list(my(CATEGORIES).list_categories(mode,facet)))
 
 @app.route('/category_autocomplete/<mode>',methods=['GET','POST'])
 @app.route('/category_autocomplete/<mode>/<scope>',methods=['GET','POST'])
