@@ -716,23 +716,23 @@ $(document).ready(function() {
     // add dominant substrate category picker
     // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
     $('#rightPanel').append('<div class="categoryPicker"><div>&nbsp;</div></div>')
-	 .find('div:last').collapsing('Topography',1)
-	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation,0)
+	 .find('div:last').collapsing('Dominant Substrate',1)
+	.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation)
 	
     // add subdominant substrate category picker
     $('#rightPanel').append('<div class="categoryPicker" ><div>&nbsp;</div></div>')
-	 .find('div:last').collapsing('Distribution',1)
-	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation,0,1);
+	 .find('div:last').collapsing('Subdominant Substrate',1)
+	.categoryPicker(1, SUBDOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation);
    
     // add image notes category picker
     $('#rightPanel').append('<div class="categoryPicker"><div id="imageNotes">&nbsp;</div></div>')
      .find('div:last').collapsing('Image Notes',1)
-	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation,0,1);
+	.categoryPicker(1, IMAGE_SCOPE, queueSubstrateAnnotation);
 	
     // percent cover
     $('#rightPanel').append('<div class="categoryPicker"><div>&nbsp;</div></div>')
 	.find('div:last').collapsing('Percent Cover',1)
-	.categoryPicker(1, PERCENT_COVER_SCOPE, queueSubstrateAnnotation, 1,1);
+	.categoryPicker(5, PERCENT_COVER_SCOPE, queueSubstrateAnnotation, 1);
 	//.categoryPicker(1, DOMINANT_SUBSTRATE_SCOPE, queueSubstrateAnnotation, 1); // FIXME use PERCENT_COVER_SCOPE
 
     // add "quick info" panel showing image and assignment metadata

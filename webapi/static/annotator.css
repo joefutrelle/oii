@@ -34,7 +34,7 @@ img.thumbnail {
 
 #rightPanel {
     float: right;
-    width: 450px;
+    width: 420px;
     margin: auto;
     margin-left: 5px;
     border: 2px solid teal;
@@ -82,6 +82,3 @@ legend { font-weight: bold}
 #deprecate-button{margin:3px; float:right}
 
 .strikethrough {text-decoration: line-through;}
-
-.percentValue {margin-left:7px}
-.percentSlider {margin-left:12px}

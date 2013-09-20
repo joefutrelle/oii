@@ -19,7 +19,7 @@ ORDER BY facets.facet_id,class_name ;  --order by facet then alphabetical
 class HabcamCategories(Categories):
     def __init__(self,config):
         self.config = config
-    def list_categories(self,mode,facet=None):
+    def list_categories(self,mode,scope=None):
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()
         query = """
@@ -33,14 +33,14 @@ SELECT distinct classes.class_id,class_name,facets.facet_id,facet_name,scopes.sc
         AND idmode_id = %s --for "fish scallops didemnum and highlights"        
 ORDER BY facets.facet_id,class_name ;  --order by facet then alphabetical 
 """
-        if facet is not None:
-            facet_clause = 'AND classes.facet_id = %s'
-            params = (facet, mode)
+        if scope is not None:
+            scope_clause = 'AND scopes.scope_id = %s'
+            params = (scope, mode)
         else:
-            facet_clause = ''
+            scope_clause = ''
             params = (mode,)
         # ok the following looks weird but works because of psycopg2 'overloading' %s
-        cursor.execute(query % (facet_clause,'%s'), params)
+        cursor.execute(query % (scope_clause,'%s'), params)
         for row in cursor.fetchall():
             d = {}
             d['pid'] = self.config.category_namespace + str(row[0])

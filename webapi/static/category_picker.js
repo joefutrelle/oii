@@ -1,7 +1,7 @@
 // mmm mm some tasty jQuery extensibility
 (function($) {
     $.fn.extend({
-        categoryPicker: function(mode, scope, callback, showPercentCover,showAdd) {
+        categoryPicker: function(mode, scope, callback, showPercentCover) {
 	    return this.each(function() {
 		var $this = $(this);
 		$this.data('all_categories',[]); // stores the result of /list_categories call
@@ -38,7 +38,6 @@
 			$(select).append('<option value="'+c.pid+'">'+c.label+'</option>')
 		    });
 		    // now make all buttons "-" buttons (including the last one, which will be a "+" button at this point)
-		    if(showAdd){
 		    $this.find('.button').replaceWith('<a href="#" class="button">-</a>').end()
 			.find('.button').button().click(function() {
 			    // a "-" button removes the selector, and recomputes the selected category accordingly
@@ -47,7 +46,6 @@
 			});
 		    // now add the "+" button to the last selector. its click handler is add_choice
 		    $this.find('div:last').append('<a href="#" class="button">+</a>').find('.button').button().click(add_choice);
-			}
 		    //
 		    if(showPercentCover) {
 			$this.find('div:last').percentPicker(function(pct) {
