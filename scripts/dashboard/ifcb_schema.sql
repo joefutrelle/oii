@@ -5,7 +5,8 @@
 CREATE TABLE bins
 (
   lid text,
-  sample_time timestamp with time zone
+  sample_time timestamp with time zone,
+  skip boolean default false
 )
 WITH (
   OIDS=FALSE

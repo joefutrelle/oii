@@ -16,10 +16,13 @@ class Psql(object):
         self.psql_connect = psql_connect
 
 class IfcbFeed(Psql):
-    def exists(self,lid):
+    def exists(self,lid,skip=True):
         """Determines whether or not a bin exists"""
         with xa(self.psql_connect) as (c,db):
-            db.execute("select count(*) from bins where lid=%s",(lid,))
+            if skip:
+                db.execute("select count(*) from bins where lid=%s and not skip",(lid,))
+            else:
+                db.execute("select count(*) from bins where lid=%s",(lid,))
             count = db.fetchone()[0]
             return count != 0
     def create(self,lid,ts,cursor=None):
@@ -40,7 +43,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,sample_time from bins where sample_time <= %s order by sample_time desc limit %s",(dt,n)) # dangling comma is necessary
+            db.execute("select lid,sample_time from bins where sample_time <= %s and not skip order by sample_time desc limit %s",(dt,n)) # dangling comma is necessary
             for row in db.fetchall():
                 yield row[0]
     def nearest_bin(self,date=None):
@@ -50,7 +53,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins order by time_delta limit 1",(dt,))
+            db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins where not skip order by time_delta limit 1",(dt,))
             for row in db.fetchall():
                 yield row[0]
     def between(self,start=None,end=None):
@@ -64,19 +67,19 @@ class IfcbFeed(Psql):
         end_dt = utcdatetime(end)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid from bins where sample_time >= %s and sample_time <= %s",(start_dt, end_dt))
+            db.execute("select lid from bins where sample_time >= %s and sample_time <= %s and not skip",(start_dt, end_dt))
             for row in db.fetchall():
                 yield row[0]
     def before(self,lid,n=1):
         """Return the LIDs of n bins before the given one"""
         with xa(self.psql_connect) as (c,db):
-            db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) order by sample_time desc limit %s",(lid,n))
+            db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) and not skip order by sample_time desc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def after(self,lid,n=1):
         """Return the LIDs of n bins after the given one"""
         with xa(self.psql_connect) as (c,db):
-            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) order by sample_time asc limit %s",(lid,n))
+            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) and not skip order by sample_time asc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def day_bins(self,date=None):
@@ -86,7 +89,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,sample_time from bins where date_part('year',sample_time) = %s and date_part('month',sample_time) = %s and date_part('day',sample_time) = %s order by sample_time desc",(dt.year,dt.month,dt.day))
+            db.execute("select lid,sample_time from bins where date_part('year',sample_time) = %s and date_part('month',sample_time) = %s and date_part('day',sample_time) = %s and not skip order by sample_time desc",(dt.year,dt.month,dt.day))
         for row in db.fetchall():
             yield row[0]
 
