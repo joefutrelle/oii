@@ -4,8 +4,9 @@ class Configuration(object):
     """Arbitrary holder of configuration values"""
     pass
 
-def configure(obj,pathname,subconf_name=None,schema=None):
+def parse_conf(pathname,schema=None):
     current_subconf = None
+    confs = {None:{}}
     with open(pathname,'r') as configfile:
         for line in configfile:
             line = line.strip()
@@ -13,6 +14,7 @@ def configure(obj,pathname,subconf_name=None,schema=None):
                 continue
             try:
                 current_subconf = re.match(r'^\[(.*)\]',line).groups(0)[0].strip()
+                confs[current_subconf] = {}
             except:
                 pass
             try:
@@ -29,12 +31,23 @@ def configure(obj,pathname,subconf_name=None,schema=None):
                         value = int(value)
                 except:
                     pass
-                if current_subconf is None or current_subconf == subconf_name:
-                    setattr(obj,key,value)
+                confs[current_subconf][key] = value
             except:
                 pass
-        return obj
+        return confs
+
+def list_subconfs(confs):
+    return [k for k in confs.keys() if k is not None]
+
+def get_subconf(confs,subconf_name):
+    return dict(confs[None].items() + confs[subconf_name].items())
+
+def configure(obj,pathname,subconf_name=None,schema=None):
+    confs = parse_conf(pathname)
+    conf = get_subconf(confs,subconf_name)
+    for k,v in conf.items():
+        setattr(obj,k,v)
+    return obj
 
 def get_config(pathname,subconf_name=None,schema=None):
     return configure(Configuration(),pathname,subconf_name,schema)
-    
