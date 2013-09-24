@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.ndimage as ndi
 
 def resize(img,shape,order=0):
