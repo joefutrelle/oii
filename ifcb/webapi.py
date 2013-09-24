@@ -18,7 +18,7 @@ from oii.ifcb.formats.adc import read_adc, read_target, ADC
 from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_2
 from oii.ifcb.formats.roi import read_roi, read_rois, ROI
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
-from oii.ifcb.db import IfcbFeed, IfcbFixity, IfcbAutoclass
+from oii.ifcb.db import IfcbFeed, IfcbFixity, IfcbAutoclass, IfcbBinProps
 from oii.resolver import parse_stream
 from oii.ifcb import stitching
 from oii.ifcb import represent
@@ -56,6 +56,7 @@ CACHE='cache'
 CACHE_TTL='ttl'
 PSQL_CONNECT='psql_connect'
 FEED='feed'
+BIN_PROPS='bin_props'
 FIXITY='fixity'
 PORT='port'
 DEBUG='debug'
@@ -105,6 +106,9 @@ def get_psql_connect(time_series):
 
 def get_feed(time_series):
     return IfcbFeed(get_psql_connect(time_series))
+
+def get_bin_props(time_series):
+    return IfcbBinProps(get_psql_connect(time_series))
 
 def get_fixity(time_series):
     return IfcbFixity(get_psql_connect(time_series))
@@ -382,9 +386,16 @@ def autoclass_rois_of_class(time_series,class_label,start=None,end=None,threshol
         end = parse_date_param(end)
     ns = get_namespace(time_series)
     def doit():
-        for roi_lid in get_autoclass(time_series).rois_of_class(class_label,start,end,threshold,page):
-            yield ns + roi_lid
-    return jsonr(list(doit()))
+        roi_lids = get_autoclass(time_series).rois_of_class(class_label,start,end,threshold,page)
+        for roi_lid in roi_lids:
+            if roi_lid is None:
+                yield None
+            else:
+                yield ns + roi_lid
+    result = list(doit())
+    if result == [None]:
+        return jsonr('end')
+    return jsonr(result)
 
 ### mosaicing
 
@@ -627,10 +638,13 @@ def serve_bin(hit,mimetype):
     if hit.extension == HDR:
         return Response(file(hdr_path), direct_passthrough=True, mimetype='text/plain')
     props = read_hdr(LocalFileSource(hdr_path))
+    bin_props = get_bin_props(hit.time_series).get_props(hit.bin_lid)
     context = props[CONTEXT]
     del props[CONTEXT]
     # sort properties according to their order in the header schema
     props = [(k,props[k]) for k,_ in HDR_SCHEMA if k in props]
+    # then add database props
+    props += [(k,bin_props[k]) for k in sorted(bin_props.keys())]
     # get a list of all targets, taking into account stitching
     if hit.product != 'short':
         targets = list_targets(hit)

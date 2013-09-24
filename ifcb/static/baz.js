@@ -29,9 +29,9 @@ function loadImages() {
     });
     $.each($('#main').find('.last_image'),function(ix,elt) {
 	if(elementInViewport(elt)) {
-	    $(elt).removeClass('last_image');
 	    var queryString = $(elt).data('queryString');
 	    var page = $(elt).data('page');
+	    $(elt).remove();
 	    console.log('loading next page');
 	    addPage(queryString, page);
 	}
@@ -39,18 +39,20 @@ function loadImages() {
 }
 function addPage(queryString, page) {
     $.getJSON(queryString + page, function(r) {
+	if(r == "end") {
+	    return;
+	}
 	$.each(r, function(ix, roi_pid) {
 	    $('#images').append('<div style="display:inline-block;width:200px;height:200px"><a href="'+roi_pid+'.html" target="_blank">&nbsp;</a></div>')
 		.find('div:last')
 		.addClass('roi_image_unloaded')
 		.data('img_src',roi_pid+'.png');
 	});
-	if(r.length > 0) { // FIXME sometimes intermediate pages have zero rois
-	    $('#images').find('div:last')
-		.addClass('last_image')
-		.data('queryString',queryString)
-		.data('page',page+1);
-	}
+	$('#images').append('<div></div>');
+	$('#images').find('div:last')
+	    .addClass('last_image')
+	    .data('queryString',queryString)
+	    .data('page',page+1);
 	loadImages();
     });
 }

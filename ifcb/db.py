@@ -236,6 +236,20 @@ group by day order by day
                     (day, count) = row
                     yield {'day': day.strftime('%Y-%m-%d'), 'count': count }
 
+class IfcbBinProps(Psql):
+    def get_props(self,bin_lid):
+        with xa(self.psql_connect) as (c,db):
+            try:
+                db.execute('select lat,lon,description from bin_props where lid=%s',(bin_lid,))
+                (lat,lon,description) = db.fetchone()
+                d = dict(lat=lat,lon=lon,description=description)
+                for k in d.keys():
+                    if d[k] is None:
+                        del d[k]
+                return d
+            except:
+                return {}
+
 import sys
 from oii.config import get_config, Configuration
 
@@ -253,3 +267,4 @@ if __name__=='__main__':
     autoclass = IfcbAutoclass(config.psql_connect)
     for roc in autoclass.rois_of_class('tintinnid'):
         print roc
+
