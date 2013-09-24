@@ -39,6 +39,16 @@ CREATE INDEX ix_bins_sample_time
   USING btree
   (sample_time );
 
+-- Table: bin_props
+
+CREATE TABLE bin_props
+(
+  lid text primary key,
+  lat float,
+  lon float,
+  description text
+);
+
 -- Table: fixity
 
 -- DROP TABLE fixity;
