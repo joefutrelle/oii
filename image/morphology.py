@@ -4,6 +4,7 @@ from scipy import ndimage
 from scipy.ndimage import measurements
 from scipy.ndimage.filters import maximum_filter
 from scipy.interpolate import griddata
+from scipy.cluster.vq import kmeans2
 
 from skimage.segmentation import find_boundaries
 from skimage.morphology import binary_dilation
@@ -20,6 +21,18 @@ def gmm_threshold(gray):
     samples = gray.reshape((gray.size, 1))
     model = GMM(n_states=2, cvtype='full').fit(samples)
     return gray > np.mean(model.means)
+
+def np_random_choice(arr,ns):
+    na = np.array(arr)
+    return na[np.random.randint(na.size,size=ns)]
+
+def kmeans_threshold(img,n_samples=10000):
+    samples = np_random_choice(img.reshape(img.size),n_samples)
+    means = [-1,-1]
+    while min(means) < 0:
+        (means,_) = kmeans2(samples,2)
+    means.sort()
+    return img > np.mean(means)
 
 def hysthresh(img,T1,T2):
     T2,T1 = sorted([T1,T2])
