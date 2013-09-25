@@ -1,9 +1,24 @@
 import re
 
 from skimage import img_as_float
-from skimage.io import imread, imsave
+from skimage import io
+
+from oii.iopipes import UrlSource, StagedInputFile
 
 """Image I/O utilities"""
+
+def imread(infile):
+    def _readfile(fin):
+        if re.match(r'.*\.tiff?$',fin):
+            return io.imread(fin,plugin='freeimage')
+        else:
+            return io.imread(fin)
+    if re.match(r'^https?:.*',infile):
+        with StagedInputFile(UrlSource(infile)) as fin:
+            img = _readfile(fin)
+    else:
+        img = _readfile(fin)
+    return img
 
 def imread_float(infile):
     """
@@ -14,17 +29,13 @@ def imread_float(infile):
     Parameters
     ----------
     infile : str
-        the file containing the image
+        the file or URL containing the image
 
     Returns
     img : ndarray of float
         the image
     """
-    if re.match(r'.*\.tiff?$',infile):
-        img = imread(infile,plugin='freeimage')
-    else:
-        img = imread(infile)
-    return img_as_float(img)
+    return img_as_float(imread(infile))
 
 def imsave_clip(outfile,img):
     """
@@ -32,5 +43,5 @@ def imsave_clip(outfile,img):
     This really only makes sense for floating-point images
     """
     img = img_as_float(img).clip(0.,1.)
-    imsave(outfile,img)
+    io.imsave(outfile,img)
     
