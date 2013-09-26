@@ -10,6 +10,8 @@ import shutil
 from zipfile import ZipFile, ZIP_DEFLATED
 from time import strptime
 from StringIO import StringIO
+import numpy as np
+from skimage.segmentation import find_boundaries
 from oii.config import get_config
 from oii.times import iso8601, rfc822
 import urllib
@@ -494,10 +496,12 @@ def serve_blob(time_series,pid):
             # FIXME support more imaage types
             blob_image = Image.open(StringIO(png))
             if pid_hit.product == 'blob_outline':
-                blob_image = blob_image.convert('RGB').filter(FIND_EDGES)
-                blob_image = ImageOps.colorize(blob_image.convert('L'),(255,255,255),(255,0,0))
-                roi_image = get_stitched_roi(hit.bin_pid, int(hit.target)).convert('RGB')
-                blob_image = ImageChops.multiply(roi_image, blob_image)
+                blob = np.asarray(blob_image.convert('L'))
+                blob_outline = find_boundaries(blob)
+                roi = np.asarray(get_stitched_roi(hit.bin_pid, int(hit.target)))
+                blob = np.dstack([roi,roi,roi])
+                blob[blob_outline] = [255,0,0]
+                blob_image = Image.fromarray(blob,'RGB')
             return image_response(blob_image, pil_format, mimetype)
 
 @app.route('/<time_series>/api/features/pid/<path:pid>')
