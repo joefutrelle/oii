@@ -19,3 +19,4 @@ apt-get install -y libxml2-dev libxslt-dev zlib1g-dev cython python-pip python-l
 pip install pytz
 pip install scikits-image
 pip install scikits.learn
+pip install phasepack
