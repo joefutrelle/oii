@@ -17,7 +17,7 @@ def imread(infile):
         with StagedInputFile(UrlSource(infile)) as fin:
             img = _readfile(fin)
     else:
-        img = _readfile(fin)
+        img = _readfile(infile)
     return img
 
 def imread_float(infile):
