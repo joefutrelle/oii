@@ -16,10 +16,22 @@ class Psql(object):
         self.psql_connect = psql_connect
 
 class IfcbFeed(Psql):
+    def __init__(self,psql_connect):
+        super(IfcbFeed,self).__init__(psql_connect)
+        self.has_skip = None
+    def skip_clause(self,kw='and'):
+        if self.has_skip is None:
+            with xa(self.psql_connect) as (c,db):
+                db.execute("select 'skip' in (select column_name from information_schema.columns where table_name='bins')")
+                self.has_skip = db.fetchall()[0][0]
+        if self.has_skip:
+            return '%s not skip' % kw
+        else:
+            return ''
     def exists(self,lid,skip=True):
         """Determines whether or not a bin exists"""
         with xa(self.psql_connect) as (c,db):
-            if skip:
+            if skip and self.has_skip:
                 db.execute("select count(*) from bins where lid=%s and not skip",(lid,))
             else:
                 db.execute("select count(*) from bins where lid=%s",(lid,))
@@ -43,7 +55,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,sample_time from bins where sample_time <= %s and not skip order by sample_time desc limit %s",(dt,n)) # dangling comma is necessary
+            db.execute("select lid,sample_time from bins where sample_time <= %s "+self.skip_clause()+" order by sample_time desc limit %s",(dt,n)) # dangling comma is necessary
             for row in db.fetchall():
                 yield row[0]
     def nearest_bin(self,date=None):
@@ -53,7 +65,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins where not skip order by time_delta limit 1",(dt,))
+            db.execute("select lid,@ extract(epoch from sample_time-%s) as time_delta from bins "+self.skip_clause('where')+" order by time_delta limit 1",(dt,))
             for row in db.fetchall():
                 yield row[0]
     def between(self,start=None,end=None):
@@ -67,19 +79,19 @@ class IfcbFeed(Psql):
         end_dt = utcdatetime(end)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid from bins where sample_time >= %s and sample_time <= %s and not skip",(start_dt, end_dt))
+            db.execute("select lid from bins where sample_time >= %s and sample_time <= %s "+self.skip_clause(),(start_dt, end_dt))
             for row in db.fetchall():
                 yield row[0]
     def before(self,lid,n=1):
         """Return the LIDs of n bins before the given one"""
         with xa(self.psql_connect) as (c,db):
-            db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) and not skip order by sample_time desc limit %s",(lid,n))
+            db.execute("select lid from bins where sample_time < (select sample_time from bins where lid=%s) "+self.skip_clause()+" order by sample_time desc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def after(self,lid,n=1):
         """Return the LIDs of n bins after the given one"""
         with xa(self.psql_connect) as (c,db):
-            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) and not skip order by sample_time asc limit %s",(lid,n))
+            db.execute("select lid from bins where sample_time > (select sample_time from bins where lid=%s) "+self.skip_clause()+" order by sample_time asc limit %s",(lid,n))
             for row in db.fetchall():
                 yield row[0]
     def day_bins(self,date=None):
@@ -89,7 +101,7 @@ class IfcbFeed(Psql):
         dt = utcdatetime(date)
         with xa(self.psql_connect) as (c,db):
             db.execute("set session time zone 'UTC'")
-            db.execute("select lid,sample_time from bins where date_part('year',sample_time) = %s and date_part('month',sample_time) = %s and date_part('day',sample_time) = %s and not skip order by sample_time desc",(dt.year,dt.month,dt.day))
+            db.execute("select lid,sample_time from bins where date_part('year',sample_time) = %s and date_part('month',sample_time) = %s and date_part('day',sample_time) = %s "+self.skip_clause()+" order by sample_time desc",(dt.year,dt.month,dt.day))
         for row in db.fetchall():
             yield row[0]
 

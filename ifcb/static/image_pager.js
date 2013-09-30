@@ -28,6 +28,11 @@
 		    .attr('width',width).attr('height',height)
 		    .css('display','block');
 		console.log('loaded '+image_href);
+	    }).error(function() {
+		$(node).find('.imagepager_placeholder')
+		    .removeClass('imagepager_placeholder')
+		    .addClass('imagepager_404');
+		console.log('failed to load '+image_href);
 	    });
     }
     $.fn.extend({

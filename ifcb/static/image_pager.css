@@ -7,6 +7,12 @@
     background-repeat: no-repeat;
     background-position: center;
 }
+.imagepager_404 {
+    background-color: #999999;
+    background-image: url('images/x-mark_32.gif');
+    background-repeat: no-repeat;
+    background-position: center;
+}
 .imagepager_frame {
     overflow: hidden;
     margin: 2px;
