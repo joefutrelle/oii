@@ -85,7 +85,7 @@ class CannySegmentation(DelaunaySegmentation):
         c = canny(rgb2gray(self.image))
         return np.rot90(np.vstack(np.where(c)))
 
-class AverageColorSegmentation(CannySegmentation)
+class AverageColorSegmentation(CannySegmentation):
     """Example features"""
     def compute_features(self,i):
         fy,fx = self.pixels[i]
