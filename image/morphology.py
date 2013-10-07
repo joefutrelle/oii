@@ -35,10 +35,19 @@ def kmeans_threshold(img,n_samples=10000):
     return img > np.mean(means)
 
 def hysthresh(img,T1,T2):
+    """All pixels with values above T1 are marked as edges.
+    All pixels adjacent to points that have been marked as edges
+    and with values above T2 are also marked as edges. Eight-
+    connectivity is used.
+    Adaopted from Peter Kovesi"""
     T2,T1 = sorted([T1,T2])
     edges = img > T1
-    bd = (binary_dilation(edges,EIGHT) - edges) * img > T2
-    return edges | bd
+    sum = 1
+    while sum > 0:
+        bd = (binary_dilation(edges,EIGHT) & (img > T2)) - edges
+        edges |= bd
+        sum = np.sum(bd)
+    return edges
 
 def bwmorph_thin(img,n_iter=0):
     # http://www.mathworks.com/help/images/ref/bwmorph.html#f1-500491
