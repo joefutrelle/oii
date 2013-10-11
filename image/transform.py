@@ -11,3 +11,7 @@ def resize(img,shape,order=0):
         sx = (1. * shape[1] / img.shape[1]) + 0.0000000001
         return ndi.interpolation.zoom(img,(sy,sx),order=order)
         return ndi.interpolation.zoom(img,1. * shape / img.shape,order=order)
+
+def rescale(img,scale,order=0):
+    new_size = [int(a * scale) for a in img.shape[:2]]
+    return resize(img,new_size,order)

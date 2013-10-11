@@ -154,12 +154,13 @@ def redcyan(y_LR,dx=None,correct_y=False):
     else:
         dy = 0
     # align x
+    y_LR[:,w:] = np.roll(y_LR[:,w:],dx/2,axis=1)
     y_LR = y_LR[:,dx/2:w2-dx/2]
     (h,w2) = y_LR.shape
     w = w2/2
     red = y_LR[:,:w]
     cyan = y_LR[:,w:]
-    # align y
+    # align y                                                                                                                                
     if dy != 0:
         cyan = np.roll(cyan,dy,axis=0)
     return np.dstack([red,cyan,cyan])

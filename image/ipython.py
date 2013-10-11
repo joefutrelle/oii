@@ -14,13 +14,25 @@ from skimage.segmentation import find_boundaries
 
 from IPython.core import display
 
-def tmp_img(extension='.png'):
-    (o,f) = mkstemp(suffix=extension,dir='tmp')
+from oii.image.transform import resize, rescale
+
+def tmp_img(extension='.png',tmpdir='tmp'):
+    if not os.path.exists(tmpdir):
+        try:
+            os.makedirs(tmpdir)
+        except:
+            pass
+        assert os.path.exists(tmpdir)
+    (o,f) = mkstemp(suffix=extension,dir=tmpdir)
     os.close(o)
     return f
 
-def show_image(image):
+def show_image(image,max_width=None):
     f = tmp_img()
+    if max_width is not None:
+        (h,w) = image.shape[:2]
+        scale = max_width / float(w)
+        image = rescale(image,scale)
     imsave(f,image)
     return display.Image(filename=f)
 
@@ -33,7 +45,7 @@ def as_spectrum(gray):
 def show_spectrum(gray):
     return show_image(as_spectrum(gray))
 
-def show_masked(rgb,mask,outline=False):
+def as_masked(rgb,mask,outline=False):
     copy = img_as_float(rgb,force_copy=True)
     if outline:
         (labels,_) = measurements.label(mask)
@@ -41,4 +53,7 @@ def show_masked(rgb,mask,outline=False):
         copy[boundaries] = [1,0,0]
     else:
         copy[mask] = [1,0,0]
-    return show_image(copy)
+    return copy
+
+def show_masked(rgb,mask,outline=False):
+    return show_image(as_masked(rgb,mask,outline))
