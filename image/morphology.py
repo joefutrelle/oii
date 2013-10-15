@@ -12,6 +12,9 @@ from skimage.morphology import binary_dilation
 from scikits.learn.mixture import GMM
 
 EIGHT = np.ones((3,3))
+FOUR = np.array([[0, 1, 0],
+                 [1, 1, 1],
+                 [0, 1, 0]])
 
 def gmm_threshold(gray):
     """
@@ -101,7 +104,7 @@ def bwmorph_thin(img,n_iter=0):
         if n_iter == 0:
             done = True
 
-    return skeleton
+    return skeleton.astype(np.bool)
 
 def _ro_find(img,structure=EIGHT):
     (labeled,_) = measurements.label(img,structure=structure)
@@ -116,9 +119,11 @@ def remove_small_objects(img,min_area,structure=EIGHT):
             labeled[labeled == label] = 0
     return labeled > 0
 
-def remove_smallest_objects(img,structure=np.ones((3,3),np.bool)):
+def remove_smallest_objects(img,structure=np.ones((3,3),np.bool),size_range=1.0,max_area=None):
     (labeled,objects,areas) = _ro_find(img,structure)
-    min_area = min(areas)
+    if max_area is None:
+        max_area = max(areas)
+    min_area = min(max_area,(1. * min(areas) * size_range))
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area <= min_area:
             labeled[labeled == label] = 0
@@ -131,9 +136,9 @@ def remove_large_objects(img,max_area,structure=EIGHT):
             labeled[labeled == label] = 0
     return labeled > 0
 
-def remove_largest_objects(img,structure=EIGHT):
+def remove_largest_objects(img,structure=np.ones((3,3),np.bool),size_range=1.0,min_area=1):
     (labeled,objects,areas) = _ro_find(img,structure)
-    max_area = max(areas)
+    max_area = max(min_area,(1. * max(areas) / size_range))
     for label,o,area in zip(range(1,len(objects)+1),objects,areas):
         if area >= max_area:
             labeled[labeled == label] = 0
@@ -142,6 +147,7 @@ def remove_largest_objects(img,structure=EIGHT):
 def inpaint(img,mask):
     """Inpaint masked regions in an image via linear and
     nearest-neighbor interpolation"""
+    img = img.astype(np.float)
     def _interp(img,mask,method):
         xi = np.where(mask)
         if len(xi[0])==0:
