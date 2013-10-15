@@ -4,6 +4,14 @@ from scipy.cluster.vq import kmeans2
 def wh(img):
     return img.shape[:2] # surely there's some ndimage way to do this?
 
+def vectorize(img):
+    """return the pixels of an image as feature vectors,
+    one dimension per image channel"""
+    if len(img.shape)==2: # grayscale
+        return img.reshape((-1,1))
+    else:
+        return img.reshape((-1,img.shape[2]))
+
 def np_random_choice(arr,ns):
     """this is an impl of a function that's not in numpy 1.7.x"""
     na = np.array(arr)
