@@ -24,4 +24,5 @@ def contrast_stretch(image,amount=2):
     return rescale_intensity(image,in_range=(low,high))
 
 def local_variance(image,footprint=square(3),mode='reflect',cval=0.0):
+    """warning: slow"""
     return generic_filter(image, np.var, footprint=footprint, mode=mode,cval=cval)
