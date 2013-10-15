@@ -33,12 +33,14 @@ def show_image(image,max_width=None):
         (h,w) = image.shape[:2]
         scale = max_width / float(w)
         image = rescale(image,scale)
+    if image.dtype == np.bool:
+        image = image.astype(np.int) * 255
     imsave(f,image)
     return display.Image(filename=f)
 
 def as_spectrum(gray):
-    One = np.ones_like(gray)
-    Y = 1 - rescale_intensity(gray,out_range=(0,1))
+    One = np.ones(gray.shape,np.float)
+    Y = 1 - rescale_intensity(img_as_float(gray))
     HSV = np.dstack([Y*0.66,One,One])
     return hsv2rgb(HSV)
 
