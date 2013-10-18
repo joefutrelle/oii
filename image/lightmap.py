@@ -156,10 +156,6 @@ class CorrectRaw(object):
             Bayer-patterned lightmap returned by average_image in LearnLightmap.
         """
         self.lightmap = cfa_lightmap
-        self.avg_lightmap_00 = np.average(self.lightmap[::2,::2])
-        self.avg_lightmap_01 = np.average(self.lightmap[::2,1::2])
-        self.avg_lightmap_10 = np.average(self.lightmap[1::2,::2])
-        self.avg_lightmap_11 = np.average(self.lightmap[1::2,1::2])
     def correct_image(self,image):
         """
         Correct an image with the lightmap.
@@ -167,25 +163,20 @@ class CorrectRaw(object):
         Parameters
         ----------
         image : ndarray
-            Bayer-patterned image to correct. Should be floating-point
+            Bayer-patterned image to correct. Does not clip out of gamut colors
 
         Returns
         -------
         corrected image : ndarray
             Bayer-patterend corrected image.
         """
-        new_cfa = (image - self.lightmap)
-        new_cfa[::2,::2] += self.avg_lightmap_00
-        new_cfa[::2,1::2] += self.avg_lightmap_01
-        new_cfa[1::2,::2] += self.avg_lightmap_10
-        new_cfa[1::2,1::2] += self.avg_lightmap_11
-        return (new_cfa - np.min(new_cfa)).clip(0.,1.)
+        return (image / self.lightmap) * self.lightmap.ptp()
 
 class CorrectRgb(object):
     """
     Given a lightmap computed by LearnLightmap(raw=False), correct new images.
     """
-    def __init__(self,rgb_lightmap,color_balance=True,brightness=0.0):
+    def __init__(self,rgb_lightmap,color_balance=False,brightness=1.0):
         """
         Parameters
         ----------
@@ -194,11 +185,9 @@ class CorrectRgb(object):
         color_balance : boolean
             Whether to apply gray world color balancing to corrected images
         brightness : float
-            How much to scale brightness. Default of 0.0 means to adadptively brighten
-            based on average intensity. 1.0 means not to brighten.
+            How much to scale brightness. 1.0 means not to brighten.
         """
         self.lightmap = rgb_lightmap
-        self.avg_lightmap = np.dstack([np.average(self.lightmap[:,:,c]) for c in range(3)])
         self.color_balance = color_balance
         self.brightness = brightness
     def correct_image(self,image):
@@ -213,19 +202,14 @@ class CorrectRgb(object):
         Returns
         -------
         corrected image : ndarray
-            corrected image (corrected for illumination and/or color balance and/or brightness
+            corrected image (corrected for illumination and/or color balance and/or brightness.
+            does not clip out of gamut colors.
         """
-        new_rgb = (image - self.lightmap)
-        new_rgb += self.avg_lightmap
         if self.color_balance:
-            # here we balance to the local image rather than against the lightmap's gray value
-            new_rgb = gray_world(new_rgb)
-        if self.brightness == 0: # adaptive
-            avg = np.average(new_rgb - np.min(new_rgb))
-            factor = 0.5 / avg
+            new_rgb = gray_world(image)
         else:
-            factor = self.brightness
-        return ((new_rgb - np.min(new_rgb)) * factor).clip(0.,1.)
+            new_rgb = image
+        return (new_rgb / self.lightmap) * self.lightmap.ptp() * self.brightness
 
 def average_image(infiles):
     learn = LearnLightmap()
