@@ -27,16 +27,18 @@ def tmp_img(extension='.png',tmpdir='tmp'):
     os.close(o)
     return f
 
-def show_image(image,max_width=None):
+def show_image(image,max_width=None,order=1):
     f = tmp_img()
+    if image.dtype == np.bool:
+        image = image.astype(np.int) * 255
     if max_width is not None:
         (h,w) = image.shape[:2]
         scale = max_width / float(w)
-        image = rescale(image,scale)
-    if image.dtype == np.bool:
-        image = image.astype(np.int) * 255
+        image = rescale(image,scale,order=order)
     imsave(f,image)
-    return display.Image(filename=f)
+    d = display.Image(filename=f)
+    os.remove(f)
+    return d
 
 def as_spectrum(gray):
     One = np.ones(gray.shape,np.float)
