@@ -4,7 +4,7 @@ from scipy.cluster.vq import kmeans2
 def wh(img):
     return img.shape[:2] # surely there's some ndimage way to do this?
 
-def vectorize(img):
+def as_vectors(img):
     """return the pixels of an image as feature vectors,
     one dimension per image channel"""
     if len(img.shape)==2: # grayscale
