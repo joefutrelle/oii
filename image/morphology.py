@@ -1,5 +1,7 @@
 import numpy as np
 
+from numpy.random import RandomState
+
 from scipy import ndimage
 from scipy.ndimage import measurements
 from scipy.ndimage.filters import maximum_filter
@@ -147,6 +149,7 @@ def remove_largest_objects(img,structure=np.ones((3,3),np.bool),size_range=1.0,m
 def inpaint(img,mask):
     """Inpaint masked regions in an image via linear and
     nearest-neighbor interpolation"""
+    random = RandomState(0)
     img = img.astype(np.float)
     def _interp(img,mask,method):
         xi = np.where(mask)
@@ -154,13 +157,15 @@ def inpaint(img,mask):
             return img
         edges = maximum_filter(find_boundaries(mask),3)
         edges[xi] = 0
-        points = np.where(edges)
-        values = seed[points]
-        fill = griddata(points,values,xi,method=method)
+        yp, xp = np.where(edges)
+        values = seed[yp,xp]
+        # add jitter to points to avoid https://beagle.whoi.edu/redmine/issues/2609
+        yp = np.array(yp) + (random.standard_normal((yp.size)) * 0.0001)
+        xp = np.array(xp) + (random.standard_normal((xp.size)) * 0.0001)
+        fill = griddata((yp,xp),values,xi,method=method)
         img[xi] = fill
         return img
     seed = img.copy()
     seed = _interp(seed,mask,'linear')
     seed = _interp(seed,np.isnan(seed),'nearest')
     return seed
-
