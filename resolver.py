@@ -372,7 +372,11 @@ def parse_node(node):
 def parse_stream(stream):
     """Parse an XML document and return a dictionary of all named
     resolvers immediately below the root node"""
-    return parse_node(etree.parse(stream).getroot())
+    try:
+        root = etree.parse(stream).getroot()
+    except:
+        root = etree.fromstring(stream)
+    return parse_node(root)
 
 # example configuration
 # this takes pids like
@@ -504,5 +508,3 @@ if __name__=='__main__':
             for var in sorted(bindings.keys()):
                 print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
             print '}'
-
-            
