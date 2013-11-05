@@ -8,7 +8,7 @@ import numpy as np
 from scipy.ndimage import measurements
 from skimage import img_as_float
 from skimage.io import imsave
-from skimage.color import hsv2rgb
+from skimage.color import hsv2rgb, gray2rgb
 from skimage.exposure import rescale_intensity
 from skimage.segmentation import find_boundaries
 
@@ -49,7 +49,11 @@ def as_spectrum(gray):
 def show_spectrum(gray):
     return show_image(as_spectrum(gray))
 
-def as_masked(rgb,mask,outline=False):
+def as_masked(img,mask,outline=False):
+    if len(img.shape)==2:
+        rgb = gray2rgb(img)
+    else:
+        rgb = img
     copy = img_as_float(rgb,force_copy=True)
     if outline:
         (labels,_) = measurements.label(mask)
@@ -59,5 +63,5 @@ def as_masked(rgb,mask,outline=False):
         copy[mask] = [1,0,0]
     return copy
 
-def show_masked(rgb,mask,outline=False):
-    return show_image(as_masked(rgb,mask,outline))
+def show_masked(img,mask,outline=False):
+    return show_image(as_masked(img,mask,outline))
