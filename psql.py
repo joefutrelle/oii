@@ -22,6 +22,10 @@ def iterrows(cursor,columns):
         if len(rows) == 0:
             break
 
+def exists(db,query,params=()):
+    db.execute('select exists (%s)' % query,params)
+    return db.fetchone()[0]
+
 # simplest ORM ever
 class PsqlStore(object):
     def __init__(self,psql_connect):
