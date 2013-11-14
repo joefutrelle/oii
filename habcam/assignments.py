@@ -86,11 +86,10 @@ class HabcamAssignmentStore(AssignmentStore):
                 i += 1
             return offset
     def set_status(self,assignment_id,image_id,status):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        print 'gonna set status to %s for assignment %s image %s' % (status,self.lid(assignment_id),self.lid(image_id))
-        cursor.execute('update imagelist set status=%s where assignment_id=%s and imagename=%s',(status,int(self.lid(assignment_id)),self.lid(image_id)))
-        connection.commit()
+        with xa(self.config.psql_connect) as (connection,cursor):
+            #print 'gonna set status to %s for assignment %s image %s' % (status,self.lid(assignment_id),self.lid(image_id))
+            cursor.execute('update imagelist set status=%s where assignment_id=%s and imagename=%s',(status,int(self.lid(assignment_id)),self.lid(image_id)))
+            connection.commit()
 
 if __name__=='__main__':
     config = get_config('habcam_annotation.conf')
