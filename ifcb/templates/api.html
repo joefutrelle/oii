@@ -126,7 +126,8 @@ Images can be fetched using image extensions;
 </div>
 
 The PNG and TIFF variants are guaranteed to contain the exact data in the image. Other formats may
-be lossy.
+be lossy. In particular do not use the JPG variant if you intend to perform any automated analysis
+of the images.
 
 <div class="api">
 <b>IMAGE DIMENSIONS ARE ROTATED:</b>
@@ -141,28 +142,23 @@ To see an interactive web page summarizing the sample bin, use this URL:
 <i>target URL</i>.html<br>
 </div>
 
-<h2>Product API</h2>
+<h2>Product API: Sample Bins</h2>
 
-In addition to instrument data, products are also available. "Blob" images, bitmap masks separating the
-target from its background, are available for each target at
+In addition to instrument data and images, image processing, features, and classification results
+are also available.
 
-<div class="api code">
-<i>target URL</i>_blob.<i>extension</i><br>
-</div>
-
-Where <i>extension</i> is a valid image type extension such as "png".
-
-To conveniently fetch all blob images for a given sample bin as a zip file, use one of the following URL patterns:
+To fetch a ZIP file containing all "blobs" (bitmap masks separating the target from the background)
+for a given bin, use one of these URL variants:
 
 <div class="api code">
 <i>bin URL</i>_blob.zip<br>
 <i>namespace</i>/api/blob/pid/<i>bin URL</i>.zip<br>
 </div>
 
-Note that in the second variant you should put the entire bin URL in after <tt>/pid/</tt>. The URL should look like this:
+Note that in the second variant you should put the entire bin URL after <tt>/pid/</tt>. The URL should look like this:
 
 <div class="api code">
-http://ifcb-data.whoi.edu/mvco/api/blob/pid/http://demi.whoi.edu:5062/mvco/IFCB1_2009_208_123123.zip
+http://ifcb-data.whoi.edu/mvco/api/blob/pid/http://ifcb-data.whoi.edu/mvco/IFCB1_2009_208_123123.zip
 </div>
 
 Instead of this:
@@ -171,12 +167,33 @@ Instead of this:
 http://ifcb-data.whoi.edu/mvco/api/blob/pid/IFCB1_2009_208_123123.zip
 </div>
 
-Blobs are avilable for targets at the following URLs:
+Features (scalar metrics computed from images and metadata prior to classification) are available in
+CSV format using one of these URL variants:
+
+<div class="api code">
+<i>bin URL</i>_features.csv<br>
+<i>namespace</i>/api/features/pid/<i>bin URL</i>.csv<br>
+</div>
+
+And classification results are available using one of these URL variants:
+
+<div class="api code">
+<i>bin URL</i>_class_scores.csv<br>
+<i>namespace</i>/api/class_scores/pid/<i>bin URL</i>.csv<br>
+</div>
+
+Note that products are not available unless the processing that produces them has completed.
+
+<h2>Product API: Targets</h2>
+
+Blob images are available per-target. Use one of these URL variants:
 
 <div class="api code">
 <i>target URL</i>_blob.<i>extension</i><br>
 <i>namespace</i>/api/blob/pid/<i>target URL</i>.<i>extension</i><br>
 </div>
+
+Where <i>extension</i> is a valid image type extension such as "png".
 
 A simple visualization that shows the outline of the blob overlaid on the target image is available at:
 
@@ -184,7 +201,7 @@ A simple visualization that shows the outline of the blob overlaid on the target
 <i>target URL</i>_blob_outline.<i>extension</i><br>
 </div>
 
-Note that the this requires some image processing on the server side.
+Note that blob outlining requires some image processing on the server side.
 
 </div>
 {% endblock content %}

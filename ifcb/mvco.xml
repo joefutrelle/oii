@@ -7,6 +7,9 @@
       <value>Healy1001,Healy 1001</value>
       <value>saltpond,Salt Pond</value>
       <value>ditylum,Ditylum</value>
+      <value>OkeanosExplorerAug2013_IFCB014,OkeanosExplorerAug2013_IFCB014</value>
+      <value>OkeanosExplorerAug2013_IFCB010,OkeanosExplorerAug2013_IFCB010</value>
+      <value>TaraOceansPolarCircle_IFCB013,TaraOceansPolarCircle</value>
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
@@ -46,8 +49,23 @@
       <var name="dbname">mvco_beads</var>
       <hit/>
     </match>
+    <match var="time_series" value="OkeanosExplorerAug2013_IFCB014">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="OkeanosExplorerAug2013_IFCB010">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="TaraOceansPolarCircle_IFCB013">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
   </resolver>
-  <resolver name="pid">
+ <resolver name="pid">
     <match var="pid" groups="namespace time_series lid bin_lid instrument date yearday year day time - target - product - extension"
 	   pattern="(.*?\b(\w+)?)/?(((IFCB\d+)_(((\d{4})_(\d{3}))_(\d{6})))(_(\d{5}))?)(_([a-zA-Z]\w+))?(\.([a-z][a-z0-9]*))?">
       <import name="time_series"/>
@@ -133,6 +151,39 @@
       </match>
       <match var="product" pattern="blob.*">
 	<hit name="root">/data/vol4/blobs/ditylum</hit>
+      </match>
+    </match>
+    <match var="time_series" value="OkeanosExplorerAug2013_IFCB014">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/${time_series}</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">/mnt/${time_series}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">/mnt/${time_series}/features</hit>
+      </match>
+    </match>
+    <match var="time_series" value="OkeanosExplorerAug2013_IFCB010">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/${time_series}</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">/mnt/${time_series}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">/mnt/${time_series}/features</hit>
+      </match>
+    </match>
+    <match var="time_series" value="TaraOceansPolarCircle_IFCB013">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/${time_series}</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">/mnt/${time_series}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">/mnt/${time_series}/features</hit>
       </match>
     </match>
   </resolver>

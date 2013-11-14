@@ -41,7 +41,8 @@
 		    .append('<span> <a href="'+pid+'.xml">XML</a></span>')
 		    .append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
 		    .append('<span> <a href="'+pid+'_blob.zip">blobs ZIP</a></span>')
-		    .append('<span> <a href="'+pid+'_features.csv">features CSV</a>)</span>')
+		    .append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
+		    .append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a>)</span>')
 		    .find('span').addClass('bin_label').end()
 		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
