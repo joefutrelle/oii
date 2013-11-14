@@ -1,4 +1,4 @@
-import psycopg2 as psql
+from oii.psql import xa
 from oii.config import get_config
 from oii.annotation.categories import Categories
 
@@ -20,9 +20,9 @@ class HabcamCategories(Categories):
     def __init__(self,config):
         self.config = config
     def list_categories(self,mode,scope=None):
-        connection = psql.connect(self.config.psql_connect)
-        cursor = connection.cursor()
-        query = """
+        with xa(self.config.psql_connect) as (connection,cursor):
+            cursor = connection.cursor()
+            query = """
 SELECT distinct classes.class_id,class_name,facets.facet_id,facet_name,scopes.scope_id,scope_name,idmode_id,idmode_name 
     FROM facets,scopes,classes,idmodes
     WHERE facets.scope_id = scopes.scope_id
@@ -33,22 +33,22 @@ SELECT distinct classes.class_id,class_name,facets.facet_id,facet_name,scopes.sc
         AND idmode_id = %s --for "fish scallops didemnum and highlights"        
 ORDER BY facets.facet_id,class_name ;  --order by facet then alphabetical 
 """
-        if scope is not None:
-            scope_clause = 'AND scopes.scope_id = %s'
-            params = (scope, mode)
-        else:
-            scope_clause = ''
-            params = (mode,)
-        # ok the following looks weird but works because of psycopg2 'overloading' %s
-        cursor.execute(query % (scope_clause,'%s'), params)
-        for row in cursor.fetchall():
-            d = {}
-            d['pid'] = self.config.category_namespace + str(row[0])
-            d['label'] = row[1]
-            yield d
+            if scope is not None:
+                scope_clause = 'AND scopes.scope_id = %s'
+                params = (scope, mode)
+            else:
+                scope_clause = ''
+                params = (mode,)
+            # ok the following looks weird but works because of psycopg2 'overloading' %s
+            cursor.execute(query % (scope_clause,'%s'), params)
+            for row in cursor.fetchall():
+                d = {}
+                d['pid'] = self.config.category_namespace + str(row[0])
+                d['label'] = row[1]
+                yield d
 
 if __name__=='__main__':
     config = get_config('habcam_annotation.conf')
     hc = HabcamCategories(config)
-    for cat in hc.list_categories('QC_Fish'):
+    for cat in hc.list_categories(2):
         print cat
