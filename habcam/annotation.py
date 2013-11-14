@@ -24,7 +24,7 @@ SELECT_CLAUSE = "select image_id, scope_id, category_id, geometry_text, annotato
 class HabcamAnnotationStore(AnnotationStore):
     def __init__(self,config):
         self.config = config
-    def __db(self):
+    def __db(self): # FIXME is this unused?
         connection = psql.connect(self.config.psql_connect)
         cursor = connection.cursor()
         return (connection, cursor)
