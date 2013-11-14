@@ -119,7 +119,7 @@ function getExistingAnnotations(cell, callback) {
 			addExistingRow(ann);
         });
    
-   updateExistingTable();
+    updateExistingTable();
 
 	callback();
     });
@@ -185,7 +185,7 @@ function gotoPage(pp,size) {
             cell = addCell(imagePid);
             clog('adding image for '+imageUrl);
             addImage(cell,imageUrl,scalingFactor);
-	    $("#quickImagename").html(imagePid);
+	    $("#quickImagename").html(imagePid);	         
 
 	    if (imagePid.match(/illum_L/)){			
 			var imagePid3d = imagePid.replace('rgb_illum_L','redcyan');
@@ -704,6 +704,8 @@ $(document).ready(function() {
 	$('#prev').removeClass('hidden');
     });
        
+
+
     //START div creation for controls (category pickers, etc)
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
@@ -743,12 +745,10 @@ $(document).ready(function() {
     $('#rightPanel').append('<div id="existingAnnotations"><div id="existingTableContainer"></div></div>');
     $('#rightPanel > div:last-child').collapsing('Existing Annotations',1);
 
-
     // when the user changes the assignment
     $('#assignment').change(function() {
         changeAssignment($('#assignment').val()); // deal with it
     });
-
 
 		
     // button hide existing annotations on image
@@ -773,6 +773,7 @@ $(document).ready(function() {
 
 	$('#rightPanel #existingAnnotations').prepend('<a  class="button toggle" id="deprecate-button">Deprecate Selected</a>'); // FIXME remove fieldset selector
 	$('#deprecate-button').button();
+
 	$('#deprecate-button').bind('click', function() {	
 	    if($('#workspace').data('login') == undefined) {
 		alert('Please login');
@@ -793,6 +794,9 @@ $(document).ready(function() {
 	    // redrawing
 	});
 
+ $('#quickinfo').append('<a href="#" id="view3D" class="button">View image in 3D</a>')
+	.find('#view3D')
+	.button();	
 
 $( ".selectable" ).selectable({
 			stop: function() {

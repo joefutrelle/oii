@@ -5,7 +5,8 @@ $(document).ready(function() {
 		+ '<fieldset style="width:40% ; float:left;"><legend>Assignment Position</legend>'
 		+ '<span id="quickOffset"></span>'
 		+ '<span id="quickNumImages"></span></fieldset>'
-		+ '<fieldset style="width:20%; float:left;"><legend>Progress</legend><span id="quickProgress"></span></fieldset>'
+		+ '<fieldset style="width:20%; float:left;"><legend>Progress</legend><span id="quickProgress"></span>'
+		+ '</fieldset>'
 		 
 	);
 	   $('#quickinfo').append('<div><a href="#" id="view3D" class="button">view 3D image</a></div>')

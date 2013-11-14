@@ -1,18 +1,4 @@
-function emptyExistingTable() {
-	$("#existingTable").empty();
-     
-    $('#existingTableContainer').empty();
-	    $('#existingTableContainer').append('<table id="existingTable"  style="width:100%; cellpadding="0" ' + 
-	    'cellspacing="0" border="1"></table>') ;
 
-	$('#existingTable').append('<thead><tr class="ui-widget-header">'
-				+ '<th>Class Name</th>'
-				+ '<th>Username </th>'
-				+ '<th>Timestamp</th></tr></thead>'
-				+ '<tbody class="ui-widget-content"></tbody>'
-				);	
-}
- 
 function addExistingRow(ann){
 	
 	$('#existingTable tbody').append('<tr '
@@ -28,9 +14,25 @@ function addExistingRow(ann){
 
 }
 
-function updateExistingTable(){
-			$('#existingTable').dataTable({"sPaginationType": "full_numbers"});
+function addExistingTable(){
+    $('#existingTableContainer').append('<table id="existingTable"  style="width:100%; cellpadding="0" ' + 
+	    'cellspacing="0" border="1"></table>') ;
+
+	$('#existingTable').append('<thead><tr class="ui-widget-header">'
+				+ '<th>Class Name</th>'
+				+ '<th>Username </th>'
+				+ '<th>Timestamp</th></tr></thead>'
+				+ '<tbody class="ui-widget-content"></tbody>'
+				);
+
+  
 			
+}
+
+function updateExistingTable(){
+			//$("#existingTable").dataTable().fnDestroy();
+	  $('#existingTable').dataTable({"sPaginationType": "full_numbers","bDestroy":true});
+
 			$("table#existingTable tbody").selectable({
 				filter: 'tr',
 				cancel: 'td.sort'
@@ -69,6 +71,16 @@ function updateExistingTable(){
 
 }
 
+function emptyExistingTable() {
+	//$("#existingTable").dataTable().fnDestroy();
+//$("#existingTable").dataTable().fnClearTable();
+	$("#existingTable").empty();
+     
+    $('#existingTableContainer').empty();
+
+  addExistingTable();
+}
+ 
 /*
  var ann = {
 		image: 'sdfa',
