@@ -697,6 +697,7 @@ $(document).ready(function() {
 	$('#prev').addClass('hidden');
     }, function(username) { // on logout,
 	clog('logged out as '+username);
+	changeImageStatus('new');
 	// erase the username from the workspace
 	$('#workspace').removeData('login'); // FIXME user accessor
 	// and unhide all paging controls
