@@ -133,6 +133,7 @@ def serve_imgdata(imagename=None):
 def serve_image(width=None,imagename=None):
     resolver = app.config[RESOLVER]
     (hit,out) = (resolver[IMAGE].resolve(pid=imagename), None)
+    print hit
     if hit is not None:
         if hit.extension == 'json':
             return Response(app.config[METADATA].json(imagename), mimetype='application/json')

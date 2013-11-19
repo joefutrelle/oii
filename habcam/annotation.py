@@ -46,12 +46,13 @@ class HabcamAnnotationStore(AnnotationStore):
         "List annotations which match the given template (flat dictionary, k/v's in template must match k/v's in candidate"
         where_clauses = []
         where_values = []
-        for k,v in template.items():
-            where_clauses.append(json2db[k]+'=%s')
+        for k,v in template.items():	
+            where_clauses.append(json2db[k]+'~*imageid_repl(%s)')
             where_values.append(v)
         with xa(self.config.psql_connect) as (connection,cursor):
             if(len(where_clauses) > 0):
-                cursor.execute(SELECT_CLAUSE +  'where ' + 'and '.join(where_clauses), tuple(where_values))
+               cursor.execute(SELECT_CLAUSE +  'where ' + 'and '.join(where_clauses), tuple(where_values))
+
             else:
                 cursor.execute(SELECT_CLAUSE)
             for ann in self.__consume(cursor):

@@ -15,7 +15,6 @@
   </resolver>
   <resolver name="jpg">
     <var name="root_suffix">
-      <value>/mnt/rose5/g,jpg</value>
       <value>/mnt/nmfs-2/webdata/HabCam/data/Cruises,Images/Full</value>
       <value>/mnt/habcam-images/Images,</value>
       <value>/mnt/habcam-images3/Images,jpg</value>
@@ -24,6 +23,7 @@
       <value>/mnt/rose6/RSA,jpg</value>
       <value>/mnt/rose6/RSA,</value>
       <value>/mnt/rose6/mosaics,</value>
+     <value>/mnt/rose5/g,jpg</value>
     </var>
     <match var="root_suffix" pattern="(.*),(.*)" groups="root suffix">
       <path var="cruise_dir" match="${root}/*">
