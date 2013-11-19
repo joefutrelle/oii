@@ -715,6 +715,7 @@ $(document).ready(function() {
     // assignment selector
     $('#rightPanel').append('<div><select id="assignment"></select></div>')
         .find('div:last').collapsing('Assignment',1);
+    $('#assignment').append('<option >Pick and Assignment</option>')
     
     // add dominant substrate category picker
     // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
