@@ -30,9 +30,9 @@ import numpy as np
 from scipy.ndimage.filters import convolve
 
 def CONV(i,w):
-    return convolve(i, weights=w, mode='constant')
+    return convolve(i, weights=w, mode='reflect')
 
-def demosaic_bilinear(cfa,pattern='rggb'):
+def demosaic_bilinear(cfa,pattern='rggb',clip=(0.,1.)):
     # pull color channels
     ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
     for c,(y,x) in zip(pattern,[(0,0),(0,1),(1,0),(1, 1)]):
@@ -52,9 +52,9 @@ def demosaic_bilinear(cfa,pattern='rggb'):
     r = np.where(r > 0, r, CONV(r, sintpl))
     g = np.where(g > 0, g, CONV(g, dintpl))
     b = np.where(b > 0, b, CONV(b, sintpl))
-    return np.dstack((r,g,b))
+    return np.dstack((r,g,b)).clip(clip[0],clip[1])
 
-def demosaic_gradient(cfa,pattern='rggb'):
+def demosaic_gradient(cfa,pattern='rggb',clip=(0.,1.)):
     """Based on Laroche-Prescott"""
 
     # pull G channel
@@ -104,89 +104,99 @@ def demosaic_gradient(cfa,pattern='rggb'):
         e[m::2,n::2] = cfa[m::2,n::2]
         rb[ch] = e
     
-    return np.dstack((rb['r'], g, rb['b'])).clip(0.,1.)
+    return np.dstack((rb['r'], g, rb['b'])).clip(clip[0],clip[1])
                   
-def demosaic_hq_linear(cfa,pattern='rggb'):
+def demosaic_hq_linear(cfa,pattern='rggb',clip=(0.,1.)):
     # Malvar et al
-    # pull color channels
-    offsets = [(0,0),(0,1),(1,0),(1,1)]
-    ch = dict((c,np.zeros_like(cfa)) for c in 'rgb')
-    for c,(y,x) in zip(pattern,offsets):
-        ch[c][y::2,x::2] = cfa[y::2,x::2]
-    (R,G,B) = 'rgb'
-    # compute offets of R and B channels
-    rb_offsets = [(c,(m,n)) for c,(m,n) in zip(pattern,offsets) if c in 'rb']
-    g_offsets = [(m,n) for c,(m,n) in zip(pattern,offsets) if c in 'g']
+    # kernel generation from bayer pattern
+    def color_kern(pattern,c):
+        return np.array([[pattern[0]==c, pattern[1]==c],
+                         [pattern[2]==c, pattern[3]==c]])
+    def r_kern(pattern):
+        return color_kern(pattern,'r')
+    def g_kern(pattern):
+        return color_kern(pattern,'g')
+    def b_kern(pattern):
+        return color_kern(pattern,'b')
+    def ratg_rrow_kern(pattern):
+        gk = g_kern(pattern)
+        return gk & np.array([[pattern[1]=='r', pattern[0]=='r'],
+                              [pattern[3]=='r', pattern[2]=='r']])
+    def ratg_rcol_kern(pattern):
+        gk = g_kern(pattern)
+        return gk & np.array([[pattern[2]=='r', pattern[3]=='r'],
+                              [pattern[0]=='r', pattern[1]=='r']])
 
-    # rb at br locations, other color
-    rbk = np.array([[   0, 0, -1.5, 0,    0],
-                    [   0, 0,    0, 0,    0],
-                    [-1.5, 0,    6, 0, -1.5],
-                    [   0, 0,    0, 0,    0],
-                    [   0, 0, -1.5, 0,    0]]) / 8.
-    # rb at br locations, same color
-    brk = np.array([[2, 0, 2],
-                    [0, 0, 0],
-                    [2, 0, 2]]) / 8.
-    # rb at g locations, other color (horizontal)
-    cgck = np.array([[4, 0, 4]]) / 8.
-    cgck_90 = np.rot90(cgck)
-    # rb at g locations, g (horizontal)
-    cgk = np.array([[ 0 , 0, 0.5,  0,  0],
-                    [ 0, -1,   0, -1,  0],
-                    [-1 , 0,   5,  0, -1],
-                    [ 0, -1,   0, -1,  0],
-                    [ 0,  0, 0.5,  0,  0]]) / 8.
-    cgk_90 = np.rot90(cgk)
+    # produce masks
+    (h,w) = cfa.shape[:2]
+    cells = np.ones((h/2,w/2)) # for producing masks
 
-    for c,(i,j) in rb_offsets:
-        for (m,n) in g_offsets:
-            # RB at green pixel
-            wc, wg = (cgck,cgk) if m==i else (cgck_90,cgk_90)
-            ch[c][m::2,n::2] = CONV(ch[c],wc)[m::2,n::2] + CONV(ch[G],wg)[m::2,n::2]
-        # R at B, B at R
-        (k,l) = (1-i, 1-j) # other offsets
-        d = {R:B,B:R}[c] # other channel
-        ch[c][k::2,l::2] = CONV(ch[d],rbk)[k::2,l::2] + CONV(ch[c],brk)[k::2,l::2]
+    r_mask = np.kron(cells, r_kern(pattern))
+    g_mask = np.kron(cells, g_kern(pattern))
+    b_mask = np.kron(cells, b_kern(pattern))
 
-    # estimate green
-    ck = np.array([[0,  0, -1,  0,  0],
-                   [0,  0,  0,  0,  0],
-                   [-1, 0,  4,  0, -1],
-                   [0,  0,  0,  0,  0],
-                   [0,  0, -1,  0,  0]]) / 8.
-    gk = np.array([[0, 2, 0],
-                   [2, 0, 2],
-                   [0, 2, 0]]) / 8.;
+    # construct green channel
+    G = cfa * g_mask
+
+    # interpolate G at RB locations
+    gatrb = np.array([[ 0, 0, -1, 0,  0],
+                      [ 0, 0,  2, 0,  0],
+                      [-1, 2,  4, 2, -1],
+                      [ 0, 0,  2, 0,  0],
+                      [ 0, 0, -1, 0,  0]]) / 8.
+
+    G += CONV(image, gatrb) * (1-g_mask)
+
+    # R and B channels
+    R = cfa * r_mask
+    B = cfa * b_mask
+
+    # interpolate R at B locations and vice versa
+    rbatbr = np.array([[   0, 0, -1.5, 0,    0],
+                       [   0, 2,    0, 2,    0],
+                       [-1.5, 0,    6, 0, -1.5],
+                       [   0, 2,    0, 2,    0],
+                       [   0, 0, -1.5, 0,    0]]) / 8.
+
+    iRB = CONV(image, rbatbr)
+    R += iRB * b_mask
+    B += iRB * r_mask
     
-    gc = CONV(ch[G],gk)
-    for c,(m,n) in rb_offsets:
-        ch[G][m::2,n::2] = CONV(ch[c],ck)[m::2,n::2] + gc[m::2,n::2]
-    
-    rgb = np.dstack(ch[c] for c in 'rgb').clip(0.,1.)
+    # now interpolate R and B at G locations
 
-    return rgb
+    # masks
+    ratg_rrow_mask = np.kron(cells, ratg_rrow_kern(pattern))
+    ratg_rcol_mask = np.kron(cells, ratg_rcol_kern(pattern))
+    batg_brow_mask = ratg_rcol_mask
+    batg_bcol_mask = ratg_rrow_mask
 
-def enborder(cfa,n=2):
-    (h,w) = cfa.shape
-    e = np.zeros((2*n+h,2*n+w))
-    e[n:-n,n:-n] = cfa
-    # now fill border with repeated image edge
-    e[:n,n:-n] = cfa[:n,:]
-    e[-n:,n:-n] = cfa[-n:,:]
-    e[n:-n,:n] = cfa[:,:n]
-    e[n:-n,-n:] = cfa[:,-n:]
-    return e
+    # convolution kernels
+    rbatg_rbrow = np.array([[ 0,  0, 0.5,  0,  0],
+                            [ 0, -1,   0, -1,  0],
+                            [-1,  4,   5,  4, -1],
+                            [ 0, -1,   0, -1,  0],
+                            [ 0,  0, 0.5,  0,  0]]) / 8.
+    rbatg_rbcol = np.rot90(rbatg_rbrow)
 
-def deborder(rgb,n=2):
-    return rgb[n:-n,n:-n,:]
+    # RB at G in RB row, BR column
+    iRB = CONV(image, rbatg_rbrow)
+    R += iRB * ratg_rrow_mask
+    B += iRB * batg_brow_mask
 
-def demosaic(cfa,pattern='rggb',method='hq_linear'):
-    cfa = enborder(cfa)
+    # RB at G in BR row, RB column
+    iRB = CONV(image, rbatg_rbcol)
+    R += iRB * ratg_rcol_mask
+    B += iRB * batg_bcol_mask
+
+    # assemble color image and clip
+    RGB = np.dstack([R,G,B]).clip(clip[0],clip[1])
+    return RGB
+
+def demosaic(cfa,pattern='rggb',method='hq_linear',clip=(0.,1.)):
     if method=='hq_linear':
-        rgb = demosaic_hq_linear(cfa,pattern)
+        rgb = demosaic_hq_linear(cfa,pattern,clip)
     if method=='gradient':
-        rgb = demosaic_gradient(cfa,pattern)
+        rgb = demosaic_gradient(cfa,pattern,clip)
     elif method=='bilinear':
-        rgb = demosaic_bilinear(cfa,pattern)
-    return deborder(rgb)
+        rgb = demosaic_bilinear(cfa,pattern,clip)
+    return rgb
