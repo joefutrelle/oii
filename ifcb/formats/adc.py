@@ -108,6 +108,6 @@ def read_adc(source, target_no=1, limit=-1, schema_version=SCHEMA_VERSION_1):
             yield row
 
 def read_target(source, target_no, schema_version=SCHEMA_VERSION_1):
-    for target in read_adc(source, target_no-1, limit=1, schema_version=schema_version):
+    for target in read_adc(source, target_no, limit=1, schema_version=schema_version):
         return target
     raise KeyError('ADC data not found')
