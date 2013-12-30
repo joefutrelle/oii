@@ -18,7 +18,7 @@ import urllib
 from oii.utils import order_keys, jsons
 from oii.ifcb.formats.adc import read_adc, read_target, ADC
 from oii.ifcb.formats.adc import ADC_SCHEMA, TARGET_NUMBER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED, SCHEMA_VERSION_2
-from oii.ifcb.formats.roi import read_roi, read_rois, ROI
+from oii.ifcb.formats.roi import read_roi, read_rois, ROI, as_pil
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.db import IfcbFeed, IfcbFixity, IfcbAutoclass, IfcbBinProps
 from oii.resolver import parse_stream
@@ -166,7 +166,7 @@ def max_age(ttl=None):
 def image_response(image,format,mimetype):
     """Construct a Flask Response object for the given image, PIL format, and MIME type."""
     buf = StringIO()
-    im = image.save(buf,format)
+    im = as_pil(image).save(buf,format)
     return Response(buf.getvalue(), mimetype=mimetype)
 
 def resolve_pid(pid):
@@ -465,7 +465,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         for tile in layout:
             target = tile.image
             # FIXME use fast stitching
-            tile.image = get_fast_stitched_roi(hit.bin_pid, target[TARGET_NUMBER])
+            tile.image = as_pil(get_fast_stitched_roi(hit.bin_pid, target[TARGET_NUMBER]))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
     (pil_format, mimetype) = image_types(hit)

@@ -4,6 +4,7 @@ from scipy import interpolate
 from math import sqrt
 from PIL import Image, ImageChops, ImageDraw
 from oii.ifcb.formats.adc import TRIGGER, LEFT, BOTTOM, WIDTH, HEIGHT, STITCHED
+from oii.ifcb.formats.roi import as_pil
 
 def overlaps(t1, t2):
     if t1[TRIGGER] == t2[TRIGGER]:
@@ -110,13 +111,14 @@ def stitch_raw(targets,images,box=None,background=0):
     # now we swap width and height to rotate the image 90 degrees
     s = Image.new('L',(h,w),background) # the stitched image with a missing region
     for (roi,image) in zip(targets,images):
+        image = as_pil(image)
         rx = roi[LEFT] - x
         ry = roi[BOTTOM] - y
         rw = roi[WIDTH]
         rh = roi[HEIGHT]
         roi_box = (ry, rx, ry + rh, rx + rw)
         s.paste(image, roi_box) # paste in the right location
-    return s
+    return np.array(s)
 
 def edges_mask(targets,images):
     # compute bounds relative to the camera field
@@ -164,7 +166,7 @@ def stitch(targets,images):
     (x,y,w,h) = stitched_box(targets)
     # note that w and h are switched from here on out to rotate 90 degrees.
     # step 1: compute masks
-    s = stitch_raw(targets,images,(x,y,w,h)) # stitched ROI's with black gaps
+    s = as_pil(stitch_raw(targets,images,(x,y,w,h))) # stitched ROI's with black gaps
     rois_mask = mask(targets) # a mask of where the ROI's are
     gaps_mask = ImageChops.invert(rois_mask) # its inverse is where the gaps are
     edges = edges_mask(targets,images) # edges are pixels along the ROI edges
@@ -221,7 +223,7 @@ def stitch(targets,images):
         noise_pix[x,y] = r + (gaussian[x,y] * std_dev)
     # step 6: final composite
     s.paste(noise,None,gaps_mask)
-    return (s,rois_mask)
+    return (np.array(s),rois_mask)
 
 def list_stitched_targets(targets):
     """Adjust a list of targets for stitching"""

@@ -16,7 +16,7 @@ from oii.iopipes import LocalFileSource, StagedInputFile, UrlSource, LocalFileSi
 from oii.ifcb.formats.adc import read_adc, ADC_SCHEMA, TARGET_NUMBER, SCHEMA_VERSION_2
 from oii.ifcb.formats.hdr import read_hdr, HDR, CONTEXT, HDR_SCHEMA
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
-from oii.ifcb.formats.roi import read_roi, read_rois, ROI
+from oii.ifcb.formats.roi import read_roi, read_rois, ROI, as_pil
 
 """This module provides representations of various IFCB data types, mostly for the purpose
 of serializing that data to a web client."""
@@ -31,7 +31,8 @@ def add_bin_pid(targets, bin_pid):
     return targets
 
 def im2bytes(im):
-    """Convert a PIL Image to a bytearray"""
+    """Convert a numpy uint8 array to a bytearray"""
+    im = as_pil(im)
     buf = BytesIO()
     with tempfile.SpooledTemporaryFile() as imtemp:
         im.save(imtemp,'PNG')
