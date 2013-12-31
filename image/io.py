@@ -1,9 +1,23 @@
 import re
 
+import numpy as np
+from PIL import Image
+
 from skimage import img_as_float
 from skimage import io
 
 from oii.iopipes import UrlSource, StagedInputFile
+
+"""Image conversion utilities"""
+
+def as_pil(array_or_image):
+    try:
+        return Image.fromarray(array_or_image)
+    except:
+        return array_or_image
+
+def as_numpy(array_or_image):
+    return np.array(array_or_image)
 
 """Image I/O utilities"""
 
