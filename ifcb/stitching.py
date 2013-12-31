@@ -45,6 +45,7 @@ def mv(eh):
 
 # FIXME this is still too sensitive to lower modes
 def bright_mv(image,mask=None):
+    mask = as_pil(mask)
     eh = image.histogram(mask)
     # toast extrema
     return bright_mv_hist(eh)
@@ -100,7 +101,7 @@ def mask(targets):
         rx = target[LEFT] - x
         ry = target[BOTTOM] - y
         mask.paste(255, (ry, rx, ry + target[HEIGHT], rx + target[WIDTH]))
-    return mask
+    return np.array(mask)
 
 # stitch with no noise fill
 def stitch_raw(targets,images,box=None,background=0):
@@ -167,7 +168,7 @@ def stitch(targets,images):
     # note that w and h are switched from here on out to rotate 90 degrees.
     # step 1: compute masks
     s = as_pil(stitch_raw(targets,images,(x,y,w,h))) # stitched ROI's with black gaps
-    rois_mask = mask(targets) # a mask of where the ROI's are
+    rois_mask = as_pil(mask(targets)) # a mask of where the ROI's are
     gaps_mask = ImageChops.invert(rois_mask) # its inverse is where the gaps are
     edges = edges_mask(targets,images) # edges are pixels along the ROI edges
     # step 2: estimate background from edges

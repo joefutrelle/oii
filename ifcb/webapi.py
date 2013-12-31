@@ -25,6 +25,7 @@ from oii.resolver import parse_stream
 from oii.ifcb import stitching
 from oii.ifcb import represent
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
+from oii.ifcb.joestitch import stitch as joe_stitch
 from oii.iopipes import UrlSource, LocalFileSource
 from oii.image.pil.utils import filename2format, thumbnail
 from oii.image import mosaic
@@ -592,6 +593,8 @@ def resolve(pid):
         hit.target_no = int(hit.target) # parse target number
         if major_type(mimetype) == 'image': # need an image?
             mask = False
+            if hit.product == 'stitch2':
+                return serve_roi(hit, mask=None, stitch_version=2)
             if hit.product == 'mask':
                 mask = True
             return serve_roi(hit, mask=mask) # serve it, or its mask
@@ -712,21 +715,21 @@ def image_types(hit):
     (mimetype, _) = mimetypes.guess_type(filename)
     return (pil_format, mimetype)
 
-def get_stitched_roi(bin_pid, target_no, mask=False):
-    return get_roi_image(bin_pid, target_no, mask=mask)
+def get_stitched_roi(bin_pid, target_no, mask=False, stitch_version=1):
+    return get_roi_image(bin_pid, target_no, mask=mask, stitch_version=stitch_version)
 
 def get_fast_stitched_roi(bin_pid, target_no):
     return get_roi_image(bin_pid, target_no, True)
 
-def get_roi_image(bin_pid, target_no, fast_stitching=False, mask=False):
+def get_roi_image(bin_pid, target_no, fast_stitching=False, mask=False, stitch_version=1):
     """Serve a stitched ROI image given the output of the pid resolver"""
     # resolve the ADC and ROI files
     hit = resolve_pid(pid=bin_pid)
     schema_version = hit.schema_version
     (adc_path, roi_path) = resolve_files(bin_pid, (ADC, ROI))
-    return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching, mask)
+    return get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching, mask, stitch_version)
 
-def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False, mask=False):
+def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target_no, fast_stitching=False, mask=False, stitch_version=1):
     to_stitch = app.config[STITCH]
     if to_stitch:
         offset=max(1,target_no-1)
@@ -753,8 +756,10 @@ def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target
                 roi_image = stitching.mask((a,b))
             elif fast_stitching:
                 roi_image = stitch_raw((a,b), images, background=180)
-            else:
+            elif stitch_version == 1:
                 (roi_image, mask) = stitch((a,b), images) # stitch them
+            elif stitch_version == 2:
+                (roi_image, mask) = joe_stitch((a,b), images)
         else:
             # now check that the target number is correct
             for target in targets:
@@ -763,9 +768,9 @@ def get_roi_image_from_files(schema_version, adc_path, roi_path, bin_pid, target
                     roi_image = images[0]
         return roi_image
 
-def serve_roi(hit,mask=False):
+def serve_roi(hit,mask=False, stitch_version=1):
     """Serve a stitched ROI image given the output of the pid resolver"""
-    roi_image = get_stitched_roi(hit.bin_pid, hit.target_no, mask=mask)
+    roi_image = get_stitched_roi(hit.bin_pid, hit.target_no, mask=mask, stitch_version=stitch_version)
     if roi_image is None:
         abort(404)
     # now determine PIL format and MIME type
