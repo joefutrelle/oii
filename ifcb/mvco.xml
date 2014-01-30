@@ -9,7 +9,9 @@
       <value>ditylum,Ditylum</value>
       <value>OkeanosExplorerAug2013_IFCB014,OkeanosExplorerAug2013_IFCB014</value>
       <value>OkeanosExplorerAug2013_IFCB010,OkeanosExplorerAug2013_IFCB010</value>
+      <value>OkeanosExplorerNov2013_IFCB101,OkeanosExplorerNov2013_IFCB101</value>
       <value>TaraOceansPolarCircle_IFCB013,TaraOceansPolarCircle</value>
+      <value>IFCB101_GEOCAPE_GOMEX2013,IFCB101_GEOCAPE_GOMEX2013</value>
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
@@ -59,7 +61,17 @@
       <var name="dbname">${time_series}</var>
       <hit/>
     </match>
+    <match var="time_series" value="OkeanosExplorerNov2013_IFCB101">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
     <match var="time_series" value="TaraOceansPolarCircle_IFCB013">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="IFCB101_GEOCAPE_GOMEX2013">
       <var name="title">${bot_name} @ ${time_series}</var>
       <var name="dbname">${time_series}</var>
       <hit/>
@@ -175,7 +187,29 @@
 	<hit name="root">/mnt/${time_series}/features</hit>
       </match>
     </match>
+    <match var="time_series" value="OkeanosExplorerNov2013_IFCB101">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/${time_series}</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">/mnt/${time_series}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">/mnt/${time_series}/features</hit>
+      </match>
+    </match>
     <match var="time_series" value="TaraOceansPolarCircle_IFCB013">
+      <match var="product" value="raw">
+	<hit name="root">/mnt/${time_series}</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">/mnt/${time_series}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">/mnt/${time_series}/features</hit>
+      </match>
+    </match>
+    <match var="time_series" value="IFCB101_GEOCAPE_GOMEX2013">
       <match var="product" value="raw">
 	<hit name="root">/mnt/${time_series}</hit>
       </match>
