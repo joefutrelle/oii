@@ -13,7 +13,7 @@ def scaling_noise(shape,seed=None):
     out = np.zeros(shape,np.float)
     p = ceil(log(max(shape),2))
     random = RandomState(seed)
-    for scale in np.power(2,np.arange(1,p)):
+    for scale in np.power(2,np.arange(1,p+1)):
         noise = random.random_sample((scale,scale)) - 0.5
         out += (zoom(noise,(2**p)/scale) / scale)[:h,:w]
     out += 0.5
