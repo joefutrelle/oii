@@ -140,7 +140,7 @@ def serve_image(width=None,imagename=None):
         fin = hit.value
         (format, mimetype) = image_types(hit.filename)
         if hit.product is None:
-            out = img_as_float(imread(fin))
+            out = img_as_float(imread(fin,plugin='freeimage'))
     if out is None:
         if hit.product == 'rgb_illum_LR':
             out = rgb_illum_LR(fin)
