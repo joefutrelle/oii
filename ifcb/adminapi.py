@@ -1,7 +1,10 @@
+from os import listdir
+from os.path import isdir
 from flask import Flask, jsonify, abort, request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import validates
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -53,6 +56,13 @@ class SystemPath(Base):
     def serialize(self):
         return self.path
 
+    @validates('path')
+    def validate_path(self, key, path):
+        # improve later
+        if not isdir(path):
+            raise ValueError('directory path is not readable on system')
+        return path
+
     def __repr__(self):
         return "<SystemPath(path='%s')>" % self.path
 
@@ -92,7 +102,6 @@ def get_timeseries(timeseries_id):
 @app.route(BASEPATH + '/timeseries', methods = ['POST'])
 # create timeseries configuration
 def create_timeseries():
-    print request.json
     if not request.json:
         abort(400)
     if not 'name' in request.json or not 'enabled' in request.json:
@@ -104,10 +113,15 @@ def create_timeseries():
     session.add(ts)
     if 'systempaths' in request.json:
         for np in request.json['systempaths']:
-            ts.systempaths.append(SystemPath(path = np))
+            try:
+                ts.systempaths.append(SystemPath(path = np))
+            except:
+                session.rollback()
+                abort(400)
     try:
         session.commit()
     except:
+        # something went wrong. rollback and report 400
         session.rollback()
         abort(400)
     return jsonify(timeseries=ts.serialize)
@@ -133,10 +147,15 @@ def update_timeseries(timeseries_id):
                 session.delete(ep)
         for np in request.json['systempaths']:
             if np not in eps:
-                ts.systempaths.append(SystemPath(path = np))
+                try:
+                    ts.systempaths.append(SystemPath(path = np))
+                except:
+                    session.rollback()
+                    abort(400)
     try:
         session.commit()
     except:
+        # something went wrong. rollback and report 400
         session.rollback()
         abort(400)
     return jsonify(timeseries=ts.serialize)
@@ -150,6 +169,7 @@ def delete_timeseries(timeseries_id):
     try:
         session.delete(ts)
     except:
+        # something went wrong. rollback and report 400
         session.rollback()
         abort(400)
     return jsonify( { 'result': True } )
@@ -158,7 +178,7 @@ def delete_timeseries(timeseries_id):
 if __name__=='__main__':
     Base.metadata.create_all(dbengine)
     ts = TimeSeries(name = 'testseries1',enabled = False)
-    path = SystemPath(path = '/foo/foo')
+    path = SystemPath(path = '/Users/marknye')
     ts.systempaths.append(path)
     session.add(ts)
     session.commit()
