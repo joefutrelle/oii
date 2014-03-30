@@ -21,7 +21,7 @@ class TimeSeries(Base):
 
     __tablename__ = 'timeseries'
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     enabled = Column(Boolean)
 
     @property
@@ -29,8 +29,13 @@ class TimeSeries(Base):
         return {
             'id': self.id,
             'name': self.name,
-            'enabled': self.enabled
+            'enabled': self.enabled,
+            'systempaths':self.serialize_paths
         }
+
+    @property
+    def serialize_paths(self):
+        return [ i.serialize for i in self.systempaths]
 
     def __repr__(self):
         return "<TimeSeries(name='%s')>" % self.name
@@ -40,10 +45,13 @@ class SystemPath(Base):
     __tablename__ = 'systempaths'
     id = Column(Integer, primary_key=True)
     timeseries_id = Column(Integer, ForeignKey('timeseries.id'))
-    path = Column(String)
-
+    path = Column(String, unique=True)
     timeseries = relationship("TimeSeries",
-        backref=backref('systempaths', order_by=id))
+        backref=backref('systempaths', cascade="all, delete-orphan", order_by=id))
+
+    @property
+    def serialize(self):
+        return self.path
 
     def __repr__(self):
         return "<SystemPath(path='%s')>" % self.path
@@ -94,9 +102,12 @@ def create_timeseries():
         enabled = request.json['enabled']
         )
     session.add(ts)
+    if 'systempaths' in request.json:
+        for np in request.json['systempaths']:
+            ts.systempaths.append(SystemPath(path = np))
     try:
         session.commit()
-    except IntegrityError:
+    except:
         session.rollback()
         abort(400)
     return jsonify(timeseries=ts.serialize)
@@ -114,9 +125,18 @@ def update_timeseries(timeseries_id):
         ts.name = request.json['name']
     if 'enabled' in request.json:
         ts.enabled = request.json['enabled']
+    if 'systempaths' in request.json:
+        # sync paths
+        eps = [ep.path for ep in ts.systempaths]
+        for ep in ts.systempaths:
+            if ep.path not in request.json['systempaths']:
+                session.delete(ep)
+        for np in request.json['systempaths']:
+            if np not in eps:
+                ts.systempaths.append(SystemPath(path = np))
     try:
         session.commit()
-    except IntegrityError:
+    except:
         session.rollback()
         abort(400)
     return jsonify(timeseries=ts.serialize)
@@ -137,9 +157,9 @@ def delete_timeseries(timeseries_id):
 
 if __name__=='__main__':
     Base.metadata.create_all(dbengine)
-    session.add(
-        TimeSeries(
-            name = 'testseries1',
-            enabled = False))
+    ts = TimeSeries(name = 'testseries1',enabled = False)
+    path = SystemPath(path = '/foo/foo')
+    ts.systempaths.append(path)
+    session.add(ts)
     session.commit()
     app.run(host='0.0.0.0',port=8080,threaded=False)
