@@ -1,17 +1,17 @@
-from flask import Flask, jsonify, abort
+from flask import Flask, jsonify, abort, request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.exc import IntegrityError
 
 # IFCB restful configuration API
 # written by Mark Nye (marknye@clubofhumanbeings.com), March 2014
 
 # config (refactor later)
 BASEPATH = '/admin/api/v1.0'
-DBENGINE = 'sqlite:///:memory:'
 
 # configuration database mapping
 # this will also need to be refactored, but keep in one file for now
@@ -27,13 +27,13 @@ class TimeSeries(Base):
     @property
     def serialize(self):
         return {
-            id: self.id,
-            name: self.name,
-            enabled: self.enabled
+            'id': self.id,
+            'name': self.name,
+            'enabled': self.enabled
         }
 
     def __repr__(self):
-        return "<TimeSeries(name='%s')" % self.name
+        return "<TimeSeries(name='%s')>" % self.name
 
 class SystemPath(Base):
 
@@ -46,7 +46,7 @@ class SystemPath(Base):
         backref=backref('systempaths', order_by=id))
 
     def __repr__(self):
-        return "<SystemPath(path='%s')" % self.path
+        return "<SystemPath(path='%s')>" % self.path
 
 
 def validate_path(path):
@@ -57,9 +57,13 @@ app = Flask(__name__)
 app.debug = True
 
 # create db engine and database session
-dbengine = create_engine(DBENGINE, echo=True)
-Session = sessionmaker(bind=dbengine)
 # do something better here later
+from sqlalchemy.pool import StaticPool
+dbengine = create_engine('sqlite://',
+                    connect_args={'check_same_thread':False},
+                    poolclass=StaticPool,
+                    echo=True)
+Session = sessionmaker(bind=dbengine)
 session = Session()
 
 
@@ -67,29 +71,75 @@ session = Session()
 # return all timeseries configurations
 def get_timeseries_list():
     return jsonify(
-        json_list=[i.serialize for i in session.query(TimeSeries).all()])
+        timeseries=[i.serialize for i in session.query(TimeSeries).all()])
 
 @app.route(BASEPATH + '/timeseries/<int:timeseries_id>', methods = ['GET'])
 # return select timeseries configuration
 def get_timeseries(timeseries_id):
-    pass
+    ts = session.query(TimeSeries).filter_by(id=timeseries_id).one()
+    if not ts:
+        abort(404)
+    return jsonify(timeseries=ts.serialize)
 
 @app.route(BASEPATH + '/timeseries', methods = ['POST'])
 # create timeseries configuration
 def create_timeseries():
-    pass
+    print request.json
+    if not request.json:
+        abort(400)
+    if not 'name' in request.json or not 'enabled' in request.json:
+        abort(400)
+    ts = TimeSeries(
+        name = request.json['name'],
+        enabled = request.json['enabled']
+        )
+    session.add(ts)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        abort(400)
+    return jsonify(timeseries=ts.serialize)
+
 
 @app.route(BASEPATH + '/timeseries/<int:timeseries_id>', methods = ['PUT'])
 # update timeseries configuration
-def update_timeseries():
-    pass
+def update_timeseries(timeseries_id):
+    if not request.json:
+        abort(400)
+    ts = session.query(TimeSeries).filter_by(id=timeseries_id).one()
+    if not ts:
+        abort(404)
+    if 'name' in request.json:
+        ts.name = request.json['name']
+    if 'enabled' in request.json:
+        ts.enabled = request.json['enabled']
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        abort(400)
+    return jsonify(timeseries=ts.serialize)
 
 @app.route(BASEPATH + '/timeseries/<int:timeseries_id>', methods = ['DELETE'])
 # delete timeseries configuration
-def delete_timeseries():
-    pass
+def delete_timeseries(timeseries_id):
+    ts = session.query(TimeSeries).filter_by(id=timeseries_id).one()
+    if not ts:
+        abort(404)
+    try:
+        session.delete(ts)
+    except:
+        session.rollback()
+        abort(400)
+    return jsonify( { 'result': True } )
 
 
 if __name__=='__main__':
     Base.metadata.create_all(dbengine)
-    app.run(host='0.0.0.0',port=8080)
+    session.add(
+        TimeSeries(
+            name = 'testseries1',
+            enabled = False))
+    session.commit()
+    app.run(host='0.0.0.0',port=8080,threaded=False)
