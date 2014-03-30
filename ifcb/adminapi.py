@@ -24,6 +24,14 @@ class TimeSeries(Base):
     name = Column(String)
     enabled = Column(Boolean)
 
+    @property
+    def serialize(self):
+        return {
+            id: self.id,
+            name: self.name,
+            enabled: self.enabled
+        }
+
     def __repr__(self):
         return "<TimeSeries(name='%s')" % self.name
 
@@ -51,12 +59,15 @@ app.debug = True
 # create db engine and database session
 dbengine = create_engine(DBENGINE, echo=True)
 Session = sessionmaker(bind=dbengine)
+# do something better here later
+session = Session()
 
 
 @app.route(BASEPATH + '/timeseries', methods = ['GET'])
 # return all timeseries configurations
 def get_timeseries_list():
-    pass
+    return jsonify(
+        json_list=[i.serialize for i in session.query(TimeSeries).all()])
 
 @app.route(BASEPATH + '/timeseries/<int:timeseries_id>', methods = ['GET'])
 # return select timeseries configuration
