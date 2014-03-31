@@ -104,3 +104,5 @@ class TimeSeriesAdminAPI(MethodView):
             session.rollback()
             abort(400)
         return jsonify( { 'result': True } )
+
+

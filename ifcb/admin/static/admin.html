@@ -1,0 +1,17 @@
+<!doctype html>
+<html ng-app>
+    <head>
+        <title>Hello AngularJS</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
+        <script src="js/timeseries.js"></script>
+    </head>
+
+    <body>
+        <div ng-controller="TimeSeries">
+        <div ng-repeat="ts in timeseries">
+            <p>The ID is {{ts.id}}</p>
+            <p>The Name is {{ts.name}}</p>
+        </div>
+        </div>
+    </body>
+</html>

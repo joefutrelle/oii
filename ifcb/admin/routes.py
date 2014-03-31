@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from handlers import TimeSeriesAdminAPI
 
 # create flask app
@@ -8,8 +8,16 @@ app.debug = True
 # config (refactor later)
 BASEPATH = '/admin/api/v1.0'
 
+# add static files
+@app.route('/admin/<path:filename>')
+def serve_static(filename):
+    #FIX HARDCODED PATH!
+    return send_from_directory('/Users/marknye/Desktop/oii/ifcb/admin/static', filename)
+
+
 # configure routes
 timeseries_view = TimeSeriesAdminAPI.as_view('timeseries_api')
+
 app.add_url_rule(
     BASEPATH + '/timeseries/',
     defaults={'timeseries_id': None},
