@@ -1,5 +1,6 @@
 from flask import Flask, send_from_directory
 from handlers import TimeSeriesAdminAPI
+import os
 
 # create flask app
 app = Flask(__name__)
@@ -11,8 +12,10 @@ BASEPATH = '/admin/api/v1.0'
 # add static files
 @app.route('/admin/<path:filename>')
 def serve_static(filename):
-    #FIX HARDCODED PATH!
-    return send_from_directory('/Users/marknye/Desktop/oii/ifcb/admin/static', filename)
+    # set path to static content dynamically
+    # this may need to change later
+    fp = "%s/static" % os.path.dirname(os.path.realpath(__file__))
+    return send_from_directory(fp, filename)
 
 
 # configure routes
