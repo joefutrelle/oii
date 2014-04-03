@@ -29,7 +29,7 @@ class TimeSeriesAdminAPI(MethodView):
         if not ts.has_key('id'):
             return ts
         ts['uri'] = url_for(
-            'timeseries', timeseries_id=ts['id'], _external=True)
+            'adminapi.timeseries', timeseries_id=ts['id'], _external=True)
         ts.pop('id')
         return ts
 

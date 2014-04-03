@@ -1,17 +1,20 @@
 import os
 
-from flask import Flask, send_from_directory
+from flask import Flask, Blueprint, send_from_directory
 from handlers import TimeSeriesAdminAPI
 
 from config import BASEPATH
-
 
 # create flask app
 app = Flask(__name__)
 app.debug = True
 
+# create blueprints
+adminapi = Blueprint('adminapi', __name__, url_prefix=BASEPATH)
+adminstatic = Blueprint('adminstatic', __name__)
+
 # add static files
-@app.route('/admin/<path:filename>')
+@adminstatic.route('/admin/<path:filename>')
 def serve_static(filename):
     # set path to static content dynamically
     # this may need to change later
@@ -19,20 +22,20 @@ def serve_static(filename):
     return send_from_directory(fp, filename)
 
 
-# configure routes
+# build api view
 timeseries_view = TimeSeriesAdminAPI.as_view('timeseries_api')
 
-app.add_url_rule(
-    BASEPATH + '/timeseries/',
+adminapi.add_url_rule(
+    '/timeseries/',
     defaults={'timeseries_id': None},
     view_func=timeseries_view,
     methods=['GET',])
-app.add_url_rule(
-    BASEPATH + '/timeseries/',
+adminapi.add_url_rule(
+    '/timeseries/',
     view_func=timeseries_view,
     methods=['POST',])
-app.add_url_rule(
-    BASEPATH + '/timeseries/<int:timeseries_id>',
+adminapi.add_url_rule(
+    '/timeseries/<int:timeseries_id>',
     view_func=timeseries_view,
     methods=['GET', 'PUT', 'DELETE'],
     endpoint='timeseries')
@@ -49,4 +52,7 @@ if __name__=='__main__':
     ts.systempaths.append(path)
     session.add(ts)
     session.commit()
+    app.register_blueprint(adminapi)
+    app.register_blueprint(adminstatic)
+    print app.url_map
     app.run(host='0.0.0.0',port=8080,threaded=False)
