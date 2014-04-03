@@ -1,13 +1,14 @@
+import os
+
 from flask import Flask, send_from_directory
 from handlers import TimeSeriesAdminAPI
-import os
+
+from config import BASEPATH
+
 
 # create flask app
 app = Flask(__name__)
 app.debug = True
-
-# config (refactor later)
-BASEPATH = '/admin/api/v1.0'
 
 # add static files
 @app.route('/admin/<path:filename>')
@@ -33,7 +34,8 @@ app.add_url_rule(
 app.add_url_rule(
     BASEPATH + '/timeseries/<int:timeseries_id>',
     view_func=timeseries_view,
-    methods=['GET', 'PUT', 'DELETE'])
+    methods=['GET', 'PUT', 'DELETE'],
+    endpoint='timeseries')
 
 
 if __name__=='__main__':

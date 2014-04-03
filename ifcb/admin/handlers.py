@@ -1,7 +1,8 @@
-from flask import jsonify, abort, request
+from flask import jsonify, abort, request, url_for
 from flask.views import MethodView
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+
 from models import TimeSeries, SystemPath
 
 # IFCB restful configuration API
@@ -22,17 +23,27 @@ session = Session()
 class TimeSeriesAdminAPI(MethodView):
     "RESTful admin API for timeseries configurations"
 
+    def _idToUri(self, ts):
+        """Takes serialized TimeSeries instance. Returns instance with
+        database ID replaced with usable URI."""
+        if not ts.has_key('id'):
+            return ts
+        ts['uri'] = url_for(
+            'timeseries', timeseries_id=ts['id'], _external=True)
+        ts.pop('id')
+        return ts
+
     def get(self, timeseries_id):
         if timeseries_id is None:
             "return all timeseries configurations"
             return jsonify(
-                timeseries=[i.serialize for i in session.query(TimeSeries).all()])
+                timeseries=[self._idToUri(i.serialize) for i in session.query(TimeSeries).all()])
         else:
             "return a single timeseries configuration"
             ts = session.query(TimeSeries).filter_by(id=timeseries_id).one()
             if not ts:
                 abort(404)
-            return jsonify(timeseries=ts.serialize)
+            return jsonify(timeseries=self._idToUri(ts.serialize))
 
     def post(self):
         "create a new timeseries configuration"
@@ -58,7 +69,7 @@ class TimeSeriesAdminAPI(MethodView):
             # something went wrong. rollback and report 400
             session.rollback()
             abort(400)
-        return jsonify(timeseries=ts.serialize)
+        return jsonify(timeseries=self._idToUri(ts.serialize))
 
     def put(self, timeseries_id):
         "update existing timeseries configuration"
@@ -90,7 +101,7 @@ class TimeSeriesAdminAPI(MethodView):
             # something went wrong. rollback and report 400
             session.rollback()
             abort(400)
-        return jsonify(timeseries=ts.serialize)
+        return jsonify(timeseries=self._idToUri(ts.serialize))
 
     def delete(self, timeseries_id):
         "delete timeseries configuration"
@@ -104,5 +115,4 @@ class TimeSeriesAdminAPI(MethodView):
             session.rollback()
             abort(400)
         return jsonify( { 'result': True } )
-
 
