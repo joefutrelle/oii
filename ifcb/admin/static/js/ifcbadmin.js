@@ -1,10 +1,13 @@
 
 
-var ifcbAdmin = angular.module('ifcbAdmin', []);
+// create AngularJS application
+var ifcbAdmin = angular.module('ifcbAdmin', ['ngRoute']);
 
+// application controllers container
+var controllers = {};
 
-
-ifcbAdmin.controller('TimeSeriesController', function($scope) {
+// time series controller
+controllers.TimeSeriesController = function($scope) {
 
     $scope.timeseries = [
         {
@@ -17,4 +20,42 @@ ifcbAdmin.controller('TimeSeriesController', function($scope) {
         }
     ];
 
-});
+};
+
+// users controller
+controllers.UsersController = function($scope) {
+
+    $scope.users = [];
+}
+
+// my account controller
+controllers.MyAccountController = function($scope) {
+
+    $scope.myaccount = [];
+}
+
+// bind controllers to application
+ifcbAdmin.controller(controllers);
+
+// define application routes
+ifcbAdmin.config(['$routeProvider', function($routeProvider) {
+    $routeProvider.
+        when('/', {
+            controller: 'TimeSeriesController',
+            templateUrl: 'views/TimeSeries.html'
+            }).
+        when('/users', {
+            controller: 'UsersController',
+            templateUrl: 'views/Users.html'
+            }).
+        when('/myaccount', {
+            controller: 'MyAccountController',
+            templateUrl: 'views/MyAccount.html'
+            }).
+        otherwise({
+            redirectTo: '/'
+        });
+}]);
+
+
+
