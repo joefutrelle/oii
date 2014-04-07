@@ -40,7 +40,7 @@ ifcbAdmin.controller(controllers);
 // define application routes
 ifcbAdmin.config(['$routeProvider', function($routeProvider) {
     $routeProvider.
-        when('/', {
+        when('/timeseries', {
             controller: 'TimeSeriesController',
             templateUrl: 'views/TimeSeries.html'
             }).
@@ -53,7 +53,7 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             templateUrl: 'views/MyAccount.html'
             }).
         otherwise({
-            redirectTo: '/'
+            redirectTo: '/timeseries'
         });
 }]);
 
