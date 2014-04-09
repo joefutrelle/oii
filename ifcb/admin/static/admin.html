@@ -6,6 +6,7 @@
         <link rel="stylesheet" href="css/local.css">
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular-route.min.js"></script>
+        <script src="js/lodash.min.js"></script>
         <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/restangular/1.2.2/restangular.min.js"></script>
         <script src="js/ifcbadmin.js"></script>
     </head>
@@ -45,15 +46,13 @@
               <ul class="nav nav-sidebar">
                 <li ng-class="{ active: isCurrentPath('/timeseries') }"><a href="#/timeseries">Time Series</a></li>
                 <li ng-class="{ active: isCurrentPath('/users') }"><a href="#/users">Users</a></li>
-                <li ng-class="{ active: isCurrentPath('/myaccount') }"><a href="#/myaccount">MyAccount</a></li>
+                <li ng-class="{ active: isCurrentPath('/myaccount') }"><a href="#/myaccount">My Account</a></li>
               </ul>
           </div>
           <!-- end side navbar -->
 
           <!-- start main page content -->
           <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-            <h1 class="page-header">Dashboard</h1>
-
 
             <!-- start template -->
             <div data-ng-view=""></div>

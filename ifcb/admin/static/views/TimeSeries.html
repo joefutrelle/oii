@@ -1,6 +1,44 @@
-<div class="container">
-    <div data-ng-repeat="ts in timeseries">
-        <p>The URI is {{ts.url}}</p>
-        <p>The Name is {{ts.name}}</p>
+
+<div ng-controller="TimeSeriesCtrl">
+<h1 class="page-header">Time Series Groups</h1>
+
+<div class="list-group">
+    <div class="list-group-item" data-ng-repeat="ts in timeseries">
+        <!-- time series display view -->
+        <div ng-if="!ts.edit">
+        <button type="button" class="btn pull-right" ng-click="editTimeSeries(ts)">Edit</button>
+        <h4 class="list-group-item-heading">{{ ts.name }}</h4>
+        <p class="list-group-item-text" data-ng-repeat="path in ts.systempaths">
+            {{ path.path }}
+        </p>
+        </div>
+        <!-- time series edit view -->
+        <div ng-if="ts.edit">
+        <button type="button" class="btn pull-right" ng-click="saveTimeSeries(ts)">Save</button>
+        <h4 class="list-group-item-heading">
+            <input ng-model="ts.name">
+        </h4>
+        <p class="list-group-item-text" data-ng-repeat="path in ts.systempaths">
+            <input ng-model="path.path">
+        </p>
+        </div>
     </div>
 </div>
+
+<button type="button" class="btn btn-primary">Add New Time Series</button>
+<p><pre>timeseries = {{timeseries | json}}</pre></p>
+</div>
+
+<!-- <div class="container">
+    <div data-ng-repeat="ts in timeseries">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">{{ts.name}}</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+        </div>
+    </div>
+</div> -->
+

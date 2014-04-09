@@ -94,3 +94,8 @@ body {
   display: inline-block;
   border-radius: 50%;
 }
+
+.list-group-item-text {
+  padding-left: 10px;
+  padding-bottom: 3px;
+}
