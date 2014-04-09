@@ -6,6 +6,13 @@ var ifcbAdmin = angular.module('ifcbAdmin', ['ngRoute']);
 // application controllers container
 var controllers = {};
 
+// nav controller
+ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope, $location) {
+    $scope.isCurrentPath = function (path) {
+      return $location.path() == path;
+    };
+  }]);
+
 // time series controller
 controllers.TimeSeriesController = function($scope) {
 
@@ -19,7 +26,6 @@ controllers.TimeSeriesController = function($scope) {
             "uri": "http://localhost:8080/admin/api/v1.0/timeseries/1"
         }
     ];
-
 };
 
 // users controller

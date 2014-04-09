@@ -1,17 +1,41 @@
 <!doctype html>
 <html data-ng-app="ifcbAdmin">
     <head>
-        <title>Hello AngularJS</title>
+        <title>IFCB Admin</title>
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+        <link rel="stylesheet" href="css/local.css">
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular-route.min.js"></script>
+        <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/restangular/1.2.2/restangular.min.js"></script>
         <script src="js/ifcbadmin.js"></script>
     </head>
     <body>
-        <div>
-        <a href="#/timeseries">Time Series</a> |
-        <a href="#/users">Users</a> |
-        <a href="#/myaccount">MyAccount</a>
+
+        <nav class="navbar navbar-default" role="navigation" ng-controller="NavigationCtrl">
+        <div class="container-fluid">
+
+        <div class="navbar-header">
+            <div class="navbar-brand" href="#">IFCB Admin</div>
         </div>
+
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li ng-class="{ active: isCurrentPath('/timeseries') }"><a href="#/timeseries">Time Series</a></li>
+                <li ng-class="{ active: isCurrentPath('/users') }"><a href="#/users">Users</a></li>
+                <li ng-class="{ active: isCurrentPath('/myaccount') }"><a href="#/myaccount">MyAccount</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </div>
+
+        {{activePath}}
+
+        </div> <!-- end container-fluid-->
+        </nav>
+
         <div data-ng-view=""></div>
+
     </body>
 </html>
