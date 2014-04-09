@@ -19,13 +19,13 @@
             <input ng-model="ts.name">
         </h4>
         <p class="list-group-item-text" data-ng-repeat="path in ts.systempaths">
-            <input ng-model="path.path">
+            <input ng-model="path.path" size="35">
         </p>
         </div>
     </div>
 </div>
 
-<button type="button" class="btn btn-primary">Add New Time Series</button>
+<button type="button" class="btn btn-primary" ng-click="addNewTimeSeries()">Add New Time Series</button>
 <p><pre>timeseries = {{timeseries | json}}</pre></p>
 </div>
 

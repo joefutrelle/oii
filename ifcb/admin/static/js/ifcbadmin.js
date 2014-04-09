@@ -47,6 +47,11 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
         delete ts.edit;
     }
 
+    $scope.addNewTimeSeries = function() {
+        $scope.timeseries.push({name:'',systempaths:[{path:''}],edit:'true'});
+        return true;
+    }
+
 }]);
 
 // users controller

@@ -99,3 +99,7 @@ body {
   padding-left: 10px;
   padding-bottom: 3px;
 }
+
+.btn:focus {
+  outline: none;
+}
