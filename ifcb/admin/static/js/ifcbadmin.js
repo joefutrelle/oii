@@ -59,6 +59,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     // initialize local scope
     var baseTimeSeries = Restangular.all('timeseries');
     $scope.timeseries = baseTimeSeries.getList().$object;
+    $scope.alert = null;
 
 
     // create new timeseries
@@ -89,13 +90,21 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
             // timeseries group already exists on server. update.
             ts.patch().then(function(serverResponse) {
                 delete ts.edit;
+                $scope.alert = null;
+            }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
             });
         } else {
             // new timeseries group. post to server.
             baseTimeSeries.post(ts).then(function(serverResponse) {
                 // copy server response to scope object
                 angular.copy(serverResponse, ts);
-                });
+                $scope.alert = null;
+            }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+            });
         }
     }
 

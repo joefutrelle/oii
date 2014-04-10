@@ -5,19 +5,11 @@ import flask.ext.restless
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base, TimeSeries, SystemPath
-
+from models import Base, TimeSeries, SystemPath, DBValidationError
+from models import dbengine, session
 
 app = flask.Flask(__name__)
-app.config['DEBUG'] = True
-
-from sqlalchemy.pool import StaticPool
-dbengine = create_engine('sqlite://',
-                    connect_args={'check_same_thread':False},
-                    poolclass=StaticPool,
-                    echo=True)
-Session = sessionmaker(bind=dbengine)
-session = Session()
+app.config['DEBUG'] = False
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
     if data.has_key('edit'):
@@ -31,14 +23,17 @@ def patch_single_preprocessor(instance_id=None, data=None, **kw):
 manager = flask.ext.restless.APIManager(app, session=session)
 manager.create_api(
     TimeSeries,
+    validation_exceptions=[DBValidationError],
     url_prefix='/admin/api/v1',
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]})
+    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
 manager.create_api(
     SystemPath,
-    url_prefix='/admin/api/v1',
+    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor] })
+    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
 
 
 if __name__=='__main__':

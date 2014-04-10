@@ -2,13 +2,17 @@
 <div ng-controller="TimeSeriesCtrl">
 <h1 class="page-header">Time Series Groups</h1>
 
+<div ng-if="alert" class="alert alert-danger">
+    {{alert}}
+</div>
+
 <div class="list-group">
     <div class="list-group-item" data-ng-repeat="ts in timeseries">
         <!-- time series display view -->
         <div ng-if="!ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-default" ng-click="editTimeSeries(ts)">Edit</button>
-                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
+                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.name}}' time series group?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
         <h4 class="list-group-item-heading">{{ ts.name }}</h4>
         <p class="list-group-item-text" data-ng-repeat="path in ts.systempaths">
