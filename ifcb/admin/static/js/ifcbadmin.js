@@ -58,9 +58,16 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // initialize local scope
     var baseTimeSeries = Restangular.all('timeseries');
-    $scope.timeseries = baseTimeSeries.getList().$object;
     $scope.alert = null;
 
+    // load iniital data from api
+    baseTimeSeries.getList().then(function(serverResponse) {
+        $scope.timeseries = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
@@ -129,8 +136,16 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // initialize local scope
     var baseUsers = Restangular.all('users');
-    $scope.users = baseUsers.getList().$object;
     $scope.alert = null;
+
+    // load iniital data from api
+    baseUsers.getList().then(function(serverResponse) {
+        $scope.users = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
 
 }]);
 
