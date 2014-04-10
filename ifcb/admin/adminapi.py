@@ -67,5 +67,13 @@ if __name__=='__main__':
     print app.url_map
     app.run(host='0.0.0.0',port=8080)
 
+"""
+# add blueprints later
+adminapi = Blueprint('adminapi', __name__, url_prefix=BASEPATH)
+adminstatic = Blueprint('adminstatic', __name__)
+app.register_blueprint(adminapi)
+app.register_blueprint(adminstatic)
+"""
+
 
 
