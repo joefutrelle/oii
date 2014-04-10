@@ -19,9 +19,26 @@ dbengine = create_engine('sqlite://',
 Session = sessionmaker(bind=dbengine)
 session = Session()
 
+def patch_single_preprocessor(instance_id=None, data=None, **kw):
+    if data.has_key('edit'):
+        # remove restangularize "edit" field. probably a better way
+        # to do this on the javascript side
+        print "*************************************************"
+        print data
+        print "*************************************************"
+        data.pop('edit')
+
 manager = flask.ext.restless.APIManager(app, session=session)
-manager.create_api(TimeSeries, url_prefix='/admin/api/v1', methods=['GET', 'PUT', 'POST', 'DELETE'])
-manager.create_api(SystemPath, url_prefix='/admin/api/v1', methods=['GET', 'POST', 'DELETE'])
+manager.create_api(
+    TimeSeries,
+    url_prefix='/admin/api/v1',
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]})
+manager.create_api(
+    SystemPath,
+    url_prefix='/admin/api/v1',
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor] })
 
 
 if __name__=='__main__':

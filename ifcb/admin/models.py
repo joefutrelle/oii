@@ -39,7 +39,7 @@ class SystemPath(Base):
     __tablename__ = 'systempaths'
     id = Column(Integer, primary_key=True)
     timeseries_id = Column(Integer, ForeignKey('timeseries.id'))
-    path = Column(String, unique=True)
+    path = Column(String)
     timeseries = relationship("TimeSeries",
         backref=backref('systempaths', cascade="all, delete-orphan", order_by=id))
 
@@ -49,7 +49,8 @@ class SystemPath(Base):
 
     @validates('path')
     def validate_path(self, key, path):
-        # improve later
+        # skip val for now, improve later
+        return path
         if not isdir(path):
             raise ValueError('directory path is not readable on system')
         return path

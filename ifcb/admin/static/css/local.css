@@ -96,10 +96,25 @@ body {
 }
 
 .list-group-item-text {
-  padding-left: 10px;
+  padding-top: 1px;
+  padding-left: 15px;
   padding-bottom: 3px;
 }
 
-.btn:focus {
+.btn-default:focus {
   outline: none;
+  background-color: white;
+  border-color: #ccc;
+}
+
+.btn-primary:focus {
+  outline: none;
+  background-color:#428bca;
+  border-color:#357ebd
+}
+
+.btn-default:focus {
+  outline: none;
+  background-color: white;
+  border-color: #ccc;
 }

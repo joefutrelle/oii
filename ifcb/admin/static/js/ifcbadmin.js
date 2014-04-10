@@ -27,6 +27,26 @@ ifcbAdmin.config(function(RestangularProvider) {
     });
 });
 
+// confirmation popup
+ifcbAdmin.directive('ngConfirmClick', [function() {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            element.bind('click', function() {
+                var condition = scope.$eval(attrs.ngConfirmCondition);
+                if(condition) {
+                    var message = attrs.ngConfirmMessage;
+                    if (message && confirm(message)) {
+                        scope.$apply(attrs.ngConfirmClick);
+                    }
+                } else {
+                    scope.$apply(attrs.ngConfirmClick);
+                }
+            });
+        }
+    }
+}]);
+
 // nav controller
 ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope, $location) {
     $scope.isCurrentPath = function (path) {
@@ -36,20 +56,61 @@ ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope,
 
 ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
+    // initialize local scope
     var baseTimeSeries = Restangular.all('timeseries');
     $scope.timeseries = baseTimeSeries.getList().$object;
 
+
+    // create new timeseries
+    $scope.addNewTimeSeries = function() {
+        $scope.timeseries.push({name:'',systempaths:[{path:''}],edit:'true'});
+        return true;
+    }
+
+    // create new path
+    $scope.addNewPath = function(ts) {
+        ts.systempaths.push({path:''});
+    }
+
+    // mark timeseries group for editing
     $scope.editTimeSeries = function(ts) {
         ts.edit = true;
     }
 
+    // save timeseries group to server
     $scope.saveTimeSeries = function(ts) {
-        delete ts.edit;
+        // remove blank paths before save
+        for (var i = 0; i < ts.systempaths.length; i++) {
+            if (ts.systempaths[i].path.trim() == "") {
+                $scope.removePath(ts, ts.systempaths[i]);
+            }
+        }
+        if(ts.id) {
+            // timeseries group already exists on server. update.
+            ts.patch().then(function(serverResponse) {
+                delete ts.edit;
+            });
+        } else {
+            // new timeseries group. post to server.
+            baseTimeSeries.post(ts).then(function(serverResponse) {
+                // copy server response to scope object
+                angular.copy(serverResponse, ts);
+                });
+        }
     }
 
-    $scope.addNewTimeSeries = function() {
-        $scope.timeseries.push({name:'',systempaths:[{path:''}],edit:'true'});
-        return true;
+    // remove timeseries group
+    $scope.removeTimeSeries = function(ts) {
+        ts.remove().then(function() {
+            $scope.timeseries = _.without($scope.timeseries, ts);
+        });
+    }
+
+    // remove path
+    $scope.removePath = function(ts,p) {
+        // remove only from local scrope
+        // server is updated with saveTimeSeries()
+        ts.systempaths = _.without(ts.systempaths, p);
     }
 
 }]);
