@@ -125,9 +125,13 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 }]);
 
 // users controller
-ifcbAdmin.controller('UsersCtrl', ['$scope', function ($scope) {
+ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
-    $scope.users = [];
+    // initialize local scope
+    var baseUsers = Restangular.all('users');
+    $scope.users = baseUsers.getList().$object;
+    $scope.alert = null;
+
 }]);
 
 // my account controller
@@ -145,7 +149,7 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             templateUrl: 'views/TimeSeries.html'
             }).
         when('/users', {
-            controller: 'UsersCtrl',
+            controller: 'UserCtrl',
             templateUrl: 'views/Users.html'
             }).
         when('/myaccount', {

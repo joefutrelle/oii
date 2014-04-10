@@ -8,6 +8,8 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# eventually the session cofiguration should
+# go in its own class.
 from sqlalchemy.pool import StaticPool
 dbengine = create_engine('sqlite://',
                     connect_args={'check_same_thread':False},
@@ -32,32 +34,21 @@ class TimeSeries(Base):
     name = Column(String, unique=True)
     enabled = Column(Boolean)
 
-    @property
-    def serialize(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'enabled': self.enabled,
-            'systempaths':self.serialize_paths
-        }
-
-    @property
-    def serialize_paths(self):
-        return [ i.serialize for i in self.systempaths]
+    def __repr__(self):
+        return "<TimeSeries(name='%s')>" % self.name
 
     @validates('name')
     def validate_name(self, key, name):
         # flask-restless can't yet deal with unique=True database columns
         # so check for conflicting names with a validation dectorator
+        if not name:
+            raise DBValidationError('name validation error','The time series name can not be blank.')
         q = session.query(TimeSeries).filter(TimeSeries.name == name)
         if self.id:
             q = q.filter(TimeSeries.id != self.id)
         if q.count():
-            raise DBValidationError('validation error','The time series name "%s" already exists.' % name)
+            raise DBValidationError('name validation error','The time series name "%s" already exists.' % name)
         return name
-
-    def __repr__(self):
-        return "<TimeSeries(name='%s')>" % self.name
 
 
 class SystemPath(Base):
@@ -69,9 +60,8 @@ class SystemPath(Base):
     timeseries = relationship("TimeSeries",
         backref=backref('systempaths', cascade="all, delete-orphan", order_by=id))
 
-    @property
-    def serialize(self):
-        return self.path
+    def __repr__(self):
+        return "<SystemPath(path='%s')>" % self.path
 
     @validates('path')
     def validate_path(self, key, path):
@@ -81,5 +71,20 @@ class SystemPath(Base):
             raise DBValidationError('validation error','The path "%s" is not available.' % path)
         return path
 
+
+class User(Base):
+
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    email = Column(String,unique=True)
+    password = Column(String)
+    admin = Column(Boolean, default=False)
+    superadmin = Column(Boolean, default=False)
+    apiuser = Column(Boolean, default=False)
+
     def __repr__(self):
-        return "<SystemPath(path='%s')>" % self.path
+        return "<User(email='%s')>" % self.email
+
+
+

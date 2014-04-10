@@ -1,2 +1,40 @@
 
+
 <h1 class="page-header">IFCB Users</h1>
+
+<div ng-if="alert" class="alert alert-danger">
+    {{alert}}
+</div>
+
+<table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>SuperAdmin</th>
+            <th>Admin</th>
+            <th>API User</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="user in users">
+                <td>{{user.name}}</td>
+                <td>{{user.email}}</td>
+                <td>{{user.superadmin}}</td>
+                <td>{{user.admin}}</td>
+                <td>{{user.apiuser}}</td>
+                <td>
+                    <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default" ng-click="editUser(ts)">Edit</button>
+                    <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="removeUser(ts)">Remove</button>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+</table>
+
+<button type="button" class="btn btn-primary" ng-click="addNewUser()">Add New User</button>
+
+
+
