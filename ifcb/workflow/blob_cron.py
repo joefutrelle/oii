@@ -25,7 +25,7 @@ def enqueue_blobs(time_series,queue):
     r = parse_stream(config.resolver)
     blob_resolver = r['mvco_blob']
     pid_resolver = r['pid']
-    for lid in feed.latest_bins(n=1000):
+    for lid in feed.latest_bins(n=10000):
         if blob_resolver.resolve(pid=lid,time_series=time_series) is None:
             pid = pid_resolver.resolve(pid=lid,time_series=time_series).bin_pid
             print 'No blobs found for %s, enqueuing' % pid
@@ -33,5 +33,8 @@ def enqueue_blobs(time_series,queue):
 
 if __name__=='__main__':
     time_series = sys.argv[1]
-    queue = sys.argv[2]
+    try:
+        queue = sys.argv[2]
+    except:
+        queue = '_'.join([time_series,'blobs'])
     enqueue_blobs(time_series,queue)

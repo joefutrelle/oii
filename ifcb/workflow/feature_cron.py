@@ -26,7 +26,7 @@ def enqueue_features(time_series,queue):
     blob_resolver = r['mvco_blob']
     feature_resolver = r['features']
     pid_resolver = r['pid']
-    for lid in feed.latest_bins(n=1000):
+    for lid in feed.latest_bins(n=5000):
         if blob_resolver.resolve(pid=lid,time_series=time_series) is not None:
             pid = pid_resolver.resolve(pid=lid,time_series=time_series).bin_pid
             if feature_resolver.resolve(pid=lid,time_series=time_series) is None:
@@ -35,5 +35,8 @@ def enqueue_features(time_series,queue):
 
 if __name__=='__main__':
     time_series = sys.argv[1]
-    queue = sys.argv[2]
+    try:
+        queue = sys.argv[2]
+    except:
+        queue = '_'.join([time_series,'features'])
     enqueue_features(time_series,queue)

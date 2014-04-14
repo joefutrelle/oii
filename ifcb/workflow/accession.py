@@ -27,7 +27,7 @@ def celery_logging(**kw):
     logger.setLevel(logging.INFO)
 
 after_setup_task_logger.connect(celery_logging)
-    
+   
 # example config file
 # resolver = oii/ifcb/mvco.xml
 # [ditylum]
@@ -42,6 +42,7 @@ def list_adcs(time_series,resolver,year_pattern='....'):
 def list_new_filesets(time_series,psql_connect,resolver,year_pattern='....'):
     feed = IfcbFeed(psql_connect)
     r = parse_stream(resolver)
+    logging.info('Listing filesets...')
     for s in list_adcs(time_series,resolver,year_pattern):
         if feed.exists(s.pid):
             logger.info('%s EXISTS in time series %s' % (s.pid, time_series))
@@ -64,6 +65,7 @@ def check_integrity(pid, hdr_path, adc_path, roi_path, schema_version):
 @celery.task
 def accede(config_file, time_series):
     config = get_config(config_file, time_series)
+    logging.info('parsed config file %s:%s' % (config_file, time_series))
     fx = IfcbFixity(config.psql_connect)
     feed = IfcbFeed(config.psql_connect)
     try:
