@@ -442,8 +442,7 @@ def print_resolver(expressions,indent=0):
         except:
             print '%s<%s%s/>' % (' ' * indent, type(expr).__name__, attrs)
 
-def interactive_shell(resolvers):
-    bindings = {}
+def interactive_shell(resolvers,bindings={}):
     class Shell(cmd.Cmd):
         def do_list(self,args):
             """List the resolvers"""
@@ -485,26 +484,32 @@ def interactive_shell(resolvers):
 
 if __name__=='__main__':
     """Usage:
-    python resolver.py {resolver file} {resolver name} {key0=value0 key1=value1 ... keyN=valueN}"""
+    python resolver.py {resolver file} {resolver name}? {key0=value0 key1=value1 ... keyN=valueN}"""
     args = sys.argv
     resolver_file = args[1]
     resolvers = parse_stream(resolver_file)
     if len(args)==2:
         interactive_shell(resolvers)
     else:
-        resolver_name = args[2]
-        bindings = parse_kvs(args[3:])
-        for solution in resolvers[resolver_name].resolve_all(**bindings):
-            bindings = solution.bindings
-            for var in bindings.keys():
-                try:
-                    int(var)
-                    del bindings[var]
-                except ValueError:
-                    pass
-            # colon-align
-            width = max([len(var) for var in bindings.keys()])
-            print 'Solution: "%s" {' % solution.value
-            for var in sorted(bindings.keys()):
-                print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
-            print '}'
+        try:
+            assert not '=' in args[2]
+            resolver_name = args[2]
+            bindings = parse_kvs(args[3:])
+            for solution in resolvers[resolver_name].resolve_all(**bindings):
+                bindings = solution.bindings
+                for var in bindings.keys():
+                    try:
+                        int(var)
+                        del bindings[var]
+                    except ValueError:
+                        pass
+                # colon-align
+                width = max([len(var) for var in bindings.keys()])
+                print 'Solution: "%s" {' % solution.value
+                for var in sorted(bindings.keys()):
+                    print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
+                print '}'
+        except:
+            bindings = parse_kvs(args[2:])
+            interactive_shell(resolvers,bindings)
+
