@@ -444,6 +444,9 @@ def print_resolver(expressions,indent=0):
 
 def interactive_shell(resolvers,bindings={}):
     class Shell(cmd.Cmd):
+        def __init__(self,bindings):
+            cmd.Cmd.__init__(self)
+            self.bindings = bindings
         def do_list(self,args):
             """List the resolvers"""
             resolver_name = args
@@ -454,31 +457,47 @@ def interactive_shell(resolvers,bindings={}):
                 print_resolver(resolvers[resolver_name].expressions)
         def do_clear(self,args):
             """Clear all bindings"""
-            bindings = {}
-            print_bindings(bindings)
+            self.bindings = {}
+            print_bindings(self.bindings)
         def do_set(self,args):
             """Bind variables (args should be k0=v0 k1=v1 ... kN=vN)"""
-            bindings.update(parse_kvs(re.split(' +',args)))
-            print_bindings(bindings)
+            self.bindings.update(parse_kvs(re.split(' +',args)))
+            print_bindings(self.bindings)
         def do_exit(self,args):
             """Quit"""
             sys.exit(1)
-        def do_resolve(self,args):
-            """Resolve. optionally include bindings"""
+        def do_foo(self,args):
+            try:
+                self.foo = args[0]
+            except:
+                pass
+            print foo
+        def print_solution(self,solution):
+            print 'Solution: "%s" {' % solution.value
+            print_bindings(solution.bindings)
+            print '}'
+        def resolve_all(self,args):
             args = re.split(' +',args)
             resolver_name = args[0]
             local_bindings = {}
-            local_bindings.update(bindings)
+            local_bindings.update(self.bindings)
             local_bindings.update(parse_kvs(args[1:]))
+            for solution in resolvers[resolver_name].resolve_all(**local_bindings):
+                yield solution
+        def do_resolve(self,args):
+            """Resolve. optionally include bindings"""
             try:
-                for solution in resolvers[resolver_name].resolve_all(**local_bindings):
-                    print 'Solution: "%s" {' % solution.value
-                    print_bindings(solution.bindings)
-                    print '}'
+                for solution in self.resolve_all(args):
+                    self.print_solution(solution)
             except:
                 traceback.print_exc(file=sys.stdout)
+        def do_import(self,args):
+            for solution in self.resolve_all(args):
+                self.bindings.update(solution.bindings)
+                self.print_solution(solution)
+                break
     load_message = 'Found %d resolver(s) in %s:' % (len(resolvers), resolver_file)
-    Shell().cmdloop(load_message)
+    Shell(bindings).cmdloop(load_message)
 
 # FIXME split CLI into different module
 
