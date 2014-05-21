@@ -1,21 +1,55 @@
+import sys
+import os
 from flask import Flask, Response
 from oii.webapi.image_service.stereo import get_img, get_resolver
 from oii.webapi.image_service.utils import image_response
+from oii.config import get_config
+from oii.resolver import parse_stream
+from werkzeug.contrib.cache import SimpleCache
 
 app = Flask(__name__)
-app.debug = True
 
-RESOLVER_PATH='resolver.xml'
+# string key constants
+CACHE='cache'
+CACHE_TTL='cache_ttl'
+RESOLVER='resolver'
+PORT='port'
 
-I = get_resolver(RESOLVER_PATH)
+IMAGE_RESOLVER='image' # name of image resolver in resolvers
 
-@app.route('/image/<path:pid>')
+@app.route('/<path:pid>')
+@app.route('/data/<path:pid>')
 def serve_image(pid):
-    hit = I.resolve(pid=pid)
+    hit = app.config[RESOLVER][IMAGE_RESOLVER].resolve(pid=pid)
     img = get_img(hit)
     return image_response(img, hit.filename)
 
+def configure(config=None):
+    app.config[CACHE] = SimpleCache()
+    app.config[CACHE_TTL] = 120
+    try:
+        if config.debug in ['True', 'true', 'T', 't', 'Yes', 'yes', 'debug']:
+            app.debug = True
+    except AttributeError:
+        pass
+    try:
+        app.config[RESOLVER] = parse_stream(config.resolver)
+    except AttributeError:
+        app.config[RESOLVER] = parse_stream('oii/habcam/image_resolver.xml')
+    try:
+        app.config[PORT] = int(config.port)
+    except:
+        app.config[PORT] = 5061
+
 # utilities
 if __name__=='__main__':
-    app.run(host='0.0.0.0',port=8080)
-
+    """First argument is a config file"""
+    if len(sys.argv) > 1:
+        configure(get_config(sys.argv[1]))
+    else:
+        configure()
+    app.secret_key = os.urandom(24)
+    app.run(host='0.0.0.0',port=app.config[PORT])
+else:
+    config = get_config(os.environ['IMAGE_SERVICE_CONFIG_FILE'])
+    configure(config)
