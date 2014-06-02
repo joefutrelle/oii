@@ -5,6 +5,7 @@ from oii.webapi.image_service.stereo import get_img, get_resolver
 from oii.webapi.image_service.utils import image_response
 from oii.config import get_config
 from oii.resolver import parse_stream
+from skimage.transform import resize
 from werkzeug.contrib.cache import SimpleCache
 
 app = Flask(__name__)
@@ -17,11 +18,20 @@ PORT='port'
 
 IMAGE_RESOLVER='image' # name of image resolver in resolvers
 
-@app.route('/<path:pid>')
-@app.route('/data/<path:pid>')
-def serve_image(pid):
+def pid2image(pid):
     hit = app.config[RESOLVER][IMAGE_RESOLVER].resolve(pid=pid)
-    img = get_img(hit)
+    return hit, get_img(hit)
+
+@app.route('/data/<path:pid>')
+@app.route('/<path:pid>')
+@app.route('/data/width/<int:width>/<path:pid>')
+@app.route('/width/<int:width>/<path:pid>')
+def serve_image(width=None,pid=None):
+    hit, img = pid2image(pid)
+    if width is not None:
+        (h,w) = img.shape[:2]
+        height = int(1. * width / w * h)
+        img = resize(img,(height,width))
     return image_response(img, hit.filename)
 
 def configure(config=None):
