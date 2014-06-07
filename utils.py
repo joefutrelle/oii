@@ -12,6 +12,7 @@ import platform
 import ctypes
 import hashlib
 import sys
+from multiprocessing import Pool
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -69,6 +70,19 @@ def gen_id(namespace=''):
             prev = sha1(prev + entropy).hexdigest()
         genid_prev_id = prev
     return namespace + prev
+
+def scatter(fn,argses,callback=None,processes=None):
+    """Extremely simple multiprocessing.
+    Parameters:
+    fn - the function to apply
+    argses - a list of argument lists for that function
+    callback (optional) - a callback to receive results.
+    processes (optional) - how many simultaneous processes to run."""
+    pool = Pool(processes=processes)
+    for args in argses:
+        pool.apply_async(fn,args,{},callback)
+    pool.close()
+    pool.join()
 
 # order the keys of a dict according to a sequence
 # any keys in the sequence that are not present in the dict will not be listed
