@@ -189,6 +189,7 @@ function gotoPage(pp,size) {
 
 	   // if (imagePid.match(/illum_L/)){			
 			var imagePid3d = imagePid.replace('.jpg','_redcyan.jpg');
+			var imagePid3d = imagePid.replace('.png','_redcyan.png');
 	        $('#view3D').attr("href",imagePid3d).attr("target","_blank");
 	        $('#view3D').show(100);
 		//}
