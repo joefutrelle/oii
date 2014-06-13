@@ -7,15 +7,17 @@ from oii.resolver import parse_stream
 import fileinput
 
 def get_img(hit):
+    if hit is None:
+        raise
     img = imread(hit.value)
     if hit.product == 'LR':
         return img
-    elif hit.product is None or hit.product == 'L':
-        return get_L(img)
     elif hit.product == 'R':
         return get_R(img)
     elif hit.product == 'redcyan':
         return redcyan(rgb2gray(img),None,True)
+    else:
+        return get_L(img)
 
 def get_resolver(path):
     """assumes there is a resolver called 'image'"""
