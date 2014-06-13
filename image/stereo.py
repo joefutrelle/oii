@@ -163,4 +163,13 @@ def redcyan(y_LR,dx=None,correct_y=False):
     # align y                                                                                                                                
     if dy != 0:
         cyan = np.roll(cyan,dy,axis=0)
-    return np.dstack([red,cyan,cyan])
+
+    rolled = np.dstack([red,cyan,cyan])
+
+    # crop
+    if dy > 0:
+        rolled = rolled[dy:,dx:,:]
+    else:
+        rolled = rolled[:-dy,dx:,:]
+
+    return rolled
