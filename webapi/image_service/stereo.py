@@ -8,16 +8,18 @@ import fileinput
 
 def get_img(hit):
     if hit is None:
-        raise
+        raise Exception('Not found')
     img = imread(hit.value)
-    if hit.product == 'LR':
-        return img
-    elif hit.product == 'R':
-        return get_R(img)
-    elif hit.product == 'redcyan':
+    if hit.product == 'redcyan':
         return redcyan(rgb2gray(img),None,True)
-    else:
+    if hit.variant is None:
+        hit.variant = hit.default_variant
+    if hit.variant == 'L':
         return get_L(img)
+    elif hit.variant == 'R':
+        return get_R(img)
+    else:
+        return img
 
 def get_resolver(path):
     """assumes there is a resolver called 'image'"""

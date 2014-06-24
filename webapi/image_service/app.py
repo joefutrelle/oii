@@ -1,6 +1,6 @@
 import sys
 import os
-from flask import Flask, Response
+from flask import Flask, Response, abort
 from oii.webapi.image_service.stereo import get_img, get_resolver
 from oii.webapi.image_service.utils import image_response
 from oii.config import get_config
@@ -20,6 +20,8 @@ IMAGE_RESOLVER='image' # name of image resolver in resolvers
 
 def pid2image(pid):
     hit = app.config[RESOLVER][IMAGE_RESOLVER].resolve(pid=pid)
+    if hit is None:
+        abort(404)
     return hit, get_img(hit)
 
 @app.route('/data/<path:pid>')
