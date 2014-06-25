@@ -20,7 +20,7 @@ class Matlab:
         self.output_callback = output_callback
         self.log_callback = lambda x: log_callback(message(x))
     def run(self,command):
-        pathcmds = '; '.join(['path(path,\'%s\')' % d for d in self.matlab_path])
+        pathcmds = '; '.join(['path(\'%s\',path)' % d for d in self.matlab_path])
         p = None
         try:
             script = '%s; try, disp(\'%s\'), %s, catch err, disp(err.message), disp(err.stack), disp(err.identifier), exit(1), end, exit(0)' % (pathcmds, self.output_separator, command)
