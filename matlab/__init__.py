@@ -8,6 +8,11 @@ import os
 def reset_tty():
     pass
 
+def make_dead(process):
+    process.kill()
+    process.wait()
+    reset_tty()
+
 def message(msg='WARNING'):
     return ' '.join([iso8601(),str(msg)])
 
@@ -44,8 +49,7 @@ class Matlab:
                                 self.output_callback(line)
                             except:
                                 self.log_callback('Output callback raised exception; killing Matlab process %d' % p.pid)
-                                reset_tty()
-                                p.kill()
+                                make_dead(p)
                                 raise
                         elif not seen_separator and line == self.output_separator:
                             seen_separator = True
@@ -56,14 +60,13 @@ class Matlab:
                 raise RuntimeError('Nonzero return code (%d) from Matlab process %d' % (p.pid, p.returncode))
         except KeyboardInterrupt:
             self.log_callback('Keyboard interrupt; killing Matlab process %d' % p.pid)
-            reset_tty()
-            p.kill()
+            make_dead(p)
             raise
         except:
             print_exc()
             reset_tty()
             try:
-                p.kill()
+                make_dead(p)
             except OSError:
                 print('did not kill, no such process')
             if self.fail_fast:
