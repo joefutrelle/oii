@@ -43,7 +43,7 @@ def timestamp(message,t=None,format=ISO_8601_FORMAT,separator=' '):
     if t is None: t=time.gmtime()
     return separator.join([time.strftime(format,t),message])
 
-def text2utcdatetime(string, format):
+def text2utcdatetime(string, format=ISO_8601_FORMAT):
     spt = time.strptime(string, format)
     return datetime.fromtimestamp(calendar.timegm(spt), pytz.utc)
 
