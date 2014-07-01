@@ -116,6 +116,8 @@ def bin_zip(hit, hdr_path, adc_path, roi_path, outfile):
         temp.seek(0)
         shutil.copyfileobj(temp, outfile)
 
+    return stitched_targets
+
 def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=None):
     """Generate a zip file given a pid (using a resolver) to find the files"""
     if resolver is None:
@@ -130,7 +132,7 @@ def binpid2zip(bin_pid, outfile, resolver_file='oii/ifcb/mvco.xml', resolver=Non
             with tempfile.NamedTemporaryFile() as roi:
                 roi_path = roi.name
                 drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
-                bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
+                return bin_zip(hit, hdr_path, adc_path, roi_path, outfile)
 
 def class_scoresmat2csv(matfile, bin_lid):
     """Convert a class score .mat file into a CSV representation"""
