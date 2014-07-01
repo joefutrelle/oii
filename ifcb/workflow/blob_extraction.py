@@ -124,13 +124,16 @@ class BlobExtraction(object):
             selflog('CREATED temporary directory %s for %s' % (zip_dir, bin_pid))
         except:
             selflog('WARNING cannot create temporary directory %s for %s' % (zip_dir, bin_pid))
-        selflog('LOADING and STITCHING %s' % bin_pid)
-        with open(bin_zip_path,'wb') as binzip:
-            represent.binpid2zip(bin_pid, binzip, resolver=self.resolver)
-        tmp_file = os.path.join(job_dir, zipname(bin_pid))
-        matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
-        cmd = 'bin_blobs(\'%s\',\'%s\',\'%s\')' % (bin_pid, bin_zip_path, job_dir)
         try:
+            selflog('LOADING and STITCHING %s' % bin_pid)
+            with open(bin_zip_path,'wb') as binzip:
+                targets = represent.binpid2zip(bin_pid, binzip, resolver=self.resolver)
+                if len(targets)==0:
+                    selflog('SKIPPING %s - no targets in bin' % bin_pid)
+                    return SKIP
+            tmp_file = os.path.join(job_dir, zipname(bin_pid))
+            matlab = Matlab(self.config.matlab_exec_path,self.config.matlab_path,output_callback=lambda l: self_check_log(l, bin_pid))
+            cmd = 'bin_blobs(\'%s\',\'%s\',\'%s\')' % (bin_pid, bin_zip_path, job_dir)
             self.output_check = CHECK_EVERY
             matlab.run(cmd)
             if not os.path.exists(tmp_file):
