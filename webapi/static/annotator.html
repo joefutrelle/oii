@@ -37,14 +37,26 @@
   <p style="float:right; margin:10px;"> <b>Annotator Version:</b>2.0</p>
   <a href="#" id="closeRight" class="left button">Hide</a>	
 </div>
-<div id="controls" class="ui-widget">
-  <div id="login" class="ui-widget"></div>
+<div id="hotbuts">
+<a href="#" id="hot6" class="button" style="float:right">skate</a>
+<a href="#" id="hot7" class="button" style="float:right">flatfish</a>
+<a href="#" id="hot2" class="button" style="float:right">roundfish</a>
+<a href="#" id="hot3" class="button" style="float:right">crab</a>
+<a href="#" id="hot5" class="button" style="float:right">scallop width</a>
+<a href="#" id="hot4" class="button" style="float:right">swimming scallop</a>
+<a href="#" id="hot1" class="button" style="float:right">scallop</a>
+
+</div>
+<div id="controls" class="ui-widget" >
+  <div id="login" class="ui-widget">
+</div>
+
   <a href="#" id="prev" class="button">&lt; Prev</a>
   <input id="offset" size="4">
   <a href="#" id="next" class="button">Next &gt;</a>
   <a href="#" id="nextNew" class="button">Next New &gt;</a>
   Class
-  <input id="label" size="32"/>
+  <input id="label" size="32" onkeypress="labelInput()" />
   <a href="#" id="commit" class="button">Commit</a>
   <a href="#" id="undo" class="button">Undo one</a>
   <a href="#" id="cancel" class="button">Undo all</a>
