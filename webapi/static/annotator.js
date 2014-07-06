@@ -562,7 +562,10 @@ function resetImageLevelPending() {
 }
 // FIXME make class selection a plugin
 function validateLabel() {
+
+
     var label = $('#label').val();
+
     var c = categoryPidForLabel(label);
     if(c == undefined) {
 	console.log(label+' invalid');
@@ -571,6 +574,40 @@ function validateLabel() {
 	console.log(label+' valid');
 	$('#label').removeClass('invalid');
     }
+
+}
+
+function labelInput(){
+var label = $('#label').val();
+	if (label.match(/scallop/)){
+	//alert('scallop');
+	$('#tool').val('line');
+	selectedTool('line');
+	}
+	if (label.match(/fish/)){
+	//alert('scallop');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+	}
+
+	if (label.match(/whelk/)){
+	//alert('scallop');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+	}
+
+	if (label.match(/crab/)){
+	//alert('scallop');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+	}
+
+	if (label.match(/skate/)){
+	//alert('scallop');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+	}
+
 }
 // FIXME should record which annotator changed the status
 function changeImageStatus(status){
@@ -645,6 +682,48 @@ $(document).ready(function() {
         undo(); // undo one annotation
     });
 
+    $('#hot1').click(function() {
+        $('#label').val('live sea scallop');
+	$('#tool').val('line');
+	selectedTool('line');
+    });
+
+    $('#hot2').click(function() {
+        $('#label').val('unidentified roundfish');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+    });
+
+    $('#hot6').click(function() {
+        $('#label').val('unidentified skate');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+    });
+
+    $('#hot7').click(function() {
+        $('#label').val('unidentified flatfish');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+    });
+
+    $('#hot3').click(function() {
+        $('#label').val('jonah or rock crab');
+	$('#tool').val('boundingBox');
+	selectedTool('boundingBox');
+    });
+
+    $('#hot4').click(function() {
+        $('#label').val('swimming sea scallop');
+	$('#tool').val('line');
+	selectedTool('line');
+    });
+
+    $('#hot5').click(function() {
+        $('#label').val('live sea scallop width');
+	$('#tool').val('line');
+	selectedTool('line');
+    });
+
     $(document).bind('keydown', 'ctrl+z', undo); // use ctrl+z for undo
 
     // "geometry" is the global object with all the geometric types in it
@@ -716,7 +795,7 @@ $(document).ready(function() {
     // assignment selector
     $('#rightPanel').append('<div><select id="assignment"></select></div>')
         .find('div:last').collapsing('Assignment',1);
-    $('#assignment').append('<option >Pick and Assignment</option>')
+    $('#assignment').append('<option >Pick an Assignment</option>')
     
     // add dominant substrate category picker
     // FIXME  instead of margin-top here, fix the top of the right Panel so rest of elements line up
