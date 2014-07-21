@@ -47,6 +47,10 @@ def text2utcdatetime(string, format=ISO_8601_FORMAT):
     spt = time.strptime(string, format)
     return datetime.fromtimestamp(calendar.timegm(spt), pytz.utc)
 
+def datetime2utcdatetime(dt):
+    # convert dt without timezone to one in utc
+    return datetime.fromtimestamp(calendar.timegm(dt.timetuple()), pytz.utc)
+
 class test_formats(TestCase):
     def runTest(self):
         assert iso8601(time.gmtime(0)) == '1970-01-01T00:00:00Z'
