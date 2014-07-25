@@ -3,6 +3,7 @@ from sqlalchemy.orm import mapper
 
 from oii.times import dt2utcdt
 
+from oii.workflow.product import Product
 from oii.workflow.fixity import Fixity
 
 metadata = MetaData()
@@ -24,3 +25,16 @@ def fixity_utc_listener(target, context):
 
 mapper(Fixity, fixity)
 event.listen(Fixity, 'load', fixity_utc_listener)
+
+product = Table('products', metadata,
+                Column('pid', String, primary_key=True),
+                Column('status', String),
+                Column('event', String),
+                Column('ts', DateTime(timezone=True)))
+
+def product_utc_listener(target, context):
+    target.ts = dt2utcdt(target.ts)
+
+mapper(Product, product)
+event.listen(Product, 'load', product_utc_listener)
+
