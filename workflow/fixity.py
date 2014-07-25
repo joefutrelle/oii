@@ -7,7 +7,7 @@ class FixityException(Exception):
     pass
 
 class Fixity(object):
-    def __init__(self,pid,pathname,length=None,checksum=None,fix_time=None,create_time=None,mod_time=None,checksum_type='md5'):
+    def __init__(self,pid,pathname,length=None,checksum=None,fix_time=None,create_time=None,mod_time=None,checksum_type='md5',fix=True):
         """all timestamps should be datetimes with timezone"""
         self.pid = pid
         self.pathname = pathname
@@ -18,6 +18,8 @@ class Fixity(object):
         self.fix_time = fix_time
         self.create_time = create_time
         self.mod_time = mod_time
+        if fix:
+            self.fix()
     def __repr__(self):
         return '<Fixity pid=%s path=%s length=%d checksum(%s)=%s>' % \
             (self.pid, self.pathname, self.length, self.checksum_type, self.checksum)
