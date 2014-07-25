@@ -53,7 +53,10 @@ def text2utcdatetime(string, format=ISO_8601_FORMAT):
 
 def datetime2utcdatetime(dt):
     # convert dt without timezone to one in utc
+    if dt is None: return None
     return datetime.fromtimestamp(calendar.timegm(dt.timetuple()), pytz.utc)
+
+dt2utcdt = datetime2utcdatetime
 
 class test_formats(TestCase):
     def runTest(self):

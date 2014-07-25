@@ -1,6 +1,6 @@
 import os
 import time
-from oii.times import secs2utcdatetime
+from oii.times import secs2utcdatetime, datetime2utcdatetime
 from oii.utils import sha1_file, md5_file
 
 class FixityException(Exception):
@@ -15,14 +15,14 @@ class Fixity(object):
         self.length = length
         self.checksum = checksum
         self.checksum_type = checksum_type
-        self.fix_time = fix_time
-        self.create_time = create_time
-        self.mod_time = mod_time
+        self.fix_time = datetime2utcdatetime(fix_time)
+        self.create_time = datetime2utcdatetime(create_time)
+        self.mod_time = datetime2utcdatetime(mod_time)
         if fix:
             self.fix()
     def __repr__(self):
-        return '<Fixity pid=%s path=%s length=%d checksum(%s)=%s>' % \
-            (self.pid, self.pathname, self.length, self.checksum_type, self.checksum)
+        return '<Fixity pid=%s path=%s length=%d checksum(%s)=%s as of %s>' % \
+            (self.pid, self.pathname, self.length, self.checksum_type, self.checksum, self.fix_time)
     def fix(self):
         """compute fixity based on pathname"""
         now = secs2utcdatetime(time.time())
