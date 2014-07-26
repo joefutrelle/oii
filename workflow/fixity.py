@@ -25,7 +25,7 @@ class Fixity(object):
             (self.pid, self.pathname, self.length, self.checksum_type, self.checksum, self.fix_time)
     def fix(self):
         """compute fixity based on pathname"""
-        now = secs2utcdatetime(time.time())
+        now = secs2utcdatetime()
         stat = os.stat(self.pathname)
         self.length = stat.st_size
         self.fix_time = now

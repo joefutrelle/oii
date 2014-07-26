@@ -1,5 +1,6 @@
 from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, event
 from sqlalchemy.orm import mapper
+from oii.orm_utils import fix_utc
 
 from oii.times import dt2utcdt
 
@@ -18,13 +19,8 @@ fixity = Table('fixity', metadata,
                Column('mod_time', DateTime(timezone=True)),
                Column('checksum_type', String))
 
-def fixity_utc_listener(target, context):
-    target.fix_time = dt2utcdt(target.fix_time)
-    target.create_time = dt2utcdt(target.create_time)
-    target.mod_time = dt2utcdt(target.mod_time)
-
+fix_utc(Fixity)    
 mapper(Fixity, fixity)
-event.listen(Fixity, 'load', fixity_utc_listener)
 
 product = Table('products', metadata,
                 Column('pid', String, primary_key=True),
@@ -32,9 +28,7 @@ product = Table('products', metadata,
                 Column('event', String),
                 Column('ts', DateTime(timezone=True)))
 
-def product_utc_listener(target, context):
-    target.ts = dt2utcdt(target.ts)
-
+fix_utc(Product)
 mapper(Product, product)
-event.listen(Product, 'load', product_utc_listener)
+
 
