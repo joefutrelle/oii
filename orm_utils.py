@@ -1,11 +1,12 @@
 from sqlalchemy import event
 from sqlalchemy.types import DateTime
+from sqlalchemy.orm.properties import ColumnProperty
 
 from oii.times import dt2utcdt
 
 def utc_datetime_attribute_instrument_listener(cls, key, inst):
     # here I'm assuming "key" is the class's attribute name - unclear from SQLAlchemy docs
-    if isinstance(inst.property.columns[0].type, DateTime):
+    if isinstance(inst.property, ColumnProperty) and isinstance(inst.property.columns[0].type, DateTime):
         # listen for userland set operation and set timezone to UTC
         def setter(target, value, oldvalue, _):
             return dt2utcdt(value)
