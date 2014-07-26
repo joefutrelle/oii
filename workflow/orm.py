@@ -6,7 +6,7 @@ from oii.orm_utils import fix_utc
 
 from oii.times import dt2utcdt
 
-from oii.workflow.product import Product, Dependency
+from oii.workflow.product import Product
 from oii.workflow.fixity import Fixity
 
 metadata = MetaData()

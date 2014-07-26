@@ -24,6 +24,7 @@ class Product(object):
         self.status = status
         self.event = event
         self.ts = ts
+        self.depends_on = []
     def __repr__(self):
         return '<Product %s>' % self.pid
     def event(self, event='new', ts=None):
@@ -38,8 +39,9 @@ class Product(object):
             self.ts = ts
         except KeyError:
             raise ProductException('illegal state transition: state=%s event=%s' % (self.state, event))
-        
-class Dependency(object):
-    def __init__(self, pid, depends_on):
-        self.pid = pid
-        self.depends_on = depends_on
+    @property
+    def ancestors(self):
+        for parent in self.depends_on:
+            yield parent
+            for anc in parent.ancestors:
+                yield anc
