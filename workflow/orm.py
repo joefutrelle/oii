@@ -13,11 +13,11 @@ fixity = Table('fixity', metadata,
                Column('pid', String, primary_key=True),
                Column('pathname', String, primary_key=True),
                Column('length', BigInteger),
-               Column('checksum', String),
+               Column('checksum', String, primary_key=True),
                Column('fix_time', DateTime(timezone=True)),
                Column('create_time', DateTime(timezone=True)),
                Column('mod_time', DateTime(timezone=True)),
-               Column('checksum_type', String))
+               Column('checksum_type', String, primary_key=True))
 
 fix_utc(Fixity)    
 mapper(Fixity, fixity)
