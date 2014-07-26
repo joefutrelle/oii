@@ -1,10 +1,12 @@
 from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, event
-from sqlalchemy.orm import mapper
+from sqlalchemy.orm import mapper, relationship, backref
+from sqlalchemy.ext.associationproxy import association_proxy
+
 from oii.orm_utils import fix_utc
 
 from oii.times import dt2utcdt
 
-from oii.workflow.product import Product
+from oii.workflow.product import Product, Dependency
 from oii.workflow.fixity import Fixity
 
 metadata = MetaData()
@@ -28,7 +30,16 @@ product = Table('products', metadata,
                 Column('event', String),
                 Column('ts', DateTime(timezone=True)))
 
-fix_utc(Product)
-mapper(Product, product)
+product_deps = Table('product_deps', metadata,
+             Column('dependent', String, ForeignKey('products.pid')),
+             Column('depends_on', String, ForeignKey('products.pid')))
 
+fix_utc(Product)
+mapper(Product, product, properties={
+        'depends_on': relationship(Product,
+                                   secondary=product_deps,
+                                   primaryjoin=product.c.pid==product_deps.c.dependent,
+                                   secondaryjoin=product.c.pid==product_deps.c.depends_on,
+                                   backref='dependents')
+})
 

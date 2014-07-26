@@ -24,6 +24,8 @@ class Product(object):
         self.status = status
         self.event = event
         self.ts = ts
+    def __repr__(self):
+        return '<Product %s>' % self.pid
     def event(self, event='new', ts=None):
         if event not in EVENTS:
             raise ProductException('unknown event %s' % event)
@@ -37,3 +39,7 @@ class Product(object):
         except KeyError:
             raise ProductException('illegal state transition: state=%s event=%s' % (self.state, event))
         
+class Dependency(object):
+    def __init__(self, pid, depends_on):
+        self.pid = pid
+        self.depends_on = depends_on
