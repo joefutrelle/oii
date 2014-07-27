@@ -26,7 +26,7 @@ mapper(Fixity, fixity)
 
 product = Table('products', metadata,
                 Column('pid', String, primary_key=True),
-                Column('status', String),
+                Column('state', String),
                 Column('event', String),
                 Column('ts', DateTime(timezone=True)))
 
@@ -42,4 +42,3 @@ mapper(Product, product, properties={
                                    secondaryjoin=product.c.pid==product_deps.c.depends_on,
                                    backref='dependents')
 })
-
