@@ -4,7 +4,7 @@ STATES=['new','waiting','running','available','failed','halted','blacklisted']
 EVENTS=['create','ready','start','retry','restart','finish','blacklist']
 STATE_TRANSITIONS = {
     None: {'create': 'new'},
-    'new': {'ready': 'start'},
+    'new': {'ready': 'waiting'},
     'waiting': {'start': 'running'},
     'running': {'stop': 'halted',
                 'fail': 'failed',
