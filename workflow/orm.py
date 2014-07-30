@@ -4,7 +4,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 from oii.orm_utils import fix_utc
 
-from oii.times import dt2utcdt
+from oii.times import dt2utcdt, utcdtnow
 
 from oii.workflow.product import Product
 from oii.workflow.fixity import Fixity
@@ -92,3 +92,17 @@ class Products(object):
             product.dependents = []
             session.delete(product)
         session.commit()
+    @staticmethod
+    def younger_than(session, ago):
+        """find all products whose events occurred recently.
+        ago must be a datetime.timedelta"""
+        now = utcdtnow()
+        return session.query(Product).\
+            filter(Product.ts > now - ago)
+    @staticmethod
+    def older_than(session, ago):
+        """find all products whose events occurred less than or equal to ago.
+        ago must be a datetime.timedelta"""
+        now = utcdtnow()
+        return session.query(Product).\
+            filter(Product.ts < now - ago)
