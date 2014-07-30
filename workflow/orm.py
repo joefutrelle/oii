@@ -65,11 +65,21 @@ class ProductSet(object):
         p.changed(new_event,new_state)
         session.commit()
         return p
-    def delete_used(self, session, state='available', dep_state='available'):
-        """delete all products in state all of whose dependents are in dep_state.
+    def roots(self, session):
+        """return all roots; that is, products with no dependencies"""
+        return session.query(Product).filter(~Product.depends_on.any())
+    def leaves(self, session):
+        """return all leaves; that is, products with no dependents"""
+        return session.query(Product).filter(~Product.dependents.any())
+    def delete_intermediate(self, session, state='available', dep_state='available'):
+        """delete all products that
+        - are in 'state'
+        - have any dependencies (in other words, not "root" products")
+        - have any dependents, all of which are in 'dep_state'
         default is to find available products that no unavailable products depend on"""
         for product in session.query(Product).\
             filter(Product.state==state).\
+            filter(Product.depends_on.any()).\
             filter(Product.dependents.any()).\
             filter(~Product.dependents.any(Product.state!=dep_state)).\
             with_lockmode('update'):
