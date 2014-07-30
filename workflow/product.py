@@ -10,6 +10,7 @@ class Product(object):
         self.event = event
         self.ts = ts
         self.depends_on = []
+        self.dependents = []
         self.changed(state=state,event=event,ts=ts)
     def __repr__(self):
         return '<Product %s (%s)>' % (self.pid, self.state)
@@ -27,3 +28,9 @@ class Product(object):
             yield parent
             for anc in parent.ancestors:
                 yield anc
+    @property
+    def descendants(self):
+        for child in self.dependents:
+            yield child
+            for desc in child.descendants:
+                yield desc
