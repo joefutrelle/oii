@@ -44,29 +44,36 @@ mapper(Product, product, properties={
 })
 
 # queries that range across entire product dependency hierarchies
+# requires that an SQLA session be passed into each call
 
-def get_next_product(session, dep_state='available', old_state='waiting', new_state='running'):
-    """find any product that is in state old_state and all of whose
-    dependents are in dep_state, and atomically set its state to new_state"""
-    p = session.query(Product).\
-        filter(Product.state==old_state).\
-        filter(Product.depends_on.any(Product.state==dep_state)).\
-        filter(~Product.depends_on.any(Product.state!=dep_state)).\
-        with_lockmode('update').\
-        first()
-    if p is None:
-        return None
-    p.changed('pop',new_state)
-    session.commit()
-    return p
-
-def delete_unneeded(session, dep_state='available'):
-    """delete all products that have dependents all of which are in dep_state"""
-    for product in session.query(Product).\
-        filter(Product.dependents.any()).\
-        filter(~Product.dependents.any(Product.state!='available')).\
-        with_lockmode('update'):
-        product.depends_on = []
-        product.dependents = []
-        session.delete(product)
-    session.commit()
+class ProductSet(object):
+    def count(self, session):
+        return session.query(Product).count()
+    def get_next(self, session, dep_state='available', old_state='waiting', new_state='running', new_event='start'):
+        """find any product that is in state old_state and all of whose
+        dependencies are in dep_state, and atomically set its state to new_state.
+        default is to find any product which is waiting and all of whose dependencies are available
+        and trigger a start->running event"""
+        p = session.query(Product).\
+            filter(Product.state==old_state).\
+            filter(Product.depends_on.any(Product.state==dep_state)).\
+            filter(~Product.depends_on.any(Product.state!=dep_state)).\
+            with_lockmode('update').\
+            first()
+        if p is None:
+            return None
+        p.changed(new_event,new_state)
+        session.commit()
+        return p
+    def delete_used(self, session, state='available', dep_state='available'):
+        """delete all products in state all of whose dependents are in dep_state.
+        default is to find available products that no unavailable products depend on"""
+        for product in session.query(Product).\
+            filter(Product.state==state).\
+            filter(Product.dependents.any()).\
+            filter(~Product.dependents.any(Product.state!=dep_state)).\
+            with_lockmode('update'):
+            product.depends_on = []
+            product.dependents = []
+            session.delete(product)
+        session.commit()
