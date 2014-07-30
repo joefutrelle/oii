@@ -48,7 +48,7 @@ def secs2utcdatetime(secs=None):
     return datetime.fromtimestamp(calendar.timegm(time.gmtime(secs)), pytz.utc)
 
 def utcdtnow():
-    return sec2utcdatetime()
+    return secs2utcdatetime()
 
 def text2utcdatetime(string, format=ISO_8601_FORMAT):
     spt = time.strptime(string, format)
