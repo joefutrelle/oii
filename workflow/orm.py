@@ -46,10 +46,12 @@ mapper(Product, product, properties={
 # queries that range across entire product dependency hierarchies
 # requires that an SQLA session be passed into each call
 
-class ProductSet(object):
-    def count(self, session):
+class Products(object):
+    @staticmethod
+    def count(session):
         return session.query(Product).count()
-    def get_next(self, session, dep_state='available', old_state='waiting', new_state='running', new_event='start'):
+    @staticmethod
+    def get_next(session, dep_state='available', old_state='waiting', new_state='running', new_event='start'):
         """find any product that is in state old_state and all of whose
         dependencies are in dep_state, and atomically set its state to new_state.
         default is to find any product which is waiting and all of whose dependencies are available
@@ -65,13 +67,16 @@ class ProductSet(object):
         p.changed(new_event,new_state)
         session.commit()
         return p
-    def roots(self, session):
+    @staticmethod
+    def roots(session):
         """return all roots; that is, products with no dependencies"""
         return session.query(Product).filter(~Product.depends_on.any())
-    def leaves(self, session):
+    @staticmethod
+    def leaves(session):
         """return all leaves; that is, products with no dependents"""
         return session.query(Product).filter(~Product.dependents.any())
-    def delete_intermediate(self, session, state='available', dep_state='available'):
+    @staticmethod
+    def delete_intermediate(session, state='available', dep_state='available'):
         """delete all products that
         - are in 'state'
         - have any dependencies (in other words, not "root" products")
