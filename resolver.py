@@ -7,6 +7,7 @@ from os import path
 import sys
 import readline
 import cmd
+from itertools import imap
 import traceback
 
 # "little language" pattern
@@ -339,7 +340,7 @@ def resolve(resolver,bindings,cwd='/',namespace={}):
                 for solution in resolve(expr.expressions, local_bindings, hit, namespace):
                     yield solution
 
-class Resolver(object):
+class NamedResolver(object):
     """Class handling resolution"""
     def __init__(self,expressions,name,namespace={}):
         """Internal use only. Use parse_stream as a resolver factory"""
@@ -366,7 +367,7 @@ def parse_node(node):
             namespace[name] = list(sub_parse(child))
     result = {}
     for n,e in namespace.items():
-        result[n] = Resolver(e,n,namespace)
+        result[n] = NamedResolver(e,n,namespace)
     return result
 
 def parse_stream(stream):
@@ -377,6 +378,34 @@ def parse_stream(stream):
     except:
         root = etree.fromstring(stream)
     return parse_node(root)
+
+# public API
+
+class SolutionGenerator(object):
+    def __init__(self, gen_func):
+        self._gen_func = gen_func
+    def __iter__(self):
+        return self._gen_func
+    def next(self):
+        return self._gen_func.next()
+    def first(self):
+        try:
+            return self.next()
+        except StopIteration:
+            return None
+    def values(self):
+        return SolutionGenerator(imap(lambda hit: hit.value, self))
+
+def as_solution_generator(named_resolver):
+    def closure(**kw):
+        return SolutionGenerator(named_resolver.resolve_all(**kw))
+    return closure
+
+class Resolver(object):
+    def __init__(self,stream):
+        self._resolvers = parse_stream(stream)
+        for n,r in self._resolvers.items():
+            setattr(self, n, as_solution_generator(r))
 
 # example configuration
 # this takes pids like
