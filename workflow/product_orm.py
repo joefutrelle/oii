@@ -16,10 +16,33 @@ class Product(Base):
     pid = Column('pid', String, primary_key=True)
     state = Column('state', String, default='available')
     event = Column('event', String, default='new')
+    message = Column('message', String)
     ts = Column('ts', DateTime(timezone=True), default=utcdtnow)
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
+
+    def changed(self, event, state='updated', message=None, ts=None):
+        """call when the product's state changes."""
+        self.event = event
+        self.state = state
+        self.message = message
+        if ts is None:
+            ts = utcdtnow()
+        self.ts = ts
+
+    @property
+    def deps_for_role(role):
+        for ud in self.depends_on:
+            if ud.role=='role':
+                yield ud
+
+    @property
+    def dep_for_role(role):
+        for ud in self.depends_on:
+            if ud.role=='role':
+                return ud
+        return None
 
     @property
     def ancestors(self):
@@ -63,6 +86,32 @@ class Products(object):
     def count(session):
         return session.query(Product).count()
     @staticmethod
+    def add_dep(session, downstream, upstream, role=None):
+        d = Dependency(downstream=downstream, upstream=upstream, role=role)
+        session.add(d)
+    @staticmethod
+    def younger_than(session, ago):
+        """find all products whose events occurred more recently than ago ago.
+        ago must be a datetime.timedelta"""
+        now = utcdtnow()
+        return session.query(Product).\
+            filter(Product.ts > now - ago)
+    @staticmethod
+    def older_than(session, ago):
+        """find all products whose events occurred longer than ago ago.
+        ago must be a datetime.timedelta"""
+        now = utcdtnow()
+        return session.query(Product).\
+            filter(Product.ts < now - ago)
+    @staticmethod
+    def roots(session):
+        """return all roots; that is, products with no dependencies"""
+        return session.query(Product).filter(~Product.depends_on.any())
+    @staticmethod
+    def leaves(session):
+        """return all leaves; that is, products with no dependents"""
+        return session.query(Product).filter(~Product.dependents.any())
+    @staticmethod
     def get_next(session, dep_state='available', old_state='waiting', new_state='running', new_event='start'):
         """find any product that is in state old_state and all of whose
         dependencies are in dep_state, and atomically set its state to new_state.
@@ -82,14 +131,6 @@ class Products(object):
         session.commit()
         return p
     @staticmethod
-    def roots(session):
-        """return all roots; that is, products with no dependencies"""
-        return session.query(Product).filter(~Product.depends_on.any())
-    @staticmethod
-    def leaves(session):
-        """return all leaves; that is, products with no dependents"""
-        return session.query(Product).filter(~Product.dependents.any())
-    @staticmethod
     def delete_intermediate(session, state='available', dep_state='available'):
         """delete all products that
         - are in 'state'
@@ -104,18 +145,4 @@ class Products(object):
             with_lockmode('update'):
             session.delete(product)
         session.commit()
-    @staticmethod
-    def younger_than(session, ago):
-        """find all products whose events occurred more recently than ago ago.
-        ago must be a datetime.timedelta"""
-        now = utcdtnow()
-        return session.query(Product).\
-            filter(Product.ts > now - ago)
-    @staticmethod
-    def older_than(session, ago):
-        """find all products whose events occurred longer than ago ago.
-        ago must be a datetime.timedelta"""
-        now = utcdtnow()
-        return session.query(Product).\
-            filter(Product.ts < now - ago)
 
