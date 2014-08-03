@@ -7,10 +7,12 @@ xml = etree.parse(XML_FILE)
 
 # runtime scope represented as hieararchical dicts
 
+# enclose inner bindings in an outer scope
 def enclose(bindings,inner):
     inner['_parent'] = bindings
     return inner
 
+# get the value of a key from a set of bindings
 def val(bindings,key):
     try:
         return bindings[key]
@@ -20,6 +22,7 @@ def val(bindings,key):
         except KeyError:
             return None
 
+# get keys defined on this set of bindings
 def keys(bindings):
     for k in bindings.keys():
         if k != '_parent':
@@ -31,10 +34,12 @@ def keys(bindings):
     except KeyError:
         pass
 
+# flatten the hierarchical bindings into a flat dict
 def flatten(bindings):
     return dict((k,val(bindings,k)) for k in keys(bindings))
 
-# namespace scoping
+# namespace scoping within the XML document
+# foo.bar corresponds to an XPath of /namespace[@name='foo']/namespace[@name='bar']
 def find_names(e):
     def descend(e,namespace=[]):
         if e.tag=='namespace':
@@ -57,12 +62,14 @@ def interpolate(template,bindings):
         result = re.sub('\$\{'+key+'\}',value,result)
     return result
 
+# evaluate a block of expressions using recursive descent to generate and filter
+# solutions a la Prolog
 def evaluate_block(exprs,bindings={}):
     # recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
     def recur(exprs,bindings,inner_bindings={}):
         return evaluate_block(exprs[1:],enclose(bindings,inner_bindings))
-    # terminal case; all blocks yield all unfiltered solutions
+    # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
         yield bindings
         return
@@ -70,9 +77,10 @@ def evaluate_block(exprs,bindings={}):
     expr = exprs[0]
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
+    # or
     # <var name="{name}">
-    #   <val>{value}</val>
-    #   <val>{value}</val>
+    #   <val>{value1}</val>
+    #   <val>{value2}</val>
     # </var>
     if expr.tag=='var':
         var_name = expr.get('name')
