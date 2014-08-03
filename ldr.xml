@@ -1,0 +1,16 @@
+<namespace name="mvco">
+  <namespace name="time_series">
+    <var name="test">blah</var>
+    <var name="multiple">
+      <val>clam</val>
+      <val>bake</val>
+    </var>
+    <var name="interpolated">${test} ${test}</var>
+    <vars names="name title" delim="/">
+      <vals>mvco/Martha's Vineyard Coastal Observatory</vals>
+      <vals>saltpond/Salt Pond</vals>
+    </vars>
+  </namespace>
+  <namespace name="other">
+  </namespace>
+</namespace>
