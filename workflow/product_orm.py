@@ -2,7 +2,7 @@ from oii.times import utcdtnow
 from oii.orm_utils import fix_utc
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -31,18 +31,14 @@ class Product(Base):
             ts = utcdtnow()
         self.ts = ts
 
-    @property
-    def deps_for_role(role):
-        for ud in self.depends_on:
-            if ud.role=='role':
-                yield ud
+    def deps_for_role(self, role):
+        return [ud.upstream for ud in self.upstream_dependencies if ud.role==role]
 
-    @property
-    def dep_for_role(role):
-        for ud in self.depends_on:
-            if ud.role=='role':
-                return ud
-        return None
+    def dep_for_role(self, role):
+        try:
+            return self.deps_for_role(role)[0]
+        except IndexError:
+            return None
 
     @property
     def ancestors(self):
@@ -64,9 +60,11 @@ class Product(Base):
 class Dependency(Base):
     __tablename__ = 'dependencies'
 
+    DEFAULT_ROLE='any'
+
     upstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
     downstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
-    role = Column(String)
+    role = Column(String, default=DEFAULT_ROLE)
 
     upstream = relationship(Product,
                             primaryjoin=upstream_id==Product.pid,
@@ -75,8 +73,14 @@ class Dependency(Base):
                               primaryjoin=downstream_id==Product.pid,
                               backref=backref('upstream_dependencies', cascade='all,delete-orphan'))
 
+    # proxy for upstream product's state
+    state = association_proxy('upstream', 'state')
+
     def __repr__(self):
-        return '<Dependency %s depends on %s>' % (self.downstream, self.upstream)
+        if self.role==Dependency.DEFAULT_ROLE:
+            return '<%s depends on %s>' % (self.downstream_id, self.upstream_id)
+        else:
+            return '<%s depends on %s %s>' % (self.downstream_id, self.role, self.upstream_id)
 
 # queries that range across entire product dependency hierarchies
 # requires that an SQLA session be passed into each call
@@ -112,24 +116,18 @@ class Products(object):
         """return all leaves; that is, products with no dependents"""
         return session.query(Product).filter(~Product.dependents.any())
     @staticmethod
-    def get_next(session, dep_state='available', old_state='waiting', new_state='running', new_event='start'):
-        """find any product that is in state old_state and all of whose
-        dependencies are in dep_state, and atomically set its state to new_state.
-        default is to find any product which is waiting and all of whose dependencies are available
-        and trigger a start->running event"""
-        p = session.query(Product).\
-            filter(Product.state==old_state).\
-            filter(Product.depends_on.any(Product.state==dep_state)).\
-            filter(~Product.depends_on.any(Product.state!=dep_state)).\
-            with_lockmode('update').\
+    def get_next(session, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available'):
+        """find any product that is in state state and whose upstream dependencies are all in
+        dep_state and satisfy all the specified roles, and lock it for update"""
+        return session.query(Product).\
+            join(Product.upstream_dependencies).\
+            filter(Product.state==state).\
+            filter(Dependency.state==dep_state).\
+            filter(Dependency.role.in_(roles)).\
+            group_by(Product).\
+            having(func.count(Dependency.role)==len(roles)).\
+            having(func.count(distinct(Dependency.role))==len(set(roles))).\
             first()
-        if p is None:
-            return None
-        p.state=new_state
-        p.event=new_event
-        p.ts=utcdtnow()
-        session.commit()
-        return p
     @staticmethod
     def delete_intermediate(session, state='available', dep_state='available'):
         """delete all products that
