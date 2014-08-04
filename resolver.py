@@ -557,7 +557,7 @@ if __name__=='__main__':
                 for var in sorted(bindings.keys()):
                     print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
                 print '}'
-        except:
+        except ValueError:
             bindings = parse_kvs(args[2:])
             interactive_shell(resolvers,bindings)
 
