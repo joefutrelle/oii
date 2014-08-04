@@ -1,9 +1,11 @@
 from lxml import etree
 import re
 
-XML_FILE='oii/ldr.xml'
-
-xml = etree.parse(XML_FILE)
+def coalesce(*args):
+    for arg in args:
+        if arg is not None:
+            return arg
+    return None
 
 # runtime scope represented as hieararchical dicts
 
@@ -50,11 +52,9 @@ def find_names(e):
                     yield name, name_e
     return dict(('.'.join(n),ne) for n, ne in descend(e.getroot()))
 
-global_ns = find_names(xml)
-
 # substitute patterns like ${varname} for their values given
 # bindings = a dict of varname->value
-# e.g., substitute('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
+# e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 def interpolate(template,bindings):
     result = template
     for key in keys(bindings):
@@ -64,17 +64,38 @@ def interpolate(template,bindings):
 
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
-def evaluate_block(exprs,bindings={}):
+def evaluate_block(exprs,bindings={},global_namespace={}):
     # recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
     def recur(exprs,bindings,inner_bindings={}):
-        return evaluate_block(exprs[1:],enclose(bindings,inner_bindings))
+        return evaluate_block(exprs[1:],enclose(bindings,inner_bindings),global_namespace)
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
         yield bindings
         return
     # handle the first expression
     expr = exprs[0]
+    # The miss expression indicates no match has been found.
+    # So refuse to recur, will not yield any solutions
+    if expr.tag=='miss':
+        pass
+    # The hit expression means a match has been found.
+    # So yield the current set of bindings.
+    # <hit/>
+    # or optionally, a subset of them
+    # <hit vars="{name1} {name2}"/>
+    elif expr.tag=='hit':
+        var_name_list = expr.get('vars')
+        if var_name_list is not None:
+            var_names = re.split('  *',var_name_list)
+            yield dict((var_name,val(bindings,var_name)) for var_name in var_names)
+        else:
+            yield bindings
+    # Import means descend, once, into another namespace, evaluating it as a block,
+    # and recur for each of its solutions
+    elif expr.tag=='import':
+        for s in evaluate(expr.get('name'),global_namespace):
+            for ss in recur(exprs,bindings,flatten(s)): yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
@@ -82,7 +103,7 @@ def evaluate_block(exprs,bindings={}):
     #   <val>{value1}</val>
     #   <val>{value2}</val>
     # </var>
-    if expr.tag=='var':
+    elif expr.tag=='var':
         var_name = expr.get('name')
         sub_val_exprs = expr.findall('val')
         if len(sub_val_exprs) == 0:
@@ -92,17 +113,41 @@ def evaluate_block(exprs,bindings={}):
             for sub_val_expr in sub_val_exprs:
                 var_val = interpolate(sub_val_expr.text,bindings)
                 for s in recur(exprs,bindings,{var_name:var_val}): yield s
+    # The vars expression is the plural of var, for multiple assignment
+    # with any regex as a delimiter between variable values.
+    # <vars names="{name1} {name2} [delim="{delim}"]>{value1}{delim}{value2}</vars>
+    # or
+    # <vars names="{name1} {name2} [delim="{delim}"]>
+    #   <vals>{value1}{delim}{value2}</vals>
+    #   <vals>{value1}{delim}{value2}</vals>
+    # </vars>
+    elif expr.tag=='vars':
+        var_names = re.split('  *',expr.get('names'))
+        sub_val_exprs = expr.findall('vals')
+        delim = coalesce(expr.get('delim'),'  *')
+        if len(sub_val_exprs) == 0:
+            var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
+            for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
+        else:
+            for sub_val_expr in sub_val_exprs:
+                var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
+                for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
+    # all other tags skip
     else:
         for s in recur(exprs,bindings): yield s
                 
-def evaluate(expr,bindings={}):
+def evaluate(name,global_namespace={}):
+    expr = global_namespace[name]
     if expr.tag == 'namespace':
-        for solution in evaluate_block(list(expr),bindings=bindings):
+        for solution in evaluate_block(list(expr),bindings={},global_namespace=global_namespace):
             yield solution
 
-ts = global_ns['mvco.time_series']
-for s in evaluate(ts):
-    print flatten(s)
+def parse(ldr_file):
+    xml = etree.parse(ldr_file)
+    namespace = find_names(xml)
+    return namespace
 
-
+def resolve(namespace,name):
+    for s in evaluate(name,namespace):
+        yield flatten(s)
     

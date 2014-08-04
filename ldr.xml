@@ -6,11 +6,20 @@
       <val>bake</val>
     </var>
     <var name="interpolated">${test} ${test}</var>
-    <vars names="name title" delim="/">
+    <vars names="ts_name title" delim="/">
       <vals>mvco/Martha's Vineyard Coastal Observatory</vals>
       <vals>saltpond/Salt Pond</vals>
     </vars>
   </namespace>
+  <namespace name="global_import">
+    <import name="mvco.time_series"/>
+  </namespace>
   <namespace name="other">
+    <namespace name="sibling">
+      <import name="mvco.time_series"/>
+    </namespace>
+    <namespace name="deep">
+      <import name="sibling"/>
+    </namespace>
   </namespace>
 </namespace>
