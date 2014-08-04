@@ -9,6 +9,7 @@ import readline
 import cmd
 from itertools import imap
 import traceback
+from StringIO import StringIO
 
 # "little language" pattern
 
@@ -113,11 +114,19 @@ RESERVED_NAMES = ['value', 'bindings']
 # bindings = a dict of varname->value
 # e.g., substitute('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 def substitute(template,bindings):
-    result = template
-    for key,value in bindings.items():
-        if value is not None:
-            result = re.sub('\$\{'+key+'\}',value,result)
-    return result
+    s = StringIO()
+    pattern = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+    end = 0
+    for m in re.finditer(pattern,template):
+        end = m.end()
+        (plain, expr, key) = m.groups()
+        s.write(plain)
+        try:
+            s.write(bindings[key])
+        except KeyError:
+            s.write(expr)
+    s.write(template[end:])
+    return s.getvalue()
 
 # recursive resolution engine that handles one expression
 # resolver - parsed resolution script
