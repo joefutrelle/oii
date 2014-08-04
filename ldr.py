@@ -122,11 +122,20 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   {expr2}
     #   ...
     #   {exprn}
-    # </all>
-    elif expr.tag=='any':
+    # </any>
+    # first is like any except it only yields the first solution and then stops
+    # <first>
+    #   {expr1}
+    #   {expr2}
+    #   ...
+    #   {exprn}
+    # </first>
+    elif expr.tag in ('any','first'):
         for sub_expr in list(expr):
             for s in evaluate_block([sub_expr],bindings,global_namespace):
                 for ss in recur(exprs,bindings,s): yield ss
+                if expr.tag=='first':
+                    return
     # log interpolates its text and prints it. useful for debugging
     # <log>{template}</log>
     elif expr.tag=='log':
