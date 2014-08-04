@@ -79,7 +79,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         var_name_list = expr.get('vars')
         if var_name_list:
             var_names = re.split('  *',var_name_list)
-            yield dict((var_name,val(bindings,var_name)) for var_name in var_names)
+            yield dict((var_name,bindings[var_name]) for var_name in var_names)
         else:
             yield bindings.flatten()
     # Import means descend, once, into another namespace, evaluating it as a block,
