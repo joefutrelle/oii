@@ -13,7 +13,7 @@ class Scope(object):
       try:
          return self.bindings[key]
       except KeyError:
-         if self.parent is None:
+         if not self.parent:
             raise
          return self.parent[key]
    def __setitem__(self,key,value):
@@ -27,7 +27,7 @@ class Scope(object):
       """iterate over keys from local and ancestor bindings"""
       for k in self.bindings.keys():
          yield k
-      if self.parent is None:
+      if not self.parent:
          return
       for k in self.parent:
          if k not in self.bindings.keys():
@@ -39,7 +39,7 @@ class Scope(object):
       """is key contained in local or ancestor bindings"""
       if key in self.bindings:
          return True
-      if self.parent is not None and key in self.parent:
+      if self.parent and key in self.parent:
          return True
       return False
    def flatten(self):
