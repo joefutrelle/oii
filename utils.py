@@ -17,6 +17,13 @@ from multiprocessing import Pool
 genid_prev_id_tl = Lock()
 genid_prev_id = None
 
+def coalesce(*args):
+    """return first non-None arg or None if none"""
+    for arg in args:
+        if arg is not None:
+            return arg
+    return None
+
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
     """Retry calling the decorated function using an exponential backoff.
 

@@ -1,46 +1,10 @@
+from StringIO import StringIO
 from lxml import etree
 import re
 
-def coalesce(*args):
-    for arg in args:
-        if arg is not None:
-            return arg
-    return None
+from oii.scope import Scope
+from oii.utils import coalesce
 
-# runtime scope represented as hieararchical dicts
-
-# enclose inner bindings in an outer scope
-def enclose(bindings,inner):
-    inner['_parent'] = bindings
-    return inner
-
-# get the value of a key from a set of bindings
-def val(bindings,key):
-    try:
-        return bindings[key]
-    except KeyError:
-        try:
-            return val(bindings['_parent'],key)
-        except KeyError:
-            return None
-
-# get keys defined on this set of bindings
-def keys(bindings):
-    for k in bindings.keys():
-        if k != '_parent':
-            yield k
-    try:
-        for k in keys(bindings['_parent']):
-            if k not in bindings.keys():
-                yield k
-    except KeyError:
-        pass
-
-# flatten the hierarchical bindings into a flat dict
-def flatten(bindings):
-    return dict((k,val(bindings,k)) for k in keys(bindings))
-
-# namespace scoping within the XML document
 # foo.bar corresponds to an XPath of /namespace[@name='foo']/namespace[@name='bar']
 def find_names(e):
     def descend(e,namespace=[]):
@@ -55,23 +19,31 @@ def find_names(e):
 # substitute patterns like ${varname} for their values given
 # bindings = a dict of varname->value
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
-def interpolate(template,bindings):
-    result = template
-    for key in keys(bindings):
-        value = val(bindings,key)
-        result = re.sub('\$\{'+key+'\}',value,result)
-    return result
+def interpolate(template,scope):
+   s = StringIO()
+   pattern = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+   end = 0
+   for m in re.finditer(pattern,template):
+      end = m.end()
+      (plain, expr, key) = m.groups()
+      s.write(plain)
+      try:
+         s.write(scope[key])
+      except:
+         s.write(expr)
+   s.write(template[end:])
+   return s.getvalue()
 
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
-def evaluate_block(exprs,bindings={},global_namespace={}):
+def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
-    def recur(exprs,bindings={},inner_bindings={}):
-        return evaluate_block(exprs[1:],enclose(bindings,inner_bindings),global_namespace)
+    def recur(exprs,bindings=Scope(),inner_bindings={}):
+        return evaluate_block(exprs[1:],bindings.enclose(**inner_bindings),global_namespace)
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
-        yield bindings
+        yield bindings.flatten()
         return
     # handle the first expression
     expr = exprs[0]
@@ -90,12 +62,12 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
             var_names = re.split('  *',var_name_list)
             yield dict((var_name,val(bindings,var_name)) for var_name in var_names)
         else:
-            yield bindings
+            yield bindings.flatten()
     # Import means descend, once, into another namespace, evaluating it as a block,
     # and recur for each of its solutions
     elif expr.tag=='import':
         for s in evaluate(expr.get('name'),global_namespace):
-            for ss in recur(exprs,bindings,flatten(s)): yield ss
+            for ss in recur(exprs,bindings,s): yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
@@ -135,12 +107,12 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
     # all is a conjunction
     elif expr.tag=='all':
         for s in evaluate_block(list(expr),bindings,global_namespace):
-            for ss in recur(exprs,bindings,flatten(s)): yield ss
+            for ss in recur(exprs,bindings,s): yield ss
     # any is a disjunction
     elif expr.tag=='any':
         for sub_expr in list(expr):
             for s in evaluate_block([sub_expr],bindings,global_namespace):
-                for ss in recur(exprs,bindings,flatten(s)): yield ss
+                for ss in recur(exprs,bindings,s): yield ss
     # log prints output
     elif expr.tag=='log':
         print interpolate(expr.text,bindings)
@@ -148,7 +120,9 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
     # <match pattern="{regex}" value="{thing to match}" [groups="{name1} {name2}"]/>
     elif expr.tag=='match':
         pattern = coalesce(expr.get('pattern'),r'.*')
-        group_names = re.split('  *',coalesce(expr.get('groups'),''))
+        group_name_list, group_names = expr.get('groups'), []
+        if group_name_list is not None:
+            group_names = re.split('  *',group_name_list)
         value = coalesce(expr.get('value'),'')
         m = re.match(interpolate(pattern,bindings), interpolate(value,bindings))
         if m is not None:
@@ -166,7 +140,7 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
 def evaluate(name,global_namespace={}):
     expr = global_namespace[name]
     if expr.tag == 'namespace':
-        for solution in evaluate_block(list(expr),bindings={},global_namespace=global_namespace):
+        for solution in evaluate_block(list(expr),global_namespace=global_namespace):
             yield solution
 
 def parse(ldr_file):
@@ -176,5 +150,5 @@ def parse(ldr_file):
 
 def resolve(namespace,name):
     for s in evaluate(name,namespace):
-        yield flatten(s)
+        yield s
     
