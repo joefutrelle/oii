@@ -10,12 +10,12 @@ class Scope(object):
    def __getitem__(self,key):
       """find value of item with given key,
       look in local bindings first, then recurse upward"""
-      try:
+      if key in self.bindings:
          return self.bindings[key]
-      except KeyError:
-         if not self.parent:
-            raise
+      elif key in self.parent:
          return self.parent[key]
+      else:
+         raise KeyError
    def __setitem__(self,key,value):
       """set value in local bindings.
       will shadow same name in any ancestor scopes"""
