@@ -10,6 +10,18 @@
       <vals>mvco/Martha's Vineyard Coastal Observatory</vals>
       <vals>saltpond/Salt Pond</vals>
     </vars>
+    <any>
+      <match value="${multiple}${ts_name}" pattern="(.*)X(.*)"/>
+      <match value="${multiple}${ts_name}" pattern="(.*)o(.*)"/>
+    </any>
+    <any>
+      <var name="foo">bar</var>
+      <all>
+	<var name="knork">blaps</var>
+	<var name="knip">blimps</var>
+      </all>
+      <var name="baz">quux</var>
+    </any>
   </namespace>
   <namespace name="global_import">
     <import name="mvco.time_series"/>

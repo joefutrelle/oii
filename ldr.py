@@ -67,7 +67,7 @@ def interpolate(template,bindings):
 def evaluate_block(exprs,bindings={},global_namespace={}):
     # recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
-    def recur(exprs,bindings,inner_bindings={}):
+    def recur(exprs,bindings={},inner_bindings={}):
         return evaluate_block(exprs[1:],enclose(bindings,inner_bindings),global_namespace)
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
@@ -132,6 +132,33 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
             for sub_val_expr in sub_val_exprs:
                 var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
                 for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
+    # all is a conjunction
+    elif expr.tag=='all':
+        for s in evaluate_block(list(expr),bindings,global_namespace):
+            for ss in recur(exprs,bindings,flatten(s)): yield ss
+    # any is a disjunction
+    elif expr.tag=='any':
+        for sub_expr in list(expr):
+            for s in evaluate_block([sub_expr],bindings,global_namespace):
+                for ss in recur(exprs,bindings,flatten(s)): yield ss
+    # log prints output
+    elif expr.tag=='log':
+        print interpolate(expr.text,bindings)
+    # match generates solutions for every regex match
+    # <match pattern="{regex}" value="{thing to match}" [groups="{name1} {name2}"]/>
+    elif expr.tag=='match':
+        pattern = coalesce(expr.get('pattern'),r'.*')
+        group_names = re.split('  *',coalesce(expr.get('groups'),''))
+        value = coalesce(expr.get('value'),'')
+        m = re.match(interpolate(pattern,bindings), interpolate(value,bindings))
+        if m is not None:
+            groups = m.groups()
+            inner_bindings = {}
+            for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
+                inner_bindings[str(index+1)] = group
+            for name,group in zip(group_names, groups): # bind named variables to groups
+                inner_bindings[name] = group
+            for s in recur(exprs,bindings,inner_bindings): yield s
     # all other tags skip
     else:
         for s in recur(exprs,bindings): yield s
