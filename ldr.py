@@ -1,6 +1,10 @@
+import os
 from StringIO import StringIO
 from lxml import etree
 import re
+from glob import iglob
+
+import traceback
 
 from oii.scope import Scope
 from oii.utils import coalesce
@@ -37,10 +41,25 @@ def interpolate(template,scope):
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
-    # recurrence expression establishes an inner scope and evaluates
+    # utility to parse arguments to match and split
+    def match_args(expr,bindings,default_pattern='.*'):
+        pattern = coalesce(expr.get('pattern'),default_pattern)
+        if expr.get('value'):
+            value = expr.get('value')
+        elif expr.get('var'):
+            value = bindings[expr.get('var')]
+        return interpolate(pattern,bindings), interpolate(value,bindings)
+    # utility block evaluation function using this expression's bindings and global namespace
+    def local_block(exprs,inner_bindings={}):
+        return evaluate_block(exprs,bindings.enclose(**inner_bindings),global_namespace)
+    # utility recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
-    def recur(exprs,bindings=Scope(),inner_bindings={}):
-        return evaluate_block(exprs[1:],bindings.enclose(**inner_bindings),global_namespace)
+    # usage: for s in rest(exprs,bindings): yield s
+    def rest(inner_bindings={}):
+        return local_block(exprs[1:],inner_bindings)
+    # utility recurrence expression for unnamed block
+    def inner_block(expr,inner_bindings={}):
+        return local_block(list(expr),inner_bindings)
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
         yield bindings.flatten()
@@ -50,7 +69,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # The miss expression indicates no match has been found.
     # So refuse to recur, will not yield any solutions
     if expr.tag=='miss':
-        pass
+        return
     # The hit expression means a match has been found.
     # So yield the current set of bindings.
     # <hit/>
@@ -67,7 +86,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # and recur for each of its solutions
     elif expr.tag=='import':
         for s in evaluate(expr.get('name'),global_namespace):
-            for ss in recur(exprs,bindings,s): yield ss
+            for ss in rest(s): yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
@@ -80,11 +99,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         sub_val_exprs = expr.findall('val')
         if len(sub_val_exprs) == 0:
             var_val = interpolate(expr.text,bindings)
-            for s in recur(exprs,bindings,{var_name:var_val}): yield s
+            for s in rest({var_name:var_val}): yield s
         else:
             for sub_val_expr in sub_val_exprs:
                 var_val = interpolate(sub_val_expr.text,bindings)
-                for s in recur(exprs,bindings,{var_name:var_val}): yield s
+                for s in rest({var_name:var_val}): yield s
     # The vars expression is the plural of var, for multiple assignment
     # with any regex as a delimiter between variable values.
     # <vars names="{name1} {name2} [delim="{delim}"]>{value1}{delim}{value2}</vars>
@@ -99,11 +118,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         delim = coalesce(expr.get('delim'),'  *')
         if len(sub_val_exprs) == 0:
             var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
-            for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
+            for s in rest(dict(zip(var_names,var_vals))): yield s
         else:
             for sub_val_expr in sub_val_exprs:
                 var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
-                for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
+                for s in rest(dict(zip(var_names,var_vals))): yield s
     # all is a conjunction. it is like an unnamed namespace block
     # and will yield any solution that exists after all exprs are evaluated
     # in sequence
@@ -114,8 +133,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   {exprn}
     # </all>
     elif expr.tag=='all':
-        for s in evaluate_block(list(expr),bindings,global_namespace):
-            for ss in recur(exprs,bindings,s): yield ss
+        for s in inner_block(expr):
+            for ss in rest(s): yield ss
     # any is a disjunction. it will yield all solutions of each expr
     # <any>
     #   {expr1}
@@ -131,21 +150,22 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   {exprn}
     # </first>
     elif expr.tag in ('any','first'):
-        for sub_expr in list(expr):
-            for s in evaluate_block([sub_expr],bindings,global_namespace):
-                for ss in recur(exprs,bindings,s): yield ss
+        for sub_expr in list(expr): # iterate over subexpressions
+            for s in local_block([sub_expr]): # treat each one as a block
+                for ss in rest(s): yield ss # and recur for each of its solutions
                 if expr.tag=='first':
                     return
     # log interpolates its text and prints it. useful for debugging
     # <log>{template}</log>
     elif expr.tag=='log':
         print interpolate(expr.text,bindings)
-        for s in recur(exprs,bindings): yield s
+        for s in rest(): yield s
     # match generates solutions for every regex match
     # <match pattern="{regex}" [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
     # if "value" is specified, the template is interpolated and then matched against,
     # if "var" is specified, the variable's value is looked up and then matched.
     # var="foo" is equivalent to value="${foo}"
+    # if pattern is not specified the default pattern is ".*"
     # match also acts as an implicit, unnamed block so
     # <match ...>
     #   {expr1}
@@ -158,31 +178,61 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   {expr2}
     # </all>
     elif expr.tag=='match':
-        pattern = coalesce(expr.get('pattern'),r'.*')
+        pattern, value = match_args(expr,bindings,'.*')
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
             group_names = re.split('  *',group_name_list)
-        if expr.get('value'):
-            value = interpolate(expr.get('value'), bindings)
-        elif expr.get('var'):
-            value = bindings[expr.get('var')]
-        else:
-            return
-        m = re.match(interpolate(pattern,bindings), interpolate(value,bindings))
+        m = re.match(pattern, value)
         if m:
             groups = m.groups()
             inner_bindings = {}
             for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
                 inner_bindings[str(index+1)] = group
             for name,group in zip(group_names, groups): # bind named variables to groups
-                inner_bindings[name] = group
+                if group:
+                    inner_bindings[name] = group
             # now invoke the (usually empty) inner unnamed block and recur
-            for s in evaluate_block(list(expr),bindings.enclose(**inner_bindings),global_namespace):
-                for ss in recur(exprs,bindings,s): yield ss
+            for s in inner_block(expr,inner_bindings):
+                for ss in rest(s): yield ss
+        else:
+            return # miss
+    # split iterates over the result of splitting a value by a regex, assigning it repeatedly
+    # to the variable specified by group. like match it recurs and is also an implicit block
+    # <split [var="{var}"|value="{template}"] pattern="{pattern}" group="{name}"/>
+    # if pattern is not specified the default pattern is "  *"
+    elif expr.tag=='split':
+        pattern, value = match_args(expr,bindings,default_pattern='  *')
+        group = expr.get('group')
+        if group:
+            for val in re.split(pattern,value):
+                # now invoke the (usually empty) inner unnamed block and recur
+                for s in inner_block(expr,{group:val}):
+                    for ss in rest(s): yield ss
+    # path checks for the existence of files in the local filesystem and yields a hit if it does
+    # <path match="{template}" [var="{name}"]/>
+    # it is also an implicit anonymous block.
+    # if template expands to a nonexistent filename it will be attempted as a glob, which will then
+    # produce solutions binding to the named var for each glob match
+    elif expr.tag=='path':
+        template = coalesce(expr.get('match'),'')
+        match_expr = interpolate(template,bindings)
+        if os.path.exists(match_expr) and os.path.isfile(match_expr):
+            if expr.get('var'):
+                inner_bindings = {expr.get('var'): match_expr}
+            else:
+                inner_bindings = {}
+            # hit; recur on inner block
+            for s in inner_block(expr,inner_bindings):
+                for ss in rest(s): yield ss
+        else:
+            for glob_hit in iglob(match_expr):
+                inner_bindings = {expr.get('var'): glob_hit}
+                for s in inner_block(expr,inner_bindings):
+                    for ss in rest(s): yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     else:
-        for s in recur(exprs,bindings): yield s
+        for s in rest(): yield s
                 
 def evaluate(name,global_namespace={}):
     expr = global_namespace[name]
