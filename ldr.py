@@ -17,22 +17,22 @@ def find_names(e):
     return dict(('.'.join(n),ne) for n, ne in descend(e.getroot()))
 
 # substitute patterns like ${varname} for their values given
-# bindings = a dict of varname->value
+# scope = values for the names (dict-like)
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 def interpolate(template,scope):
-   s = StringIO()
-   pattern = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
-   end = 0
-   for m in re.finditer(pattern,template):
-      end = m.end()
-      (plain, expr, key) = m.groups()
-      s.write(plain)
-      try:
-         s.write(scope[key])
-      except:
-         s.write(expr)
-   s.write(template[end:])
-   return s.getvalue()
+    s = StringIO()
+    pattern = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+    end = 0
+    for m in re.finditer(pattern,template):
+        end = m.end()
+        (plain, expr, key) = m.groups()
+        s.write(plain)
+        try:
+            s.write(scope[key])
+        except KeyError:
+            s.write(expr)
+    s.write(template[end:])
+    return s.getvalue()
 
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
@@ -104,16 +104,31 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for sub_val_expr in sub_val_exprs:
                 var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
                 for s in recur(exprs,bindings,dict(zip(var_names,var_vals))): yield s
-    # all is a conjunction
+    # all is a conjunction. it is like an unnamed namespace block
+    # and will yield any solution that exists after all exprs are evaluated
+    # in sequence
+    # <all>
+    #   {expr1}
+    #   {expr2}
+    #   ...
+    #   {exprn}
+    # </all>
     elif expr.tag=='all':
         for s in evaluate_block(list(expr),bindings,global_namespace):
             for ss in recur(exprs,bindings,s): yield ss
-    # any is a disjunction
+    # any is a disjunction. it will yield all solutions of each expr
+    # <any>
+    #   {expr1}
+    #   {expr2}
+    #   ...
+    #   {exprn}
+    # </all>
     elif expr.tag=='any':
         for sub_expr in list(expr):
             for s in evaluate_block([sub_expr],bindings,global_namespace):
                 for ss in recur(exprs,bindings,s): yield ss
-    # log prints output
+    # log interpolates its text and prints it. useful for debugging
+    # <log>{template}</log>
     elif expr.tag=='log':
         print interpolate(expr.text,bindings)
     # match generates solutions for every regex match
@@ -133,7 +148,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for name,group in zip(group_names, groups): # bind named variables to groups
                 inner_bindings[name] = group
             for s in recur(exprs,bindings,inner_bindings): yield s
-    # all other tags skip
+    # all other tags are no-ops, but because this a block will recur
+    # to subsequent expressions
     else:
         for s in recur(exprs,bindings): yield s
                 
