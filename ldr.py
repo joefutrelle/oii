@@ -58,7 +58,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <hit vars="{name1} {name2}"/>
     elif expr.tag=='hit':
         var_name_list = expr.get('vars')
-        if var_name_list is not None:
+        if var_name_list:
             var_names = re.split('  *',var_name_list)
             yield dict((var_name,val(bindings,var_name)) for var_name in var_names)
         else:
@@ -140,23 +140,45 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <log>{template}</log>
     elif expr.tag=='log':
         print interpolate(expr.text,bindings)
+        for s in recur(exprs,bindings): yield s
     # match generates solutions for every regex match
-    # <match pattern="{regex}" value="{thing to match}" [groups="{name1} {name2}"]/>
+    # <match pattern="{regex}" [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
+    # if "value" is specified, the template is interpolated and then matched against,
+    # if "var" is specified, the variable's value is looked up and then matched.
+    # var="foo" is equivalent to value="${foo}"
+    # match also acts as an implicit, unnamed block so
+    # <match ...>
+    #   {expr1}
+    #   {expr2}
+    # </match>
+    # is equivalent to
+    # <all>
+    #   <match .../>
+    #   {expr1}
+    #   {expr2}
+    # </all>
     elif expr.tag=='match':
         pattern = coalesce(expr.get('pattern'),r'.*')
         group_name_list, group_names = expr.get('groups'), []
-        if group_name_list is not None:
+        if group_name_list:
             group_names = re.split('  *',group_name_list)
-        value = coalesce(expr.get('value'),'')
+        if expr.get('value'):
+            value = interpolate(expr.get('value'), bindings)
+        elif expr.get('var'):
+            value = bindings[expr.get('var')]
+        else:
+            return
         m = re.match(interpolate(pattern,bindings), interpolate(value,bindings))
-        if m is not None:
+        if m:
             groups = m.groups()
             inner_bindings = {}
             for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
                 inner_bindings[str(index+1)] = group
             for name,group in zip(group_names, groups): # bind named variables to groups
                 inner_bindings[name] = group
-            for s in recur(exprs,bindings,inner_bindings): yield s
+            # now invoke the (usually empty) inner unnamed block and recur
+            for s in evaluate_block(list(expr),bindings.enclose(**inner_bindings),global_namespace):
+                for ss in recur(exprs,bindings,s): yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     else:

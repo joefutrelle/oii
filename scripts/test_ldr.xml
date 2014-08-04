@@ -4,6 +4,7 @@
     <var name="multiple">
       <val>clam</val>
       <val>bake</val>
+      <val>The X factor</val>
     </var>
     <var name="interpolated">${test} ${test}</var>
     <vars names="ts_name title" delim="/">
@@ -11,17 +12,25 @@
       <vals>saltpond/Salt Pond</vals>
     </vars>
     <any>
-      <match value="${multiple}${ts_name}" pattern="(.*)X(.*)"/>
-      <match value="${multiple}${ts_name}" pattern="(.*)o(.*)"/>
+      <match var="multiple" pattern=".(.*)" groups="mymult"/>
+      <log>Matching ${multiple}${ts_name} for X</log>
+      <all>
+	<match value="${multiple}${ts_name}" pattern="(.*)X(.*)" groups="one two"/>
+	<var name="soMuchX">YES A ROOTIE</var>
+      </all>
+      <log>Matching ${multiple}${ts_name} for o</log>
+      <match value="${multiple}${ts_name}" pattern="(.*)o(.*)" groups="one two">
+	<var name="soMuchO">YES AN O</var>
+      </match>
     </any>
-    <any>
+    <first>
       <var name="foo">bar</var>
       <all>
 	<var name="knork">blaps</var>
 	<var name="knip">blimps</var>
       </all>
       <var name="baz">quux</var>
-    </any>
+    </first>
   </namespace>
   <namespace name="global_import">
     <import name="mvco.time_series"/>
