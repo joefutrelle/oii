@@ -40,10 +40,15 @@ def find_names(e):
             for se in e.findall('namespace'):
                 for name, name_e in descend(se,namespace=sub_ns):
                     yield name, name_e
-    return dict(('.'.join(n),ne) for n, ne in descend(e.getroot()))
+    return dict(('.'.join(n),ne) for n, ne in descend(e))
 
 LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
 LDR_WS_SEP_PATTERN = re.compile(r'\s+')
+
+def flatten(dictlike, key_names=None):
+    if not key_names:
+        return dict(dictlike.items())
+    return dict((k,dictlike[k]) for k in key_names)
 
 # substitute patterns like ${varname} for their values given
 # scope = values for the names (dict-like)
@@ -61,7 +66,6 @@ def interpolate(template,scope):
             s.write(expr)
     s.write(template[end:])
     return s.getvalue()
-    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
 ## interpolate a template using Jinja2
 #def interpolate(template,scope):
@@ -93,7 +97,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
-        yield bindings.flatten()
+        yield flatten(bindings)
         return
     # handle the first expression
     expr = exprs[0]
@@ -110,9 +114,26 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         var_name_list = expr.get('vars')
         if var_name_list:
             var_names = re.split(LDR_WS_SEP_PATTERN,var_name_list)
-            yield dict((var_name,bindings[var_name]) for var_name in var_names)
+            yield flatten(bindings, var_names)
         else:
-            yield bindings.flatten()
+            yield flatten(bindings)
+    # Distinct eliminates duplicate solutions from its inner block, and optionally reduces the set
+    # of variables to the named vars.
+    # <distinct [vars="{var1} {var2}"]>
+    #   {expr1}
+    # </distinct>
+    elif expr.tag=='distinct':
+        var_name_list = expr.get('vars')
+        if var_name_list:
+            var_names = re.split(LDR_WS_SEP_PATTERN,var_name_list)
+        so_far = set()
+        for s in inner_block(expr):
+            if var_name_list:
+                s = flatten(s, var_names)
+            frozen = frozenset(s.items())
+            if frozen not in so_far:
+                so_far.add(frozen)
+                yield s
     # Import means descend, once, into another namespace, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions
     elif expr.tag=='import':
@@ -293,10 +314,13 @@ def evaluate(name,bindings=Scope(),global_namespace={}):
         for solution in evaluate_block(list(expr),bindings,global_namespace=global_namespace):
             yield solution
 
-def parse(*ldr_files):
+def parse(*ldr_streams):
     namespace = {}
-    for ldr_file in ldr_files:
-        xml = etree.parse(ldr_file)
+    for ldr_stream in ldr_streams:
+        try:
+            xml = etree.parse(ldr_stream).getroot()
+        except:
+            xml = etree.fromstring(ldr_stream)
         namespace.update(find_names(xml).items())
     return namespace
 
