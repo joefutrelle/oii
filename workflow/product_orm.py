@@ -64,7 +64,7 @@ class Dependency(Base):
 
     upstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
     downstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
-    role = Column(String, default=DEFAULT_ROLE)
+    role = Column(String, default=DEFAULT_ROLE, nullable=False)
 
     upstream = relationship(Product,
                             primaryjoin=upstream_id==Product.pid,
@@ -127,6 +127,7 @@ class Products(object):
             group_by(Product).\
             having(func.count(Dependency.role)==len(roles)).\
             having(func.count(distinct(Dependency.role))==len(set(roles))).\
+            with_lockmode('update').\
             first()
     @staticmethod
     def delete_intermediate(session, state='available', dep_state='available'):
