@@ -9,6 +9,25 @@ import traceback
 from oii.scope import Scope
 from oii.utils import coalesce
 
+# pretty-print bindings
+def pprint(bindings):
+    if len(bindings) == 0:
+        print '{}'
+        return
+    # remove integer bindings (groups from the most recent regex match)
+    for var in bindings.keys():
+        try:
+            int(var)
+            del bindings[var]
+        except ValueError:
+            pass
+    # colon-align
+    width = max(len(var) for var in bindings)
+    print '{'
+    for var in sorted(bindings):
+        print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
+    print '}'
+
 # foo.bar corresponds to an XPath of /namespace[@name='foo']/namespace[@name='bar']
 def find_names(e):
     def descend(e,namespace=[]):
@@ -264,12 +283,21 @@ def evaluate(name,bindings=Scope(),global_namespace={}):
         for solution in evaluate_block(list(expr),bindings,global_namespace=global_namespace):
             yield solution
 
-def parse(ldr_file):
-    xml = etree.parse(ldr_file)
-    namespace = find_names(xml)
+def parse(*ldr_files):
+    namespace = {}
+    for ldr_file in ldr_files:
+        xml = etree.parse(ldr_file)
+        namespace.update(find_names(xml).items())
     return namespace
 
 def resolve(namespace,name):
     for s in evaluate(name,global_namespace=namespace):
         yield s
+
+class Resolver(object):
+    def __init__(self,*files):
+        self.namespace = parse(*files)
+    def resolve(self,name,**bindings):
+        for s in evaluate(name,Scope(bindings),self.namespace):
+            yield s
     
