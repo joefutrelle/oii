@@ -42,9 +42,11 @@ class Scope(object):
       if self.parent and key in self.parent:
          return True
       return False
-   def flatten(self):
+   def flatten(self,key_list=None):
       """return dict of all non-shadowed bindings"""
-      return dict((k,self[k]) for k in self)
+      if not key_list:
+         key_list = self
+      return dict((k,self[k]) for k in key_list)
    def items(self):
       """return k,v of all non-shadowed bindings"""
       return self.flatten().items()
