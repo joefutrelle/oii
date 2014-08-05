@@ -1,3 +1,4 @@
+import sys
 import os
 from StringIO import StringIO
 from lxml import etree
@@ -6,8 +7,10 @@ from glob import iglob
 
 import traceback
 
+import jinja2
+
 from oii.scope import Scope
-from oii.utils import coalesce
+from oii.utils import coalesce, asciitable
 
 # pretty-print bindings
 def pprint(bindings):
@@ -39,14 +42,16 @@ def find_names(e):
                     yield name, name_e
     return dict(('.'.join(n),ne) for n, ne in descend(e.getroot()))
 
+LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+LDR_WS_SEP_PATTERN = re.compile(r'\s+')
+
 # substitute patterns like ${varname} for their values given
 # scope = values for the names (dict-like)
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 def interpolate(template,scope):
     s = StringIO()
-    pattern = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
     end = 0
-    for m in re.finditer(pattern,template):
+    for m in re.finditer(LDR_INTERP_PATTERN,template):
         end = m.end()
         (plain, expr, key) = m.groups()
         s.write(plain)
@@ -56,6 +61,11 @@ def interpolate(template,scope):
             s.write(expr)
     s.write(template[end:])
     return s.getvalue()
+    return jinja2.Environment().from_string(template).render(**scope.flatten())
+
+## interpolate a template using Jinja2
+#def interpolate(template,scope):
+#    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
@@ -99,7 +109,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='hit':
         var_name_list = expr.get('vars')
         if var_name_list:
-            var_names = re.split('  *',var_name_list)
+            var_names = re.split(LDR_WS_SEP_PATTERN,var_name_list)
             yield dict((var_name,bindings[var_name]) for var_name in var_names)
         else:
             yield bindings.flatten()
@@ -137,9 +147,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   <vals>{value1}{delim}{value2}</vals>
     # </vars>
     elif expr.tag=='vars':
-        var_names = re.split('  *',expr.get('names'))
+        var_names = re.split(LDR_WS_SEP_PATTERN,expr.get('names'))
         sub_val_exprs = expr.findall('vals')
-        delim = coalesce(expr.get('delim'),'  *')
+        delim = coalesce(expr.get('delim'),LDR_WS_SEP_PATTERN)
         if len(sub_val_exprs) == 0:
             var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
             for s in rest(dict(zip(var_names,var_vals))):
@@ -223,7 +233,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         pattern, value = match_args(expr,bindings,'.*')
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
-            group_names = re.split('  *',group_name_list)
+            group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
         m = re.match(pattern, value)
         if m:
             groups = m.groups()
@@ -243,7 +253,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <split [var="{var}"|value="{template}"] pattern="{pattern}" group="{name}"/>
     # if pattern is not specified the default pattern is "  *"
     elif expr.tag=='split':
-        pattern, value = match_args(expr,bindings,default_pattern='  *')
+        pattern, value = match_args(expr,bindings,default_pattern=LDR_WS_SEP_PATTERN)
         group = expr.get('group')
         if group:
             for val in re.split(pattern,value):
@@ -301,3 +311,14 @@ class Resolver(object):
         for s in evaluate(name,Scope(bindings),self.namespace):
             yield s
     
+if __name__=='__main__':
+    """usage example
+    python oii/ldr.py foo.xml:bar.xml some.resolver.name var1=val1 var2=val2 ...
+    """
+    path, name = sys.argv[1:3]
+    xml_files = re.split(':',path)
+    bindings = dict(re.split('=',kw) for kw in sys.argv[3:])
+
+    resolver = Resolver(*xml_files)
+    for line in asciitable(list(resolver.resolve(name,**bindings))):
+        print line
