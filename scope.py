@@ -12,7 +12,7 @@ class Scope(object):
       look in local bindings first, then recurse upward"""
       if key in self.bindings:
          return self.bindings[key]
-      elif key in self.parent:
+      elif self.parent and key in self.parent:
          return self.parent[key]
       else:
          raise KeyError
