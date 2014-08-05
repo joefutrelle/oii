@@ -75,13 +75,19 @@ def interpolate(template,scope):
 # solutions a la Prolog
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # utility to parse arguments to match and split
-    def match_args(expr,bindings,default_pattern='.*'):
+    def parse_match_args(expr,bindings,default_pattern='.*'):
         pattern = coalesce(expr.get('pattern'),default_pattern)
         if expr.get('value'):
             value = expr.get('value')
         elif expr.get('var'):
             value = bindings[expr.get('var')]
         return interpolate(pattern,bindings), interpolate(value,bindings)
+    # utility to parse "vars" argument
+    def parse_vars_arg(expr):
+        var_name_list = expr.get('vars')
+        if var_name_list:
+            return re.split(LDR_WS_SEP_PATTERN,var_name_list)
+        return None
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
         return evaluate_block(exprs,bindings.enclose(**inner_bindings),global_namespace)
@@ -110,34 +116,49 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <hit/>
     # or optionally, a subset of them
     # <hit vars="{name1} {name2}"/>
-    elif expr.tag=='hit':
-        var_name_list = expr.get('vars')
-        if var_name_list:
-            var_names = re.split(LDR_WS_SEP_PATTERN,var_name_list)
-            yield flatten(bindings, var_names)
+    # then recurs. it's the only way to generate a hit and recur;
+    # otherwise one can just fall through.
+    # The export expression is just like this, except that it doesn't
+    # generate a hit but rather falls through after reducing the set
+    # of variables in the solution.
+    elif expr.tag in ('hit','export'):
+        var_names = parse_vars_arg(expr)
+        if var_names:
+            s = flatten(bindings, var_names)
         else:
-            yield flatten(bindings)
+            s = flatten(bindings)
+        if expr.tag=='hit':
+            yield s
+            for ss in rest(s):
+                yield ss
+        elif expr.tag=='export':
+            for ss in evaluate_block(exprs[1:],s,global_namespace):
+                yield ss
     # Distinct eliminates duplicate solutions from its inner block, and optionally reduces the set
     # of variables to the named vars.
     # <distinct [vars="{var1} {var2}"]>
     #   {expr1}
     # </distinct>
     elif expr.tag=='distinct':
-        var_name_list = expr.get('vars')
-        if var_name_list:
-            var_names = re.split(LDR_WS_SEP_PATTERN,var_name_list)
+        var_names = parse_vars_arg(expr)
         so_far = set()
-        for s in inner_block(expr):
-            if var_name_list:
+        for s in local_block(expr):
+            if var_names:
                 s = flatten(s, var_names)
             frozen = frozenset(s.items())
             if frozen not in so_far:
                 so_far.add(frozen)
-                yield s
+                for ss in rest(s):
+                    yield ss
     # Import means descend, once, into another namespace, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions
+    # optionally filtering all but vars
+    # <import [vars="{var1} {var2}"] from="{name}"/>
     elif expr.tag=='import':
-        for s in evaluate(expr.get('name'),bindings,global_namespace):
+        var_names = parse_vars_arg(expr)
+        for s in evaluate(expr.get('from'),bindings,global_namespace):
+            if var_names:
+                s = flatten(s, var_names)
             for ss in rest(s):
                 yield ss
     # The var expression sets variables to interpolated values
@@ -251,7 +272,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   {expr2}
     # </all>
     elif expr.tag=='match':
-        pattern, value = match_args(expr,bindings,'.*')
+        pattern, value = parse_match_args(expr,bindings,'.*')
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
             group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
@@ -274,7 +295,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <split [var="{var}"|value="{template}"] pattern="{pattern}" group="{name}"/>
     # if pattern is not specified the default pattern is "  *"
     elif expr.tag=='split':
-        pattern, value = match_args(expr,bindings,default_pattern=LDR_WS_SEP_PATTERN)
+        pattern, value = parse_match_args(expr,bindings,default_pattern=LDR_WS_SEP_PATTERN)
         group = expr.get('group')
         if group:
             for val in re.split(pattern,value):
@@ -346,3 +367,4 @@ if __name__=='__main__':
     resolver = Resolver(*xml_files)
     for line in asciitable(list(resolver.resolve(name,**bindings))):
         print line
+
