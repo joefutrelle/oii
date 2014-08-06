@@ -46,7 +46,7 @@ LDR_WS_SEP_REGEX = r'\s+'
 LDR_WS_SEP_PATTERN = re.compile(LDR_WS_SEP_REGEX)
 
 def flatten(dictlike, key_names=None):
-    if not key_names:
+    if key_names is None:
         return dict(dictlike.items())
     return dict((k,dictlike[k]) for k in key_names if k in dictlike)
 
@@ -72,6 +72,33 @@ def interpolate(template,scope):
 #def interpolate(template,scope):
 #    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
+# utility to parse "vars" argument
+def parse_vars_arg(expr,attr='vars'):
+    var_name_list = expr.get(attr)
+    if var_name_list:
+        return re.split(LDR_WS_SEP_PATTERN,var_name_list)
+    return None
+
+# filter out distinct solutions. if vars is specified,
+# retain only those vars prior to testing for uniqueness.
+# if expr is specified parse the 'distinct' argument from it
+# to get the var list.
+# if neither is specified, allow all solutions
+def distinct(solution_generator,expr=None,vars=None):
+    if expr is not None:
+        vars = parse_vars_arg(expr,'distinct')
+    if vars is not None:
+        distinct_solutions = set()
+        for raw_solution in solution_generator:
+            solution = flatten(raw_solution,vars)
+            f_solution = frozenset(solution.items())
+            if f_solution not in distinct_solutions:
+                distinct_solutions.add(f_solution)
+                yield solution
+    else:
+        for s in solution_generator:
+            yield s
+
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
@@ -83,12 +110,6 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         elif expr.get('var'):
             value = bindings[expr.get('var')]
         return interpolate(pattern,bindings), interpolate(value,bindings)
-    # utility to parse "vars" argument
-    def parse_vars_arg(expr,attr='vars'):
-        var_name_list = expr.get(attr)
-        if var_name_list:
-            return re.split(LDR_WS_SEP_PATTERN,var_name_list)
-        return None
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
         return evaluate_block(exprs,bindings.enclose(**inner_bindings),global_namespace)
@@ -99,7 +120,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return local_block(exprs[1:],inner_bindings)
     # utility recurrence expression for unnamed block
     def inner_block(expr,inner_bindings={}):
-        for s in local_block(list(expr),inner_bindings):
+        for s in distinct(local_block(list(expr),inner_bindings),expr):
             for ss in rest(s):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
@@ -135,46 +156,21 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         elif expr.tag=='retain':
             for ss in evaluate_block(exprs[1:],s,global_namespace):
                 yield ss
-    # Distinct eliminates duplicate solutions from its inner block, optionally removing
-    # all but the specified variables (before, not after the test for uniqueness)
-    # <distinct [vars="{var1} {var2}"]>
-    #   {expr1}
-    # </distinct>
-    # is equivalent to
-    # <distinct>
-    #   {exprt1}
-    #   <export vars="{var1} {var2}"/>
-    # </distinct>
-    elif expr.tag=='distinct':
-        var_names = parse_vars_arg(expr)
-        so_far = set()
-        for s in local_block(expr):
-            if var_names:
-                s = flatten(s, var_names)
-            frozen = frozenset(s.items())
-            if frozen not in so_far:
-                so_far.add(frozen)
-                for ss in rest(s):
-                    yield ss
     # Invoke means descend, once, into a named rule, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions.
-    # options include filtering the ingoing and outgoing variables, as well as
-    # whether to de-duplicate the solutions a la distinct.
-    # <invoke rule="{name}" [using="{var1} {var2}"] [toget="{var1} {var2}"]"/>
+    # options include filtering the input and output variables, as well as
+    # aliasing the output variables
+    # <invoke rule="{name}" [using="{var1} {var2}"] [toget="{var1} {var2}" [as="{alias1} {alias2}"]]"/>
     elif expr.tag=='invoke':
         rule_name = expr.get('rule')
         using = parse_vars_arg(expr,'using')
         toget = parse_vars_arg(expr,'toget')
-        distinct = expr.get('distinct') is not None
-        so_far = set()
-        for s in invoke(rule_name,Scope(flatten(bindings,using)),global_namespace):
-            if toget:
-                s = flatten(s, toget)
-            frozen = frozenset(s.items())
-            if frozen not in so_far:
-                so_far.add(frozen)
-                for ss in rest(s):
-                    yield ss
+        aliases = parse_vars_arg(expr,'as')
+        for s in distinct(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr):
+            if toget is not None and aliases is not None:
+                s = dict((a,s[k]) for k,a in zip(toget,aliases))
+            for ss in rest(s):
+                yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
@@ -351,11 +347,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     else:
         for s in rest():
             yield s
-                
+
 def invoke(name,bindings=Scope(),global_namespace={}):
     expr = global_namespace[name]
     if expr.tag == 'rule':
-        for solution in evaluate_block(list(expr),bindings,global_namespace=global_namespace):
+        for solution in distinct(evaluate_block(list(expr),bindings,global_namespace=global_namespace),expr):
             yield solution
 
 def parse(*ldr_streams):
