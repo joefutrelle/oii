@@ -4,6 +4,7 @@ from StringIO import StringIO
 from lxml import etree
 import re
 from glob import iglob
+import fileinput
 
 import traceback
 
@@ -79,6 +80,10 @@ def parse_vars_arg(expr,attr='vars'):
         return re.split(LDR_WS_SEP_PATTERN,var_name_list)
     return None
 
+# utility to parse single var argument, which always defaults to '_'
+def parse_var_arg(expr,attr='var'):
+    return coalesce(expr.get(attr),'_')
+
 # filter out distinct solutions. if vars is specified,
 # retain only those vars prior to testing for uniqueness.
 # if expr is specified parse the 'distinct' argument from it
@@ -107,8 +112,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         pattern = coalesce(expr.get('pattern'),default_pattern)
         if expr.get('value'):
             value = expr.get('value')
-        elif expr.get('var'):
-            value = bindings[expr.get('var')]
+        else:
+            value = bindings[parse_var_arg(expr)]
         return interpolate(pattern,bindings), interpolate(value,bindings)
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
@@ -179,7 +184,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   <val>{value2}</val>
     # </var>
     elif expr.tag=='var':
-        var_name = expr.get('name')
+        var_name = parse_var_arg(expr,'name')
         sub_val_exprs = expr.findall('val')
         if len(sub_val_exprs) == 0:
             var_val = interpolate(expr.text,bindings)
@@ -330,18 +335,26 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         template = coalesce(expr.get('match'),'')
         match_expr = interpolate(template,bindings)
         if os.path.exists(match_expr) and os.path.isfile(match_expr):
-            if expr.get('var'):
-                inner_bindings = {expr.get('var'): match_expr}
-            else:
-                inner_bindings = {}
+            inner_bindings = {parse_var_arg(expr): match_expr}
             # hit; recur on inner block
             for s in inner_block(expr,inner_bindings):
                 yield s
         else:
             for glob_hit in iglob(match_expr):
-                inner_bindings = {expr.get('var'): glob_hit}
+                inner_bindings = {parse_var_arg(expr): glob_hit}
                 for s in inner_block(expr,inner_bindings):
                     yield s
+    # read produces each line of a specified file as solution bound to the given var.
+    # if no var is specified each line is bound to a variable named '_'
+    # <read file="foo.csv" [var="{name}"]/>
+    # and is also an implicit block. if no file is specified stdin is read
+    elif expr.tag=='read':
+        var_name = parse_var_arg(expr)
+        file_path = coalesce(expr.get('file'),'-')
+        for raw_line in fileinput.input(file_path):
+            line = raw_line.rstrip()
+            for s in inner_block(expr,{var_name:line}):
+                yield s
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     else:
@@ -359,6 +372,8 @@ def parse(*ldr_streams):
     for ldr_stream in ldr_streams:
         try:
             xml = etree.parse(ldr_stream).getroot()
+        except etree.XMLSyntaxError:
+            raise
         except:
             xml = etree.fromstring(ldr_stream)
         namespace.update(find_names(xml).items())
@@ -384,6 +399,10 @@ if __name__=='__main__':
     bindings = dict(re.split('=',kw) for kw in sys.argv[3:])
 
     resolver = Resolver(*xml_files)
-    for line in asciitable(list(resolver.resolve(name,**bindings))):
-        print line
+    result = list(resolver.resolve(name,**bindings))
+    if not result:
+        print 'No solutions found'
+    else:
+        for line in asciitable(result):
+            print line
 
