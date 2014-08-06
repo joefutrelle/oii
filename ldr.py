@@ -7,8 +7,6 @@ from glob import iglob
 
 import traceback
 
-import jinja2
-
 from oii.scope import Scope
 from oii.utils import coalesce, asciitable
 
@@ -44,12 +42,13 @@ def find_names(e):
     return dict(('.'.join(n),ne) for n, ne in descend(e))
 
 LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+LDR_WS_SEP_REGEX = r'\s+'
 LDR_WS_SEP_PATTERN = re.compile(r'\s+')
 
 def flatten(dictlike, key_names=None):
     if not key_names:
         return dict(dictlike.items())
-    return dict((k,dictlike[k]) for k in key_names)
+    return dict((k,dictlike[k]) for k in key_names if k in dictlike)
 
 # substitute patterns like ${varname} for their values given
 # scope = values for the names (dict-like)
@@ -69,6 +68,7 @@ def interpolate(template,scope):
     return s.getvalue()
 
 ## interpolate a template using Jinja2
+#import jinja2
 #def interpolate(template,scope):
 #    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
@@ -306,16 +306,25 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             return # miss
     # split iterates over the result of splitting a value by a regex, assigning it repeatedly
     # to the variable specified by group. like match it recurs and is also an implicit block
-    # <split [var="{var}"|value="{template}"] pattern="{pattern}" group="{name}"/>
+    # <split [var="{var}"|value="{template}"] [pattern="{pattern}"] [group="{name}|vars="{name1} {name}"]/>
     # if pattern is not specified the default pattern is "  *"
+    # alternatively one can use split to do multiple assignment, as in this example
+    # <split value="foo bar baz" vars="a b c"/>
+    # which will set a=foo, b=bar, c=baz
     elif expr.tag=='split':
-        pattern, value = parse_match_args(expr,bindings,default_pattern=LDR_WS_SEP_PATTERN)
+        pattern, value = parse_match_args(expr,bindings,default_pattern=LDR_WS_SEP_REGEX)
+        var_names = parse_vars_arg(expr)
         group = expr.get('group')
         if group:
             for val in re.split(pattern,value):
                 # now invoke the (usually empty) inner unnamed block and recur
                 for s in inner_block(expr,{group:val}):
                     yield s
+        elif var_names:
+            inner_bindings = dict((n,v) for n,v in zip(var_names, re.split(pattern,value)))
+            # now invoke the (usually empty) inner unnamed block and recur
+            for s in inner_block(expr,inner_bindings):
+                yield s
     # path checks for the existence of files in the local filesystem and yields a hit if it does
     # <path match="{template}" [var="{name}"]/>
     # it is also an implicit anonymous block.
