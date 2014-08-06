@@ -46,6 +46,20 @@ LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
 LDR_WS_SEP_REGEX = r'\s+'
 LDR_WS_SEP_PATTERN = re.compile(LDR_WS_SEP_REGEX)
 
+# supports time-like regexes e.g., IFCB9_yyyy_YYY_HHMMSS
+def timestamp2regex(pattern):
+    pattern = re.sub(r'9','[0-9]',pattern)
+    pattern = re.sub(r's+','(?P<millisecond>[0-9]+)',pattern)
+    pattern = re.sub(r'yyyy','(?P<year>[0-9]{4})',pattern)
+    pattern = re.sub(r'mm','(?P<month>0?[1-9]|11|12)',pattern)
+    pattern = re.sub(r'dd','(?P<day>0?1|[1-2][0-9]|3[0-1])',pattern)
+    pattern = re.sub(r'YYY','(?P<yearday>[0-3][0-9][0-9])',pattern)
+    pattern = re.sub(r'HH','(?P<hour>0?[1-9]|1[0-9]|2[0-3])',pattern)
+    pattern = re.sub(r'MM','(?P<minute>[0-5][0-9])',pattern)
+    pattern = re.sub(r'SS','(?P<second>[0-5][0-9])',pattern)
+    pattern = re.sub(r'\.',r'\.',pattern)
+    return pattern
+
 def flatten(dictlike, key_names=None):
     if key_names is None:
         return dict(dictlike.items())
@@ -270,24 +284,17 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for s in rest():
             yield s
     # match generates solutions for every regex match
-    # <match pattern="{regex}" [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
+    # <match [pattern="{regex}"|timestamp="{date pattern}"] [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
     # if "value" is specified, the template is interpolated and then matched against,
     # if "var" is specified, the variable's value is looked up and then matched.
     # var="foo" is equivalent to value="${foo}"
     # if pattern is not specified the default pattern is ".*"
-    # match also acts as an implicit, unnamed block so
-    # <match ...>
-    #   {expr1}
-    #   {expr2}
-    # </match>
-    # is equivalent to
-    # <all>
-    #   <match .../>
-    #   {expr1}
-    #   {expr2}
-    # </all>
+    # match also acts as an implicit, unnamed block supporting distinct
     elif expr.tag=='match':
         pattern, value = parse_match_args(expr,bindings,'.*')
+        timestamp_pattern = expr.get('timestamp')
+        if timestamp_pattern is not None:
+            pattern = timestamp2regex(timestamp_pattern)
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
             group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
@@ -399,10 +406,6 @@ if __name__=='__main__':
     bindings = dict(re.split('=',kw) for kw in sys.argv[3:])
 
     resolver = Resolver(*xml_files)
-    result = list(resolver.resolve(name,**bindings))
-    if not result:
-        print 'No solutions found'
-    else:
-        for line in asciitable(result):
-            print line
+    for result in resolver.resolve(name,**bindings):
+        pprint(result)
 
