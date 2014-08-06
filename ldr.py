@@ -31,15 +31,16 @@ def pprint(bindings):
         print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
     print '}'
 
-# foo.bar corresponds to an XPath of /namespace[@name='foo']/namespace[@name='bar']
+# foo.bar corresponds to an XPath of /rule[@name='foo']/namespace[@name='bar']
 def find_names(e):
     def descend(e,namespace=[]):
         if e.tag=='namespace':
             sub_ns = namespace + [e.get('name')]
-            yield sub_ns, e
-            for se in e.findall('namespace'):
+            for se in e:
                 for name, name_e in descend(se,namespace=sub_ns):
                     yield name, name_e
+        elif e.tag=='rule':
+            yield namespace + [e.get('name')], e
     return dict(('.'.join(n),ne) for n, ne in descend(e))
 
 LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
@@ -83,8 +84,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             value = bindings[expr.get('var')]
         return interpolate(pattern,bindings), interpolate(value,bindings)
     # utility to parse "vars" argument
-    def parse_vars_arg(expr):
-        var_name_list = expr.get('vars')
+    def parse_vars_arg(expr,attr='vars'):
+        var_name_list = expr.get(attr)
         if var_name_list:
             return re.split(LDR_WS_SEP_PATTERN,var_name_list)
         return None
@@ -118,10 +119,10 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <hit vars="{name1} {name2}"/>
     # then recurs. it's the only way to generate a hit and recur;
     # otherwise one can just fall through.
-    # The export expression is just like this, except that it doesn't
+    # The retain expression is just like this, except that it doesn't
     # generate a hit but rather falls through after reducing the set
     # of variables in the solution.
-    elif expr.tag in ('hit','export'):
+    elif expr.tag in ('hit','retain'):
         var_names = parse_vars_arg(expr)
         if var_names:
             s = flatten(bindings, var_names)
@@ -131,13 +132,18 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             yield s
             for ss in rest(s):
                 yield ss
-        elif expr.tag=='export':
+        elif expr.tag=='retain':
             for ss in evaluate_block(exprs[1:],s,global_namespace):
                 yield ss
-    # Distinct eliminates duplicate solutions from its inner block, and optionally reduces the set
-    # of variables to the named vars.
+    # Distinct eliminates duplicate solutions from its inner block, optionally removing
+    # all but the specified variables (before, not after the test for uniqueness)
     # <distinct [vars="{var1} {var2}"]>
     #   {expr1}
+    # </distinct>
+    # is equivalent to
+    # <distinct>
+    #   {exprt1}
+    #   <export vars="{var1} {var2}"/>
     # </distinct>
     elif expr.tag=='distinct':
         var_names = parse_vars_arg(expr)
@@ -150,17 +156,25 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 so_far.add(frozen)
                 for ss in rest(s):
                     yield ss
-    # Import means descend, once, into another namespace, evaluating it as a block,
-    # with the current bindings in scope, and recur for each of its solutions
-    # optionally filtering all but vars
-    # <import [vars="{var1} {var2}"] from="{name}"/>
-    elif expr.tag=='import':
-        var_names = parse_vars_arg(expr)
-        for s in evaluate(expr.get('from'),bindings,global_namespace):
-            if var_names:
-                s = flatten(s, var_names)
-            for ss in rest(s):
-                yield ss
+    # Invoke means descend, once, into a named rule, evaluating it as a block,
+    # with the current bindings in scope, and recur for each of its solutions.
+    # options include filtering the ingoing and outgoing variables, as well as
+    # whether to de-duplicate the solutions a la distinct.
+    # <invoke rule="{name}" [using="{var1} {var2}"] [toget="{var1} {var2}"]"/>
+    elif expr.tag=='invoke':
+        rule_name = expr.get('rule')
+        using = parse_vars_arg(expr,'using')
+        toget = parse_vars_arg(expr,'toget')
+        distinct = expr.get('distinct') is not None
+        so_far = set()
+        for s in invoke(rule_name,Scope(flatten(bindings,using)),global_namespace):
+            if toget:
+                s = flatten(s, toget)
+            frozen = frozenset(s.items())
+            if frozen not in so_far:
+                so_far.add(frozen)
+                for ss in rest(s):
+                    yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
@@ -329,9 +343,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for s in rest():
             yield s
                 
-def evaluate(name,bindings=Scope(),global_namespace={}):
+def invoke(name,bindings=Scope(),global_namespace={}):
     expr = global_namespace[name]
-    if expr.tag == 'namespace':
+    if expr.tag == 'rule':
         for solution in evaluate_block(list(expr),bindings,global_namespace=global_namespace):
             yield solution
 
@@ -353,7 +367,7 @@ class Resolver(object):
     def __init__(self,*files):
         self.namespace = parse(*files)
     def resolve(self,name,**bindings):
-        for s in evaluate(name,Scope(bindings),self.namespace):
+        for s in invoke(name,Scope(bindings),self.namespace):
             yield s
     
 if __name__=='__main__':
