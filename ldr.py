@@ -43,7 +43,7 @@ def find_names(e):
 
 LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
 LDR_WS_SEP_REGEX = r'\s+'
-LDR_WS_SEP_PATTERN = re.compile(r'\s+')
+LDR_WS_SEP_PATTERN = re.compile(LDR_WS_SEP_REGEX)
 
 def flatten(dictlike, key_names=None):
     if not key_names:
