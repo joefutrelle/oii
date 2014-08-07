@@ -391,6 +391,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
+    # FIXME change this behavior
     else:
         for s in rest():
             yield s
