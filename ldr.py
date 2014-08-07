@@ -1,10 +1,12 @@
 import sys
 import os
+from urllib2 import urlopen
 from StringIO import StringIO
 from lxml import etree
 import re
 from glob import iglob
 import fileinput
+import csv
 
 import traceback
 
@@ -30,7 +32,7 @@ def pprint(bindings):
         print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
     print '}'
 
-# foo.bar corresponds to an XPath of /rule[@name='foo']/namespace[@name='bar']
+# foo.bar corresponds to an XPath of /namespace[@name='foo']/rule[@name='bar']
 def find_names(e):
     def descend(e,namespace=[]):
         if e.tag=='namespace':
@@ -97,6 +99,12 @@ def parse_vars_arg(expr,attr='vars'):
 # utility to parse single var argument, which always defaults to '_'
 def parse_var_arg(expr,attr='var'):
     return coalesce(expr.get(attr),'_')
+
+# utility to parse a source file or url and get a stream
+def parse_source_arg(expr):
+    url = expr.get('url')
+    file_path = coalesce(expr.get('file'),'-')
+    return url, file_path
 
 # filter out distinct solutions. if vars is specified,
 # retain only those vars prior to testing for uniqueness.
@@ -351,17 +359,36 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 inner_bindings = {parse_var_arg(expr): glob_hit}
                 for s in inner_block(expr,inner_bindings):
                     yield s
-    # read produces each line of a specified file as solution bound to the given var.
+    # read produces each line of a specified source as solution bound to the given var.
     # if no var is specified each line is bound to a variable named '_'
-    # <read file="foo.csv" [var="{name}"]/>
+    # <read [file="{filename}|url="{url}"] [var="{name}"]/>
     # and is also an implicit block. if no file is specified stdin is read
     elif expr.tag=='read':
         var_name = parse_var_arg(expr)
-        file_path = coalesce(expr.get('file'),'-')
-        for raw_line in fileinput.input(file_path):
+        url, file_path = parse_source_arg(arg)
+        if url is not None:
+            iterable = urlopen(url)
+        else:
+            iterable = fileinput.input(file_path)
+        for raw_line in iterable:
             line = raw_line.rstrip()
             for s in inner_block(expr,{var_name:line}):
                 yield s
+    # csv reads CSV data from a source to bind selected variables.
+    # <csv [file="{filename}|url="{url}"] [vars="{name1} {name2}"]/>
+    # if no vars are specified the CSV data must have a header row
+    # and those headers will be used as variable names
+    elif expr.tag=='csv':
+        vars = parse_vars_arg(expr)
+        url, file_path = parse_source_arg(expr)
+        if url is not None:
+            stream = urlopen(url)
+        else:
+            stream = open(file_path)
+        reader = csv.DictReader(stream,vars)
+        for s in reader:
+            for ss in inner_block(expr,flatten(s,vars)):
+                yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     else:
