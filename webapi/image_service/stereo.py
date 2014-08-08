@@ -10,16 +10,18 @@ def get_img(hit):
     if hit is None:
         raise Exception('Not found')
     img = imread(hit.value)
-    if hit.product == 'redcyan':
-        return redcyan(rgb2gray(img),None,True)
-    if hit.variant is None:
-        hit.variant = hit.default_variant
-    if hit.variant == 'L':
-        return get_L(img)
-    elif hit.variant == 'R':
-        return get_R(img)
-    else:
-        return img
+    try:
+        if hit.product == 'redcyan':
+            return redcyan(rgb2gray(img),None,True)
+        if hit.variant is None:
+            hit.variant = hit.default_variant
+        if hit.variant == 'L':
+            return get_L(img)
+        elif hit.variant == 'R':
+            return get_R(img)
+    except AttributeError:
+        pass
+    return img
 
 def get_resolver(path):
     """assumes there is a resolver called 'image'"""

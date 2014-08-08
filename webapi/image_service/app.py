@@ -34,7 +34,7 @@ def serve_image(width=None,pid=None):
         (h,w) = img.shape[:2]
         height = int(1. * width / w * h)
         img = resize(img,(height,width))
-    return image_response(img, hit.filename)
+    return image_response(img, pid)
 
 def configure(config=None):
     app.config[CACHE] = SimpleCache()
