@@ -1,16 +1,19 @@
 import sys
 import os
 from flask import Flask, Response, abort
+from skimage.transform import resize
+from werkzeug.contrib.cache import SimpleCache
+
+from oii.utils import memoize
 from oii.webapi.image_service.stereo import get_img, get_resolver
 from oii.webapi.image_service.utils import image_response
 from oii.config import get_config
 from oii.resolver import parse_stream
-from skimage.transform import resize
-from werkzeug.contrib.cache import SimpleCache
 
 app = Flask(__name__)
 
 # string key constants
+CONFIG='config'
 CACHE='cache'
 CACHE_TTL='cache_ttl'
 RESOLVER='resolver'
@@ -18,8 +21,12 @@ PORT='port'
 
 IMAGE_RESOLVER='image' # name of image resolver in resolvers
 
+@memoize(ttl=10)
+def resolver():
+    return parse_stream(app.config[RESOLVER])
+
 def pid2image(pid):
-    hit = app.config[RESOLVER][IMAGE_RESOLVER].resolve(pid=pid)
+    hit = resolver()[IMAGE_RESOLVER].resolve(pid=pid)
     if hit is None:
         abort(404)
     return hit, get_img(hit)
@@ -45,9 +52,9 @@ def configure(config=None):
     except AttributeError:
         pass
     try:
-        app.config[RESOLVER] = parse_stream(config.resolver)
+        app.config[RESOLVER] = config.resolver
     except AttributeError:
-        app.config[RESOLVER] = parse_stream('oii/habcam/image_resolver.xml')
+        app.config[RESOLVER] = 'oii/habcam/image_resolver.xml'
     try:
         app.config[PORT] = int(config.port)
     except:
