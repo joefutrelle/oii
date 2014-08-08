@@ -14,9 +14,12 @@ from oii.scope import Scope
 from oii.utils import coalesce, asciitable
 
 # pretty-print bindings
-def pprint(bindings):
+def pprint(bindings,header=''):
     if len(bindings) == 0:
-        print '{}'
+        print '%s {}' % header
+        return
+    if len(bindings) == 1:
+        print '%s %s' % (header, bindings)
         return
     # remove integer bindings (groups from the most recent regex match)
     for var in bindings.keys():
@@ -27,7 +30,7 @@ def pprint(bindings):
             pass
     # colon-align
     width = max(len(var) for var in bindings)
-    print '{'
+    print '%s {' % header
     for var in sorted(bindings):
         print '%s%s: "%s"' % (' ' * (width-len(var)),var,bindings[var])
     print '}'
@@ -70,6 +73,7 @@ def flatten(dictlike, key_names=None):
 # substitute patterns like ${varname} for their values given
 # scope = values for the names (dict-like)
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
+#import jinja2
 def interpolate(template,scope):
     s = StringIO()
     end = 0
@@ -82,10 +86,11 @@ def interpolate(template,scope):
         except KeyError:
             s.write(expr)
     s.write(template[end:])
-    return s.getvalue()
+    interpolated = s.getvalue()
+#    interpolated = jinja2.Environment().from_string(interpolated).render(**scope.flatten())
+    return interpolated
 
 ## interpolate a template using Jinja2
-#import jinja2
 #def interpolate(template,scope):
 #    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
@@ -361,11 +366,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                     yield s
     # read produces each line of a specified source as solution bound to the given var.
     # if no var is specified each line is bound to a variable named '_'
-    # <read [file="{filename}|url="{url}"] [var="{name}"]/>
+    # <lines [file="{filename}|url="{url}"] [var="{name}"]/>
     # and is also an implicit block. if no file is specified stdin is read
-    elif expr.tag=='read':
+    elif expr.tag=='lines':
         var_name = parse_var_arg(expr)
-        url, file_path = parse_source_arg(arg)
+        url, file_path = parse_source_arg(expr)
         if url is not None:
             iterable = urlopen(url)
         else:
@@ -434,6 +439,9 @@ if __name__=='__main__':
     bindings = dict(re.split('=',kw) for kw in sys.argv[3:])
 
     resolver = Resolver(*xml_files)
+    n = 0
     for result in resolver.resolve(name,**bindings):
-        pprint(result)
+        n += 1
+        pprint(result,'Solution %d' % n)
+            
 
