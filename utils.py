@@ -12,6 +12,7 @@ import platform
 import ctypes
 import hashlib
 import sys
+from datetime import timedelta
 from multiprocessing import Pool
 
 genid_prev_id_tl = Lock()
@@ -23,6 +24,32 @@ def coalesce(*args):
         if arg is not None:
             return arg
     return None
+
+def memoize(ttl=30,ignore_exceptions=False):
+    """decorator to memoize a function by its args,
+    with an expiration time. use this to wrap an idempotent
+    or otherwise cacheable getter or transformation function.
+    the function args must be hashable.
+    ignore exceptions means not to expire values in the case
+    that the function to generate them raises an exception."""
+    cache = {}
+    exp = {}
+    def wrapper(function):
+        def inner(*args):
+            now = time.time()
+            if args not in exp or now > exp[args] or args not in cache:
+                try:
+                    new_value = function(*args)
+                except:
+                    if ignore_exceptions and args in cache:
+                        new_value = args[cache]
+                    else:
+                        raise
+                cache[args] = new_value
+                exp[args] = now + ttl
+            return cache[args]
+        return inner
+    return wrapper
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
     """Retry calling the decorated function using an exponential backoff.
