@@ -7,11 +7,13 @@ import re
 from glob import iglob
 import fileinput
 import csv
+import json
 
 import traceback
 
 from oii.scope import Scope
 from oii.utils import coalesce, asciitable
+from oii.jsonquery import jsonquery
 
 # pretty-print bindings
 def pprint(bindings,header=''):
@@ -111,12 +113,20 @@ def parse_source_arg(expr):
     file_path = coalesce(expr.get('file'),'-')
     return url, file_path
 
+def open_source_arg(url=None, file_arg=None):
+    if url is not None:
+        return urlopen(url)
+    elif file_arg is not None:
+        return open(file_arg)
+    else:
+        raise ValueError
+
 # filter out distinct solutions. if vars is specified,
 # retain only those vars prior to testing for uniqueness.
 # if expr is specified parse the 'distinct' argument from it
 # to get the var list.
 # if neither is specified, allow all solutions
-def distinct(solution_generator,expr=None,vars=None):
+def with_distinct(solution_generator,expr=None,distinct=None):
     if expr is not None:
         vars = parse_vars_arg(expr,'distinct')
     if vars is not None:
@@ -131,6 +141,36 @@ def distinct(solution_generator,expr=None,vars=None):
         for s in solution_generator:
             yield s
 
+# apply aliasing to a solution generator.
+# if expr is specified parse the "rename" and "as" arguments from
+# it to get the aliases dict.
+# if neither is specified allow all solutions
+def with_aliases(solution_generator,expr=None,aliases=None):
+    if expr is not None:
+        rename = parse_vars_arg(expr,'rename')
+        rename_as = parse_vars_arg(expr,'as')
+        try:
+            aliases = dict((o,n) for o,n in zip(rename,rename_as))
+        except:
+            aliases = {}
+    if aliases is not None:
+        for raw_solution in solution_generator:
+            s = {}
+            for k,v in raw_solution.items():
+                if k in aliases: s[aliases[k]] = v
+                else: s[k] = v
+            yield s
+    else:
+        for s in solution_generator:
+            yield s
+
+# apply block-level modifications such as distinct and rename
+def with_block(solution_generator,expr=None,distinct=None,aliases=None):
+    distinct = with_distinct(solution_generator,expr,distinct)
+    rename = with_aliases(distinct,expr,aliases)
+    for s in rename:
+        yield s
+
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
@@ -140,7 +180,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         if expr.get('value'):
             value = expr.get('value')
         else:
-            value = bindings[parse_var_arg(expr)]
+            value = str(bindings[parse_var_arg(expr)])
         return interpolate(pattern,bindings), interpolate(value,bindings)
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
@@ -152,7 +192,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return local_block(exprs[1:],inner_bindings)
     # utility recurrence expression for unnamed block
     def inner_block(expr,inner_bindings={}):
-        for s in distinct(local_block(list(expr),inner_bindings),expr):
+        for s in with_block(local_block(list(expr),inner_bindings),expr):
             for ss in rest(s):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
@@ -181,6 +221,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             s = flatten(bindings, var_names)
         else:
             s = flatten(bindings)
+        s = Scope(s)
         if expr.tag=='hit':
             yield s
             for ss in rest(s):
@@ -190,17 +231,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 yield ss
     # Invoke means descend, once, into a named rule, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions.
-    # options include filtering the input and output variables, as well as
-    # aliasing the output variables
-    # <invoke rule="{name}" [using="{var1} {var2}"] [toget="{var1} {var2}" [as="{alias1} {alias2}"]]"/>
+    # options include filtering the input variables, including
+    # all block level operations e.g., distinct and rename/as
+    # <invoke rule="{name}" [using="{var1} {var2}"]/>
     elif expr.tag=='invoke':
         rule_name = expr.get('rule')
         using = parse_vars_arg(expr,'using')
-        toget = parse_vars_arg(expr,'toget')
-        aliases = parse_vars_arg(expr,'as')
-        for s in distinct(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr):
-            if toget is not None and aliases is not None:
-                s = dict((a,s[k]) for k,a in zip(toget,aliases))
+        for s in with_block(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr):
             for ss in rest(s):
                 yield ss
     # The var expression sets variables to interpolated values
@@ -386,14 +423,31 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='csv':
         vars = parse_vars_arg(expr)
         url, file_path = parse_source_arg(expr)
-        if url is not None:
-            stream = urlopen(url)
-        else:
-            stream = open(file_path)
+        stream = open_source_arg(url, file_path)
         reader = csv.DictReader(stream,vars)
         for s in reader:
             for ss in inner_block(expr,flatten(s,vars)):
                 yield ss
+    # <json var={name} [select={query}] [file={pathname}|url={url}|from={name}]/>
+    elif expr.tag=='json':
+        url, file_path = parse_source_arg(expr)
+        select = expr.get('select')
+        from_arg = expr.get('from')
+        var = expr.get('var')
+        if from_arg is not None:
+            parsed = bindings[from_arg]
+        else:
+            parsed = json.load(open_source_arg(url, file_path))
+        if select is None and var is not None:
+            for ss in inner_block(expr,{var:parsed}):
+                yield ss
+        else:
+            select = interpolate(select, bindings)
+            for result in jsonquery(parsed, select):
+                if var is not None:
+                    result = {var: result}
+                for ss in inner_block(expr,result):
+                    yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     # FIXME change this behavior
@@ -404,7 +458,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
 def invoke(name,bindings=Scope(),global_namespace={}):
     expr = global_namespace[name]
     if expr.tag == 'rule':
-        for solution in distinct(evaluate_block(list(expr),bindings,global_namespace=global_namespace),expr):
+        for solution in with_block(evaluate_block(list(expr),bindings,global_namespace=global_namespace),expr):
             yield solution
 
 def parse(*ldr_streams):
@@ -443,5 +497,3 @@ if __name__=='__main__':
     for result in resolver.resolve(name,**bindings):
         n += 1
         pprint(result,'Solution %d' % n)
-            
-
