@@ -55,4 +55,4 @@ class Scope(object):
       return Scope(parent=self,bindings=kw)
    def __repr__(self):
       """represent as if this is a flat dict"""
-      return self.flatten().__repr__()
+      return 'Scope ' + self.flatten().__repr__()
