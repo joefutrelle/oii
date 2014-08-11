@@ -8,12 +8,16 @@ from glob import iglob
 import fileinput
 import csv
 import json
+import logging
 
 import traceback
 
 from oii.scope import Scope
 from oii.utils import coalesce, asciitable
 from oii.jsonquery import jsonquery
+
+class UnboundVariable(Exception):
+    pass
 
 # pretty-print bindings
 def pprint(bindings,header=''):
@@ -49,22 +53,24 @@ def find_names(e):
             yield namespace + [e.get('name')], e
     return dict(('.'.join(n),ne) for n, ne in descend(e))
 
-LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_]+)\})')
+LDR_INTERP_PATTERN = re.compile(r'([^\$]*)(\$\{([a-zA-Z0-9_.]+)\})')
 LDR_WS_SEP_REGEX = r'\s+'
 LDR_WS_SEP_PATTERN = re.compile(LDR_WS_SEP_REGEX)
 
 # supports time-like regexes e.g., IFCB9_yyyy_YYY_HHMMSS
 def timestamp2regex(pattern):
+    # FIXME handle unfortunate formats such as
+    # - non-zero-padded numbers
+    # - full and abbreviated month names
     pattern = re.sub(r'9','[0-9]',pattern)
     pattern = re.sub(r's+','(?P<millisecond>[0-9]+)',pattern)
     pattern = re.sub(r'yyyy','(?P<year>[0-9]{4})',pattern)
     pattern = re.sub(r'mm','(?P<month>0?[1-9]|11|12)',pattern)
     pattern = re.sub(r'dd','(?P<day>0?1|[1-2][0-9]|3[0-1])',pattern)
     pattern = re.sub(r'YYY','(?P<yearday>[0-3][0-9][0-9])',pattern)
-    pattern = re.sub(r'HH','(?P<hour>0?[1-9]|1[0-9]|2[0-3])',pattern)
+    pattern = re.sub(r'HH','(?P<hour>0[1-9]|1[0-9]|2[0-3])',pattern)
     pattern = re.sub(r'MM','(?P<minute>[0-5][0-9])',pattern)
     pattern = re.sub(r'SS','(?P<second>[0-5][0-9])',pattern)
-    pattern = re.sub(r'\.',r'\.',pattern)
     return pattern
 
 def flatten(dictlike, key_names=None):
@@ -76,7 +82,7 @@ def flatten(dictlike, key_names=None):
 # scope = values for the names (dict-like)
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 #import jinja2
-def interpolate(template,scope):
+def interpolate(template,scope,fail_fast=True):
     s = StringIO()
     end = 0
     for m in re.finditer(LDR_INTERP_PATTERN,template):
@@ -86,7 +92,8 @@ def interpolate(template,scope):
         try:
             s.write(scope[key])
         except KeyError:
-            s.write(expr)
+            if fail_fast:
+                raise UnboundVariable(key)
     s.write(template[end:])
     interpolated = s.getvalue()
 #    interpolated = jinja2.Environment().from_string(interpolated).render(**scope.flatten())
@@ -151,14 +158,17 @@ def with_aliases(solution_generator,expr=None,aliases=None):
         rename_as = parse_vars_arg(expr,'as')
         try:
             aliases = dict((o,n) for o,n in zip(rename,rename_as))
-        except:
+        except TypeError:
             aliases = {}
     if aliases is not None:
         for raw_solution in solution_generator:
             s = {}
             for k,v in raw_solution.items():
-                if k in aliases: s[aliases[k]] = v
-                else: s[k] = v
+                try:
+                    if k in aliases: s[aliases[k]] = v
+                    else: s[k] = v
+                except KeyError:
+                    raise KeyError('unbound variable %s' % k)
             yield s
     else:
         for s in solution_generator:
@@ -176,12 +186,20 @@ def with_block(solution_generator,expr=None,distinct=None,aliases=None):
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # utility to parse arguments to match and split
     def parse_match_args(expr,bindings,default_pattern='.*'):
-        pattern = coalesce(expr.get('pattern'),default_pattern)
+        pattern = coalesce(expr.get('pattern'),expr.get('timestamp'),default_pattern)
         if expr.get('value'):
             value = expr.get('value')
         else:
-            value = str(bindings[parse_var_arg(expr)])
-        return interpolate(pattern,bindings), interpolate(value,bindings)
+            var_arg = parse_var_arg(expr)
+            try:
+                value = str(bindings[var_arg])
+            except KeyError: # the caller is attempting to match an unbound variable
+                raise UnboundVariable(var_arg)
+        i_pattern = interpolate(pattern,bindings)
+        if expr.get('timestamp'):
+            i_pattern = timestamp2regex(i_pattern)
+        i_value = interpolate(value,bindings)
+        return i_pattern, i_value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
         return evaluate_block(exprs,bindings.enclose(**inner_bindings),global_namespace)
@@ -250,15 +268,19 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='var':
         var_name = parse_var_arg(expr,'name')
         sub_val_exprs = expr.findall('val')
-        if len(sub_val_exprs) == 0:
-            var_val = interpolate(expr.text,bindings)
-            for s in rest({var_name:var_val}):
-                yield s
-        else:
-            for sub_val_expr in sub_val_exprs:
-                var_val = interpolate(sub_val_expr.text,bindings)
+        try:
+            if len(sub_val_exprs) == 0:
+                var_val = interpolate(expr.text,bindings)
                 for s in rest({var_name:var_val}):
                     yield s
+            else:
+                for sub_val_expr in sub_val_exprs:
+                    var_val = interpolate(sub_val_expr.text,bindings,fail_fast=False)
+                    for s in rest({var_name:var_val}):
+                        yield s
+        except UnboundVariable, uv:
+            logging.warn('var: unbound variable in template "%s": %s' % (expr.text, uv))
+            return # miss
     # The vars expression is the plural of var, for multiple assignment
     # with any regex as a delimiter between variable values.
     # <vars names="{name1} {name2} [delim="{delim}"]>{value1}{delim}{value2}</vars>
@@ -268,18 +290,22 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   <vals>{value1}{delim}{value2}</vals>
     # </vars>
     elif expr.tag=='vars':
-        var_names = re.split(LDR_WS_SEP_PATTERN,expr.get('names'))
-        sub_val_exprs = expr.findall('vals')
-        delim = coalesce(expr.get('delim'),LDR_WS_SEP_PATTERN)
-        if len(sub_val_exprs) == 0:
-            var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
-            for s in rest(dict(zip(var_names,var_vals))):
-                yield s
-        else:
-            for sub_val_expr in sub_val_exprs:
-                var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
+        try:
+            var_names = re.split(LDR_WS_SEP_PATTERN,expr.get('names'))
+            sub_val_exprs = expr.findall('vals')
+            delim = coalesce(expr.get('delim'),LDR_WS_SEP_PATTERN)
+            if len(sub_val_exprs) == 0:
+                var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
                 for s in rest(dict(zip(var_names,var_vals))):
                     yield s
+            else:
+                for sub_val_expr in sub_val_exprs:
+                    var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
+                    for s in rest(dict(zip(var_names,var_vals))):
+                        yield s
+        except UnboundVariable, uv:
+            logging.warn('vars: unbound variable %s' % uv)
+            return # miss
     # all is a conjunction. it is like an unnamed namespace block
     # and will yield any solution that exists after all exprs are evaluated
     # in sequence
@@ -323,14 +349,14 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # </none>
     elif expr.tag=='none':
         for s in inner_block(expr):
-            return
+            return # miss
         # if we fell through, there were no solutions
         for s in rest():
             yield s
     # log interpolates its text and prints it. useful for debugging
     # <log>{template}</log>
     elif expr.tag=='log':
-        print interpolate(expr.text,bindings)
+        print interpolate(expr.text,bindings,fail_fast=False)
         for s in rest():
             yield s
     # match generates solutions for every regex match
@@ -341,10 +367,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # if pattern is not specified the default pattern is ".*"
     # match also acts as an implicit, unnamed block supporting distinct
     elif expr.tag=='match':
-        pattern, value = parse_match_args(expr,bindings,'.*')
-        timestamp_pattern = expr.get('timestamp')
-        if timestamp_pattern is not None:
-            pattern = timestamp2regex(timestamp_pattern)
+        try:
+            pattern, value = parse_match_args(expr,bindings,'.*')
+        except UnboundVariable, uv:
+            logging.warn('match: unbound variable %s' % uv)
+            return # miss
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
             group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
@@ -370,7 +397,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # <split value="foo bar baz" vars="a b c"/>
     # which will set a=foo, b=bar, c=baz
     elif expr.tag=='split':
-        pattern, value = parse_match_args(expr,bindings,default_pattern=LDR_WS_SEP_REGEX)
+        try:
+            pattern, value = parse_match_args(expr,bindings,default_pattern=LDR_WS_SEP_REGEX)
+        except UnboundVariable, uv:
+            logging.warn('split: unbound variable %s' % uv)
+            return # miss
         var_names = parse_vars_arg(expr)
         group = expr.get('group')
         if group:
@@ -390,7 +421,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # produce solutions binding to the named var for each glob match
     elif expr.tag=='path':
         template = coalesce(expr.get('match'),'')
-        match_expr = interpolate(template,bindings)
+        try:
+            match_expr = interpolate(template,bindings)
+        except UnboundVariable, uv:
+            logging.warn('path: unbound variable %s' % uv)
+            return # pass
         if os.path.exists(match_expr) and os.path.isfile(match_expr):
             inner_bindings = {parse_var_arg(expr): match_expr}
             # hit; recur on inner block
@@ -433,7 +468,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         url, file_path = parse_source_arg(expr)
         select = expr.get('select')
         from_arg = expr.get('from')
-        var = expr.get('var')
+        var = expr.get('var') # important: don't use parse_var_arg so not to default to _
         if from_arg is not None:
             parsed = bindings[from_arg]
         else:
@@ -442,7 +477,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for ss in inner_block(expr,{var:parsed}):
                 yield ss
         else:
-            select = interpolate(select, bindings)
+            try:
+                select = interpolate(select, bindings)
+            except UnboundVariable, uv:
+                logging.warn('json: unbound variable %s' % uv)
+                return # miss
             for result in jsonquery(parsed, select):
                 if var is not None:
                     result = {var: result}
@@ -470,6 +509,10 @@ def parse(*ldr_streams):
             raise
         except:
             xml = etree.fromstring(ldr_stream)
+        # first, strip comments
+        for c in xml.xpath('//comment()'):
+            p = c.getparent()
+            p.remove(c)
         namespace.update(find_names(xml).items())
     return namespace
 
