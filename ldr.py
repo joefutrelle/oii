@@ -73,10 +73,13 @@ def timestamp2regex(pattern):
     pattern = re.sub(r'SS','(?P<second>[0-5][0-9])',pattern)
     return pattern
 
-def flatten(dictlike, key_names=None):
-    if key_names is None:
-        return dict(dictlike.items())
-    return dict((k,dictlike[k]) for k in key_names if k in dictlike)
+def flatten(dictlike, include=None, exclude=None):
+    result = dict(dictlike.items())
+    if include is not None:
+        result = dict((k,result[k]) for k in result if k in include)
+    if exclude is not None:
+        result = dict((k,result[k]) for k in result if k not in exclude)
+    return result
 
 # substitute patterns like ${varname} for their values given
 # scope = values for the names (dict-like)
@@ -174,9 +177,19 @@ def with_aliases(solution_generator,expr=None,aliases=None):
         for s in solution_generator:
             yield s
 
-# apply block-level modifications such as distinct and rename
-def with_block(solution_generator,expr=None,distinct=None,aliases=None):
-    distinct = with_distinct(solution_generator,expr,distinct)
+# apply block-level include/excludes
+def with_inc_exc(solution_generator,expr=None,include=None,exclude=None):
+    if expr is not None:
+        include = parse_vars_arg(expr,'include')
+        exclude = parse_vars_arg(expr,'exclude')
+    for raw_solution in solution_generator:
+        s = Scope(flatten(raw_solution,include,exclude))
+        yield s
+
+# apply block-level modifications such as distinct, rename, include, and exclude
+def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None):
+    inc_exc = with_inc_exc(solution_generator,expr,include,exclude)
+    distinct = with_distinct(inc_exc,expr,distinct)
     rename = with_aliases(distinct,expr,aliases)
     for s in rename:
         yield s
@@ -226,27 +239,33 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # The hit expression means a match has been found.
     # So yield the current set of bindings.
     # <hit/>
-    # or optionally, a subset of them
-    # <hit vars="{name1} {name2}"/>
+    # or optionally, a subset of them defined via include
+    # <hit include="{name1} {name2}"/>
+    # or exclude
+    # <hit exclude="{name1} {name2}"/>
     # then recurs. it's the only way to generate a hit and recur;
     # otherwise one can just fall through.
-    # The retain expression is just like this, except that it doesn't
-    # generate a hit but rather falls through after reducing the set
-    # of variables in the solution.
-    elif expr.tag in ('hit','retain'):
-        var_names = parse_vars_arg(expr)
-        if var_names:
-            s = flatten(bindings, var_names)
-        else:
-            s = flatten(bindings)
-        s = Scope(s)
-        if expr.tag=='hit':
-            yield s
-            for ss in rest(s):
-                yield ss
-        elif expr.tag=='retain':
-            for ss in evaluate_block(exprs[1:],s,global_namespace):
-                yield ss
+    elif expr.tag=='hit':
+        include = parse_vars_arg(expr,'include')
+        exclude = parse_vars_arg(expr,'exclude')
+        s = Scope(flatten(bindings, include=include, exclude=exclude))
+        yield s # this is where we produce a solution
+        for ss in evaluate_block(exprs[1:],s,global_namespace):
+            yield ss
+    # include deletes all bindings except the ones mentioned.
+    # <include vars="{var1} {var2}"/>
+    elif expr.tag=='include':
+        include = parse_vars_arg(expr)
+        s = Scope(flatten(bindings, include=include))
+        for ss in evaluate_block(exprs[1:],s,global_namespace):
+            yield ss
+    # exclude deletes the specified bindings.
+    # <exclude vars="{var1} {var2}"/>
+    elif expr.tag=='exclude':
+        exclude = parse_vars_arg(expr)
+        s = Scope(flatten(bindings, exclude=exclude))
+        for ss in evaluate_block(exprs[1:],s,global_namespace):
+            yield ss
     # Invoke means descend, once, into a named rule, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions.
     # options include filtering the input variables, including
