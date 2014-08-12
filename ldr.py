@@ -145,11 +145,9 @@ def open_source_arg(url=None, file_arg=None, bindings={}):
 # if expr is specified parse the 'distinct' argument from it
 # to get the var list.
 # if neither is specified, allow all solutions
-def with_distinct_count(solution_generator,expr=None,distinct=None,count=None):
+def with_distinct(solution_generator,expr=None,distinct=None):
     if expr is not None:
         vars = parse_vars_arg(expr,'distinct')
-        count = expr.get('count')
-    c = 1
     if vars is not None:
         distinct_solutions = set()
         for raw_solution in solution_generator:
@@ -157,15 +155,34 @@ def with_distinct_count(solution_generator,expr=None,distinct=None,count=None):
             f_solution = frozenset(solution.items())
             if f_solution not in distinct_solutions:
                 distinct_solutions.add(f_solution)
-                if count is not None:
-                    solution[count] = c
-                    c += 1
                 yield solution
     else:
         for s in solution_generator:
+            yield s
+
+# count is used to specify variable to hold the 1-based distinct/nondistinct
+# solution count.
+# nth is used to select a specific solution by solution number and ignore the rest
+def with_count(solution_generator,expr=None,count=None,nth=None):
+    if expr is not None:
+        count = expr.get('count')
+        nth = expr.get('nth') # FIXME need to interpolate this!
+        if nth is not None:
+            nth = int(nth)
+    if count is not None or nth is not None:
+        c = 1
+        for s in solution_generator:
             if count is not None:
                 s[count] = c
-                c += 1
+            if nth is not None:
+                if c==nth:
+                    yield s
+                    return
+            else:
+                yield s
+            c += 1
+    else:
+        for s in solution_generator:
             yield s
 
 # apply aliasing to a solution generator.
@@ -199,15 +216,20 @@ def with_inc_exc(solution_generator,expr=None,include=None,exclude=None):
     if expr is not None:
         include = parse_vars_arg(expr,'include')
         exclude = parse_vars_arg(expr,'exclude')
-    for raw_solution in solution_generator:
-        s = Scope(flatten(raw_solution,include,exclude))
-        yield s
+    if include is not None or exclude is not None:
+        for raw_solution in solution_generator:
+            s = Scope(flatten(raw_solution,include,exclude))
+            yield s
+    else:
+        for s in solution_generator:
+            yield s
 
-# apply block-level modifications such as distinct, rename, include/exclude, and count
-def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None,count=None):
+# apply block-level modifications such as distinct, rename, include/exclude, count, and nth
+def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None,count=None,nth=None):
     inc_exc = with_inc_exc(solution_generator,expr,include,exclude)
-    distinct_count = with_distinct_count(inc_exc,expr,distinct,count)
-    rename = with_aliases(distinct_count,expr,aliases)
+    distinct = with_distinct(inc_exc,expr,distinct)
+    count = with_count(distinct,expr,count,nth)
+    rename = with_aliases(count,expr,aliases)
     for s in rename:
         yield s
 
