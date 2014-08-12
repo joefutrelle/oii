@@ -40,14 +40,19 @@
 	     groups="target product extension"/>
     </all>
   </rule>
-  <rule name="adc2targets" uses="adc_file schema_version" exclude="adc_file schema_version">
+  <!-- given an ADC file and a schema version, return all the targets as solutions -->
+  <rule name="adc2targets" uses="adc_file schema_version" exclude="adc_file schema_version" count="targetNumber">
     <first>
       <test var="schema_version" eq="v1">
 	<csv file="${adc_file}" vars="trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus"/>
       </test>
       <test var="schema_version" eq="v2">
-	<csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left heigh width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
+	<csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
       </test>
     </first>
+  </rule>
+  <!-- given an ADC file, schema version, and target number, return that target -->
+  <rule name="adc2target" uses="adc_file schema_version target" exclude="target">
+    <invoke rule="ifcb.adc2targets" using="adc_file schema_version" nth="${target}"/>
   </rule>
 </namespace>
