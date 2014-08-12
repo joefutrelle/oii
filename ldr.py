@@ -1,4 +1,5 @@
 import sys
+import operator
 import os
 from urllib2 import urlopen
 from StringIO import StringIO
@@ -106,6 +107,14 @@ def interpolate(template,scope,fail_fast=True):
 #def interpolate(template,scope):
 #    return jinja2.Environment().from_string(template).render(**scope.flatten())
 
+def eval_test(value,op,test_value):
+    op_fn = getattr(operator,op)
+    try:
+        return op_fn(float(value),float(test_value))
+    except ValueError:
+        return op_fn(value,test_value)
+    return False
+
 # utility to parse "vars" argument
 def parse_vars_arg(expr,attr='vars'):
     var_name_list = expr.get(attr)
@@ -123,11 +132,11 @@ def parse_source_arg(expr):
     file_path = coalesce(expr.get('file'),'-')
     return url, file_path
 
-def open_source_arg(url=None, file_arg=None):
+def open_source_arg(url=None, file_arg=None, bindings={}):
     if url is not None:
-        return urlopen(url)
+        return urlopen(interpolate(url,bindings))
     elif file_arg is not None:
-        return open(file_arg)
+        return open(interpolate(file_arg,bindings))
     else:
         raise ValueError
 
@@ -408,6 +417,31 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 yield s
         else:
             return # miss
+    # test performs equality and inequality tests over strings and numbers
+    # <test [var={var}|value={template}] [eq|gt|lt|ge|le|ne]={template}/>
+    # and is also an implicit block
+    elif expr.tag=='test':
+        try:
+            var = expr.get('var')
+            tmpl = expr.get('value')
+            if tmpl is not None:
+                value = interpolate(tmpl,bindings)
+            else:
+                value = bindings[var]
+        except KeyError:
+            logging.warn('test: unbound variable %s' % var)
+            return # miss
+        except UnboundVariable, uv:
+            logging.warn('test: unbound variable %s' % uv)
+            return # miss
+        op = coalesce(*[a for a in ['eq','gt','lt','ge','le','ne'] if expr.get(a)])
+        tvt = expr.get(op)
+        tv = interpolate(tvt,bindings)
+        if eval_test(value,op,tv): # hit
+            for s in inner_block(expr):
+                yield s
+        else:
+            return # miss
     # split iterates over the result of splitting a value by a regex, assigning it repeatedly
     # to the variable specified by group. like match it recurs and is also an implicit block
     # <split [var="{var}"|value="{template}"] [pattern="{pattern}"] [group="{name}|vars="{name1} {name}"]/>
@@ -463,9 +497,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         var_name = parse_var_arg(expr)
         url, file_path = parse_source_arg(expr)
         if url is not None:
-            iterable = urlopen(url)
+            iterable = urlopen(interpolate(url,bindings))
         else:
-            iterable = fileinput.input(file_path)
+            iterable = fileinput.input(interpolate(file_path,bindings))
         for raw_line in iterable:
             line = raw_line.rstrip()
             for s in inner_block(expr,{var_name:line}):
@@ -477,7 +511,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='csv':
         vars = parse_vars_arg(expr)
         url, file_path = parse_source_arg(expr)
-        stream = open_source_arg(url, file_path)
+        stream = open_source_arg(url, file_path, bindings)
         reader = csv.DictReader(stream,vars)
         for s in reader:
             for ss in inner_block(expr,flatten(s,vars)):
@@ -491,7 +525,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         if from_arg is not None:
             parsed = bindings[from_arg]
         else:
-            parsed = json.load(open_source_arg(url, file_path))
+            parsed = json.load(open_source_arg(url, file_path, bindings))
         if select is None and var is not None:
             for ss in inner_block(expr,{var:parsed}):
                 yield ss
@@ -513,11 +547,28 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for s in rest():
             yield s
 
+# invoke a named rule
 def invoke(name,bindings=Scope(),global_namespace={}):
-    expr = global_namespace[name]
+    try:
+        expr = global_namespace[name]
+    except KeyError:
+        logging.warn('invoke: no such rule %s' % name)
+        return
     if expr.tag == 'rule':
-        for solution in with_block(evaluate_block(list(expr),bindings,global_namespace=global_namespace),expr):
+        # enforce required variables
+        uses = parse_vars_arg(expr,'uses')
+        if uses is not None:
+            for u in uses:
+                if u not in bindings:
+                    logging.warn('invoke: missing variable in uses: %s' % u)
+                    return
+        # generate block-level solutions (pre-filter)
+        raw_block = evaluate_block(list(expr),bindings,global_namespace=global_namespace)
+        # now filter the solutions with block-level modifiers
+        for solution in with_block(raw_block,expr):
             yield solution
+    else:
+        logging.warn('invoke: %s is not a rule' % name)
 
 def parse(*ldr_streams):
     namespace = {}
