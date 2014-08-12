@@ -1,0 +1,53 @@
+<namespace name="ifcb">
+  <rule name="test">
+    <var name="foo">bar</var>
+    <test value="${foo}" gt="${foo} bar"/>
+  </rule>
+  <!-- general regular expressions -->
+  <rule name="re">
+    <!-- identifier with no _ or . allowed (examples: "foo", "bar", "mp3") -->
+    <var name="re.id">([a-zA-Z][a-zA-Z0-9]*)</var>
+    <!-- extension (example ".jpg", ".mp3") matching everything but the period -->
+    <var name="re.ext">(?:\.${re.id})</var>
+    <!-- integer (zero-padding allowed) -->
+    <var name="re.int">([0-9]+)</var>
+  </rule>
+  <!-- IFCB identifier parsing rule -->
+  <rule name="pid" uses="pid">
+    <!-- first, parse ID to determine IFCB schema version and extract timestamp -->
+    <first>
+      <!-- IFCB v1 ID syntax -->
+      <match var="pid" timestamp="IFCB(9)_(yyyy_YYY_HHMMSS)(.*)"
+	     groups="instrument timestamp year yearday hour minute second tpe">
+	<var name="schema_version">v1</var>
+	<var name="timestamp_format">%Y_%j_%H%M%S</var>
+      </match>
+      <!-- IFCB v2 ID syntax -->
+      <match var="pid" timestamp="D(yyyymmddTHHMMSS)_IFCB(999)(.*)"
+	     groups="timestamp year month day hour minute second instrument tpe">
+	<var name="schema_version">v2</var>
+	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
+      </match>
+    </first>
+    <!-- now get any _target_product.extension -->
+    <all include="target product extension">
+      <invoke rule="ifcb.re"/>
+      <var name="re.target">(?:_${re.int})</var>
+      <var name="re.product">(?:_${re.id})</var>
+      <!-- default product is raw -->
+      <var name="product">raw</var>
+      <match value="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
+	     groups="target product extension"/>
+    </all>
+  </rule>
+  <rule name="adc2targets" uses="adc_file schema_version" exclude="adc_file schema_version">
+    <first>
+      <test var="schema_version" eq="v1">
+	<csv file="${adc_file}" vars="trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus"/>
+      </test>
+      <test var="schema_version" eq="v2">
+	<csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left heigh width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
+      </test>
+    </first>
+  </rule>
+</namespace>
