@@ -145,92 +145,79 @@ def open_source_arg(url=None, file_arg=None, bindings={}):
 # if expr is specified parse the 'distinct' argument from it
 # to get the var list.
 # if neither is specified, allow all solutions
-def with_distinct(solution_generator,expr=None,distinct=None):
-    if expr is not None:
-        vars = parse_vars_arg(expr,'distinct')
-    if vars is not None:
-        distinct_solutions = set()
-        for raw_solution in solution_generator:
-            solution = flatten(raw_solution,vars)
-            f_solution = frozenset(solution.items())
-            if f_solution not in distinct_solutions:
-                distinct_solutions.add(f_solution)
-                yield solution
-    else:
-        for s in solution_generator:
-            yield s
+def with_distinct(solution_generator,distinct=None):
+    distinct_solutions = set()
+    for raw_solution in solution_generator:
+        solution = flatten(raw_solution,distinct)
+        f_solution = frozenset(solution.items())
+        if f_solution not in distinct_solutions:
+            distinct_solutions.add(f_solution)
+            yield solution
 
 # count is used to specify variable to hold the 1-based distinct/nondistinct
 # solution count.
 # nth is used to select a specific solution by solution number and ignore the rest
-def with_count(solution_generator,expr=None,count=None,nth=None):
-    if expr is not None:
-        count = expr.get('count')
-        nth = expr.get('nth') # FIXME need to interpolate this!
+def with_count(solution_generator,count=None,nth=None):
+    c = 1
+    for s in solution_generator:
+        if count is not None:
+            s[count] = c
         if nth is not None:
-            nth = int(nth)
-    if count is not None or nth is not None:
-        c = 1
-        for s in solution_generator:
-            if count is not None:
-                s[count] = c
-            if nth is not None:
-                if c==nth:
-                    yield s
-                    return
-            else:
+            if c==nth:
                 yield s
-            c += 1
-    else:
-        for s in solution_generator:
+                return
+        else:
             yield s
+        c += 1
 
 # apply aliasing to a solution generator.
 # if expr is specified parse the "rename" and "as" arguments from
 # it to get the aliases dict.
 # if neither is specified allow all solutions
-def with_aliases(solution_generator,expr=None,aliases=None):
-    if expr is not None:
-        rename = parse_vars_arg(expr,'rename')
-        rename_as = parse_vars_arg(expr,'as')
-        try:
-            aliases = dict((o,n) for o,n in zip(rename,rename_as))
-        except TypeError:
-            aliases = {}
-    if aliases is not None:
-        for raw_solution in solution_generator:
-            s = {}
-            for k,v in raw_solution.items():
-                try:
-                    if k in aliases: s[aliases[k]] = v
-                    else: s[k] = v
-                except KeyError:
-                    raise KeyError('unbound variable %s' % k)
-            yield s
-    else:
-        for s in solution_generator:
-            yield s
+def with_aliases(solution_generator,aliases={}):
+    for raw_solution in solution_generator:
+        s = {}
+        for k,v in raw_solution.items():
+            try:
+                if k in aliases: s[aliases[k]] = v
+                else: s[k] = v
+            except KeyError:
+                raise KeyError('unbound variable %s' % k)
+        yield s
 
 # apply block-level include/excludes
-def with_inc_exc(solution_generator,expr=None,include=None,exclude=None):
-    if expr is not None:
-        include = parse_vars_arg(expr,'include')
-        exclude = parse_vars_arg(expr,'exclude')
-    if include is not None or exclude is not None:
-        for raw_solution in solution_generator:
-            s = Scope(flatten(raw_solution,include,exclude))
-            yield s
-    else:
-        for s in solution_generator:
-            yield s
+def with_inc_exc(solution_generator,include=None,exclude=None):
+    for raw_solution in solution_generator:
+        s = Scope(flatten(raw_solution,include,exclude))
+        yield s
 
 # apply block-level modifications such as distinct, rename, include/exclude, count, and nth
-def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None,count=None,nth=None):
-    inc_exc = with_inc_exc(solution_generator,expr,include,exclude)
-    distinct = with_distinct(inc_exc,expr,distinct)
-    count = with_count(distinct,expr,count,nth)
-    rename = with_aliases(count,expr,aliases)
-    for s in rename:
+def with_block(S,expr,bindings={}):
+    bindings = flatten(bindings)
+    # include/exclude
+    include = parse_vars_arg(expr,'include')
+    exclude = parse_vars_arg(expr,'exclude')
+    if include is not None or exclude is not None:
+        S = with_inc_exc(S,include,exclude)
+    # distinct
+    distinct = parse_vars_arg(expr,'distinct')
+    if distinct is not None:
+        S = with_distinct(S,distinct)
+    # count
+    count = expr.get('count')
+    nth = expr.get('nth')
+    if nth is not None:
+        nth = int(interpolate(nth,bindings))
+    S = with_count(S,count,nth)
+    # rename/as
+    rename = parse_vars_arg(expr,'rename')
+    rename_as = parse_vars_arg(expr,'as')
+    try:
+        aliases = dict((o,n) for o,n in zip(rename,rename_as))
+        S = with_aliases(S,aliases)
+    except TypeError:
+        pass
+    for s in S:
         yield s
 
 # evaluate a block of expressions using recursive descent to generate and filter
@@ -254,7 +241,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return i_pattern, i_value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
-        return evaluate_block(exprs,bindings.enclose(**inner_bindings),global_namespace)
+        return evaluate_block(exprs,bindings.enclose(inner_bindings),global_namespace)
     # utility recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
     # usage: for s in rest(exprs,bindings): yield s
@@ -262,7 +249,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return local_block(exprs[1:],inner_bindings)
     # utility recurrence expression for unnamed block
     def inner_block(expr,inner_bindings={}):
-        for s in with_block(local_block(list(expr),inner_bindings),expr):
+        for s in with_block(local_block(list(expr),inner_bindings),expr,bindings):
             for ss in rest(s):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
@@ -313,7 +300,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='invoke':
         rule_name = expr.get('rule')
         using = parse_vars_arg(expr,'using')
-        for s in with_block(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr):
+        for s in with_block(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr,bindings):
             for ss in rest(s):
                 yield ss
     # The var expression sets variables to interpolated values
@@ -580,7 +567,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             yield s
 
 # invoke a named rule
-def invoke(name,bindings=Scope(),global_namespace={}):
+def invoke(name,bindings={},global_namespace={}):
     try:
         expr = global_namespace[name]
     except KeyError:
@@ -597,7 +584,7 @@ def invoke(name,bindings=Scope(),global_namespace={}):
         # generate block-level solutions (pre-filter)
         raw_block = evaluate_block(list(expr),bindings,global_namespace=global_namespace)
         # now filter the solutions with block-level modifiers
-        for solution in with_block(raw_block,expr):
+        for solution in with_block(raw_block,expr,bindings):
             yield solution
     else:
         logging.warn('invoke: %s is not a rule' % name)

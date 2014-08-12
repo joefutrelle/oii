@@ -47,12 +47,16 @@ class Scope(object):
       if not key_list:
          key_list = self
       return dict((k,self[k]) for k in key_list)
+   def keys(self):
+      return self.flatten().keys()
+   def values(self):
+      return self.flatten().values()
    def items(self):
       """return k,v of all non-shadowed bindings"""
       return self.flatten().items()
-   def enclose(self,**kw):
+   def enclose(self,mapping):
       """generate a child scope with the given initial local bindings"""
-      return Scope(parent=self,bindings=kw)
+      return Scope(parent=self,bindings=mapping)
    def __repr__(self):
       """represent as if this is a flat dict"""
       return 'Scope ' + self.flatten().__repr__()
