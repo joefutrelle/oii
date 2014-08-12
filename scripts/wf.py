@@ -21,7 +21,7 @@ resolver_xml = """
 	   groups="lid - product - extension"/>
   </rule>
   <rule name="deps" distinct="pid product upstream_product role">
-    <invoke rule="wf.pid" using="pid" toget="pid lid"/>
+    <invoke rule="wf.pid" using="pid" distinct="pid lid"/>
     <vars names="product upstream_product role" delim=",">
       <vals>${lid}_gray,${pid},color</vals>
       <vals>${lid}_canny,${lid}_gray,gray</vals>
@@ -30,7 +30,7 @@ resolver_xml = """
     </vars>
   </rule>
   <rule name="products" distinct="product">
-    <invoke rule="wf.deps" using="pid" toget="product"/>
+    <invoke rule="wf.deps" using="pid" distinct="product"/>
   </rule>
 </namespace>
 """
