@@ -362,11 +362,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # </first>
     elif expr.tag in ('any','first'):
         for sub_expr in list(expr): # iterate over subexpressions
+            done = False
             for s in local_block([sub_expr]): # treat each one as a block
                 for ss in rest(s):  # and recur for each of its solutions
+                    done = True
                     yield ss
-                    if expr.tag=='first': # if all we want is the first
-                        return # then stop
+            if done and expr.tag=='first': # if all we want is the first subexpr
+                return # then stop
     # none is negation. if the enclosed block generates any solutions,
     # this will generate a miss rather than a hit. otherwise it will recur.
     # <none>
