@@ -140,14 +140,16 @@ def open_source_arg(url=None, file_arg=None, bindings={}):
     else:
         raise ValueError
 
-# filter out distinct solutions. if vars is specified,
+# filter out (and optionally count) distinct solutions. if vars is specified,
 # retain only those vars prior to testing for uniqueness.
 # if expr is specified parse the 'distinct' argument from it
 # to get the var list.
 # if neither is specified, allow all solutions
-def with_distinct(solution_generator,expr=None,distinct=None):
+def with_distinct_count(solution_generator,expr=None,distinct=None,count=None):
     if expr is not None:
         vars = parse_vars_arg(expr,'distinct')
+        count = expr.get('count')
+    c = 1
     if vars is not None:
         distinct_solutions = set()
         for raw_solution in solution_generator:
@@ -155,9 +157,15 @@ def with_distinct(solution_generator,expr=None,distinct=None):
             f_solution = frozenset(solution.items())
             if f_solution not in distinct_solutions:
                 distinct_solutions.add(f_solution)
+                if count is not None:
+                    solution[count] = c
+                    c += 1
                 yield solution
     else:
         for s in solution_generator:
+            if count is not None:
+                s[count] = c
+                c += 1
             yield s
 
 # apply aliasing to a solution generator.
@@ -195,11 +203,11 @@ def with_inc_exc(solution_generator,expr=None,include=None,exclude=None):
         s = Scope(flatten(raw_solution,include,exclude))
         yield s
 
-# apply block-level modifications such as distinct, rename, include, and exclude
-def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None):
+# apply block-level modifications such as distinct, rename, include/exclude, and count
+def with_block(solution_generator,expr=None,distinct=None,aliases=None,include=None,exclude=None,count=None):
     inc_exc = with_inc_exc(solution_generator,expr,include,exclude)
-    distinct = with_distinct(inc_exc,expr,distinct)
-    rename = with_aliases(distinct,expr,aliases)
+    distinct_count = with_distinct_count(inc_exc,expr,distinct,count)
+    rename = with_aliases(distinct_count,expr,aliases)
     for s in rename:
         yield s
 
