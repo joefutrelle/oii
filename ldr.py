@@ -217,6 +217,7 @@ def with_block(S,expr,bindings={}):
         S = with_aliases(S,aliases)
     except TypeError:
         pass
+    # now yield from the stack of solution generators
     for s in S:
         yield s
 
@@ -248,9 +249,18 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     def rest(inner_bindings={}):
         return local_block(exprs[1:],inner_bindings)
     # utility recurrence expression for unnamed block
-    def inner_block(expr,inner_bindings={}):
-        for s in with_block(local_block(list(expr),inner_bindings),expr,bindings):
+    def inner_block(expr,inner_bindings={},solution_generator=None):
+        # this is where we have an opportunity to discard variables before recurring
+        # based on this expression
+        discard = set()
+        if expr.get('retain'):
+            discard = set(bindings.keys()).difference(set(parse_vars_arg(expr,'retain')))
+        # the default solution generator is local block
+        if solution_generator is None:
+            solution_generator = local_block(list(expr),inner_bindings)
+        for s in with_block(solution_generator,expr,bindings):
             for ss in rest(s):
+                ss = flatten(ss,exclude=discard)
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
@@ -272,20 +282,6 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             yield s
             for ss in rest(s):
                 yield ss
-    # include deletes all bindings except the ones mentioned.
-    # <include vars="{var1} {var2}"/>
-    elif expr.tag=='include':
-        include = parse_vars_arg(expr)
-        s = Scope(flatten(bindings, include=include))
-        for ss in evaluate_block(exprs[1:],s,global_namespace):
-            yield ss
-    # exclude deletes the specified bindings.
-    # <exclude vars="{var1} {var2}"/>
-    elif expr.tag=='exclude':
-        exclude = parse_vars_arg(expr)
-        s = Scope(flatten(bindings, exclude=exclude))
-        for ss in evaluate_block(exprs[1:],s,global_namespace):
-            yield ss
     # Invoke means descend, once, into a named rule, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions.
     # options include filtering the input variables, including
@@ -294,7 +290,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='invoke':
         rule_name = expr.get('rule')
         using = parse_vars_arg(expr,'using')
-        for s in with_block(invoke(rule_name,Scope(flatten(bindings,using)),global_namespace),expr,bindings):
+        args = Scope(flatten(bindings,using))
+        S = invoke(rule_name,args,global_namespace)
+        for s in inner_block(expr,bindings,S):
             for ss in rest(s):
                 yield ss
     # The var expression sets variables to interpolated values
