@@ -265,19 +265,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # The hit expression means a match has been found.
     # So yield the current set of bindings.
     # <hit/>
-    # or optionally, a subset of them defined via include
-    # <hit include="{name1} {name2}"/>
-    # or exclude
-    # <hit exclude="{name1} {name2}"/>
-    # then recurs. it's the only way to generate a hit and recur;
-    # otherwise one can just fall through.
+    # it is also an implicit block supporting block-level modifiers,
+    # and generates a hit for every solution of that inner block
     elif expr.tag=='hit':
-        include = parse_vars_arg(expr,'include')
-        exclude = parse_vars_arg(expr,'exclude')
-        s = Scope(flatten(bindings, include=include, exclude=exclude))
-        yield s # this is where we produce a solution
-        for ss in evaluate_block(exprs[1:],s,global_namespace):
-            yield ss
+        for s in with_block(local_block(list(expr)),expr,bindings):
+            yield s
+            for ss in rest(s):
+                yield ss
     # include deletes all bindings except the ones mentioned.
     # <include vars="{var1} {var2}"/>
     elif expr.tag=='include':
