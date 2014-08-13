@@ -245,22 +245,21 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return evaluate_block(exprs,bindings.enclose(inner_bindings),global_namespace)
     # utility recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
-    # usage: for s in rest(exprs,bindings): yield s
-    def rest(inner_bindings={}):
-        return local_block(exprs[1:],inner_bindings)
-    # utility recurrence expression for unnamed block
-    def inner_block(expr,inner_bindings={},solution_generator=None):
+    # usage: for s in rest(expr,bindings): yield s
+    def rest(expr,inner_bindings={}):
         # this is where we have an opportunity to discard variables before recurring
         # based on this expression
         discard = set()
         if expr.get('retain'):
             discard = set(bindings.keys()).difference(set(parse_vars_arg(expr,'retain')))
-        # the default solution generator is local block
+        for ss in local_block(exprs[1:],inner_bindings):
+            yield flatten(ss,exclude=discard)
+    # utility recurrence expression for unnamed block
+    def inner_block(expr,inner_bindings={},solution_generator=None):
         if solution_generator is None:
             solution_generator = local_block(list(expr),inner_bindings)
         for s in with_block(solution_generator,expr,bindings):
-            for ss in rest(s):
-                ss = flatten(ss,exclude=discard)
+            for ss in rest(expr,s):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
     if len(exprs)==0:
@@ -280,7 +279,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='hit':
         for s in with_block(local_block(list(expr)),expr,bindings):
             yield s
-            for ss in rest(s):
+            for ss in rest(expr,s):
                 yield ss
     # Invoke means descend, once, into a named rule, evaluating it as a block,
     # with the current bindings in scope, and recur for each of its solutions.
@@ -293,7 +292,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         args = Scope(flatten(bindings,using))
         S = invoke(rule_name,args,global_namespace)
         for s in inner_block(expr,bindings,S):
-            for ss in rest(s):
+            for ss in rest(expr,s):
                 yield ss
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
@@ -308,12 +307,12 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         try:
             if len(sub_val_exprs) == 0:
                 var_val = interpolate(expr.text,bindings)
-                for s in rest({var_name:var_val}):
+                for s in rest(expr,{var_name:var_val}):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
                     var_val = interpolate(sub_val_expr.text,bindings,fail_fast=False)
-                    for s in rest({var_name:var_val}):
+                    for s in rest(expr,{var_name:var_val}):
                         yield s
         except UnboundVariable, uv:
             logging.warn('var: unbound variable in template "%s": %s' % (expr.text, uv))
@@ -333,12 +332,12 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             delim = coalesce(expr.get('delim'),LDR_WS_SEP_PATTERN)
             if len(sub_val_exprs) == 0:
                 var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
-                for s in rest(dict(zip(var_names,var_vals))):
+                for s in rest(expr,dict(zip(var_names,var_vals))):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
                     var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
-                    for s in rest(dict(zip(var_names,var_vals))):
+                    for s in rest(expr,dict(zip(var_names,var_vals))):
                         yield s
         except UnboundVariable, uv:
             logging.warn('vars: unbound variable %s' % uv)
@@ -373,7 +372,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for sub_expr in list(expr): # iterate over subexpressions
             done = False
             for s in local_block([sub_expr]): # treat each one as a block
-                for ss in rest(s):  # and recur for each of its solutions
+                for ss in rest(expr,s):  # and recur for each of its solutions
                     done = True
                     yield ss
             if done and expr.tag=='first': # if all we want is the first subexpr
@@ -390,13 +389,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for s in inner_block(expr):
             return # miss
         # if we fell through, there were no solutions
-        for s in rest():
+        for s in rest(expr):
             yield s
     # log interpolates its text and prints it. useful for debugging
     # <log>{template}</log>
     elif expr.tag=='log':
         print interpolate(expr.text,bindings,fail_fast=False)
-        for s in rest():
+        for s in rest(expr):
             yield s
     # match generates solutions for every regex match
     # <match [pattern="{regex}"|timestamp="{date pattern}"] [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
@@ -555,7 +554,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # to subsequent expressions
     # FIXME change this behavior
     else:
-        for s in rest():
+        for s in rest(expr):
             yield s
 
 # invoke a named rule
