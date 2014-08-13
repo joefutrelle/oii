@@ -119,7 +119,7 @@ def eval_test(value,op,test_value):
 def parse_vars_arg(expr,attr='vars'):
     var_name_list = expr.get(attr)
     if var_name_list:
-        return re.split(LDR_WS_SEP_PATTERN,var_name_list)
+        return [var for var in re.split(LDR_WS_SEP_PATTERN,var_name_list) if var != '']
     return None
 
 # utility to parse single var argument, which always defaults to '_'
