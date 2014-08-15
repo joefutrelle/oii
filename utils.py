@@ -25,6 +25,14 @@ def coalesce(*args):
             return arg
     return None
 
+def search_path(pathname_suffix):
+    """search the python path for a pathname relative to it"""
+    cands = [os.path.join(d,pathname_suffix) for d in sys.path]
+    try:
+        return filter(os.path.exists, cands)[0]
+    except IndexError:
+        return None
+
 def memoize(ttl=30,ignore_exceptions=False):
     """decorator to memoize a function by its args,
     with an expiration time. use this to wrap an idempotent
