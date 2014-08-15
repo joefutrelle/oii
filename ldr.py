@@ -606,7 +606,11 @@ class Resolver(object):
     def resolve(self,name,**bindings):
         for s in invoke(name,Scope(bindings),self.namespace):
             yield s
-    
+    def as_function(self,name):
+        def _fn(**bindings):
+            return self.resolve(name,**bindings)
+        return _fn
+
 if __name__=='__main__':
     """usage example
     python oii/ldr.py foo.xml:bar.xml some.resolver.name var1=val1 var2=val2 ...
