@@ -42,15 +42,17 @@
   </rule>
   <namespace name="adc">
     <!-- given an ADC file and a schema version, return all the targets as solutions -->
-    <rule name="parse" uses="adc_file schema_version" count="targetNumber">
-      <first>
-	<test var="schema_version" eq="v1">
-	  <csv file="${adc_file}" vars="trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus"/>
-	</test>
-	<test var="schema_version" eq="v2">
-	  <csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
-	</test>
-      </first>
+    <rule name="parse" uses="adc_file schema_version">
+      <all count="targetNumber">
+	<first>
+	  <test var="schema_version" eq="v1">
+	    <csv file="${adc_file}" vars="trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus"/>
+	  </test>
+	  <test var="schema_version" eq="v2">
+	    <csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
+	  </test>
+	</first>
+      </all>
       <test var="height" gt="0"/>
       <test var="width" gt="0"/>
     </rule>
