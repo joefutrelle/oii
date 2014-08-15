@@ -51,6 +51,8 @@
 	  <csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
 	</test>
       </first>
+      <test var="height" gt="0"/>
+      <test var="width" gt="0"/>
     </rule>
     <!-- given an ADC file, schema version, and target number, return that target -->
     <rule name="get_target" uses="adc_file schema_version target">
