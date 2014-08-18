@@ -1,3 +1,7 @@
+<!DOCTYPE _ [
+<!ENTITY v1_adc_cols "trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus">
+<!ENTITY v2_adc_cols "trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus">
+]>
 <namespace name="ifcb">
   <rule name="test">
     <var name="foo">bar</var>
@@ -20,12 +24,14 @@
       <match var="pid" timestamp="(IFCB(9)_(yyyy_YYY_HHMMSS))(.*)"
 	     groups="lid instrument timestamp year yearday hour minute second tpe">
 	<var name="schema_version">v1</var>
+	<var name="adc_cols">&v1_adc_cols;</var>
 	<var name="timestamp_format">%Y_%j_%H%M%S</var>
       </match>
       <!-- IFCB v2 ID syntax -->
       <match var="pid" timestamp="(D(yyyymmddTHHMMSS)_IFCB(999))(.*)"
 	     groups="lid timestamp year month day hour minute second instrument tpe">
 	<var name="schema_version">v2</var>
+	<var name="adc_cols">&v2_adc_cols;</var>
 	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
       </match>
     </first>
@@ -46,22 +52,23 @@
       <all count="targetNumber">
 	<first>
 	  <test var="schema_version" eq="v1">
-	    <csv file="${adc_file}" vars="trigger processingEndTime fluorescenceLow scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus"/>
+	    <csv file="${adc_file}" vars="&v1_adc_cols;"/>
 	  </test>
 	  <test var="schema_version" eq="v2">
-	    <csv file="${adc_file}" vars="trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus"/>
+	    <csv file="${adc_file}" vars="&v2_adc_cols;"/>
 	  </test>
 	</first>
       </all>
-      <test var="height" gt="0"/>
-      <test var="width" gt="0"/>
     </rule>
     <!-- given an ADC file, schema version, and target number, return that target -->
     <rule name="get_target" uses="adc_file schema_version target">
       <invoke rule="ifcb.adc.parse" using="adc_file schema_version" nth="${target}" retain=" "/>
     </rule>
     <rule name="get_targets" uses="adc_file schema_version">
-      <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" "/>
+      <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" ">
+	<test var="height" gt="0"/>
+	<test var="width" gt="0"/>
+      </invoke>
     </rule>
   </namespace>
 </namespace>
