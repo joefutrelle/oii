@@ -65,10 +65,9 @@
       <invoke rule="ifcb.adc.parse" using="adc_file schema_version" nth="${target}" retain=" "/>
     </rule>
     <rule name="get_targets" uses="adc_file schema_version">
-      <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" ">
-	<test var="height" gt="0"/>
-	<test var="width" gt="0"/>
-      </invoke>
+      <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" "/>
+      <test var="height" gt="0"/>
+      <test var="width" gt="0"/>
     </rule>
   </namespace>
 </namespace>
