@@ -1,6 +1,8 @@
 <!DOCTYPE _ [
 <!ENTITY v1_adc_cols "trigger processingEndTime fluorescenceLow fluoresenceHigh scatteringLow scatteringHigh comparatorPulse triggerOpenTime frameGrabTime bottom left height width byteOffset valveStatus">
+<!ENTITY v1_adc_types "int float float float float float float float float int int int int int double">
 <!ENTITY v2_adc_cols "trigger processingEndTime pmtA pmtB pmtC pmtD peakA peakB peakC peakD timeOfFlight grabTimeStart frameGrabTime bottom left height width byteOffset comparatorOut startPoint signalStrength valveStatus">
+<!ENTITY v2_adc_types "int float float float float float float float float float float float float int int int int int float int int int">
 ]>
 <namespace name="ifcb">
   <rule name="test">
@@ -47,6 +49,19 @@
     </all>
   </rule>
   <namespace name="adc">
+    <!-- return the column scheme for a given schema -->
+    <rule name="schema" uses="schema_version">
+      <first>
+	<test var="schema_version" eq="v1">
+	  <var name="columns">&v1_adc_cols;</var>
+	  <var name="types">&v1_adc_types;</var>
+	</test>
+	<test var="schema_version" eq="v2">
+	  <var name="columns">&v2_adc_cols;</var>
+	  <var name="types">&v2_adc_types;</var>
+	</test>
+      </first>
+    </rule>
     <!-- given an ADC file and a schema version, return all the targets as solutions -->
     <rule name="parse" uses="adc_file schema_version">
       <all count="targetNumber">

@@ -10,7 +10,7 @@ def add_bin_pid(targets, bin_pid):
         target['pid'] = '%s_%05d' % (bin_pid, target[TARGET_NUMBER])
     return targets
 
-def bin2csv(targets,schema_cols):
+def targets2csv(targets,schema_cols):
     """Given targets, produce a CSV representation in the specified schema"""
     ks = schema_cols + ['binID','pid','stitched','targetNumber']
     yield ','.join(ks)
@@ -18,6 +18,5 @@ def bin2csv(targets,schema_cols):
         # FIXME fake it till you make it
         target['binID'] = 'placeholder'
         target['pid'] = 'placeholder'
-        target['stitched'] = 'placeholder'
         # fetch all the data for this row as strings, emit
         yield ','.join(csv_quote(csv_str(target[k])) for k in ks)
