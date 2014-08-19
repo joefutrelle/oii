@@ -20,17 +20,19 @@
   </rule>
   <!-- IFCB identifier parsing rule -->
   <rule name="pid" uses="pid">
+    <!-- separate namespace part from rest of pid -->
+    <match var="pid" pattern="(.*/)?(.*)" groups="namespace suffix"/>
     <!-- first, parse ID to determine IFCB schema version and extract timestamp -->
     <first>
       <!-- IFCB v1 ID syntax -->
-      <match var="pid" timestamp="(IFCB(9)_(yyyy_YYY_HHMMSS))(.*)"
+      <match var="suffix" timestamp="(IFCB(9)_(yyyy_YYY_HHMMSS))(.*)"
 	     groups="lid instrument timestamp year yearday hour minute second tpe">
 	<var name="schema_version">v1</var>
 	<var name="adc_cols">&v1_adc_cols;</var>
 	<var name="timestamp_format">%Y_%j_%H%M%S</var>
       </match>
       <!-- IFCB v2 ID syntax -->
-      <match var="pid" timestamp="(D(yyyymmddTHHMMSS)_IFCB(999))(.*)"
+      <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB(999))(.*)"
 	     groups="lid timestamp year month day hour minute second instrument tpe">
 	<var name="schema_version">v2</var>
 	<var name="adc_cols">&v2_adc_cols;</var>
