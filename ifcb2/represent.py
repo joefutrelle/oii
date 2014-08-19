@@ -1,4 +1,5 @@
 from jinja2 import Environment
+import json
 
 from oii.csvio import csv_str, csv_quote
 from oii.ifcb2.identifiers import PID
@@ -23,13 +24,17 @@ BIN_XML_TEMPLATE = """<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="h
 </Bin>
 """
 
+def _split_hdr(parsed_hdr):
+    context = parsed_hdr['context']
+    properties = [(k,v) for k,v in parsed_hdr.items() if k != 'context']
+    return context, properties
+
 def _get_bin_template_bindings(pid,hdr,targets,timestamp):
     """pid should be the bin pid (with namespace)
     timestamp should be a text timestamp in iso8601 format
     hdr should be the result of calling parse_hdr on a header file
     targets should be a list of target dicts with target pids"""
-    context = hdr['context']
-    properties = [(k,v) for k,v in hdr.items() if k != 'context']
+    context, properites = _split_hdr(hdr)
     target_pids = [target[PID] for target in targets]
     return dict(pid=pid,timestamp=timestamp,context=context,properties=properties,target_pids=target_pids)
 
@@ -63,3 +68,30 @@ def bin2rdf(pid,hdr,targets,timestamp):
     targets should be a list of target dicts with target pids"""
     bindings = _get_bin_template_bindings(pid,hdr,targets,timestamp)
     return Environment().from_string(BIN_RDF_TEMPLATE).render(**bindings)
+
+def bin2dict_short(pid,hdr,timestamp):
+    context, rep = _split_hdr(hdr)
+    rep = dict(rep)
+    rep['context'] = context
+    rep['date'] = timestamp
+    rep['pid'] = pid
+    return rep
+
+def bin2dict_medium(pid,hdr,targets,timestamp):
+    rep = bin2dict_short(pid,hdr,timestamp)
+    rep['targets'] = [target[PID] for target in targets]
+    return rep
+
+def bin2dict(pid,hdr,targets,timestamp):
+    rep = bin2dict_short(pid,hdr,timestamp)
+    rep['targets'] = list(targets)
+    return rep
+
+def bin2json_short(pid,hdr,timestamp):
+    return json.dumps(bin2dict_short(pid,hdr,timestamp))
+
+def bin2json_medium(pid,hdr,targets,timestamp):
+    return json.dumps(bin2dict_medium(pid,hdr,targets,timestamp))
+
+def bin2json(pid,hdr,targets,timestamp):
+    return json.dumps(bin2dict(pid,hdr,targets,timestamp))
