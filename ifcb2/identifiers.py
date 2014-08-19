@@ -1,6 +1,17 @@
+from time import strptime
+
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.formats.adc import TARGET_NUMBER
 
+PID='pid'
+LID='lid'
+ADC_COLS='adc_cols'
+SCHEMA_VERSION='schema_version'
+TIMESTAMP='timestamp'
+TIMESTAMP_FORMAT='timestamp_format'
+
+
+# keys used in target dicts
 BIN_KEY='binID'
 TARGET_KEY='pid'
 
@@ -13,6 +24,10 @@ def parse_pid(pid):
         return next(get_resolver().ifcb.pid(pid))
     except:
         raise IdentifierSyntaxError(pid)
+
+def get_timestamp(parsed_pid):
+    """extract the timestamp from a parsed pid"""
+    return strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT])
 
 def target_pid(bin_pid,target_number=1):
     """bin_pid must have no product or extension,
