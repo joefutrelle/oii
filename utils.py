@@ -33,7 +33,7 @@ def search_path(pathname_suffix):
     except IndexError:
         return None
 
-def memoize(ttl=30,ignore_exceptions=False):
+def memoize(ttl=31557600,ignore_exceptions=False):
     """decorator to memoize a function by its args,
     with an expiration time. use this to wrap an idempotent
     or otherwise cacheable getter or transformation function.
