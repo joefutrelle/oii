@@ -23,13 +23,43 @@ BIN_XML_TEMPLATE = """<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="h
 </Bin>
 """
 
+def _get_bin_template_bindings(pid,hdr,targets,timestamp):
+    """pid should be the bin pid (with namespace)
+    timestamp should be a text timestamp in iso8601 format
+    hdr should be the result of calling parse_hdr on a header file
+    targets should be a list of target dicts with target pids"""
+    context = hdr['context']
+    properties = [(k,v) for k,v in hdr.items() if k != 'context']
+    target_pids = [target[PID] for target in targets]
+    return dict(pid=pid,timestamp=timestamp,context=context,properties=properties,target_pids=target_pids)
+
 def bin2xml(pid,hdr,targets,timestamp):
     """pid should be the bin pid (with namespace)
     timestamp should be a text timestamp in iso8601 format
     hdr should be the result of calling parse_hdr on a header file
-    targets should be a list of target dicts with target names"""
-    context = hdr['context']
-    properties = [(k,v) for k,v in hdr.items() if k != 'context']
-    target_pids = [target[PID] for target in targets]
-    kvs = dict(pid=pid,timestamp=timestamp,context=context,properties=properties,target_pids=target_pids)
-    return Environment().from_string(BIN_XML_TEMPLATE).render(**kvs)
+    targets should be a list of target dicts with target pids"""
+    bindings = _get_bin_template_bindings(pid,hdr,targets,timestamp)
+    return Environment().from_string(BIN_XML_TEMPLATE).render(**bindings)
+
+BIN_RDF_TEMPLATE = """<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#">
+  <Bin rdf:about="{{pid}}">
+    <dc:date>{{timestamp}}</dc:date>{% for v in context %}
+    <context>{{v}}</context>{% endfor %}{% for k,v in properties %}
+    <{{k}}>{{v}}</{{k}}>{% endfor %}
+    <dcterms:hasPart>
+      <rdf:Seq rdf:about="{{pid}}/targets">{% for target_pid in target_pids %}
+        <rdf:li>
+          <Target rdf:about="{{target_pid}}"/>
+        </rdf:li>{% endfor %}
+      </rdf:Seq>
+    </dcterms:hasPart>
+  </Bin>
+</rdf:RDF>"""
+
+def bin2rdf(pid,hdr,targets,timestamp):
+    """pid should be the bin pid (with namespace)
+    timestamp should be a text timestamp in iso8601 format
+    hdr should be the result of calling parse_hdr on a header file
+    targets should be a list of target dicts with target pids"""
+    bindings = _get_bin_template_bindings(pid,hdr,targets,timestamp)
+    return Environment().from_string(BIN_RDF_TEMPLATE).render(**bindings)
