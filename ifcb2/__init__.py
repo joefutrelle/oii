@@ -12,9 +12,3 @@ def locate_resolver(name):
 @memoize(ttl=30)
 def get_resolver():
     return Resolver(locate_resolver('ifcb.xml'))
-
-def get_rule(rule_name):
-    return get_resolver().as_function(rule_name)
-
-def get_rules():
-    return get_resolver().as_object()

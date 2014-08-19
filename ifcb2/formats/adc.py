@@ -1,5 +1,5 @@
 import re
-from oii.ifcb2 import get_rule
+from oii.ifcb2 import get_resolver
 from oii.utils import memoize
 
 TARGET_NUMBER='targetNumber'
@@ -20,7 +20,7 @@ _TYPE_CONV = {
 }
 
 def get_schema(schema_version):
-    hit = next(get_rule('ifcb.adc.schema')(schema_version=schema_version),None)
+    hit = next(get_resolver().ifcb.adc.schema(schema_version),None)
     schema = dict(zip(re.split(' ',hit['columns']),re.split(' ',hit['types'])))
     return schema
 
@@ -38,11 +38,10 @@ class Adc(object):
                 pass
         return target
     def get_targets(self):
-        gts_fn = get_rule('ifcb.adc.get_targets')
+        gts_fn = get_resolver().ifcb.adc.get_targets
         for target in gts_fn(adc_file=self.adc_file, schema_version=self.schema_version):
             yield self._cast_target(target)
     def get_target(self, targetNumber=1):
-        gt_fn = get_rule('ifcb.adc.get_target')
+        gt_fn = get_resolver().ifcb.adc.get_target
         target = next(gt_fn(adc_file=self.adc_file, schema_version=self.schema_version, target=targetNumber),None)
         return self._cast_target(target)
-

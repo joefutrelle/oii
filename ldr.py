@@ -599,6 +599,7 @@ def parse(*ldr_streams):
 class Resolver(object):
     def __init__(self,*files):
         self.namespace = parse(*files)
+        self._add_positional_functions()
     def invoke(self,name,**bindings):
         for s in invoke(name,Scope(bindings),self.namespace):
             yield s
@@ -614,12 +615,12 @@ class Resolver(object):
             kw.update(bindings)
             return self.invoke(name,**kw)
         return _fn
-    def as_object(self):
-        """return an object such that if there's a rule called
+    def _add_positional_functions(self):
+        """decorate this object so that if you call R.foo.bar.baz
+        with positional arguments it will invoke 'foo.bar.baz' eg
         foo.bar.baz that is using x and y, that you can invoke it
-        like this:
-        r.as_object().foo.bar.baz(x,y)"""
-        obj = lambda _: None # no-op
+        r.foo.bar.baz(x,y)"""
+        obj = self
         for name in sorted(self.namespace,key=lambda k: len(k)):
             level = obj
             parts = re.split(r'\.',name)
@@ -628,8 +629,6 @@ class Resolver(object):
                     setattr(level, part, lambda _: None)
                 level = getattr(level, part)
             setattr(level, parts[-1], self.as_positional_function(name))
-        return obj
-
 
 if __name__=='__main__':
     """usage example

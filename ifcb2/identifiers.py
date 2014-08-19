@@ -1,4 +1,4 @@
-from oii.ifcb2 import get_rules
+from oii.ifcb2 import get_resolver
 from oii.ifcb2.formats.adc import TARGET_NUMBER
 
 BIN_KEY='binID'
@@ -10,7 +10,7 @@ class IdentifierSyntaxError(Exception):
 def parse_pid(pid):
     """use the IFCB resolver to parse a pid"""
     try:
-        return next(get_rules().ifcb.pid(pid))
+        return next(get_resolver().ifcb.pid(pid))
     except:
         raise IdentifierSyntaxError(pid)
 
