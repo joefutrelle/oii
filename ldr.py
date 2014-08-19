@@ -14,7 +14,7 @@ import logging
 import traceback
 
 from oii.scope import Scope
-from oii.utils import coalesce, asciitable
+from oii.utils import coalesce, asciitable, structs
 from oii.jsonquery import jsonquery
 
 class UnboundVariable(Exception):
@@ -596,20 +596,40 @@ def parse(*ldr_streams):
         namespace.update(find_names(xml).items())
     return namespace
 
-def resolve(namespace,name):
-    for s in evaluate(name,global_namespace=namespace):
-        yield s
-
 class Resolver(object):
     def __init__(self,*files):
         self.namespace = parse(*files)
-    def resolve(self,name,**bindings):
+    def invoke(self,name,**bindings):
         for s in invoke(name,Scope(bindings),self.namespace):
             yield s
     def as_function(self,name):
         def _fn(**bindings):
-            return self.resolve(name,**bindings)
+            return self.invoke(name,**bindings)
         return _fn
+    def as_positional_function(self,name):
+        e = self.namespace[name]
+        uses = coalesce(parse_vars_arg(e,'uses'),[]) # FIXME encapsulation violation
+        def _fn(*args,**bindings):
+            kw = dict(zip(uses,args))
+            kw.update(bindings)
+            return self.invoke(name,**kw)
+        return _fn
+    def as_object(self):
+        """return an object such that if there's a rule called
+        foo.bar.baz that is using x and y, that you can invoke it
+        like this:
+        r.as_object().foo.bar.baz(x,y)"""
+        obj = lambda _: None # no-op
+        for name in sorted(self.namespace,key=lambda k: len(k)):
+            level = obj
+            parts = re.split(r'\.',name)
+            for part in parts[:-1]:
+                if not getattr(level, part, None):
+                    setattr(level, part, lambda _: None)
+                level = getattr(level, part)
+            setattr(level, parts[-1], self.as_positional_function(name))
+        return obj
+
 
 if __name__=='__main__':
     """usage example
@@ -621,6 +641,6 @@ if __name__=='__main__':
 
     resolver = Resolver(*xml_files)
     n = 0
-    for result in resolver.resolve(name,**bindings):
+    for result in resolver.invoke(name,**bindings):
         n += 1
         pprint(result,'Solution %d' % n)
