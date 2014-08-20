@@ -87,6 +87,8 @@ def flatten(dictlike, include=None, exclude=None):
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 #import jinja2
 def interpolate(template,scope,fail_fast=True):
+    if not '$' in template:
+        return template
     s = StringIO()
     end = 0
     for m in re.finditer(LDR_INTERP_PATTERN,template):
@@ -106,6 +108,26 @@ def interpolate(template,scope,fail_fast=True):
 ## interpolate a template using Jinja2
 #def interpolate(template,scope):
 #    return jinja2.Environment().from_string(template).render(**scope.flatten())
+
+class ScopedExpr(object):
+    def __init__(self,elt,bindings={}):
+        self.elt = elt
+        self.bindings = bindings
+    def get(self,attr_name):
+        template = self.elt.get(attr_name)
+        if template is None:
+            return None
+        return interpolate(template, self.bindings)
+    @property
+    def tag(self):
+        return self.elt.tag
+    def findall(self,tagname):
+        return self.elt.findall(tagname)
+    @property
+    def text(self):
+        return self.elt.text
+    def __iter__(self):
+        return self.elt.__iter__()
 
 def eval_test(value,op,test_value):
     op_fn = getattr(operator,op)
@@ -266,7 +288,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         yield flatten(bindings)
         return
     # handle the first expression
-    expr = exprs[0]
+    # wrap in interpolation wrapper that interpolates all arguments
+    expr = ScopedExpr(exprs[0], bindings)
     # The miss expression indicates no match has been found.
     # So refuse to recur, will not yield any solutions
     if expr.tag=='miss':
@@ -292,8 +315,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         args = Scope(flatten(bindings,using))
         S = invoke(rule_name,args,global_namespace)
         for s in inner_block(expr,bindings,S):
-            for ss in rest(expr,s):
-                yield ss
+            yield s
     # The var expression sets variables to interpolated values
     # <var name="{name}">{value}</var>
     # or
