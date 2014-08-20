@@ -22,8 +22,8 @@ def parse_pid(pid):
     """use the IFCB resolver to parse a pid"""
     try:
         return next(get_resolver().ifcb.pid(pid))
-    except:
-        raise IdentifierSyntaxError(pid)
+    except StopIteration:
+        raise
 
 def get_timestamp(parsed_pid):
     """extract the timestamp from a parsed pid"""

@@ -5,10 +5,6 @@
 <!ENTITY v2_adc_types "int float float float float float float float float float float float float int int int int int float int int int">
 ]>
 <namespace name="ifcb">
-  <rule name="test">
-    <var name="foo">bar</var>
-    <test value="${foo}" gt="${foo} bar"/>
-  </rule>
   <!-- general regular expressions -->
   <rule name="re">
     <!-- identifier with no _ or . allowed (examples: "foo", "bar", "mp3") -->
@@ -46,7 +42,7 @@
       <var name="re.product">(?:_${re.id})</var>
       <!-- default product is raw -->
       <var name="product">raw</var>
-      <match value="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
+      <match var="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
 	     groups="target product extension"/>
     </all>
   </rule>
@@ -85,6 +81,48 @@
       <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" "/>
       <test var="height" gt="0"/>
       <test var="width" gt="0"/>
+    </rule>
+  </namespace>
+  <namespace name="files">
+    <!-- given a parsed pid including extension, and a root directory,
+	 return all possible candidate paths -->
+    <rule name="raw_path">
+      <var name="filename">${lid}.${extension}</var>
+      <!-- otherwise we're in a schema-dependent directory structure -->
+      <first>
+	<test var="schema_version" eq="v1">
+	  <var name="raw_path">${root}/IFCB${instrument}_${year}_${yearday}/${filename}</var>
+	</test>
+	<test var="schema_version" eq="v2">
+	  <var name="raw_path">${root}/D${year}/D${year}${day}/${filename}</var>
+	</test>
+      </first>
+      <!-- sometimes the directory structure is flat -->
+      <var name="raw_path">${root}/${filename}</var>
+    </rule>
+    <rule name="find_raw_file">
+      <all nth="1">
+	<invoke rule="ifcb.files.raw_path"/>
+	<path match="${raw_path}"/>
+      </all>
+    </rule>
+    <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
+      <var name="extension">
+	<val>hdr</val>
+	<val>adc</val>
+	<val>roi</val>
+      </var>
+      <invoke rule="ifcb.files.find_raw_file" nth="1"/>
+      <var name="${extension}_path">${raw_path}</var>
+    </rule>
+  </namespace>
+  <!-- for testing only! -->
+  <namespace name="local">
+    <rule name="data_roots">
+      <var name="root">
+	<val>/home/jfutrelle</val>
+	<val>/home/ubuntu/dev</val>
+      </var>
     </rule>
   </namespace>
 </namespace>
