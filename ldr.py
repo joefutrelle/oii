@@ -230,7 +230,8 @@ def with_block(S,expr,bindings={}):
     nth = expr.get('nth')
     if nth is not None:
         nth = int(interpolate(nth,bindings))
-    S = with_count(S,count,nth)
+    if count is not None or nth is not None:
+        S = with_count(S,count,nth)
     # rename/as
     rename = parse_vars_arg(expr,'rename')
     rename_as = parse_vars_arg(expr,'as')
@@ -383,7 +384,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     #   ...
     #   {exprn}
     # </any>
-    # first is like any except it only yields the first solution and then stops
+    # first is like any except it only yields the solutions of the first clause that produces any
     # <first>
     #   {expr1}
     #   {expr2}
