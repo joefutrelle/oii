@@ -15,12 +15,12 @@ session = sessionmaker(bind=engine)()
 
 resolver_xml = """
 <namespace name="wf">
-  <rule name="pid" distinct="pid lid product extension">
+  <rule name="pid" uses="pid" distinct="pid lid product extension">
     <var name="reid">[a-zA-Z][a-zA-Z0-9]*</var>
     <match var="pid" pattern="([^_.]+)(_(${reid}))?(.(${reid}))?"
 	   groups="lid - product - extension"/>
   </rule>
-  <rule name="deps" distinct="pid product upstream_product role">
+  <rule name="deps" uses="pid" distinct="pid product upstream_product role">
     <invoke rule="wf.pid" using="pid" distinct="pid lid"/>
     <vars names="product upstream_product role" delim=",">
       <vals>${lid}_gray,${pid},color</vals>
@@ -29,7 +29,7 @@ resolver_xml = """
       <vals>${lid}_final,${pid},background</vals>
     </vars>
   </rule>
-  <rule name="products" distinct="product">
+  <rule name="products" uses="pid" distinct="product">
     <invoke rule="wf.deps" using="pid" distinct="product"/>
   </rule>
 </namespace>
@@ -40,14 +40,14 @@ pid='foo_raw.jpg'
 
 P = {}
 P[pid] = Product(pid=pid,state='available')
-p_lids = R.resolve('wf.products',pid=pid)
+p_lids = list(R.wf.products(pid))
 for p_lid in [s['product'] for s in p_lids]:
+    print p_lid
     P[p_lid] = Product(pid=p_lid, state='waiting')
 
 session.add_all(P.values())
 
-deps = R.resolve('wf.deps',pid=pid)
-for dep in deps:
+for dep in R.wf.deps(pid):
     Products.add_dep(session, P[dep['product']], P[dep['upstream_product']], dep['role'])
 
 session.commit()
