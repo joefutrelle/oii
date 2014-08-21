@@ -87,7 +87,7 @@ def flatten(dictlike, include=None, exclude=None):
 # e.g., interpolate('${x}_${blaz}',{'x':'7','bork':'z','blaz':'quux'}) -> '7_quux'
 #import jinja2
 def interpolate(template,scope,fail_fast=True):
-    if not '$' in template:
+    if not '$' in coalesce(template,''):
         return template
     s = StringIO()
     end = 0
@@ -135,6 +135,8 @@ class ScopedExpr(object):
         return self.elt.text
     def __iter__(self):
         return self.elt.__iter__()
+    def __repr__(self):
+        return '<%s/>' % self.tag
 
 def eval_test(value,op,test_value):
     op_fn = getattr(operator,op)
@@ -494,10 +496,12 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         var_names = parse_vars_arg(expr)
         group = expr.get('group')
         if group:
-            for val in re.split(pattern,value):
-                # now invoke the (usually empty) inner unnamed block and recur
-                for s in inner_block(expr,{group:val}):
-                    yield s
+            def S():
+                for val in re.split(pattern,value):
+                    yield {group: val}
+            # now invoke the (usually empty) inner unnamed block and recur
+            for s in inner_block(expr,solution_generator=S()):
+                yield s
         elif var_names:
             inner_bindings = dict((n,v) for n,v in zip(var_names, re.split(pattern,value)))
             # now invoke the (usually empty) inner unnamed block and recur
@@ -520,10 +524,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for s in inner_block(expr,inner_bindings):
                 yield s
         else:
-            for glob_hit in iglob(match_expr):
-                inner_bindings = {parse_var_arg(expr): glob_hit}
-                for s in inner_block(expr,inner_bindings):
-                    yield s
+            def S():
+                for glob_hit in iglob(match_expr):
+                    yield {parse_var_arg(expr): glob_hit}
+            for s in inner_block(expr,solution_generator=S()):
+                yield s
     # read produces each line of a specified source as solution bound to the given var.
     # if no var is specified each line is bound to a variable named '_'
     # <lines [file="{filename}|url="{url}"] [var="{name}"]/>
@@ -535,10 +540,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             iterable = urlopen(url)
         else:
             iterable = fileinput.input(file_path)
-        for raw_line in iterable:
-            line = raw_line.rstrip()
-            for s in inner_block(expr,{var_name:line}):
-                yield s
+        def S():
+            for raw_line in iterable:
+                yield {var_name: raw_line.rstrip()}
+        for s in inner_block(expr,solution_generator=S()):
+            yield s
     # csv reads CSV data from a source to bind selected variables.
     # <csv [file="{filename}|url="{url}"] [vars="{name1} {name2}"]/>
     # if no vars are specified the CSV data must have a header row
@@ -548,9 +554,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         url, file_path = parse_source_arg(expr)
         stream = open_source_arg(url, file_path)
         reader = csv.DictReader(stream,vars)
-        for s in reader:
-            for ss in inner_block(expr,flatten(s,vars)):
-                yield ss
+        def S():
+            for s in reader:
+                yield flatten(s,vars)
+        for ss in inner_block(expr,solution_generator=S()):
+            yield ss
     # <json var={name} [select={query}] [file={pathname}|url={url}|from={name}]/>
     elif expr.tag=='json':
         url, file_path = parse_source_arg(expr)
@@ -560,16 +568,19 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         if from_arg is not None:
             parsed = bindings[from_arg]
         else:
-            parsed = json.load(open_source_arg(url, file_path, bindings))
+            parsed = json.load(open_source_arg(url, file_path))
         if select is None and var is not None:
             for ss in inner_block(expr,{var:parsed}):
                 yield ss
         else:
-            for result in jsonquery(parsed, select):
-                if var is not None:
-                    result = {var: result}
-                for ss in inner_block(expr,result):
-                    yield ss
+            def S():
+                for result in jsonquery(parsed, select):
+                    if var is None:
+                        yield result
+                    else:
+                        yield {var: result}
+            for ss in inner_block(expr,solution_generator=S()):
+                yield ss
     # all other tags are no-ops, but because this a block will recur
     # to subsequent expressions
     # FIXME change this behavior
