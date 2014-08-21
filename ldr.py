@@ -118,6 +118,10 @@ class ScopedExpr(object):
         if template is None:
             return None
         return interpolate(template, self.bindings)
+    def get_list(self,attr_name,delim=None):
+        delim = coalesce(delim, LDR_WS_SEP_PATTERN)
+        templates = re.split(delim, self.elt.get(attr_name))
+        return map(lambda t: interpolate(t,self.bindings), templates)
     @property
     def tag(self):
         return self.elt.tag
@@ -125,6 +129,9 @@ class ScopedExpr(object):
         return self.elt.findall(tagname)
     @property
     def text(self):
+        return interpolate(self.elt.text, self.bindings)
+    @property
+    def raw_text(self):
         return self.elt.text
     def __iter__(self):
         return self.elt.__iter__()
@@ -154,11 +161,11 @@ def parse_source_arg(expr):
     file_path = coalesce(expr.get('file'),'-')
     return url, file_path
 
-def open_source_arg(url=None, file_arg=None, bindings={}):
+def open_source_arg(url=None, file_arg=None):
     if url is not None:
-        return urlopen(interpolate(url,bindings))
+        return urlopen(url)
     elif file_arg is not None:
-        return open(interpolate(file_arg,bindings))
+        return open(file_arg)
     else:
         raise ValueError
 
@@ -229,7 +236,7 @@ def with_block(S,expr,bindings={}):
     count = expr.get('count')
     nth = expr.get('nth')
     if nth is not None:
-        nth = int(interpolate(nth,bindings))
+        nth = int(nth)
     if count is not None or nth is not None:
         S = with_count(S,count,nth)
     # rename/as
@@ -258,11 +265,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 value = str(bindings[var_arg])
             except KeyError: # the caller is attempting to match an unbound variable
                 raise UnboundVariable(var_arg)
-        i_pattern = interpolate(pattern,bindings)
         if expr.get('timestamp'):
-            i_pattern = timestamp2regex(i_pattern)
-        i_value = interpolate(value,bindings)
-        return i_pattern, i_value
+            pattern = timestamp2regex(pattern)
+        return pattern, value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
         return evaluate_block(exprs,bindings.enclose(inner_bindings),global_namespace)
@@ -329,12 +334,12 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         sub_val_exprs = expr.findall('val')
         try:
             if len(sub_val_exprs) == 0:
-                var_val = interpolate(expr.text,bindings)
+                var_val = expr.text
                 for s in rest(expr,{var_name:var_val}):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
-                    var_val = interpolate(sub_val_expr.text,bindings,fail_fast=False)
+                    var_val = expr.text
                     for s in rest(expr,{var_name:var_val}):
                         yield s
         except UnboundVariable, uv:
@@ -354,12 +359,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             sub_val_exprs = expr.findall('vals')
             delim = coalesce(expr.get('delim'),LDR_WS_SEP_PATTERN)
             if len(sub_val_exprs) == 0:
-                var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,expr.text))
+                var_vals = map(lambda t: interpolate(t,bindings), re.split(delim,expr.raw_text))
                 for s in rest(expr,dict(zip(var_names,var_vals))):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
-                    var_vals = map(lambda tmpl: interpolate(tmpl,bindings), re.split(delim,sub_val_expr.text))
+                    sub_val_expr = ScopedExpr(sub_val_expr, bindings)
+                    var_vals = map(lambda t: interpolate(t,bindings), re.split(delim,sub_val_expr.raw_text))
                     for s in rest(expr,dict(zip(var_names,var_vals))):
                         yield s
         except UnboundVariable, uv:
@@ -417,7 +423,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # log interpolates its text and prints it. useful for debugging
     # <log>{template}</log>
     elif expr.tag=='log':
-        print interpolate(expr.text,bindings,fail_fast=False)
+        print expr.text
         for s in rest(expr):
             yield s
     # match generates solutions for every regex match
@@ -443,7 +449,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
                 inner_bindings[str(index+1)] = group
             for name,group in zip(group_names, groups): # bind named variables to groups
-                if group:
+                if group is not None:
                     inner_bindings[name] = group
             # now invoke the (usually empty) inner unnamed block and recur
             for s in inner_block(expr,inner_bindings):
@@ -456,10 +462,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='test':
         try:
             var = expr.get('var')
-            tmpl = expr.get('value')
-            if tmpl is not None:
-                value = interpolate(tmpl,bindings)
-            else:
+            value = expr.get('value')
+            if value is None:
                 value = bindings[var]
         except KeyError:
             logging.warn('test: unbound variable %s' % var)
@@ -468,8 +472,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             logging.warn('test: unbound variable %s' % uv)
             return # miss
         op = coalesce(*[a for a in ['eq','gt','lt','ge','le','ne'] if expr.get(a)])
-        tvt = expr.get(op)
-        tv = interpolate(tvt,bindings)
+        tv = expr.get(op)
         if eval_test(value,op,tv): # hit
             for s in inner_block(expr):
                 yield s
@@ -506,9 +509,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # if template expands to a nonexistent filename it will be attempted as a glob, which will then
     # produce solutions binding to the named var for each glob match
     elif expr.tag=='path':
-        template = coalesce(expr.get('match'),'')
         try:
-            match_expr = interpolate(template,bindings)
+            match_expr = coalesce(expr.get('match'),'')
         except UnboundVariable, uv:
             logging.warn('path: unbound variable %s' % uv)
             return # pass
@@ -530,9 +532,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         var_name = parse_var_arg(expr)
         url, file_path = parse_source_arg(expr)
         if url is not None:
-            iterable = urlopen(interpolate(url,bindings))
+            iterable = urlopen(url)
         else:
-            iterable = fileinput.input(interpolate(file_path,bindings))
+            iterable = fileinput.input(file_path)
         for raw_line in iterable:
             line = raw_line.rstrip()
             for s in inner_block(expr,{var_name:line}):
@@ -544,7 +546,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='csv':
         vars = parse_vars_arg(expr)
         url, file_path = parse_source_arg(expr)
-        stream = open_source_arg(url, file_path, bindings)
+        stream = open_source_arg(url, file_path)
         reader = csv.DictReader(stream,vars)
         for s in reader:
             for ss in inner_block(expr,flatten(s,vars)):
@@ -563,11 +565,6 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             for ss in inner_block(expr,{var:parsed}):
                 yield ss
         else:
-            try:
-                select = interpolate(select, bindings)
-            except UnboundVariable, uv:
-                logging.warn('json: unbound variable %s' % uv)
-                return # miss
             for result in jsonquery(parsed, select):
                 if var is not None:
                     result = {var: result}
