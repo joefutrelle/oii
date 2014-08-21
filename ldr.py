@@ -63,15 +63,21 @@ def timestamp2regex(pattern):
     # FIXME handle unfortunate formats such as
     # - non-zero-padded numbers
     # - full and abbreviated month names
-    pattern = re.sub(r'9','[0-9]',pattern)
-    pattern = re.sub(r's+','(?P<millisecond>[0-9]+)',pattern)
-    pattern = re.sub(r'yyyy','(?P<year>[0-9]{4})',pattern)
-    pattern = re.sub(r'mm','(?P<month>0?[1-9]|11|12)',pattern)
-    pattern = re.sub(r'dd','(?P<day>0?1|[1-2][0-9]|3[0-1])',pattern)
-    pattern = re.sub(r'YYY','(?P<yearday>[0-3][0-9][0-9])',pattern)
-    pattern = re.sub(r'HH','(?P<hour>0[1-9]|1[0-9]|2[0-3])',pattern)
-    pattern = re.sub(r'MM','(?P<minute>[0-5][0-9])',pattern)
-    pattern = re.sub(r'SS','(?P<second>[0-5][0-9])',pattern)
+    pattern = re.sub(r'(([0-9])\2*)',r'(?P<n\2>[0-9]+)',pattern) # fixed-length number eg 111 88
+    pattern = re.sub(r's+','(?P<sss>[0-9]+)',pattern) # milliseconds
+    pattern = re.sub(r'yyyy','(?P<yyyy>[0-9]{4})',pattern) # four-digit year
+    pattern = re.sub(r'mm','(?P<mm>0?[1-9]|11|12)',pattern) # two-digit month
+    pattern = re.sub(r'dd','(?P<dd>01|[1-2][0-9]|3[0-1])',pattern) # two-digit day of month
+    pattern = re.sub(r'YYY','(?P<YYY>[0-3][0-9][0-9])',pattern) # three-digit day of year
+    pattern = re.sub(r'HH','(?P<HH>0[1-9]|1[0-9]|2[0-3])',pattern) # two-digit hour
+    pattern = re.sub(r'MM','(?P<MM>[0-5][0-9])',pattern) # two-digit minute
+    pattern = re.sub(r'SS','(?P<SS>[0-5][0-9])',pattern) # two-digit second
+    pattern = re.sub(r'#','[0-9]+',pattern) # any string of digits (non-capturing)
+    pattern = re.sub(r'i','[a-zA-Z][a-zA-Z0-9_]*',pattern) # an identifier (e.g., jpg2000) (non-capturing)
+    pattern = re.sub(r'\.ext',r'(?:.(?P<ext>[a-zA-Z][a-zA-Z0-9_]*))',pattern) # a file extension
+    pattern = re.sub(r'\.',r'\.',pattern) # a literal '.'
+    pattern = re.sub(r'\\.','.',pattern) # a regex '.'
+    pattern = re.sub(r'any','.*',pattern) # a regex .*
     return pattern
 
 def flatten(dictlike, include=None, exclude=None):
@@ -258,7 +264,6 @@ def with_block(S,expr,bindings={}):
 def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     # utility to parse arguments to match and split
     def parse_match_args(expr,bindings,default_pattern='.*'):
-        pattern = coalesce(expr.get('pattern'),expr.get('timestamp'),default_pattern)
         if expr.get('value'):
             value = expr.get('value')
         else:
@@ -267,8 +272,11 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                 value = str(bindings[var_arg])
             except KeyError: # the caller is attempting to match an unbound variable
                 raise UnboundVariable(var_arg)
-        if expr.get('timestamp'):
-            pattern = timestamp2regex(pattern)
+        timestamp = expr.get('timestamp')
+        if timestamp is not None:
+            pattern = timestamp2regex(timestamp)
+        else:
+            pattern = expr.get('pattern')
         return pattern, value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
@@ -353,7 +361,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                     for s in rest(expr,{var_name:var_val}):
                         yield s
         except UnboundVariable, uv:
-            logging.warn('var: unbound variable in template "%s": %s' % (expr.text, uv))
+            logging.warn('var: unbound variable in template "%s": %s' % (expr.raw_text, uv))
             return # miss
     # The vars expression is the plural of var, for multiple assignment
     # with any regex as a delimiter between variable values.
@@ -452,13 +460,28 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         group_name_list, group_names = expr.get('groups'), []
         if group_name_list:
             group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
-        m = re.match(pattern, value)
+        p = re.compile(pattern)
+        m = p.match(value)
         if m:
             groups = m.groups()
+            named_ixs = p.groupindex.values()
+            groups_minus_named = [n for n in range(len(groups)) if n+1 not in named_ixs]
             inner_bindings = {}
-            for index,group in zip(range(len(groups)), groups): # bind numbered variables to groups
-                inner_bindings[str(index+1)] = group
-            for name,group in zip(group_names, groups): # bind named variables to groups
+#            print 'pattern = %s' % pattern
+#            print 'groups = %s' % (groups,)
+#            print 'group names = %s' % group_names
+#            print 'named_ixs = %s' % named_ixs
+#            print 'gmn = %s' % groups_minus_named
+#            print 'groupindex = %s' % p.groupindex
+#            print 'groupdict = %s' % m.groupdict()
+            # bind user-specified groups to group names
+            for name,n in zip(group_names, groups_minus_named):
+                try:
+                    inner_bindings[name] = groups[n]
+                except IndexError:
+                    pass # innocuous
+            # bind pattern-specified groups to group names
+            for name,group in m.groupdict().items():
                 if group is not None:
                     inner_bindings[name] = group
             # now invoke the (usually empty) inner unnamed block and recur

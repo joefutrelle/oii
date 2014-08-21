@@ -21,17 +21,21 @@
     <!-- first, parse ID to determine IFCB schema version and extract timestamp -->
     <first>
       <!-- IFCB v1 ID syntax -->
-      <match var="suffix" timestamp="(IFCB(9)_(yyyy_YYY_HHMMSS))(.*)"
-	     groups="lid instrument timestamp year yearday hour minute second tpe">
+      <match var="suffix" timestamp="(IFCB1_(yyyy_YYY_HHMMSS))(any)" groups="lid timestamp tpe">
 	<var name="schema_version">v1</var>
 	<var name="adc_cols">&v1_adc_cols;</var>
+	<var name="instrument">${n1}</var>
+	<var name="year">${yyyy}</var>
+	<var name="yearday">${yyyy}_${YYY}</var>
 	<var name="timestamp_format">%Y_%j_%H%M%S</var>
       </match>
       <!-- IFCB v2 ID syntax -->
-      <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB(999))(.*)"
-	     groups="lid timestamp year month day hour minute second instrument tpe">
+      <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB(111))(any)" groups="lid timestamp tpe">
 	<var name="schema_version">v2</var>
 	<var name="adc_cols">&v2_adc_cols;</var>
+	<var name="instrument">${n1}</var>
+	<var name="year">${yyyy}</var>
+	<var name="yearday">${yyyy}${dd}</var>
 	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
       </match>
     </first>
@@ -91,10 +95,10 @@
       <!-- otherwise we're in a schema-dependent directory structure -->
       <first>
 	<test var="schema_version" eq="v1">
-	  <var name="raw_path">${root}/IFCB${instrument}_${year}_${yearday}/${filename}</var>
+	  <var name="raw_path">${root}/IFCB${instrument}_${yearday}/${filename}</var>
 	</test>
 	<test var="schema_version" eq="v2">
-	  <var name="raw_path">${root}/D${year}/D${year}${day}/${filename}</var>
+	  <var name="raw_path">${root}/D${year}/D${yearday}/${filename}</var>
 	</test>
       </first>
       <!-- sometimes the directory structure is flat -->
