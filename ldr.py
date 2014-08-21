@@ -285,10 +285,18 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for ss in local_block(exprs[1:],inner_bindings):
             yield flatten(ss,exclude=discard)
     # utility recurrence expression for unnamed block
+    # accepts either a solution generator which produces inner bindings for the inner block,
+    # or simply a single set of bindings (the outer bindings)
     def inner_block(expr,inner_bindings={},solution_generator=None):
         if solution_generator is None:
-            solution_generator = local_block(list(expr),inner_bindings)
-        for s in with_block(solution_generator,expr,bindings):
+            S = with_block(local_block(list(expr),inner_bindings),expr,bindings)
+        else:
+            def SS():
+                for s in with_block(solution_generator,expr,bindings):
+                    for ss in local_block(list(expr),s):
+                        yield ss
+            S = SS()
+        for s in S:
             for ss in rest(expr,s):
                 yield ss
     # terminal case; we have arrived at the end of the block with a solution, so yield it
@@ -341,7 +349,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
-                    var_val = expr.text
+                    var_val = ScopedExpr(sub_val_expr).text
                     for s in rest(expr,{var_name:var_val}):
                         yield s
         except UnboundVariable, uv:
