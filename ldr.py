@@ -16,6 +16,7 @@ import traceback
 from oii.scope import Scope
 from oii.utils import coalesce, asciitable, structs
 from oii.jsonquery import jsonquery
+from oii.utils import memoize, search_path
 
 class UnboundVariable(Exception):
     pass
@@ -691,6 +692,16 @@ class Resolver(object):
                     setattr(level, part, lambda _: None)
                 level = getattr(level, part)
             setattr(level, parts[-1], self.as_positional_function(name))
+
+# utilities for finding resolvers on the Python path
+
+@memoize()
+def locate_resolver(relative_path):
+    return search_path(relative_path)
+    
+@memoize(ttl=30)
+def get_resolver(relative_path):
+    return Resolver(locate_resolver(relative_path))
 
 if __name__=='__main__':
     """usage example
