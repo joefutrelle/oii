@@ -699,7 +699,6 @@ class Resolver(object):
 def locate_resolver(relative_path):
     return search_path(relative_path)
     
-@memoize(ttl=30)
 def get_resolver(relative_path):
     return Resolver(locate_resolver(relative_path))
 
