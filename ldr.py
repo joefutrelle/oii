@@ -68,7 +68,7 @@ def timestamp2regex(pattern):
     pattern = re.sub(r's+','(?P<sss>[0-9]+)',pattern) # milliseconds
     pattern = re.sub(r'yyyy','(?P<yyyy>[0-9]{4})',pattern) # four-digit year
     pattern = re.sub(r'mm','(?P<mm>0?[1-9]|11|12)',pattern) # two-digit month
-    pattern = re.sub(r'dd','(?P<dd>01|[1-2][0-9]|3[0-1])',pattern) # two-digit day of month
+    pattern = re.sub(r'dd','(?P<dd>0[1-9]|[1-2][0-9]|3[0-1])',pattern) # two-digit day of month
     pattern = re.sub(r'YYY','(?P<YYY>[0-3][0-9][0-9])',pattern) # three-digit day of year
     pattern = re.sub(r'HH','(?P<HH>0[1-9]|1[0-9]|2[0-3])',pattern) # two-digit hour
     pattern = re.sub(r'MM','(?P<MM>[0-5][0-9])',pattern) # two-digit minute
@@ -300,11 +300,13 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         if solution_generator is None:
             S = with_block(local_block(list(expr),inner_bindings),expr,bindings)
         else:
+            # wrap the solution generator in with_block
             def SS():
                 for s in with_block(solution_generator,expr,bindings):
                     for ss in local_block(list(expr),s):
                         yield ss
             S = SS()
+        # now recur
         for s in S:
             for ss in rest(expr,s):
                 yield ss
@@ -446,23 +448,27 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         for s in rest(expr):
             yield s
     # match generates solutions for every regex match
-    # <match [pattern="{regex}"|timestamp="{date pattern}"] [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"]/>
+    # <match [pattern="{regex}"|timestamp="{date pattern}"] [value="{template}"|var="{variable to match}"] [groups="{name1} {name2}"] [optional="true/false"/>
     # if "value" is specified, the template is interpolated and then matched against,
     # if "var" is specified, the variable's value is looked up and then matched.
     # var="foo" is equivalent to value="${foo}"
     # if pattern is not specified the default pattern is ".*"
-    # match also acts as an implicit, unnamed block supporting distinct
+    # match also acts as an implicit, unnamed block supporting block-level modifiers.
     elif expr.tag=='match':
+        optional = expr.get('optional')
+        optional = optional is not None and optional in ['true', 'True', 'yes', 'Yes']
+        m = False
         try:
             pattern, value = parse_match_args(expr,bindings,'.*')
+            group_name_list, group_names = expr.get('groups'), []
+            if group_name_list:
+                group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
+            p = re.compile(pattern)
+            m = p.match(value)
         except UnboundVariable, uv:
             logging.warn('match: unbound variable %s' % uv)
-            return # miss
-        group_name_list, group_names = expr.get('groups'), []
-        if group_name_list:
-            group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
-        p = re.compile(pattern)
-        m = p.match(value)
+            if not optional:
+                return # miss
         if m:
             groups = m.groups()
             named_ixs = p.groupindex.values()
@@ -478,7 +484,8 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             # bind user-specified groups to group names
             for name,n in zip(group_names, groups_minus_named):
                 try:
-                    inner_bindings[name] = groups[n]
+                    if groups[n] is not None:
+                        inner_bindings[name] = groups[n]
                 except IndexError:
                     pass # innocuous
             # bind pattern-specified groups to group names
@@ -488,11 +495,14 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             # now invoke the (usually empty) inner unnamed block and recur
             for s in inner_block(expr,inner_bindings):
                 yield s
+        elif optional:
+            for s in rest(expr):
+                yield s
         else:
             return # miss
     # test performs equality and inequality tests over strings and numbers
     # <test [var={var}|value={template}] [eq|gt|lt|ge|le|ne]={template}/>
-    # and is also an implicit block
+    # and is also an implicit block.
     elif expr.tag=='test':
         try:
             var = expr.get('var')
