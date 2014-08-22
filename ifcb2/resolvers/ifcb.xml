@@ -18,6 +18,9 @@
   <rule name="pid" uses="pid">
     <!-- separate namespace part from rest of pid -->
     <match var="pid" pattern="(.*/)?(.*)" groups="namespace suffix"/>
+    <!-- if there's a namespace, extract just the namespace's lid -->
+    <!-- e.g., http://foo.bar.edu/baz/ has an lid of baz -->
+    <match var="namespace" pattern="(?:.*/)?(.*)/$" groups="ns_lid" optional="true"/>
     <!-- first, parse ID to determine IFCB schema version and extract timestamp -->
     <first>
       <!-- IFCB v1 ID syntax -->
@@ -30,7 +33,7 @@
 	<var name="timestamp_format">%Y_%j_%H%M%S</var>
       </match>
       <!-- IFCB v2 ID syntax -->
-      <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB(111))(any)" groups="lid timestamp tpe">
+      <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB111)(any)" groups="lid timestamp tpe">
 	<var name="schema_version">v2</var>
 	<var name="adc_cols">&v2_adc_cols;</var>
 	<var name="instrument">${n1}</var>
