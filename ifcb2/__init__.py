@@ -1,6 +1,7 @@
 """Imaging FlowCytobot dashboard and related utilities, for dashboard v3"""
 import os
 from oii.utils import memoize, search_path
+from oii import ldr
 from oii.ldr import Resolver
 
 IFCB_RESOLVER_BASE_PATH='oii/ifcb2/resolvers'
@@ -11,4 +12,4 @@ def locate_resolver(name):
     
 @memoize(ttl=30)
 def get_resolver():
-    return Resolver(locate_resolver('ifcb.xml'))
+    return ldr.get_resolver(locate_resolver('ifcb.xml'))
