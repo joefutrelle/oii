@@ -33,7 +33,26 @@ def search_path(pathname_suffix):
     except IndexError:
         return None
 
-def memoize(ttl=31557600,ignore_exceptions=False):
+# from http://stackoverflow.com/questions/653368/how-to-create-a-python-decorator-that-can-be-used-either-with-or-without-paramet
+def doublewrap(f):
+    '''
+    a decorator decorator, allowing the decorator to be used as:
+    @decorator(with, arguments, and=kwargs)
+    or
+    @decorator
+    '''
+    @wraps(f)
+    def new_dec(*args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+            # actual decorated function
+            return f(args[0])
+        else:
+            # decorator arguments
+            return lambda realf: f(realf, *args, **kwargs)
+    return new_dec
+
+@doublewrap
+def memoize(fn,ttl=31557600,ignore_exceptions=False):
     """decorator to memoize a function by its args,
     with an expiration time. use this to wrap an idempotent
     or otherwise cacheable getter or transformation function.
@@ -42,22 +61,21 @@ def memoize(ttl=31557600,ignore_exceptions=False):
     that the function to generate them raises an exception."""
     cache = {}
     exp = {}
-    def wrapper(function):
-        def inner(*args):
-            now = time.time()
-            if args not in exp or now > exp[args] or args not in cache:
-                try:
-                    new_value = function(*args)
-                except:
-                    if ignore_exceptions and args in cache:
-                        new_value = args[cache]
-                    else:
-                        raise
-                cache[args] = new_value
-                exp[args] = now + ttl
-            return cache[args]
-        return inner
-    return wrapper
+    @wraps(fn)
+    def inner(*args,**kw):
+        now = time.time()
+        if args not in exp or now > exp[args] or args not in cache:
+            try:
+                new_value = fn(*args,**kw)
+            except:
+                if ignore_exceptions and args in cache:
+                    new_value = args[cache]
+                else:
+                    raise
+            cache[args] = new_value
+            exp[args] = now + ttl
+        return cache[args]
+    return inner
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
     """Retry calling the decorated function using an exponential backoff.
