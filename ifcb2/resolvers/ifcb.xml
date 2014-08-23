@@ -107,29 +107,17 @@
       <!-- sometimes the directory structure is flat -->
       <var name="raw_path">${root}/${filename}</var>
     </rule>
-    <rule name="find_raw_file">
-      <all nth="1">
-	<invoke rule="ifcb.files.raw_path"/>
-	<path match="${raw_path}"/>
-      </all>
+    <rule name="find_raw_file" nth="1">
+      <invoke rule="ifcb.files.raw_path"/>
+      <path match="${raw_path}"/>
     </rule>
     <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
-      <var name="extension">
-	<val>hdr</val>
-	<val>adc</val>
-	<val>roi</val>
-      </var>
-      <invoke rule="ifcb.files.find_raw_file" nth="1"/>
-      <var name="${extension}_path">${raw_path}</var>
-    </rule>
-  </namespace>
-  <!-- for testing only! -->
-  <namespace name="local">
-    <rule name="data_roots">
-      <var name="root">
-	<val>/home/jfutrelle</val>
-	<val>/home/ubuntu/dev</val>
-      </var>
+      <var name="extension">hdr</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="hdr_path"/>
+      <var name="extension">adc</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
+      <var name="extension">roi</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="roi_path"/>
     </rule>
   </namespace>
 </namespace>

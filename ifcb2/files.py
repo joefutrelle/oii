@@ -10,8 +10,8 @@ def pid2fileset(pid,roots):
 def parsed_pid2fileset(parsed_pid,roots):
     paths = {}
     for root in roots:
-        for p in get_resolver().ifcb.files.find_raw_fileset(root=root,**parsed_pid):
-            paths.update(p)
+        p = next(get_resolver().ifcb.files.find_raw_fileset(root=root,**parsed_pid))
+        paths.update(p)
         if paths:
             return paths
 

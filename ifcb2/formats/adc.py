@@ -19,6 +19,7 @@ _TYPE_CONV = {
     'str': str
 }
 
+@memoize
 def get_schema(schema_version):
     hit = next(get_resolver().ifcb.adc.schema(schema_version),None)
     schema = dict(zip(re.split(' ',hit['columns']),re.split(' ',hit['types'])))
