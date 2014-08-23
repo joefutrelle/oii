@@ -1,5 +1,4 @@
 import re
-
 from StringIO import StringIO
 
 import numpy as np
