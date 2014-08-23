@@ -277,7 +277,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         if timestamp is not None:
             pattern = timestamp2regex(timestamp)
         else:
-            pattern = expr.get('pattern')
+            pattern = coalesce(expr.get('pattern'),default_pattern)
         return pattern, value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
