@@ -13,13 +13,16 @@ import logging
 
 import traceback
 
-from oii.scope import Scope
 from oii.utils import coalesce, asciitable, structs
 from oii.jsonquery import jsonquery
 from oii.utils import memoize, search_path
 
 class UnboundVariable(Exception):
     pass
+
+@memoize
+def compile_regex(pattern):
+    return re.compile(pattern)
 
 # pretty-print bindings
 def pprint(bindings,header=''):
@@ -67,10 +70,10 @@ def timestamp2regex(pattern):
     pattern = re.sub(r'(([0-9])\2*)',r'(?P<n\2>[0-9]+)',pattern) # fixed-length number eg 111 88
     pattern = re.sub(r's+','(?P<sss>[0-9]+)',pattern) # milliseconds
     pattern = re.sub(r'yyyy','(?P<yyyy>[0-9]{4})',pattern) # four-digit year
-    pattern = re.sub(r'mm','(?P<mm>0?[1-9]|11|12)',pattern) # two-digit month
+    pattern = re.sub(r'mm','(?P<mm>0[1-9]|1[0-2])',pattern) # two-digit month
     pattern = re.sub(r'dd','(?P<dd>0[1-9]|[1-2][0-9]|3[0-1])',pattern) # two-digit day of month
     pattern = re.sub(r'YYY','(?P<YYY>[0-3][0-9][0-9])',pattern) # three-digit day of year
-    pattern = re.sub(r'HH','(?P<HH>0[1-9]|1[0-9]|2[0-3])',pattern) # two-digit hour
+    pattern = re.sub(r'HH','(?P<HH>[0-1][0-9]|2[0-3])',pattern) # two-digit hour
     pattern = re.sub(r'MM','(?P<MM>[0-5][0-9])',pattern) # two-digit minute
     pattern = re.sub(r'SS','(?P<SS>[0-5][0-9])',pattern) # two-digit second
     pattern = re.sub(r'#','[0-9]+',pattern) # any string of digits (non-capturing)
@@ -82,11 +85,16 @@ def timestamp2regex(pattern):
     return pattern
 
 def flatten(dictlike, include=None, exclude=None):
+    # an appropriate copy operation. this WILL NOT COPY internal dicts or lists
     result = dict(dictlike.items())
     if include is not None:
-        result = dict((k,result[k]) for k in result if k in include)
+        for k in result.keys():
+            if k not in include:
+                del result[k]
     if exclude is not None:
-        result = dict((k,result[k]) for k in result if k not in exclude)
+        for k in result.keys():
+            if k in exclude:
+                del result[k]
     return result
 
 # substitute patterns like ${varname} for their values given
@@ -226,7 +234,7 @@ def with_aliases(solution_generator,aliases={}):
 # apply block-level include/excludes
 def with_inc_exc(solution_generator,include=None,exclude=None):
     for raw_solution in solution_generator:
-        s = Scope(flatten(raw_solution,include,exclude))
+        s = flatten(raw_solution,include,exclude)
         yield s
 
 # apply block-level modifications such as distinct, rename, include/exclude, count, and nth
@@ -262,7 +270,7 @@ def with_block(S,expr,bindings={}):
 
 # evaluate a block of expressions using recursive descent to generate and filter
 # solutions a la Prolog
-def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
+def evaluate_block(exprs,bindings={},global_namespace={}):
     # utility to parse arguments to match and split
     def parse_match_args(expr,bindings,default_pattern='.*'):
         if expr.get('value'):
@@ -281,7 +289,9 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
         return pattern, value
     # utility block evaluation function using this expression's bindings and global namespace
     def local_block(exprs,inner_bindings={}):
-        return evaluate_block(exprs,bindings.enclose(inner_bindings),global_namespace)
+        bb = dict(bindings.items()) # an appropriate copy operation
+        bb.update(inner_bindings)
+        return evaluate_block(exprs,bb,global_namespace)
     # utility recurrence expression establishes an inner scope and evaluates
     # the remaining expressions (which will yield solutions to the head expression)
     # usage: for s in rest(expr,bindings): yield s
@@ -339,7 +349,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
     elif expr.tag=='invoke':
         rule_name = expr.get('rule')
         using = parse_vars_arg(expr,'using')
-        args = Scope(flatten(bindings,using))
+        args = flatten(bindings,using)
         S = invoke(rule_name,args,global_namespace)
         for s in inner_block(expr,bindings,S):
             yield s
@@ -463,7 +473,7 @@ def evaluate_block(exprs,bindings=Scope(),global_namespace={}):
             group_name_list, group_names = expr.get('groups'), []
             if group_name_list:
                 group_names = re.split(LDR_WS_SEP_PATTERN,group_name_list)
-            p = re.compile(pattern)
+            p = compile_regex(pattern)
             m = p.match(value)
         except UnboundVariable, uv:
             logging.warn('match: unbound variable %s' % uv)
@@ -674,7 +684,7 @@ class Resolver(object):
         self.namespace = parse(*files)
         self._add_positional_functions()
     def invoke(self,name,**bindings):
-        for s in invoke(name,Scope(bindings),self.namespace):
+        for s in invoke(name,bindings,self.namespace):
             yield s
     def as_function(self,name):
         def _fn(**bindings):
