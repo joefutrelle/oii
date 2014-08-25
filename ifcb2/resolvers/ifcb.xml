@@ -114,10 +114,33 @@
     <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
       <var name="extension">hdr</var>
       <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="hdr_path"/>
-      <var name="extension">adc</var>
-      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
+      <all>
+	<var name="extension">
+	  <val>adc</val>
+	  <val>adc.mod</val>
+	</var>
+	<invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
+      </all>
       <var name="extension">roi</var>
       <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="roi_path"/>
+    </rule>
+    <rule name="list_raw_filesets" uses="root">
+      <!-- strategy: list hdr files, then look for corresponding adc and roi files -->
+      <any>
+	<var name="data_dir">${root}</var>
+	<path var="data_dir" match="${root}/IFCB*"/>
+	<path var="year_dir" match="${root}/D*">
+	  <path var="data_dir" match="${year_dir}/D*"/>
+	</path>
+      </any>
+      <path var="hdr_path" match="${data_dir}/*.hdr"/>
+      <match var="hdr_path" pattern="(.*/(.*))\.hdr$" groups="basename lid"/>
+      <!-- look for other files in the same dir -->
+      <path var="roi_path" match="${basename}.roi"/>
+      <any>
+	<path var="adc_path" match="${basename}.adc"/>
+	<!-- FIXME needs to also work with .adc.mod files -->
+      </any>
     </rule>
   </namespace>
 </namespace>
