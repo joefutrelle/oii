@@ -16,51 +16,11 @@ from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
 from oii.times import text2utcdatetime
 
-Base = declarative_base()
+from oii.ifcb2.orm import Base, TimeSeries, DataDirectory, Bin, File, User
 
 def datetime2utcdatetime(dt):
     # convert dt without timezone to one in utc
     return datetime.fromtimestamp(calendar.timegm(dt.timetuple()), pytz.utc)
-
-class Bin(Base):
-    __tablename__ = 'bins'
-
-    lid = Column(String, primary_key=True)
-    sample_time = Column(DateTime(timezone=True))
-    skip = Column(Boolean)
-
-    def __init__(self, lid, sample_time, skip=False):
-        self.lid = lid
-        self.sample_time = sample_time
-        self.skip = skip
-
-    def __repr__(self):
-        return '<Bin %s>' % self.lid
-
-class File(Base):
-    __tablename__ = 'fixity'
-
-    lid = Column(String, ForeignKey('bins.lid'), primary_key=True)
-    length = Column(BigInteger)
-    filename = Column(String)
-    filetype = Column(String, primary_key=True)
-    sha1 = Column(String)
-    fix_time = Column(DateTime(timezone=True))
-    local_path = Column(String)
-
-    bin = relationship('Bin', backref=backref('files',order_by=lid))
-
-    def __init__(self, lid, length, filename, filetype, sha1, fix_time, local_path):
-        self.lid = lid
-        self.length = length
-        self.filename = filename
-        self.filetype = filetype
-        self.sha1 = sha1
-        self.fix_time = fix_time
-        self.local_path = local_path
-
-    def __repr__(self):
-        return '<File %s %d %s>' % (self.filename, self.length, self.sha1)
 
 def time_range(session, start_time, end_time):
     return session.query(Bin).\
@@ -166,7 +126,7 @@ def get_sqlite_engine(delete=True):
             pass
     return sqla.create_engine('sqlite:///%s' % DB_FILE)
 
-if __name__=='__main__':
+def psql_demo():
     wipe = False
     #engine = get_sqlite_engine(delete=wipe)
     engine = sqla.create_engine('postgresql://ifcb:ifcb@localhost/testdb')
@@ -174,3 +134,25 @@ if __name__=='__main__':
     if wipe: # deleted everything, so need to start
         accession_demo(engine)
     query_demo(engine)
+
+if __name__=='__main__':
+    engine = sqla.create_engine('sqlite://')
+    Base.metadata.create_all(engine)
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    session = Session()
+    ts = TimeSeries(name='ts_one',description='First time series')
+    ts.data_dirs.append(DataDirectory(path='/tmp/foo'))
+    ts.data_dirs.append(DataDirectory(path='/blah/fnord'))
+    user = User(name='Joe Futrelle',email='jfutrelle@whoi.edu')
+    session.add(ts)
+    session.add(user)
+    session.commit()
+    session.close()
+    print 'closed session'
+    session = Session()
+    for ts in session.query(TimeSeries):
+        print ts
+        print ts.data_dirs
+    for u in session.query(User):
+        print u
