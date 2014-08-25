@@ -21,7 +21,8 @@ Base = declarative_base()
 class TimeSeries(Base):
     __tablename__ = 'time_series'
 
-    name = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
     description = Column(String, default='')
     enabled = Column(Boolean, default=True)
 
@@ -32,7 +33,7 @@ class DataDirectory(Base):
     __tablename__ = 'data_dirs'
 
     id = Column(Integer, primary_key=True)
-    time_series = Column(String, ForeignKey('time_series.name'))
+    time_series = Column(String, ForeignKey('time_series.id'))
     path = Column(String)
     ts = relationship("TimeSeries",
                       backref=backref('data_dirs', cascade="all, delete-orphan", order_by=id))
@@ -83,7 +84,8 @@ class File(Base):
 class User(Base):
     __tablename__ = 'users'
 
-    email = Column(String,primary_key=True)
+    id = Column(Integer,primary_key=True)
+    email = Column(String,unique=True)
     name = Column(String)
     password = Column(String)
     admin = Column(Boolean, default=False)

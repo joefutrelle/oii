@@ -57,12 +57,12 @@ ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope,
 ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
     // initialize local scope
-    var baseTimeSeries = Restangular.all('timeseries');
+    var baseTimeSeries = Restangular.all('time_series');
     $scope.alert = null;
 
     // load iniital data from api
     baseTimeSeries.getList().then(function(serverResponse) {
-        $scope.timeseries = serverResponse;
+        $scope.time_series = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
         $scope.alert = 'Unexpected ' + errorResponse.status.toString()
@@ -71,13 +71,13 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
-        $scope.timeseries.push({name:'',systempaths:[{path:''}],edit:'true'});
+        $scope.time_series.push({name:'',data_dirs:[{path:''}],edit:'true'});
         return true;
     }
 
     // create new path
     $scope.addNewPath = function(ts) {
-        ts.systempaths.push({path:''});
+        ts.data_dirs.push({path:''});
     }
 
     // mark timeseries group for editing
@@ -88,9 +88,9 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     // save timeseries group to server
     $scope.saveTimeSeries = function(ts) {
         // remove blank paths before save
-        for (var i = 0; i < ts.systempaths.length; i++) {
-            if (ts.systempaths[i].path.trim() == "") {
-                $scope.removePath(ts, ts.systempaths[i]);
+        for (var i = 0; i < ts.data_dirs.length; i++) {
+            if (ts.data_dirs[i].path.trim() == "") {
+                $scope.removePath(ts, ts.data_dirs[i]);
             }
         }
         if(ts.id) {
@@ -118,7 +118,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     // remove timeseries group
     $scope.removeTimeSeries = function(ts) {
         ts.remove().then(function() {
-            $scope.timeseries = _.without($scope.timeseries, ts);
+            $scope.time_series = _.without($scope.time_series, ts);
         });
     }
 
@@ -126,7 +126,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     $scope.removePath = function(ts,p) {
         // remove only from local scrope
         // server is updated with saveTimeSeries()
-        ts.systempaths = _.without(ts.systempaths, p);
+        ts.data_dirs = _.without(ts.data_dirs, p);
     }
 
 }]);
@@ -159,7 +159,7 @@ ifcbAdmin.controller('AccountCtrl', ['$scope', function ($scope) {
 // define application routes
 ifcbAdmin.config(['$routeProvider', function($routeProvider) {
     $routeProvider.
-        when('/timeseries', {
+        when('/time_series', {
             controller: 'TimeSeriesCtrl',
             templateUrl: 'views/TimeSeries.html'
             }).
@@ -172,9 +172,6 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             templateUrl: 'views/MyAccount.html'
             }).
         otherwise({
-            redirectTo: '/timeseries'
+            redirectTo: '/time_series'
         });
 }]);
-
-
-
