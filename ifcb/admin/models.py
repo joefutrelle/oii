@@ -66,10 +66,10 @@ class SystemPath(Base):
     @validates('path')
     def validate_path(self, key, path):
         # skip val for now, improve later
-        # return path
-        if not isdir(path):
-            raise DBValidationError('validation error','The path "%s" is not available.' % path)
         return path
+        #if not isdir(path):
+        #    raise DBValidationError('validation error','The path "%s" is not available.' % path)
+        #return path
 
 
 class User(Base):
