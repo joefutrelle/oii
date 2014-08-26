@@ -146,17 +146,43 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         $scope.alert = 'Unexpected ' + errorResponse.status.toString()
             + ' error while loading data from server.'
     });
-/*
+
+    // save timeseries group to server
+    $scope.saveUser = function(user) {
+        if(user.id) {
+            // user already exists on server. update.
+            user.patch().then(function(serverResponse) {
+                delete user.edit;
+                $scope.alert = null;
+            }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+            });
+        } else {
+            // new user. post to server.
+            baseUsers.post(user).then(function(serverResponse) {
+                // copy server response to scope object
+                angular.copy(serverResponse, user);
+                $scope.alert = null;
+            }, function(serverResponse) {
+		console.log("OK, that didn't work"); // FIXME debug
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+            });
+        }
+    }
+
     // create new timeseries
     $scope.addNewUser = function() {
-        $scope.users.push({name:'',email:'',password='',edit:'true'});
+	user = {name:'Joe Schmo',email:'schmo@joetown.com',password:'supersecret',edit:'true'};
+        $scope.users.push(user);
         return true;
     }
 
     $scope.editUser = function(user) {
         user.edit = true;
     }
-*/
+
     // remove timeseries group
     $scope.removeUser = function(user) {
         user.remove().then(function() {
