@@ -33,9 +33,9 @@ class DataDirectory(Base):
     __tablename__ = 'data_dirs'
 
     id = Column(Integer, primary_key=True)
-    time_series = Column(String, ForeignKey('time_series.id'))
+    time_series_id = Column(Integer, ForeignKey('time_series.id'))
     path = Column(String)
-    ts = relationship("TimeSeries",
+    time_series = relationship("TimeSeries",
                       backref=backref('data_dirs', cascade="all, delete-orphan", order_by=id))
 
     def __repr__(self):
@@ -44,14 +44,10 @@ class DataDirectory(Base):
 class Bin(Base):
     __tablename__ = 'bins'
 
-    lid = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    lid = Column(String, unique=True)
     sample_time = Column(DateTime(timezone=True))
     skip = Column(Boolean)
-
-    def __init__(self, lid, sample_time, skip=False):
-        self.lid = lid
-        self.sample_time = sample_time
-        self.skip = skip
 
     def __repr__(self):
         return '<Bin %s>' % self.lid
@@ -59,24 +55,16 @@ class Bin(Base):
 class File(Base):
     __tablename__ = 'fixity'
 
-    lid = Column(String, ForeignKey('bins.lid'), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    bin_id = Column(Integer, ForeignKey('bins.id'))
     length = Column(BigInteger)
     filename = Column(String)
-    filetype = Column(String, primary_key=True)
+    filetype = Column(String)
     sha1 = Column(String)
     fix_time = Column(DateTime(timezone=True))
     local_path = Column(String)
 
-    bin = relationship('Bin', backref=backref('files',order_by=lid))
-
-    def __init__(self, lid, length, filename, filetype, sha1, fix_time, local_path):
-        self.lid = lid
-        self.length = length
-        self.filename = filename
-        self.filetype = filetype
-        self.sha1 = sha1
-        self.fix_time = fix_time
-        self.local_path = local_path
+    bin = relationship('Bin', backref=backref('files',order_by=id))
 
     def __repr__(self):
         return '<File %s %d %s>' % (self.filename, self.length, self.sha1)

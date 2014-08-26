@@ -13,6 +13,7 @@ from sqlalchemy import and_, or_, desc
 from sqlalchemy.sql.expression import func
 
 from oii.times import text2utcdatetime, datetime2utcdatetime
+from oii.utils import sha1_file
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Base, TimeSeries, DataDirectory, Bin, File, User
@@ -41,7 +42,7 @@ def files_demo(session):
 def data_volume_demo(session):
     print 'data volume per day'
     for row in session.query(func.sum(File.length), func.DATE(Bin.sample_time)).\
-        filter(Bin.lid==File.lid).\
+        filter(Bin.id==File.bin_id).\
         group_by(func.DATE(Bin.sample_time)).\
         order_by(func.DATE(Bin.sample_time)).\
         limit(7):
@@ -82,7 +83,7 @@ def accession_demo(session,root):
             print 'barf %s' % lid
             raise
         ts = text2utcdatetime(parsed['timestamp'], parsed['timestamp_format'])
-        b = Bin(lid, ts)
+        b = Bin(lid=lid, sample_time=ts)
         session.add(b)
         # now make mostly bogus fixity entries
         now = datetime.now()
@@ -90,8 +91,11 @@ def accession_demo(session,root):
         filetypes = ['hdr','adc','roi']
         for path,filetype in zip(paths,filetypes):
             length = os.stat(path).st_size
-            file = File(lid, length, os.path.basename(path), filetype, 'abc123', now, path)
-            session.add(file)
+            name = os.path.basename(path)
+            #checksum = sha1_file(path)
+            checksum = 'placeholder'
+            f = File(local_path=path, filename=name, length=length, filetype=filetype, sha1=checksum, fix_time=now)
+            b.files.append(f)
     session.commit()
 
 def get_sqlite_engine(delete=True):
@@ -107,10 +111,6 @@ def get_sqlite_engine(delete=True):
 def get_psql_engine():
     return sqla.create_engine('postgresql://ifcb:ifcb@localhost/testdb')
 
-def do_accession_demo(session,root):
-    accession_demo(session,root)
-    query_demo(session)
-
 def timeseries_demo(session):
     ts = TimeSeries(name='ts_one',description='First time series')
     ts.data_dirs.append(DataDirectory(path='/tmp/foo'))
@@ -125,6 +125,11 @@ def timeseries_demo(session):
     for u in session.query(User):
         print u
 
+def bin_demo(session):
+    bin = Bin(lid='foo', sample_time=datetime.now())
+    session.add(bin)
+    session.commit()
+
 if __name__=='__main__':
     engine = get_sqlite_engine()
     Base.metadata.create_all(engine)
@@ -132,4 +137,5 @@ if __name__=='__main__':
     Session.configure(bind=engine)
     session = Session()
     timeseries_demo(session)
-    do_accession_demo(session,'/mnt/data/okeanos')
+    accession_demo(session,'/mnt/data/okeanos')
+    query_demo(session)
