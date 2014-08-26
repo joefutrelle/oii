@@ -146,7 +146,23 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         $scope.alert = 'Unexpected ' + errorResponse.status.toString()
             + ' error while loading data from server.'
     });
+/*
+    // create new timeseries
+    $scope.addNewUser = function() {
+        $scope.users.push({name:'',email:'',password='',edit:'true'});
+        return true;
+    }
 
+    $scope.editUser = function(user) {
+        user.edit = true;
+    }
+*/
+    // remove timeseries group
+    $scope.removeUser = function(user) {
+        user.remove().then(function() {
+            $scope.users = _.without($scope.users, user);
+        });
+    }
 }]);
 
 // my account controller
