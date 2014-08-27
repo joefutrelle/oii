@@ -12,7 +12,7 @@ from oii.image.io import as_bytes
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
-from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip
+from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
@@ -50,6 +50,9 @@ def get_data_roots(ts_label):
     for data_dir in ts.data_dirs:
         paths.append(data_dir.path)
         return paths
+
+def get_timestamp(parsed_pid):
+    return iso8601(strptime(parsed_pid['timestamp'], parsed_pid['timestamp_format']))
 
 def get_targets(adc, bin_pid):
     # unstitched for now
@@ -90,6 +93,7 @@ def hello_world(pid):
     heft = 'full' # heft is either short, medium, or full
     if 'extension' in parsed:
         extension = parsed['extension']
+    timestamp = get_timestamp(parsed)
     if 'target' in parsed:
         canonical_bin_pid = canonicalize(url_root, time_series, bin_lid)
         target_no = parsed['target']
@@ -97,19 +101,25 @@ def hello_world(pid):
         add_pid(target, canonical_bin_pid)
         if extension == 'json':
             return Response(json.dumps(target),mimetype='application/json')
-        # not JSON, look for another target representation MIME type
+        # not JSON, check for image
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
             img = read_target_image(target, roi_path)
             return Response(as_bytes(img,mimetype),mimetype=mimetype)
+        # more metadata representations. we'll need the header
+        hdr = parse_hdr_file(hdr_path)
+        if extension == 'xml':
+            return Response(target2xml(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
+        if extension == 'rdf':
+            return Response(target2rdf(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
     else: # bin
         if extension in ['hdr', 'adc', 'roi']:
             path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[extension]
             mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[extension]
             return Response(file(path), direct_passthrough=True, mimetype=mimetype)
+        # gonna need targets unless heft is medium or below
         if heft=='full':
             targets = get_targets(adc, canonical_pid)
-        # gonna need targets unless heft is medium or below
         if extension=='csv':
             lines = targets2csv(targets,adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')

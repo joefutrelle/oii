@@ -124,4 +124,40 @@ def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
         temp.seek(0)
         shutil.copyfileobj(temp, outfile)
 
+# individual target representations
+
+TARGET_XML_TEMPLATE="""<Target xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#" number="{{targetNumber}}">
+  <dc:identifier>{{pid}}</dc:identifier>
+  <dc:date>{{timestamp}}</dc:date>
+  {% for k,v in target %}
+  <{{k}}>{{v}}</{{k}}>
+  {% endfor %}
+  <dcterms:hasFormat>{{pid}}.png</dcterms:hasFormat>
+  <dcterms:isPartOf>{{bin_pid}}</dcterms:isPartOf>
+</Target>
+"""
+
+TARGET_RDF_TEMPLATE="""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns="http://ifcb.whoi.edu/terms#">
+<Target rdf:about="{{pid}}">{% for k,v in target %}
+  <{{k}}>{{v}}</{{k}}>{% endfor %}
+  <binID>{{bin_pid}}</binID>
+  <dcterms:hasFormat>{{pid}}.png</dcterms:hasFormat>
+</Target>
+</rdf:RDF>
+"""
+
+def _target2metadata(pid, target, timestamp, bin_pid, template):
+    bindings = {
+        'pid': pid,
+        'target': target.items(), # FIXME sort according to ADC schema using oii.utils.order_keys
+        'targetNumber': target['targetNumber'],
+        'bin_pid': bin_pid
+    }
+    return Environment().from_string(template).render(**bindings)
+
+def target2xml(pid, target, timestamp, bin_pid):
+    return _target2metadata(pid, target, timestamp, bin_pid, TARGET_XML_TEMPLATE)
+
+def target2rdf(pid, target, timestamp, bin_pid):
+    return _target2metadata(pid, target, timestamp, bin_pid, TARGET_RDF_TEMPLATE)
 
