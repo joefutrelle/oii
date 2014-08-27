@@ -36,6 +36,7 @@ def target_pid(bin_pid,target_number=1):
 def add_pid(target,bin_pid,bin_key='binID',target_key='pid'):
     target[bin_key] = bin_pid
     target[target_key] = target_pid(bin_pid,target[TARGET_NUMBER])
+    return target
 
 def add_pids(targets,bin_pid,bin_key='binID',target_key='pid'):
     """bin_pid must have no product or extension,

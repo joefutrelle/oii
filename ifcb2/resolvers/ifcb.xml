@@ -52,7 +52,9 @@
       <var name="product">raw</var>
       <match var="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
 	     groups="target product extension"/>
-      <var name="lid">${lid}_${target}</var>
+      <match var="target" optional="true">
+	<var name="lid">${lid}_${target}</var>
+      </match>
     </all>
   </rule>
   <namespace name="adc">

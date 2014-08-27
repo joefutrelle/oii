@@ -11,7 +11,7 @@ from oii.image.io import as_bytes
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.files import parsed_pid2fileset
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
-from oii.ifcb2.represent import targets2csv, bin2xml
+from oii.ifcb2.represent import targets2csv, bin2xml, bin2json
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
@@ -93,6 +93,10 @@ def hello_world(pid):
             img = read_target_image(target, roi_path)
             return Response(as_bytes(img,mimetype),mimetype=mimetype)
     else: # bin
+        if extension in ['hdr', 'adc', 'roi']:
+            path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[extension]
+            mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')
+            return Response(file(path), direct_passthrough=True, mimetype=mimetype)
         if extension=='csv':
             targets = get_targets(adc, canonical_pid)
             lines = targets2csv(targets,adc_cols)
@@ -101,6 +105,9 @@ def hello_world(pid):
         hdr = parse_hdr_file(hdr_path)
         # and the timestamp
         timestamp = iso8601(strptime(parsed['timestamp'], parsed['timestamp_format']))
+        if extension=='json':
+            targets = get_targets(adc, canonical_pid)
+            return Response(bin2json(canonical_pid,hdr,targets,timestamp),mimetype='application/json')
         if extension=='xml':
             targets = get_targets(adc, canonical_pid)
             return Response(bin2xml(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
