@@ -43,6 +43,8 @@ def get_data_roots(ts_label):
     ts = session.query(TimeSeries)\
                 .filter(TimeSeries.label==ts_label)\
                 .first()
+    if ts is None:
+        raise NotFound('Unknown time series %s' % ts_label)
     paths = []
     for data_dir in ts.data_dirs:
         paths.append(data_dir.path)
@@ -66,7 +68,10 @@ def hello_world(pid):
     lid = parsed['lid']
     url_root = request.url_root
     canonical_pid = canonicalize(url_root, time_series, lid)
-    data_roots = list(get_data_roots(time_series))
+    try:
+        data_roots = list(get_data_roots(time_series))
+    except NotFound:
+        abort(404)
     schema_version = parsed['schema_version']
     adc_cols = parsed['adc_cols'].split(' ')
     try:
