@@ -80,9 +80,9 @@ def accession_demo(session,ts_label,root):
             b.files.append(f)
     session.commit()
 
-def get_sqlite_engine(delete=True):
+def get_sqlite_engine(delete=False):
     # first, toast db
-    DB_FILE = 'test.db'
+    DB_FILE = 'ifcb_admin.db'
     if(delete):
         try:
             os.remove(DB_FILE)

@@ -6,11 +6,11 @@ from time import strptime
 from io import BytesIO
 
 from oii.utils import coalesce, memoize
-from oii.times import iso8601
+from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
 from oii.image.io import as_bytes
 
 from oii.ifcb2 import get_resolver
-from oii.ifcb2 import feed
+from oii.ifcb2.feed import Feed
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
 from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf
@@ -65,7 +65,14 @@ def get_targets(adc, bin_pid):
 
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
-    pass
+    ts = struct_time2utcdatetime(parse_date_param(timestamp))
+    print ts
+    with Feed(session, ts_label) as feed:
+        for bin in feed.nearest(timestamp=ts):
+            break
+    print bin.lid, bin.sample_time
+    # FIXME feed needs to canonicalize lid and format timestamp
+    return Response('oh yeah', mimetype='text/plain')
 
 @app.route('/<path:pid>')
 def hello_world(pid):
