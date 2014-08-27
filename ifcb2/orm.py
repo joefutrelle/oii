@@ -48,7 +48,7 @@ class Bin(Base):
     ts_label = Column(String)
     lid = Column(String, unique=True)
     sample_time = Column(DateTime(timezone=True))
-    skip = Column(Boolean)
+    skip = Column(Boolean, default=False)
 
     def __repr__(self):
         return '<Bin %s:%s>' % (self.ts_label, self.lid)
@@ -83,10 +83,3 @@ class User(Base):
 
     def __repr__(self):
         return "<User(email='%s')>" % self.email
-
-# utilities - FIXME refactor
-
-def time_range(session, start_time, end_time):
-    return session.query(Bin).\
-        filter(and_(Bin.sample_time >= start_time, Bin.sample_time <= end_time)).\
-        order_by(Bin.sample_time)

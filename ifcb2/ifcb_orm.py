@@ -17,11 +17,7 @@ from oii.utils import sha1_file
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Base, TimeSeries, DataDirectory, Bin, File, User
-
-def time_range(session, start_time, end_time):
-    return session.query(Bin).\
-        filter(and_(Bin.sample_time >= start_time, Bin.sample_time <= end_time)).\
-        order_by(Bin.sample_time)
+from oii.ifcb2 import feed
 
 demo_end_time = text2utcdatetime('2013-09-20T00:00:00Z')
 demo_start_time = demo_end_time - timedelta(hours=2)
@@ -29,42 +25,27 @@ demo_start_time = demo_end_time - timedelta(hours=2)
 # time range demo
 def time_range_demo(session):
     print '2 hours worth of bins:'
-    for instance in time_range(session, demo_start_time, demo_end_time):
+    for instance in feed.time_range(session, demo_start_time, demo_end_time):
         print instance
 
 # now extend this to show files
 
 def files_demo(session):
     print '2 hours worth of files:'
-    for instance in time_range(session, demo_start_time, demo_end_time):
+    for instance in feed.time_range(session, demo_start_time, demo_end_time):
         print instance.files
 
 def data_volume_demo(session):
     print 'data volume per day'
-    for row in session.query(func.sum(File.length), func.DATE(Bin.sample_time)).\
-        filter(Bin.id==File.bin_id).\
-        group_by(func.DATE(Bin.sample_time)).\
-        order_by(func.DATE(Bin.sample_time)).\
-        limit(7):
+    for row in feed.daily_data_volume(session).limit(7):
         print row
 
 def nearest_demo(session):
     ts = '2013-09-10T13:45:22Z'
     somedate = text2utcdatetime(ts)
     n = 5
-    print '%d nearest bins to %s' % (n,ts)
-    n_before = session.query(Bin).\
-        filter(Bin.sample_time <= somedate).\
-        order_by(desc(Bin.sample_time)).\
-        limit(n)
-    min_date = datetime2utcdatetime(n_before[-1].sample_time)
-    max_date = somedate + (somedate - min_date)
-    n_after = session.query(Bin).\
-        filter(and_(Bin.sample_time >= somedate, Bin.sample_time <= max_date)).\
-        order_by(Bin.sample_time).\
-        limit(n)
-    cand = list(n_before) + list(n_after)
-    print sorted(cand, key=lambda b: somedate - datetime2utcdatetime(b.sample_time))[:n]
+    print '%d nearest bins to %s' % (n,ts) 
+    print feed.nearest(session,somedate,n)
 
 def query_demo(session):
     time_range_demo(session)
