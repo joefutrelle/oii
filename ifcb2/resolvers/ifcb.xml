@@ -20,7 +20,7 @@
     <match var="pid" pattern="(.*/)?(.*)" groups="namespace suffix"/>
     <!-- if there's a namespace, extract just the namespace's lid -->
     <!-- e.g., http://foo.bar.edu/baz/ has an lid of baz -->
-    <match var="namespace" pattern="(?:.*/)?(.*)/$" groups="ns_lid" optional="true"/>
+    <match var="namespace" pattern="(?:.*/)?(.*)/$" groups="ts_label" optional="true"/>
     <!-- first, parse ID to determine IFCB schema version and extract timestamp -->
     <first>
       <!-- IFCB v1 ID syntax -->
@@ -42,8 +42,9 @@
 	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
       </match>
     </first>
+    <var name="bin_lid">${lid}</var>
     <!-- now get any _target_product.extension -->
-    <all include="target product extension">
+    <all include="lid target product extension">
       <invoke rule="ifcb.re"/>
       <var name="re.target">(?:_${re.int})</var>
       <var name="re.product">(?:_${re.id})</var>
@@ -51,6 +52,7 @@
       <var name="product">raw</var>
       <match var="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
 	     groups="target product extension"/>
+      <var name="lid">${lid}_${target}</var>
     </all>
   </rule>
   <namespace name="adc">
@@ -94,7 +96,7 @@
     <!-- given a parsed pid including extension, and a root directory,
 	 return all possible candidate paths -->
     <rule name="raw_path">
-      <var name="filename">${lid}.${extension}</var>
+      <var name="filename">${bin_lid}.${extension}</var>
       <!-- otherwise we're in a schema-dependent directory structure -->
       <first>
 	<test var="schema_version" eq="v1">

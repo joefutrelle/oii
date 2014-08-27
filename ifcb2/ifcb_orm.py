@@ -112,7 +112,7 @@ def get_psql_engine():
     return sqla.create_engine('postgresql://ifcb:ifcb@localhost/testdb')
 
 def timeseries_demo(session):
-    ts = TimeSeries(name='ts_one',description='First time series')
+    ts = TimeSeries(label='ts_one',description='First time series')
     ts.data_dirs.append(DataDirectory(path='/tmp/foo'))
     ts.data_dirs.append(DataDirectory(path='/blah/fnord'))
     user = User(name='Joe Futrelle',email='jfutrelle@whoi.edu')
@@ -137,5 +137,5 @@ if __name__=='__main__':
     Session.configure(bind=engine)
     session = Session()
     timeseries_demo(session)
-    accession_demo(session,'/mnt/data/okeanos')
-    query_demo(session)
+    #accession_demo(session,'/mnt/data/okeanos')
+    #query_demo(session)

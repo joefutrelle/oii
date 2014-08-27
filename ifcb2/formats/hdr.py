@@ -1,4 +1,5 @@
 import re
+import fileinput
 
 HDR='hdr'
 
@@ -41,3 +42,6 @@ def parse_hdr(lines):
             for (column, (name, cast), value) in zip(HDR_COLUMNS, HDR_SCHEMA, values):
                 props[name] = cast(value)
     return props
+
+def parse_hdr_file(path):
+    return parse_hdr(fileinput.input(path))

@@ -71,7 +71,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
-        $scope.time_series.push({name:'',data_dirs:[{path:''}],edit:'true'});
+        $scope.time_series.push({label:'',description:'',data_dirs:[{path:''}],edit:'true'});
         return true;
     }
 

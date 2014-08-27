@@ -22,12 +22,12 @@ class TimeSeries(Base):
     __tablename__ = 'time_series'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
+    label = Column(String, unique=True)
     description = Column(String, default='')
     enabled = Column(Boolean, default=True)
 
     def __repr__(self):
-        return "<TimeSeries '%s'>" % self.name
+        return "<TimeSeries '%s'>" % self.label
 
 class DataDirectory(Base):
     __tablename__ = 'data_dirs'

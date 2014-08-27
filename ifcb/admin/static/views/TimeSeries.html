@@ -1,6 +1,6 @@
 
 <div ng-controller="TimeSeriesCtrl">
-<h1 class="page-header">Time Series Groups</h1>
+<h1 class="page-header">Time Series</h1>
 
 <div ng-if="alert" class="alert alert-danger">
     {{alert}}
@@ -12,9 +12,9 @@
         <div ng-if="!ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-default" ng-click="editTimeSeries(ts)">Edit</button>
-                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.name}}' time series group?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
+                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
-        <h4 class="list-group-item-heading">{{ ts.name }}</h4>
+        <h4 class="list-group-item-heading">{{ ts.description }} ({{ ts.label }})</h4>
         <p class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
             {{ path.path }}
         </p>
@@ -27,8 +27,14 @@
             <button type="button" class="btn btn-default pull-right" ng-click="saveTimeSeries(ts)">Save</button>
             <h4 class="list-group-item-heading">
                 <div class="input-group col-md-3">
-                    <span class="input-group-addon">Name</span>
-                    <input type="text" class="form-control" ng-model="ts.name">
+                    <span class="input-group-addon">Label</span>
+                    <input type="text" class="form-control" ng-model="ts.label">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Description</span>
+                    <input type="text" class="form-control" ng-model="ts.description">
                 </div>
             </h4>
             <div class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
