@@ -1,9 +1,16 @@
-from jinja2 import Environment
+import os
 import json
+from zipfile import ZipFile, ZIP_DEFLATED
+import shutil
+import tempfile
 
+from jinja2 import Environment
+
+from oii.image.io import as_bytes
 from oii.csvio import csv_str, csv_quote
 from oii.ifcb2.identifiers import PID
 from oii.ifcb2.formats.adc import TARGET_NUMBER
+from oii.ifcb2.image import read_target_image
 
 def targets2csv(targets,schema_cols,headers=True):
     """Given targets, produce a CSV representation in the specified schema;
@@ -95,3 +102,26 @@ def bin2json_medium(pid,hdr,targets,timestamp):
 
 def bin2json(pid,hdr,targets,timestamp):
     return json.dumps(bin2dict(pid,hdr,targets,timestamp))
+
+def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
+    bin_lid = parsed_pid['bin_lid']
+    adc_cols = parsed_pid['adc_cols'].split(' ')
+    targets = list(targets)
+    with tempfile.SpooledTemporaryFile() as temp:
+        z = ZipFile(temp,'w',ZIP_DEFLATED)
+        csv_out = '\n'.join(targets2csv(targets, adc_cols))+'\n'
+        z.writestr(bin_lid + '.csv', csv_out)
+        xml_out = bin2xml(canonical_pid,hdr,targets,timestamp)
+        z.writestr(bin_lid + '.xml', xml_out)
+        with open(roi_path,'rb') as roi_file:
+            print 'opened %s' % roi_path
+            for target in targets:
+                print 'writing target %s to zip file' % target
+                im = read_target_image(target, file=roi_file)
+                target_lid = os.path.basename(target['pid'])
+                z.writestr(target_lid + '.png', as_bytes(im, mimetype='image/png'))
+        z.close()
+        temp.seek(0)
+        shutil.copyfileobj(temp, outfile)
+
+

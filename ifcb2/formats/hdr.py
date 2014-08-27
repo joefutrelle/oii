@@ -45,5 +45,4 @@ def parse_hdr(lines):
 
 def parse_hdr_file(path):
     lines = list(fileinput.input(path))
-    print path, lines
     return parse_hdr(lines)
