@@ -17,41 +17,42 @@ from oii.utils import sha1_file
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Base, TimeSeries, DataDirectory, Bin, File, User
-from oii.ifcb2 import feed
+from oii.ifcb2.feed import Feed
 
 demo_end_time = text2utcdatetime('2013-09-20T00:00:00Z')
 demo_start_time = demo_end_time - timedelta(hours=2)
 
 # time range demo
-def time_range_demo(session):
+def time_range_demo(feed):
     print '2 hours worth of bins:'
-    for instance in feed.time_range(session, demo_start_time, demo_end_time):
+    for instance in feed.time_range(demo_start_time, demo_end_time):
         print instance
 
 # now extend this to show files
 
-def files_demo(session):
+def files_demo(feed):
     print '2 hours worth of files:'
-    for instance in feed.time_range(session, demo_start_time, demo_end_time):
+    for instance in feed.time_range(demo_start_time, demo_end_time):
         print instance.files
 
-def data_volume_demo(session):
+def data_volume_demo(feed):
     print 'data volume per day'
-    for row in feed.daily_data_volume(session).limit(7):
+    for row in feed.daily_data_volume().limit(7):
         print row
 
-def nearest_demo(session):
+def nearest_demo(feed):
     ts = '2013-09-10T13:45:22Z'
     somedate = text2utcdatetime(ts)
     n = 5
     print '%d nearest bins to %s' % (n,ts) 
-    print feed.nearest(session,somedate,n)
+    print feed.nearest(n,somedate)
 
-def query_demo(session):
-    time_range_demo(session)
-    files_demo(session)
-    data_volume_demo(session)
-    nearest_demo(session)
+def query_demo(session,ts_label):
+    with Feed(session,ts_label) as feed:
+        time_range_demo(feed)
+        files_demo(feed)
+        data_volume_demo(feed)
+        nearest_demo(feed)
 
 # accession
 def accession_demo(session,ts_label,root):
@@ -119,4 +120,4 @@ if __name__=='__main__':
     session = Session()
     #timeseries_demo(session)
     accession_demo(session,'okeanos','/mnt/data/okeanos')
-    query_demo(session)
+    query_demo(session,'okeanos')
