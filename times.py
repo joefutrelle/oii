@@ -50,9 +50,12 @@ def secs2utcdatetime(secs=None):
 def utcdtnow():
     return secs2utcdatetime()
 
+def struct_time2utcdatetime(spt):
+    return datetime.fromtimestamp(calendar.timegm(spt), pytz.utc)
+
 def text2utcdatetime(string, format=ISO_8601_FORMAT):
     spt = time.strptime(string, format)
-    return datetime.fromtimestamp(calendar.timegm(spt), pytz.utc)
+    return struct_time2utcdatetime(spt)
 
 def datetime2utcdatetime(dt):
     # convert dt without timezone to one in utc
@@ -60,6 +63,25 @@ def datetime2utcdatetime(dt):
     return datetime.fromtimestamp(calendar.timegm(dt.timetuple()), pytz.utc)
 
 dt2utcdt = datetime2utcdatetime
+
+def parse_date_param(sdate):
+    """attempt to parse a full or partial ISO 8601 timestamp"""
+    try:
+        return time.strptime(sdate,'%Y-%m-%d')
+    except:
+        pass
+    try:
+        return time.strptime(sdate,'%Y-%m-%dT%H:%M:%S')
+    except:
+        pass
+    try:
+        return time.strptime(sdate,'%Y-%m-%dT%H:%M:%SZ')
+    except:
+        pass
+    try:
+        return time.strptime(re.sub(r'\.\d+Z','',sdate),'%Y-%m-%dT%H:%M:%S')
+    except:
+        raise ValueError('cannot parse %s as an ISO 8601 date/time' % sdate)
 
 class test_formats(TestCase):
     def runTest(self):
