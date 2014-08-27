@@ -11,7 +11,7 @@ from oii.image.io import as_bytes
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
-from oii.ifcb2.represent import targets2csv, bin2xml, bin2json
+from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
@@ -108,7 +108,7 @@ def hello_world(pid):
         if extension=='csv':
             targets = get_targets(adc, canonical_pid)
             lines = targets2csv(targets,adc_cols)
-            return Response('\n'.join(lines)+'\n',mimetype='text/plain') # FIXME text/csv
+            return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
         # and the timestamp
@@ -119,6 +119,9 @@ def hello_world(pid):
         if extension=='xml':
             targets = get_targets(adc, canonical_pid)
             return Response(bin2xml(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
+        if extension=='rdf':
+            targets = get_targets(adc, canonical_pid)
+            return Response(bin2rdf(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
     return 'unimplemented'
 
 if __name__ == '__main__':
