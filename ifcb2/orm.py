@@ -45,12 +45,13 @@ class Bin(Base):
     __tablename__ = 'bins'
 
     id = Column(Integer, primary_key=True)
+    ts_label = Column(String)
     lid = Column(String, unique=True)
     sample_time = Column(DateTime(timezone=True))
     skip = Column(Boolean)
 
     def __repr__(self):
-        return '<Bin %s>' % self.lid
+        return '<Bin %s:%s>' % (self.ts_label, self.lid)
 
 class File(Base):
     __tablename__ = 'fixity'

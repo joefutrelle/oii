@@ -73,7 +73,7 @@ def query_demo(session):
     nearest_demo(session)
 
 # accession
-def accession_demo(session,root):
+def accession_demo(session,ts_label,root):
     # now accede
     for fs in get_resolver().ifcb.files.list_raw_filesets(root):
         lid = fs['lid']
@@ -83,7 +83,7 @@ def accession_demo(session,root):
             print 'barf %s' % lid
             raise
         ts = text2utcdatetime(parsed['timestamp'], parsed['timestamp_format'])
-        b = Bin(lid=lid, sample_time=ts)
+        b = Bin(ts_label=ts_label, lid=lid, sample_time=ts)
         session.add(b)
         # now make mostly bogus fixity entries
         now = datetime.now()
@@ -126,7 +126,7 @@ def timeseries_demo(session):
         print u
 
 def bin_demo(session):
-    bin = Bin(lid='foo', sample_time=datetime.now())
+    bin = Bin(ts_label='foo', lid='foo', sample_time=datetime.now())
     session.add(bin)
     session.commit()
 
@@ -136,6 +136,6 @@ if __name__=='__main__':
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
-    timeseries_demo(session)
-    #accession_demo(session,'/mnt/data/okeanos')
-    #query_demo(session)
+    #timeseries_demo(session)
+    accession_demo(session,'okeanos','/mnt/data/okeanos')
+    query_demo(session)
