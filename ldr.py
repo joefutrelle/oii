@@ -476,8 +476,8 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
             p = compile_regex(pattern)
             m = p.match(value)
         except UnboundVariable, uv:
-            logging.warn('match: unbound variable %s' % uv)
             if not optional:
+                logging.warn('match: unbound variable %s' % uv)
                 return # miss
         if m:
             groups = m.groups()
