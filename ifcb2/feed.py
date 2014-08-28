@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import and_, or_, not_, desc, func
+from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 
 from oii.times import utcdtnow, datetime2utcdatetime
 from oii.ifcb2.orm import Bin, File
@@ -32,7 +32,7 @@ class Feed(object):
             order_by(Bin.sample_time)
     def daily_data_volume(self, start_time=None, end_time=None):
         start_time, end_time = _time_range_params(start_time, end_time)
-        return self.session.query(func.sum(File.length), func.DATE(Bin.sample_time)).\
+        return self.session.query(cast(func.sum(File.length) / 1073741824.0, Numeric(6,2)), func.count(File.id) / 3, func.DATE(Bin.sample_time)).\
             filter(and_(Bin.ts_label==self.ts_label, Bin.sample_time >= start_time, Bin.sample_time <= end_time, ~Bin.skip)).\
             filter(Bin.id==File.bin_id).\
             group_by(func.DATE(Bin.sample_time)).\
