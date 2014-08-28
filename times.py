@@ -66,20 +66,20 @@ dt2utcdt = datetime2utcdatetime
 
 def parse_date_param(sdate):
     """attempt to parse a full or partial ISO 8601 timestamp"""
+    variants = [
+        '%Y-%m-%d',
+        '%Y-%m-%dT%H:%M:%S',
+        '%Y-%m-%dT%H:%M:%SZ',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S.%fZ',
+    ]
+    for variant in variants:
+        try:
+            return time.strptime(sdate,variant)
+        except:
+            pass
     try:
-        return time.strptime(sdate,'%Y-%m-%d')
-    except:
-        pass
-    try:
-        return time.strptime(sdate,'%Y-%m-%dT%H:%M:%S')
-    except:
-        pass
-    try:
-        return time.strptime(sdate,'%Y-%m-%dT%H:%M:%SZ')
-    except:
-        pass
-    try:
-        return time.strptime(re.sub(r'\.\d+Z','',sdate),'%Y-%m-%dT%H:%M:%S')
+        return time.strptime(re.sub(r'\.\d+Z?','',sdate),'%Y-%m-%dT%H:%M:%S')
     except:
         raise ValueError('cannot parse %s as an ISO 8601 date/time' % sdate)
 
