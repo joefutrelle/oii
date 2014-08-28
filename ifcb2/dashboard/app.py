@@ -191,6 +191,16 @@ def hello_world(pid):
             return Response(target2xml(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
         if extension == 'rdf':
             return Response(target2rdf(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
+        if extension in ['html', 'htm']:
+            template = {
+                'static': STATIC,
+                'target_pid': canonical_pid,
+                'bin_pid': canonical_bin_pid,
+                'properties': target,
+                'target': target.items(), # FIXME use order_keys
+                'date': timestamp
+            }
+            return template_response('target.html',**template)
     else: # bin
         if extension in ['hdr', 'adc', 'roi']:
             path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[extension]
