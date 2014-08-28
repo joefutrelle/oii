@@ -4,12 +4,15 @@ import mimetypes
 import json
 from time import strptime
 from io import BytesIO
+import re
 
 from lxml import html
 
 from oii.utils import coalesce, memoize
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
 from oii.image.io import as_bytes
+from oii.image import mosaic
+from oii.image.mosaic import Tile
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.feed import Feed
@@ -23,10 +26,15 @@ from oii.ifcb2.orm import Bin, TimeSeries, DataDirectory
 
 # keys
 from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
+from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+# constants
+
+MIME_JSON='application/json'
 
 # eventually the session cofiguration should
 # go in its own class.
@@ -44,8 +52,44 @@ session = Session()
 STATIC='/static/'
 app = Flask(__name__)
 
+### generic flask utils ###
+def parse_params(path, **defaults):
+    """Parse a path fragment and convert to dict.
+    Slashes separate alternating keys and values.
+    For example /a/3/b/5 -> { 'a': '3', 'b': '5' }.
+    Any keys not present get default values from **defaults"""
+    parts = re.split('/',path)
+    d = dict(zip(parts[:-1:2], parts[1::2]))
+    for k,v in defaults.items():
+        if k not in d:
+            d[k] = v
+    return d
+
+def max_age(ttl=None):
+    if ttl is None:
+        return {}
+    else:
+        return {'Cache-control': 'max-age=%d' % ttl}
+
+def template_response(template, mimetype=None, ttl=None, **kw):
+    if mimetype is None:
+        (mimetype, _) = mimetypes.guess_type(template)
+    if mimetype is None:
+        mimetype = 'application/octet-stream'
+    return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+
+#### generic IFCB utils #####
+# FIXME refactor!
+
 def ifcb():
     return get_resolver().ifcb
+
+@memoize(ttl=30)
+def parse_pid(pid):
+    try:
+        return next(ifcb().pid(pid))
+    except StopIteration:
+        raise
 
 @memoize(ttl=30)
 def get_data_roots(ts_label):
@@ -70,18 +114,13 @@ def get_targets(adc, bin_pid):
         us_target[STITCHED] = False
         yield us_target
 
-def max_age(ttl=None):
-    if ttl is None:
-        return {}
-    else:
-        return {'Cache-control': 'max-age=%d' % ttl}
-
-def template_response(template, mimetype=None, ttl=None, **kw):
-    if mimetype is None:
-        (mimetype, _) = mimetypes.guess_type(template)
-    if mimetype is None:
-        mimetype = 'application/octet-stream'
-    return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+@memoize(ttl=30,key=lambda args: frozenset(args[0].items()))
+def get_fileset(parsed):
+    time_series = parsed['ts_label']
+    data_roots = list(get_data_roots(time_series))
+    schema_version = parsed[SCHEMA_VERSION]
+    adc_cols = parsed[ADC_COLS].split(' ')
+    return parsed_pid2fileset(parsed,data_roots)
 
 ############# ENDPOINTS ##################
 
@@ -127,7 +166,7 @@ def volume(ts_label):
                 'bin_count': row[1],
                 'day': row[2]
             })
-    return Response(json.dumps(dv), mimetype='application/json')
+    return Response(json.dumps(dv), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
@@ -138,12 +177,12 @@ def nearest(ts_label, timestamp):
     sample_time_str = iso8601(bin.sample_time.timetuple())
     pid = canonicalize(request.url_root, ts_label, bin.lid)
     resp = dict(pid=pid, date=sample_time_str)
-    return Response(json.dumps(resp), mimetype='application/json')
+    return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 @app.route('/<path:pid>')
 def hello_world(pid):
     try:
-        parsed = next(ifcb().pid(pid))
+        parsed = parse_pid(pid)
     except StopIteration:
         abort(404)
     time_series = parsed['ts_label']
@@ -151,18 +190,11 @@ def hello_world(pid):
     lid = parsed[LID]
     url_root = request.url_root
     canonical_pid = canonicalize(url_root, time_series, lid)
-    try:
-        data_roots = list(get_data_roots(time_series))
-    except NotFound:
-        abort(404)
     schema_version = parsed[SCHEMA_VERSION]
-    adc_cols = parsed[ADC_COLS].split(' ')
     try:
-        paths = parsed_pid2fileset(parsed,data_roots)
+        paths = get_fileset(parsed)
     except NotFound:
         abort(404)
-    except:
-        abort(500)
     hdr_path = paths['hdr_path']
     adc_path = paths['adc_path']
     roi_path = paths['roi_path']
@@ -179,7 +211,7 @@ def hello_world(pid):
         target = adc.get_target(target_no)
         add_pid(target, canonical_bin_pid)
         if extension == 'json':
-            return Response(json.dumps(target),mimetype='application/json')
+            return Response(json.dumps(target),mimetype=MIME_JSON)
         # not JSON, check for image
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
@@ -234,10 +266,10 @@ def hello_world(pid):
             return template_response('bin.html', **template)
         if extension=='json':
             if product=='short':
-                return Response(bin2json_short(canonical_pid,hdr,timestamp),mimetype='application/json')
+                return Response(bin2json_short(canonical_pid,hdr,timestamp),mimetype=MIME_JSON)
             if product=='medium':
-                return Response(bin2json_medium(canonical_pid,hdr,targets,timestamp),mimetype='application/json')
-            return Response(bin2json(canonical_pid,hdr,targets,timestamp),mimetype='application/json')
+                return Response(bin2json_medium(canonical_pid,hdr,targets,timestamp),mimetype=MIME_JSON)
+            return Response(bin2json(canonical_pid,hdr,targets,timestamp),mimetype=MIME_JSON)
         if extension=='xml':
             return Response(bin2xml(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
         if extension=='rdf':
@@ -247,6 +279,77 @@ def hello_world(pid):
             bin2zip(parsed,canonical_pid,targets,hdr,timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
     return 'unimplemented'
+
+#### mosaics #####
+
+@memoize
+def get_sorted_tiles(adc_path, schema_version, bin_pid):
+    # read ADC and convert to Tiles in size-descending order
+    def descending_size(t):
+        (w,h) = t.size
+        return 0 - (w * h)
+    adc = Adc(adc_path, schema_version)
+    # using read_target means we don't stitch. this is simply for performance.
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
+    # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
+    tiles.sort(key=descending_size)
+    return tiles
+
+@memoize
+def get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page):
+    tiles = get_sorted_tiles(adc_path, schema_version, bin_pid)
+    # perform layout operation
+    return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
+
+def layout2json(layout, scale):
+    """Doesn't actually produce JSON but rather JSON-serializable representation of the tiles"""
+    for t in layout:
+        (w,h) = t.size
+        (x,y) = t.position
+        yield dict(pid=t.image['pid'], width=w*scale, height=h*scale, x=x*scale, y=y*scale)
+
+@app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
+def serve_mosaic_image(time_series=None, pid=None, params='/'):
+    """Generate a mosaic of ROIs from a sample bin.
+    params include the following, with default values
+    - series (mvco) - time series (FIXME: handle with resolver, clarify difference between namespace, time series, pid, lid)
+    - size (1024x1024) - size of the mosaic image
+    - page (1) - page. for typical image sizes the entire bin does not fit and so is split into pages.
+    - scale - scaling factor for image dimensions """
+    # parse params
+    SIZE, SCALE, PAGE = 'size', 'scale', 'page'
+    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
+    (w,h) = tuple(map(int,re.split('x',params[SIZE])))
+    scale = float(params[SCALE])
+    page = int(params[PAGE])
+    # parse pid/lid
+    parsed = parse_pid(pid)
+    schema_version = parsed['schema_version']
+    try:
+        paths = get_fileset(parsed)
+    except NotFound:
+        abort(404)
+    adc_path = paths['adc_path']
+    bin_pid = canonicalize(request.url_root, time_series, parsed['bin_lid'])
+    # perform layout operation
+    scaled_size = (int(w/scale), int(h/scale))
+    layout = get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page)
+    extension = parsed['extension']
+    # serve JSON on request
+    if extension == 'json':
+        return Response(json.dumps(list(layout2json(layout, scale))), mimetype=MIME_JSON)
+    # resolve ROI file
+    roi_path = resolve_roi(hit.bin_pid)
+    # read all images needed for compositing and inject into Tiles
+    with open(roi_path,'rb') as roi_file:
+        for tile in layout:
+            target = tile.image
+            # FIXME use fast stitching
+            tile.image = as_pil(get_fast_stitched_roi(hit.bin_pid, target[TARGET_NUMBER]))
+    # produce and serve composite image
+    mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    (pil_format, mimetype) = image_types(hit)
+    return image_response(mosaic_image, pil_format, mimetype)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=8080,debug=True)
