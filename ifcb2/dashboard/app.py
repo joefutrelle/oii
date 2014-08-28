@@ -1,4 +1,4 @@
-from flask import Flask, Response, abort, request
+from flask import Flask, Response, abort, request, render_template, render_template_string
 
 import mimetypes
 import json
@@ -39,6 +39,7 @@ dbengine = create_engine(SQLITE_URL,
 Session = sessionmaker(bind=dbengine)
 session = Session()
 
+STATIC='/static/'
 app = Flask(__name__)
 
 def ifcb():
@@ -66,6 +67,48 @@ def get_targets(adc, bin_pid):
         # claim all are unstitched
         us_target[STITCHED] = False
         yield us_target
+
+def max_age(ttl=None):
+    if ttl is None:
+        return {}
+    else:
+        return {'Cache-control': 'max-age=%d' % ttl}
+
+def template_response(template, mimetype=None, ttl=None, **kw):
+    if mimetype is None:
+        (mimetype, _) = mimetypes.guess_type(template)
+    if mimetype is None:
+        mimetype = 'application/octet-stream'
+    return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+
+############# ENDPOINTS ##################
+
+@app.route('/api')
+@app.route('/api.html')
+def serve_doc():
+    template = dict(static=STATIC)
+    return template_response('api.html', **template)
+
+@app.route('/about')
+@app.route('/about.html')
+def serve_about():
+    template = dict(static=STATIC)
+    return template_response('help.html', **template)
+
+@app.route('/<ts_label>')
+@app.route('/<ts_label>/')
+@app.route('/<ts_label>/dashboard')
+@app.route('/<ts_label>/dashboard/')
+@app.route('/<ts_label>/dashboard/<path:pid>')
+def serve_timeseries(ts_label='mvco', pid=None):
+    template = dict(static=STATIC, time_series=ts_label)
+    if pid is not None:
+        template['pid'] = pid
+    template['base_url'] = 'http://foo.bar/' # FIXME mock
+    template['page_title'] = '{page title}' # FIXME mock
+    template['title'] = '{title}' # FIXME mock
+    template['all_series'] = [('label','name')] # FIXME mock
+    return template_response('timeseries.html', **template)
 
 @app.route('/<ts_label>/api/volume')
 def volume(ts_label):
