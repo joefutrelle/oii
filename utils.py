@@ -52,7 +52,7 @@ def doublewrap(f):
     return new_dec
 
 @doublewrap
-def memoize(fn,ttl=31557600,ignore_exceptions=False):
+def memoize(fn,ttl=31557600,ignore_exceptions=False,key=None):
     """decorator to memoize a function by its args,
     with an expiration time. use this to wrap an idempotent
     or otherwise cacheable getter or transformation function.
@@ -64,17 +64,21 @@ def memoize(fn,ttl=31557600,ignore_exceptions=False):
     @wraps(fn)
     def inner(*args,**kw):
         now = time.time()
-        if args not in exp or now > exp[args] or args not in cache:
+        if key is not None:
+            args_key = key(args)
+        else:
+            args_key = args
+        if args_key not in exp or now > exp[args_key] or args_key not in cache:
             try:
                 new_value = fn(*args,**kw)
             except:
-                if ignore_exceptions and args in cache:
-                    new_value = args[cache]
+                if ignore_exceptions and args_key in cache:
+                    new_value = cache[args_key]
                 else:
                     raise
-            cache[args] = new_value
-            exp[args] = now + ttl
-        return cache[args]
+            cache[args_key] = new_value
+            exp[args_key] = now + ttl
+        return cache[args_key]
     return inner
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
