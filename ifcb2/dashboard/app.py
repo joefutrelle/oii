@@ -5,6 +5,8 @@ import json
 from time import strptime
 from io import BytesIO
 
+from lxml import html
+
 from oii.utils import coalesce, memoize
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
 from oii.image.io import as_bytes
@@ -104,10 +106,15 @@ def serve_timeseries(ts_label='mvco', pid=None):
     template = dict(static=STATIC, time_series=ts_label)
     if pid is not None:
         template['pid'] = pid
-    template['base_url'] = 'http://foo.bar/' # FIXME mock
-    template['page_title'] = '{page title}' # FIXME mock
-    template['title'] = '{title}' # FIXME mock
-    template['all_series'] = [('label','name')] # FIXME mock
+    # fetch time series information
+    all_series = []
+    for ts in session.query(TimeSeries):
+        if ts.label == ts_label:
+            template['page_title'] = html.fromstring(ts.description).text_content()
+            template['title'] = ts.description
+        all_series.append((ts.label, ts.description))
+    template['all_series'] = all_series
+    template['base_url'] = request.url_root
     return template_response('timeseries.html', **template)
 
 @app.route('/<ts_label>/api/volume')
