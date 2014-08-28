@@ -31,7 +31,7 @@ BIN_XML_TEMPLATE = """<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="h
 </Bin>
 """
 
-def _split_hdr(parsed_hdr):
+def split_hdr(parsed_hdr):
     context = parsed_hdr['context']
     properties = [(k,v) for k,v in parsed_hdr.items() if k != 'context']
     return context, properties
@@ -41,7 +41,7 @@ def _get_bin_template_bindings(pid,hdr,targets,timestamp):
     timestamp should be a text timestamp in iso8601 format
     hdr should be the result of calling parse_hdr on a header file
     targets should be a list of target dicts with target pids"""
-    context, properties = _split_hdr(hdr)
+    context, properties = split_hdr(hdr)
     target_pids = [target[PID] for target in targets]
     return dict(pid=pid,timestamp=timestamp,context=context,properties=properties,target_pids=target_pids)
 
@@ -77,7 +77,7 @@ def bin2rdf(pid,hdr,targets,timestamp):
     return Environment().from_string(BIN_RDF_TEMPLATE).render(**bindings)
 
 def bin2dict_short(pid,hdr,timestamp):
-    context, rep = _split_hdr(hdr)
+    context, rep = split_hdr(hdr)
     rep = dict(rep)
     rep['context'] = context
     rep['date'] = timestamp
@@ -114,9 +114,7 @@ def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
         xml_out = bin2xml(canonical_pid,hdr,targets,timestamp)
         z.writestr(bin_lid + '.xml', xml_out)
         with open(roi_path,'rb') as roi_file:
-            print 'opened %s' % roi_path
             for target in targets:
-                print 'writing target %s to zip file' % target
                 im = read_target_image(target, file=roi_file)
                 target_lid = os.path.basename(target['pid'])
                 z.writestr(target_lid + '.png', as_bytes(im, mimetype='image/png'))

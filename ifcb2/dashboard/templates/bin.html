@@ -1,21 +1,21 @@
 {% extends "master.html" %}
-{% block title %}{{hit.bin_pid}}{% endblock %}
+{% block title %}{{bin_pid}}{% endblock %}
 {% block head %}
   {{ super() }}
     <script type="text/javascript">
 $(document).ready(function() {
-    $('#mosaic_pager').bin_page('{{hit.bin_pid}}','{{hit.time_series}}');
+    $('#mosaic_pager').bin_page('{{bin_pid}}','{{time_series}}');
 });
     </script>
 {% endblock head %}
 {% block content %}
-  <div class="major h1">Sample bin {{hit.bin_pid}}</div>
+  <div class="major h1">Sample bin {{bin_pid}}</div>
   <div id="mosaic_pager" class="major"></div>
   <div style="clear: both"></div>
   <div class="major inline">
     <div>
-      <b>{{hit.date}}</b>
-      (<a href="/{{hit.time_series}}/dashboard/pid/{{hit.bin_pid}}">Show in time series</a>)
+      <b>{{date}}</b>
+      (<a href="/{{time_series}}/dashboard/{{bin_pid}}">Show in time series</a>)
     </div>
     <div class="metadata_key">context</div>
 {% for v in context %}
@@ -36,9 +36,9 @@ $(document).ready(function() {
 </tr>
 {% for target in targets %}
   <tr class="tbl">
-    <td class="tbl">{{target.targetNumber}}/{{target.trigger}}</td>
-    <td class="tbl"><a href="{{target.pid}}.html">{{target.pid}}</a></td>
-    <td class="tbl">{{target.width}}x{{target.height}}</td>
+    <td class="tbl">{{target['targetNumber']}}/{{target['trigger']}}</td>
+    <td class="tbl"><a href="{{target['pid']}}.html">{{target['pid']}}</a></td>
+    <td class="tbl">{{target['width']}}x{{target['height']}}</td>
   </tr>
 {% endfor %}
 </table>

@@ -13,7 +13,7 @@ from oii.ifcb2 import get_resolver
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
-from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
+from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
@@ -200,6 +200,21 @@ def hello_world(pid):
         hdr = parse_hdr_file(hdr_path)
         # and the timestamp
         timestamp = iso8601(strptime(parsed['timestamp'], parsed['timestamp_format']))
+        if extension in ['html', 'htm']:
+            targets = list(targets)
+            context, props = split_hdr(hdr)
+            print 'put %d targets into the template' % len(targets) # FIXME debug
+            template = {
+                'static': STATIC,
+                'bin_pid': canonical_pid,
+                'time_series': time_series,
+                'context': context,
+                'properties': props,
+                'targets': targets,
+                'target_pids': [t['pid'] for t in targets],
+                'date': timestamp
+            }
+            return template_response('bin.html', **template)
         if extension=='json':
             if product=='short':
                 return Response(bin2json_short(canonical_pid,hdr,timestamp),mimetype='application/json')
