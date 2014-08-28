@@ -67,6 +67,18 @@ def get_targets(adc, bin_pid):
         us_target[STITCHED] = False
         yield us_target
 
+@app.route('/<ts_label>/api/volume')
+def volume(ts_label):
+    dv = []
+    with Feed(session, ts_label) as feed:
+        for row in feed.daily_data_volume():
+            dv.append({
+                'gb': float(row[0]),
+                'bin_count': row[1],
+                'day': row[2]
+            })
+    return Response(json.dumps(dv), mimetype='application/json')
+
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
     ts = struct_time2utcdatetime(parse_date_param(timestamp))

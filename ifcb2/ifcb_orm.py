@@ -119,5 +119,5 @@ if __name__=='__main__':
     Session.configure(bind=engine)
     session = Session()
     #timeseries_demo(session)
-    accession_demo(session,'okeanos','/mnt/data/okeanos')
+    #accession_demo(session,'okeanos','/mnt/data/okeanos')
     query_demo(session,'okeanos')
