@@ -1,0 +1,41 @@
+body {
+    font: 10pt arial;
+}
+div.timeline-event {
+    border: none;
+    background: none;
+    border-radius: 0;
+}
+div.timeline-event-selected {
+    border: none;
+    background: none;
+}
+div.timeline-event-content {
+    margin: 0;
+}
+div.timeline-event-range {
+    border: none;
+    border-radius: 0;
+    height: 100px;
+    width: 100%;
+    position: relative;
+    overflow: visible;
+}
+div.bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: white;
+/* height and color is set for each individual bar */
+}
+div.requirement {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-top: 2px solid gray;
+    background: #e5e5e5;
+    opacity: 0.5;
+}

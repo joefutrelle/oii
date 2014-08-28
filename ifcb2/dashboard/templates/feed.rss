@@ -1,0 +1,17 @@
+<rss version="2.0">
+  <channel xmlns:atom="http://www.w3.org/2005/Atom">
+    <title>Imaging FlowCytobot data</title>
+    <description>Marine phytoplankton cytometry with imagery</description>
+    <link>{{namespace}}feed.rss</link>
+    <atom:link href="{{namespace}}feed.rss" rel="self"/>
+    <pubDate>{{max_date}}</pubDate>
+    <ttl>20</ttl>{% for item in feed %}
+    <item>
+      <title>Sample @ {{item.date}}</title>
+      <guid>{{item.pid}}</guid>
+      <link>{{item.pid}}.html</link>
+      <pubDate>{{item.date}}</pubDate>
+      <description>&lt;div&gt;&lt;a href="{{item.pid}}.html"&gt;Sample @ {{item.date}}&lt;a&gt;&lt;/div&gt;</description>
+    </item>{% endfor %}
+  </channel>
+</rss>

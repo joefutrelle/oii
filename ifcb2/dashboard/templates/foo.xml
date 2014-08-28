@@ -1,0 +1,8 @@
+<this>
+  <is>a</is>
+  <test/>
+  <of>your emergency broadcasting system</of>
+  {% for k,v in d.items() %}
+  <{{k}}>{{v}}</{{k}}>
+  {% endfor %}
+</this>

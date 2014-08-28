@@ -1,0 +1,26 @@
+{% extends "master.html" %}
+{% block title %}{{page_title}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+    {% if pid %}
+        $('#timeseries').timeseries('{{pid}}', '{{time_series}}');
+    {% else %}
+        $('#timeseries').timeseries(undefined, '{{time_series}}');
+    {% endif %}
+});
+</script>
+{% endblock head %}
+{% block content %}
+<div id="title" class="major h1">
+  {{title|safe}}
+  <div class="dashboard_links">
+Timeseries:
+{% for ts,n in all_series %}
+<a href="{{base_url}}{{ts}}">{{n}}</a>
+{% endfor %}
+  </div>
+</div>
+<div id="timeseries"></div>
+{% endblock content %}

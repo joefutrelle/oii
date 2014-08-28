@@ -1,0 +1,8 @@
+<div>
+  {% for page in range(1,10) %}
+  <div style="padding:0px">
+    {% if ((page-1) % 3) == 0 %}<br style="clear:both"/>{% endif %}
+    <img src="{{hit.base_url}}api/mosaic/size/320x180/scale/0.2/page/{{page}}/pid/{{hit.bin_lid}}.jpg" width="320" height="180" style="float:left">
+  </div>
+  {% endfor %}
+</Bin>

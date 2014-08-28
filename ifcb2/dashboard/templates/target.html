@@ -1,0 +1,50 @@
+{% extends "master.html" %}
+{% block title %}Target ROI {{hit.target_pid}}{% endblock %}
+{% block head %}
+  {{ super() }}
+    <script type="text/javascript">
+$(document).ready(function() {
+    var width = {{properties.height}}; // 90 degree rotation
+    var height = {{properties.width}}; // 90 degree rotation
+    $('#target_image')
+        .target_image('{{hit.target_pid}}',width,height);
+    $('.nextTarget').click(function() {
+            {% for k,v in target if k == 'next' %}
+                window.location.href = '{{v}}.html';
+            {% endfor %}
+        });
+    $('.previousTarget').click(function() {
+            {% for k,v in target if k == 'previous' %}
+                window.location.href = '{{v}}.html';
+            {% endfor %}
+        });
+});
+    </script>
+{% endblock head %}
+{% block content %}
+  <div class="major h1">Target {{hit.target_pid}}</div>
+  <div id="roi_pager" class="major inline">
+    <div>
+      <span class="controlGray previousTarget">&#x25C0; Previous</span>
+      <span class="controlGray nextTarget"> | Next &#x25B6;</span>
+    </div>
+    <div id="target_image"></div>
+  </div>
+  <br class="break">
+  <div class="major inline" style="clear: both">{{hit.date}} (<a href="{{hit.bin_pid}}.html">Show sample bin</a>)</div>
+  <br class="break">
+  <div class="major inline" style="clear: both">
+{% for k,v in target %}
+  <div>
+    <span class="metadata_key">{{k}}</span>
+    <span class="metadata_value">
+      {% if k in ['next','previous','binID'] %} <!-- FIXME hardcoded -->
+        <a href="{{v}}.html">{{v}}</a>
+      {% else %}
+        {{v}}
+      {% endif %}
+    </span>
+  </div>
+{% endfor %}
+  </div>
+{% endblock content %}
