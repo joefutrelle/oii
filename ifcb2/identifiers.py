@@ -9,6 +9,7 @@ ADC_COLS='adc_cols'
 SCHEMA_VERSION='schema_version'
 TIMESTAMP='timestamp'
 TIMESTAMP_FORMAT='timestamp_format'
+PRODUCT='product'
 
 # keys used in target dicts
 BIN_KEY='binID'

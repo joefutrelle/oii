@@ -13,11 +13,15 @@ from oii.ifcb2 import get_resolver
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
-from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf
+from oii.ifcb2.represent import targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
 from oii.ifcb2.orm import Bin, TimeSeries, DataDirectory
+
+# keys
+from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
+from oii.ifcb2.stitching import STITCHED
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -53,26 +57,26 @@ def get_data_roots(ts_label):
         return paths
 
 def get_timestamp(parsed_pid):
-    return iso8601(strptime(parsed_pid['timestamp'], parsed_pid['timestamp_format']))
+    return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
 
 def get_targets(adc, bin_pid):
     # unstitched for now
     us_targets = add_pids(adc.get_targets(),bin_pid)
     for us_target in us_targets:
         # claim all are unstitched
-        us_target['stitched'] = False
+        us_target[STITCHED] = False
         yield us_target
 
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
     ts = struct_time2utcdatetime(parse_date_param(timestamp))
-    print ts
     with Feed(session, ts_label) as feed:
         for bin in feed.nearest(timestamp=ts):
             break
-    print bin.lid, bin.sample_time
-    # FIXME feed needs to canonicalize lid and format timestamp
-    return Response('oh yeah', mimetype='text/plain')
+    sample_time_str = iso8601(bin.sample_time.timetuple())
+    pid = canonicalize(request.url_root, ts_label, bin.lid)
+    resp = dict(pid=pid, date=sample_time_str)
+    return Response(json.dumps(resp), mimetype='application/json')
 
 @app.route('/<path:pid>')
 def hello_world(pid):
@@ -82,15 +86,15 @@ def hello_world(pid):
         abort(404)
     time_series = parsed['ts_label']
     bin_lid = parsed['bin_lid']
-    lid = parsed['lid']
+    lid = parsed[LID]
     url_root = request.url_root
     canonical_pid = canonicalize(url_root, time_series, lid)
     try:
         data_roots = list(get_data_roots(time_series))
     except NotFound:
         abort(404)
-    schema_version = parsed['schema_version']
-    adc_cols = parsed['adc_cols'].split(' ')
+    schema_version = parsed[SCHEMA_VERSION]
+    adc_cols = parsed[ADC_COLS].split(' ')
     try:
         paths = parsed_pid2fileset(parsed,data_roots)
     except NotFound:
@@ -102,6 +106,7 @@ def hello_world(pid):
     roi_path = paths['roi_path']
     adc = Adc(adc_path, schema_version)
     extension = 'json' # default
+    product = parsed[PRODUCT] # should default to raw
     heft = 'full' # heft is either short, medium, or full
     if 'extension' in parsed:
         extension = parsed['extension']
@@ -130,7 +135,8 @@ def hello_world(pid):
             mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[extension]
             return Response(file(path), direct_passthrough=True, mimetype=mimetype)
         # gonna need targets unless heft is medium or below
-        if heft=='full':
+        targets = []
+        if product != 'short':
             targets = get_targets(adc, canonical_pid)
         if extension=='csv':
             lines = targets2csv(targets,adc_cols)
@@ -140,6 +146,10 @@ def hello_world(pid):
         # and the timestamp
         timestamp = iso8601(strptime(parsed['timestamp'], parsed['timestamp_format']))
         if extension=='json':
+            if product=='short':
+                return Response(bin2json_short(canonical_pid,hdr,timestamp),mimetype='application/json')
+            if product=='medium':
+                return Response(bin2json_medium(canonical_pid,hdr,targets,timestamp),mimetype='application/json')
             return Response(bin2json(canonical_pid,hdr,targets,timestamp),mimetype='application/json')
         if extension=='xml':
             return Response(bin2xml(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
