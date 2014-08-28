@@ -1,7 +1,0 @@
-<Bin xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://ifcb.whoi.edu/terms#">
-  <dc:identifier>{{hit.bin_pid}}</dc:identifier>
-  <dc:date>{{hit.date}}</dc:date>{% for v in context %}
-<context>{{v}}</context>{% endfor %}{% for k,v in properties %}
-  <{{k}}>{{v}}</{{k}}>{% endfor %}{% for target_pid in target_pids %}
-  <Target dc:identifier="{{target_pid}}"/>{% endfor %}
-</Bin>
