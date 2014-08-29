@@ -14,6 +14,7 @@ import hashlib
 import sys
 from datetime import timedelta
 from multiprocessing import Pool
+from types import GeneratorType
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -58,7 +59,10 @@ def memoize(fn,ttl=31557600,ignore_exceptions=False,key=None):
     or otherwise cacheable getter or transformation function.
     the function args must be hashable.
     ignore exceptions means not to expire values in the case
-    that the function to generate them raises an exception."""
+    that the function to generate them raises an exception.
+    if a generator is received, silently applies list() to it.
+    be very careful about memoizing generator functions as this
+    may not be desired"""
     cache = {}
     exp = {}
     @wraps(fn)
@@ -76,6 +80,9 @@ def memoize(fn,ttl=31557600,ignore_exceptions=False,key=None):
                     new_value = cache[args_key]
                 else:
                     raise
+            # we've got a value to cache, but it's a generator; freeze it
+            if isinstance(new_value, GeneratorType):
+                new_value = list(new_value)
             cache[args_key] = new_value
             exp[args_key] = now + ttl
         return cache[args_key]
