@@ -5,14 +5,18 @@ import json
 from time import strptime
 from io import BytesIO
 import re
+import PIL
 
 from lxml import html
 
 from oii.utils import coalesce, memoize
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
-from oii.image.io import as_bytes
+from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
 from oii.image.mosaic import Tile
+
+# FIXME this is used for old PIL-based mosaic compositing API
+from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.feed import Feed
@@ -252,7 +256,6 @@ def hello_world(pid):
         if extension in ['html', 'htm']:
             targets = list(targets)
             context, props = split_hdr(hdr)
-            print 'put %d targets into the template' % len(targets) # FIXME debug
             template = {
                 'static': STATIC,
                 'bin_pid': canonical_pid,
@@ -299,14 +302,14 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
 def get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page):
     tiles = get_sorted_tiles(adc_path, schema_version, bin_pid)
     # perform layout operation
-    return mosaic.layout(tiles, scaled_size, page, threshold=0.05)
+    return list(mosaic.layout(tiles, scaled_size, page, threshold=0.05))
 
 def layout2json(layout, scale):
     """Doesn't actually produce JSON but rather JSON-serializable representation of the tiles"""
     for t in layout:
         (w,h) = t.size
         (x,y) = t.position
-        yield dict(pid=t.image['pid'], width=w*scale, height=h*scale, x=x*scale, y=y*scale)
+        yield dict(pid=t.image['pid'], width=int(w*scale), height=int(h*scale), x=int(x*scale), y=int(y*scale))
 
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
@@ -330,26 +333,28 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     except NotFound:
         abort(404)
     adc_path = paths['adc_path']
+    roi_path = paths['roi_path']
     bin_pid = canonicalize(request.url_root, time_series, parsed['bin_lid'])
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
-    layout = get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page)
+    layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))
     extension = parsed['extension']
     # serve JSON on request
     if extension == 'json':
         return Response(json.dumps(list(layout2json(layout, scale))), mimetype=MIME_JSON)
-    # resolve ROI file
-    roi_path = resolve_roi(hit.bin_pid)
+    mimetype = mimetypes.types_map['.' + extension]
     # read all images needed for compositing and inject into Tiles
+    image_layout = []
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
-            target = tile.image
-            # FIXME use fast stitching
-            tile.image = as_pil(get_fast_stitched_roi(hit.bin_pid, target[TARGET_NUMBER]))
+            target = tile.image # in mosaic API, the record is called 'image'
+            # FIXME 1. replace PIL 2. use fast stitching
+            image = PIL.Image.fromarray(read_target_image(target, roi_path))
+            image_layout.append(Tile(image, tile.size, tile.position))
     # produce and serve composite image
-    mosaic_image = thumbnail(mosaic.composite(layout, scaled_size, mode='L', bgcolor=160), (w,h))
-    (pil_format, mimetype) = image_types(hit)
-    return image_response(mosaic_image, pil_format, mimetype)
+    mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    #pil_format = filename2format('foo.%s' % extension)
+    return Response(as_bytes(mosaic_image), mimetype=mimetype)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=8080,debug=True)
