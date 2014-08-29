@@ -17,6 +17,9 @@ def as_pil(array_or_image):
     try:
         return Image.fromarray(array_or_image)
     except TypeError:
+        pass
+    try:
+        array_or_image = as_numpy(array_or_image)
         # likely a floating-point image. attempt conversion to 8-bit
         array_or_image *= 255
         array_or_image = array_or_image.astype(np.uint8) # after numpy 1.7.1, use copy=False
