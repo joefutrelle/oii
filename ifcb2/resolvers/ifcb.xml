@@ -38,7 +38,7 @@
 	<var name="adc_cols">&v2_adc_cols;</var>
 	<var name="instrument">${n1}</var>
 	<var name="year">${yyyy}</var>
-	<var name="yearday">${yyyy}${dd}</var>
+	<var name="yearday">${yyyy}${mm}${dd}</var>
 	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
       </match>
     </first>
@@ -145,6 +145,22 @@
 	<path var="adc_path" match="${basename}.adc"/>
 	<!-- FIXME needs to also work with .adc.mod files -->
       </any>
+    </rule>
+    <!-- products -->
+    <rule name="product_path">
+      <first>
+	<test var="product" eq="blobs">
+	  <var name="product_path">${root}/${year}/${yearday}/${bin_lid}_blobs_v2.zip</var>
+	</test>
+	<test var="product" eq="features">
+	  <var name="product_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
+	</test>
+      </first>
+    </rule>
+    <rule name="find_product">
+      <invoke rule="ifcb.files.product_path"/>
+      <log>product path = ${product_path}</log>
+      <path match="${product_path}"/>
     </rule>
   </namespace>
 </namespace>

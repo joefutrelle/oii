@@ -96,16 +96,15 @@ def parse_pid(pid):
         raise
 
 @memoize(ttl=30)
-def get_data_roots(ts_label):
-    ts = session.query(TimeSeries)\
+def get_data_roots(ts_label, product_type='raw'):
+    dds = session.query(DataDirectory)\
+                .join(TimeSeries)\
                 .filter(TimeSeries.label==ts_label)\
-                .first()
-    if ts is None:
-        raise NotFound('Unknown time series %s' % ts_label)
+                .filter(DataDirectory.product_type==product_type)
     paths = []
-    for data_dir in ts.data_dirs:
+    for data_dir in dds:
         paths.append(data_dir.path)
-        return paths
+    return paths
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
@@ -126,6 +125,24 @@ def get_fileset(parsed):
     adc_cols = parsed[ADC_COLS].split(' ')
     return parsed_pid2fileset(parsed,data_roots)
 
+def get_blob_file(parsed):
+    parsed = dict(parsed.items())
+    time_series = parsed['ts_label']
+    data_roots = list(get_data_roots(time_series,'blobs'))
+    parsed['product'] = 'blobs'
+    for root in data_roots:
+        try:
+            print 'looking in %s' % root
+            hit = next(get_resolver().ifcb.files.find_product(root=root,**parsed))
+            return hit['product_path']
+        except StopIteration:
+            pass
+    raise NotFound
+
+def serve_blob_bin(parsed):
+    blob_zip = get_blob_file(parsed)
+    return Response(json.dumps({'zipfile': blob_zip}), mimetype='application/json')
+        
 ############# ENDPOINTS ##################
 
 @app.route('/api')
@@ -204,7 +221,7 @@ def hello_world(pid):
     roi_path = paths['roi_path']
     adc = Adc(adc_path, schema_version)
     extension = 'json' # default
-    product = parsed[PRODUCT] # should default to raw
+    product = parsed[PRODUCT]
     heft = 'full' # heft is either short, medium, or full
     if 'extension' in parsed:
         extension = parsed['extension']
@@ -219,7 +236,8 @@ def hello_world(pid):
         # not JSON, check for image
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
-            img = read_target_image(target, roi_path)
+            if product=='raw':
+                img = read_target_image(target, roi_path)
             return Response(as_bytes(img,mimetype),mimetype=mimetype)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
@@ -242,6 +260,10 @@ def hello_world(pid):
             path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[extension]
             mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[extension]
             return Response(file(path), direct_passthrough=True, mimetype=mimetype)
+        if product=='blob':
+            return serve_blob_bin(parsed)
+        if product=='features':
+            return serve_features_bin(parsed)
         # gonna need targets unless heft is medium or below
         targets = []
         if product != 'short':

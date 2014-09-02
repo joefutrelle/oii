@@ -34,8 +34,9 @@ class DataDirectory(Base):
 
     id = Column(Integer, primary_key=True)
     time_series_id = Column(Integer, ForeignKey('time_series.id'))
+    product_type = Column(String, default='raw')
     path = Column(String)
-    time_series = relationship("TimeSeries",
+    time_series = relationship('TimeSeries',
                       backref=backref('data_dirs', cascade="all, delete-orphan", order_by=id))
 
     def __repr__(self):

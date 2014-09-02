@@ -71,13 +71,13 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
-        $scope.time_series.push({label:'',description:'',data_dirs:[{path:''}],edit:'true'});
+        $scope.time_series.push({label:'',description:'',data_dirs:[{path:'',product_type:'raw'}],edit:'true'});
         return true;
     }
 
     // create new path
     $scope.addNewPath = function(ts) {
-        ts.data_dirs.push({path:''});
+        ts.data_dirs.push({path:'',product_type:'raw'});
     }
 
     // mark timeseries group for editing

@@ -45,16 +45,15 @@ def ifcb():
     return get_resolver().ifcb
 
 @memoize(ttl=30)
-def get_data_roots(ts_label):
-    ts = session.query(TimeSeries)\
+def get_data_roots(ts_label, product_type='raw'):
+    dds = session.query(DataDirectory)\
+                .join(TimeSeries)\
                 .filter(TimeSeries.label==ts_label)\
-                .first()
-    if ts is None:
-        raise NotFound('Unknown time series %s' % ts_label)
+                .filter(DataDirectory.product_type==product_type)
     paths = []
-    for data_dir in ts.data_dirs:
+    for data_dir in dds:
         paths.append(data_dir.path)
-        return paths
+    return paths
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
