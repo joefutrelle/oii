@@ -17,3 +17,4 @@ def read_target_image(parsed_target, path=None, file=None):
             return read_roi_image(parsed_target[BYTE_OFFSET], parsed_target[WIDTH], parsed_target[HEIGHT], open_roi_file)
     else:
         return read_roi_image(parsed_target[BYTE_OFFSET], parsed_target[WIDTH], parsed_target[HEIGHT], file)
+

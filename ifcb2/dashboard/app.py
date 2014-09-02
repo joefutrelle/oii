@@ -6,6 +6,8 @@ from time import strptime
 from io import BytesIO
 import re
 import PIL
+from array import array
+from zipfile import ZipFile
 
 from lxml import html
 
@@ -145,7 +147,17 @@ def serve_blob_bin(parsed):
 def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
     return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
-        
+
+def serve_blob_image(parsed):
+    blob_zip = get_product_file(parsed, 'blobs')
+    zipfile = ZipFile(blob_zip)
+    png_name = parsed['lid'] + '.png'
+    png_data = zipfile.read(png_name)
+    zipfile.close()
+    if parsed['extension'] == 'png':
+        return Response(png_data, mimetype='image/png')
+    raise NotFound
+
 ############# ENDPOINTS ##################
 
 @app.route('/api')
@@ -241,7 +253,9 @@ def hello_world(pid):
         if mimetype.startswith('image/'):
             if product=='raw':
                 img = read_target_image(target, roi_path)
-            return Response(as_bytes(img,mimetype),mimetype=mimetype)
+                return Response(as_bytes(img,mimetype),mimetype=mimetype)
+            if product=='blob':
+                return serve_blob_image(parsed)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
