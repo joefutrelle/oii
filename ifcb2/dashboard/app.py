@@ -125,14 +125,13 @@ def get_fileset(parsed):
     adc_cols = parsed[ADC_COLS].split(' ')
     return parsed_pid2fileset(parsed,data_roots)
 
-def get_blob_file(parsed):
+def get_product_file(parsed, product_type):
     parsed = dict(parsed.items())
     time_series = parsed['ts_label']
-    data_roots = list(get_data_roots(time_series,'blobs'))
-    parsed['product'] = 'blobs'
+    data_roots = list(get_data_roots(time_series,product_type))
+    parsed['product'] = product_type
     for root in data_roots:
         try:
-            print 'looking in %s' % root
             hit = next(get_resolver().ifcb.files.find_product(root=root,**parsed))
             return hit['product_path']
         except StopIteration:
@@ -140,8 +139,12 @@ def get_blob_file(parsed):
     raise NotFound
 
 def serve_blob_bin(parsed):
-    blob_zip = get_blob_file(parsed)
-    return Response(json.dumps({'zipfile': blob_zip}), mimetype='application/json')
+    blob_zip = get_product_file(parsed, 'blobs')
+    return Response(json.dumps({'blob_zip': blob_zip}), mimetype='application/json')
+
+def serve_features_bin(parsed):
+    feature_csv = get_product_file(parsed, 'features')
+    return Response(json.dumps({'feature_csv': feature_csv}), mimetype='application/json')
         
 ############# ENDPOINTS ##################
 
