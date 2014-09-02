@@ -140,11 +140,11 @@ def get_product_file(parsed, product_type):
 
 def serve_blob_bin(parsed):
     blob_zip = get_product_file(parsed, 'blobs')
-    return Response(json.dumps({'blob_zip': blob_zip}), mimetype='application/json')
+    return Response(file(blob_zip), direct_passthrough=True, mimetype='application/zip')
 
 def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
-    return Response(json.dumps({'feature_csv': feature_csv}), mimetype='application/json')
+    return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
         
 ############# ENDPOINTS ##################
 
