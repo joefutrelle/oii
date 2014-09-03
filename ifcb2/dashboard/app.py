@@ -13,6 +13,8 @@ from StringIO import StringIO
 
 import numpy as np
 
+from skimage.segmentation import find_boundaries
+
 from oii.utils import coalesce, memoize
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
 from oii.image.io import as_bytes, as_pil
@@ -151,7 +153,7 @@ def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
     return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
 
-def serve_blob_image(parsed, mimetype, outline=False):
+def serve_blob_image(parsed, mimetype, outline=False, target_img=None):
     # first, read the blob from the zipfile
     blob_zip = get_product_file(parsed, 'blobs')
     zipfile = ZipFile(blob_zip)
@@ -164,12 +166,14 @@ def serve_blob_image(parsed, mimetype, outline=False):
     else:
         # read the png-formatted blob image into a PIL image
         pil_img = PIL.Image.open(StringIO(png_data))
+        blob = np.array(pil_img.convert('L')) # convert to 8-bit grayscale
         if not outline: # unless we are drawing the outline
-            blob = np.array(pil_img.convert('L')) # convert to 8-bit grayscale
             return Response(as_bytes(blob), mimetype=mimetype) # format and serve
         else:
-            # FIXME do the fricking outline already
-            blob = np.array(pil_img.convert('L'))
+            blob_outline = find_boundaries(blob)
+            roi = target_img
+            blob = np.dstack([roi,roi,roi])
+            blob[blob_outline] = [255,0,0]
             return Response(as_bytes(blob, mimetype), mimetype=mimetype)
 
 ############# ENDPOINTS ##################
@@ -271,7 +275,8 @@ def hello_world(pid):
             if product=='blob':
                 return serve_blob_image(parsed, mimetype)
             if product=='blob_outline':
-                return serve_blob_image(parsed, mimetype, outline=True)
+                img = read_target_image(target, roi_path)
+                return serve_blob_image(parsed, mimetype, outline=True, target_img=img)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
