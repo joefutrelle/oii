@@ -22,7 +22,3 @@ def parsed_pid2fileset(parsed_pid,roots):
             pass # try the next one
     # we tried all roots and it's not there
     raise NotFound('No raw data found for %s' % parsed_pid['bin_lid'])
-
-import sys
-if __name__=='__main__':
-    print pid2fileset(sys.argv[1],roots=['/mnt/data/okeanos'])

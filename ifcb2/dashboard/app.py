@@ -8,8 +8,10 @@ import re
 import PIL
 from array import array
 from zipfile import ZipFile
-
 from lxml import html
+from StringIO import StringIO
+
+import numpy as np
 
 from oii.utils import coalesce, memoize
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
@@ -127,6 +129,7 @@ def get_fileset(parsed):
     adc_cols = parsed[ADC_COLS].split(' ')
     return parsed_pid2fileset(parsed,data_roots)
 
+@memoize(ttl=30,key=lambda args: frozenset(args[0].items() + [args[1]]))
 def get_product_file(parsed, product_type):
     parsed = dict(parsed.items())
     time_series = parsed['ts_label']
@@ -148,15 +151,26 @@ def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
     return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
 
-def serve_blob_image(parsed):
+def serve_blob_image(parsed, mimetype, outline=False):
+    # first, read the blob from the zipfile
     blob_zip = get_product_file(parsed, 'blobs')
     zipfile = ZipFile(blob_zip)
-    png_name = parsed['lid'] + '.png'
+    png_name = parsed['lid'] + '.png' # name is target LID + png extension
     png_data = zipfile.read(png_name)
     zipfile.close()
-    if parsed['extension'] == 'png':
+    # if we want a blob png, then pass it through without conversion
+    if not outline and mimetype == 'image/png':
         return Response(png_data, mimetype='image/png')
-    raise NotFound
+    else:
+        # read the png-formatted blob image into a PIL image
+        pil_img = PIL.Image.open(StringIO(png_data))
+        if not outline: # unless we are drawing the outline
+            blob = np.array(pil_img.convert('L')) # convert to 8-bit grayscale
+            return Response(as_bytes(blob), mimetype=mimetype) # format and serve
+        else:
+            # FIXME do the fricking outline already
+            blob = np.array(pil_img.convert('L'))
+            return Response(as_bytes(blob, mimetype), mimetype=mimetype)
 
 ############# ENDPOINTS ##################
 
@@ -255,7 +269,9 @@ def hello_world(pid):
                 img = read_target_image(target, roi_path)
                 return Response(as_bytes(img,mimetype),mimetype=mimetype)
             if product=='blob':
-                return serve_blob_image(parsed)
+                return serve_blob_image(parsed, mimetype)
+            if product=='blob_outline':
+                return serve_blob_image(parsed, mimetype, outline=True)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':

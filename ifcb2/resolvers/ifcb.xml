@@ -47,7 +47,7 @@
     <all include="lid target product extension">
       <invoke rule="ifcb.re"/>
       <var name="re.target">(?:_${re.int})</var>
-      <var name="re.product">(?:_${re.id})</var>
+      <var name="re.product">(?:_([a-zA-Z][a-zA-Z0-9_]*))</var>
       <!-- default product is raw -->
       <var name="product">raw</var>
       <match var="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
