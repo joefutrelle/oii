@@ -14,7 +14,6 @@
     <!-- integer (zero-padding allowed) -->
     <var name="re.int">([0-9]+)</var>
   </rule>
-  <!-- IFCB identifier parsing rule -->
   <rule name="pid" uses="pid">
     <!-- separate namespace part from rest of pid -->
     <match var="pid" pattern="(.*/)?(.*)" groups="namespace suffix"/>
@@ -161,6 +160,26 @@
       <invoke rule="ifcb.files.product_path"/>
       <log>product path = ${product_path}</log>
       <path match="${product_path}"/>
+    </rule>
+    <!-- detecting data directories -->
+    <rule name="find_raw_data" uses="root" distinct="namespace">
+      <path var="sub" match="${root}/*">
+	<first>
+	  <all>
+	    <var name="pid">${sub}</var>
+	    <invoke rule="ifcb.pid"/>
+	    <any>
+	      <test var="extension" eq="adc"/>
+	      <test var="extension" eq="hdr"/>
+	      <test var="extension" eq="roi"/>
+	    </any>
+	  </all>
+	  <all>
+	    <var name="root">${sub}</var>
+	    <invoke rule="ifcb.files.find_raw_data" include="namespace lid"/>
+	  </all>
+	</first>
+      </path>
     </rule>
   </namespace>
 </namespace>
