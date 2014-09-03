@@ -233,6 +233,28 @@ def nearest(ts_label, timestamp):
     resp = dict(pid=pid, date=sample_time_str)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/feed/<after_before>/pid/<path:pid>')
+@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<path:pid>')
+def serve_after_before(ts_label,after_before,n=1,pid=None):
+    if not after_before in ['before','after']:
+        abort(400)
+    try:
+        parsed = next(ifcb().pid(pid))
+    except StopIteration:
+        abort(404)
+    bin_lid = parsed['bin_lid']
+    with Feed(session, ts_label) as feed:
+        if after_before=='before':
+            bins = list(feed.before(bin_lid, n))
+        else:
+            bins = list(feed.after(bin_lid, n))
+    resp = []
+    for bin in bins:
+        sample_time_str = iso8601(bin.sample_time.timetuple())
+        pid = canonicalize(request.url_root, ts_label, bin.lid)
+        resp.append(dict(pid=pid, date=sample_time_str))
+    return Response(json.dumps(resp), mimetype='application/json')
+
 @app.route('/<path:pid>')
 def hello_world(pid):
     try:
