@@ -57,4 +57,23 @@ class Feed(object):
         return self._ts_query(end_time=timestamp).\
             order_by(desc(Bin.sample_time)).\
             limit(n)
+    def after(self,bin_lid,n=1):
+        return self.session.query(Bin).\
+            filter(Bin.ts_label==self.ts_label).\
+            filter(~Bin.skip).\
+            filter(Bin.sample_time > self.session.query(Bin.sample_time).\
+                   filter(Bin.lid==bin_lid).\
+                   as_scalar()).\
+            order_by(Bin.sample_time).\
+            limit(n)
+    def before(self,bin_lid,n=1):
+        return self.session.query(Bin).\
+            filter(Bin.ts_label==self.ts_label).\
+            filter(~Bin.skip).\
+            filter(Bin.sample_time < self.session.query(Bin.sample_time).\
+                   filter(Bin.lid==bin_lid).\
+                   as_scalar()).\
+            order_by(desc(Bin.sample_time)).\
+            limit(n)
+                
 
