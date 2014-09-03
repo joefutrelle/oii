@@ -1,5 +1,6 @@
-from flask import Flask, Response, abort, request, render_template, render_template_string
+from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 
+import os
 import mimetypes
 import json
 from time import strptime
@@ -190,18 +191,21 @@ def serve_about():
     template = dict(static=STATIC)
     return template_response('help.html', **template)
 
+@app.route('/')
 @app.route('/<ts_label>')
 @app.route('/<ts_label>/')
 @app.route('/<ts_label>/dashboard')
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<path:pid>')
-def serve_timeseries(ts_label='mvco', pid=None):
+def serve_timeseries(ts_label=None, pid=None):
     template = dict(static=STATIC, time_series=ts_label)
     if pid is not None:
         template['pid'] = pid
     # fetch time series information
     all_series = []
-    for ts in session.query(TimeSeries):
+    for ts in session.query(TimeSeries).filter(TimeSeries.enabled):
+        if ts_label is None: # no time series specified
+            return redirect(os.path.join(request.url_root, ts.label), code=302)
         if ts.label == ts_label:
             template['page_title'] = html.fromstring(ts.description).text_content()
             template['title'] = ts.description

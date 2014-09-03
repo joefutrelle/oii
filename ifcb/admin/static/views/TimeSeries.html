@@ -15,6 +15,7 @@
                 <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
         <h4 class="list-group-item-heading">{{ ts.description }} ({{ ts.label }})</h4>
+	<h4 class="list-group-item-heading">Enabled = {{ ts.enabled }}; Live = {{ ts.live }}</h4>
         <p class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
             ({{ path.product_type }}) {{ path.path }}
         </p>
@@ -35,6 +36,18 @@
                 <div class="input-group col-md-3">
                     <span class="input-group-addon">Description</span>
                     <input type="text" class="form-control" ng-model="ts.description">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Enabled</span>
+		    <select ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Live</span>
+		    <select ng-model="ts.live" ng-options="a for a in [true, false]"></select>
                 </div>
             </h4>
             <div class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">

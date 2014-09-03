@@ -18,6 +18,7 @@ from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Base, TimeSeries, DataDirectory, Bin, File, User
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.accession import fast_accession
 
 demo_end_time = text2utcdatetime('2013-09-20T00:00:00Z')
 demo_start_time = demo_end_time - timedelta(hours=2)
@@ -118,6 +119,6 @@ if __name__=='__main__':
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
-    timeseries_demo(session)
-    accession_demo(session,'okeanos','/mnt/data/okeanos')
+    #timeseries_demo(session)
+    fast_accession(session,'okeanos','/mnt/data/okeanos')
     query_demo(session,'okeanos')

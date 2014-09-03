@@ -25,6 +25,7 @@ class TimeSeries(Base):
     label = Column(String, unique=True)
     description = Column(String, default='')
     enabled = Column(Boolean, default=True)
+    live = Column(Boolean, default=False)
 
     def __repr__(self):
         return "<TimeSeries '%s'>" % self.label
