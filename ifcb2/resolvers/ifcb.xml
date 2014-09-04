@@ -161,26 +161,31 @@
       <path match="${product_path}"/>
     </rule>
     <!-- detecting data directories -->
+    <rule name="validate_data_dir" uses="root product" nth="1">
+      <first>
+	<test var="product" eq="raw">
+	  <split group="extension" value="adc hdr roi"/>
+	  <var name="name_glob">*.${extension}</var>
+	  <any>
+	    <path match="${root}/${name_glob}"/>
+	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
+	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
+	  </any>
+	</test>
+	<test var="product" eq="blobs">
+	  <var name="name_glob">*_blobs_v*.zip</var>
+	  <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
+	</test>
+	<test var="product" eq="features">
+	  <var name="name_glob">*_fea_v*.csv</var>
+	  <path match="${root}/features[0-9]*/[0-9]*/${name_glob}"/>
+	</test>
+      </first>
+    </rule>
     <rule name="find_data_dirs" uses="root" distinct="directory product">
-      <!--log>searching ${root}</log-->
       <any>
 	<all include="directory product" nth="1">
-	  <path var="pid" match="${root}/*"/>
-	  <invoke rule="ifcb.pid"/>
-	  <first>
-	    <match var="product" pattern="blob.*">
-	      <match var="namespace" pattern="(.*?/)(?:[D\d_]+/)+" groups="directory" optional="true"/>
-	      <var name="product">blobs</var>
-	    </match>
-	    <match var="product" pattern="fea.*">
-	      <match var="namespace" pattern="(.*?/)(?:features\d{4}_v..*)" groups="directory" optional="true"/>
-	      <var name="product">features</var>
-	    </match>
-	    <!-- since raw is the default, we need to check the extension to ensure we're seeing raw data -->
-	    <match var="extension" pattern="(adc|hdr|roi)" rename="namespace" as="directory">
-	      <match var="namespace" pattern="(.*?/)(?:(D\d+|IFCB).*)" optional="true"/>
-	    </match>
-	  </first>
+	  <!-- FIXME validate root and return product -->
 	</all>
 	<!-- recursively descend into any subdirectories -->
 	<all>
