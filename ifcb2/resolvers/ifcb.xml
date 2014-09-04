@@ -163,29 +163,38 @@
     <!-- detecting data directories -->
     <rule name="validate_data_dir" uses="root product" nth="1">
       <first>
+	<!-- raw filesets -->
 	<test var="product" eq="raw">
+	  <!-- try each extension -->
 	  <split group="extension" value="adc hdr roi"/>
 	  <var name="name_glob">*.${extension}</var>
+	  <!-- try flat, v1, and v2 directory layouts -->
 	  <any>
 	    <path match="${root}/${name_glob}"/>
 	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
 	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
 	  </any>
 	</test>
+	<!-- blobs -->
 	<test var="product" eq="blobs">
 	  <var name="name_glob">*_blobs_v*.zip</var>
+	  <!-- try the yyyy/yyyymmdd directory layout -->
 	  <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
 	</test>
 	<test var="product" eq="features">
 	  <var name="name_glob">*_fea_v*.csv</var>
-	  <path match="${root}/features[0-9]*/[0-9]*/${name_glob}"/>
+	  <!-- try the featuresyyyy_vn directory layout -->
+	  <path match="${root}/features[0-9]*_v[0-9]*/${name_glob}"/>
 	</test>
       </first>
     </rule>
     <rule name="find_data_dirs" uses="root" distinct="directory product">
+      <!-- identify all data directories including their product type -->
       <any>
 	<all include="directory product" nth="1">
-	  <!-- FIXME validate root and return product -->
+	  <!-- use the validate_data_dir on each product type -->
+	  <split group="product" value="raw blobs features"/>
+	  <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
 	</all>
 	<!-- recursively descend into any subdirectories -->
 	<all>
