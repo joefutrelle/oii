@@ -87,6 +87,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // save timeseries group to server
     $scope.saveTimeSeries = function(ts) {
+	console.log("saving time series "+ts.label);
         // remove blank paths before save
         for (var i = 0; i < ts.data_dirs.length; i++) {
             if (ts.data_dirs[i].path.trim() == "") {

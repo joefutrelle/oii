@@ -279,8 +279,9 @@ def accession(ts_label=None):
         for ts in session.query(TimeSeries).filter(TimeSeries.enabled):
             results.append(ts)
     else:
-        tss = [session.query(TimeSeries).first()]
+        tss = [session.query(TimeSeries).filter(TimeSeries.label==ts_label).first()]
     for ts in tss:
+        print 'doing accession on %s' % ts.label # FIXME debug
         for ddir in ts.data_dirs:
             if ddir.product_type != 'raw':
                 continue
