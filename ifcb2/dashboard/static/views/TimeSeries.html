@@ -1,0 +1,75 @@
+
+<div ng-controller="TimeSeriesCtrl">
+<h1 class="page-header">Time Series</h1>
+
+<div ng-if="alert" class="alert alert-danger">
+    {{alert}}
+</div>
+
+<div class="list-group">
+    <div class="list-group-item" data-ng-repeat="ts in time_series">
+        <!-- time series display view -->
+        <div ng-if="!ts.edit">
+            <div class="btn-group pull-right">
+                <button type="button" class="btn btn-default" ng-click="editTimeSeries(ts)">Edit</button>
+                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
+            </div>
+        <h4 class="list-group-item-heading">{{ ts.description }} ({{ ts.label }})</h4>
+	<h4 class="list-group-item-heading">Enabled = {{ ts.enabled }}; Live = {{ ts.live }}</h4>
+        <p class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
+            ({{ path.product_type }}) {{ path.path }}
+        </p>
+        <p class="list-group-item-text" ng-if="!ts.data_dirs.length">
+            <i>(no paths configured)</i>
+        </p>
+        </div>
+        <!-- time series edit view -->
+        <div ng-if="ts.edit">
+            <button type="button" class="btn btn-default pull-right" ng-click="saveTimeSeries(ts)">Save</button>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Label</span>
+                    <input type="text" class="form-control" ng-model="ts.label">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Description</span>
+                    <input type="text" class="form-control" ng-model="ts.description">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Enabled</span>
+		    <select ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Live</span>
+		    <select ng-model="ts.live" ng-options="a for a in [true, false]"></select>
+                </div>
+            </h4>
+            <div class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
+                <div class="input-group input-group-sm col-md-5">
+                    <span class="input-group-addon">Path</span>
+                    <input type="text" class="form-control" ng-model="path.path">
+		    <select ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features']"></select>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" ng-click="removePath(ts,path)">-</button>
+                    </span>
+                </div>
+            </div>
+            <div class="list-group-item-text">
+                <button class="btn btn-sm btn-default" type="button" ng-click="addNewPath(ts)">Add Path</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button type="button" class="btn btn-primary" ng-click="addNewTimeSeries()">Add New Time Series</button>
+
+<!-- <p><pre>timeseries = {{timeseries | json}}</pre></p>
+ <p><pre>one = {{post | json}}</pre></p> -->
+
+</div>

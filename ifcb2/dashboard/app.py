@@ -1,5 +1,3 @@
-from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
-
 import os
 import mimetypes
 import json
@@ -11,6 +9,13 @@ from array import array
 from zipfile import ZipFile
 from lxml import html
 from StringIO import StringIO
+
+from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
+import flask.ext.sqlalchemy
+import flask.ext.restless
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 import numpy as np
 
@@ -26,22 +31,21 @@ from oii.image.mosaic import Tile
 from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
+
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.formats.adc import Adc
+
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
 from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
 from oii.ifcb2.image import read_target_image
-from oii.ifcb2.formats.adc import Adc
 from oii.ifcb2.formats.hdr import parse_hdr_file
-from oii.ifcb2.orm import Bin, TimeSeries, DataDirectory
-
+from oii.ifcb2.accession import fast_accession
 # keys
 from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # constants
 
@@ -191,6 +195,8 @@ def serve_about():
     template = dict(static=STATIC)
     return template_response('help.html', **template)
 
+### timeseries endpoints ###
+
 @app.route('/')
 @app.route('/<ts_label>')
 @app.route('/<ts_label>/')
@@ -214,6 +220,7 @@ def serve_timeseries(ts_label=None, pid=None):
     template['base_url'] = request.url_root
     return template_response('timeseries.html', **template)
 
+### data volume by day ###
 @app.route('/<ts_label>/api/volume')
 def volume(ts_label):
     dv = []
@@ -225,6 +232,8 @@ def volume(ts_label):
                 'day': row[2]
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
+
+### feed API ###
 
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
@@ -258,6 +267,41 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
         pid = canonicalize(request.url_root, ts_label, bin.lid)
         resp.append(dict(pid=pid, date=sample_time_str))
     return Response(json.dumps(resp), mimetype='application/json')
+
+### data validation and accession ###
+
+@app.route('/api/accession')
+@app.route('/api/accession/<ts_label>')
+def accession(ts_label=None):
+    results = []
+    tss = []
+    if ts_label is None:
+        for ts in session.query(TimeSeries).filter(TimeSeries.enabled):
+            results.append(ts)
+    else:
+        tss = [session.query(TimeSeries).first()]
+    for ts in tss:
+        for ddir in ts.data_dirs:
+            if ddir.product_type != 'raw':
+                continue
+            try:
+                (n_new, n_total) = fast_accession(session, ts.label, ddir.path)
+                results.append({
+                    'time_series': ts.label,
+                    'data_dir': ddir.path,
+                    'status': 'found',
+                    'new': n_new,
+                    'total': n_total
+                })
+            except:
+                results.append({
+                    'time_series': ts.label,
+                    'data_dir': ddir.path,
+                    'status': 'not found'
+                });
+    return Response(json.dumps(results), mimetype='application/json')
+
+### bins, targets, and products ###
 
 @app.route('/<path:pid>')
 def hello_world(pid):
@@ -442,5 +486,42 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
 
+### admin API hacked right on in ####
+
+API_URL_PREFIX = '/admin/api/v1'
+
+def patch_single_preprocessor(instance_id=None, data=None, **kw):
+    if data.has_key('edit'):
+        print "*************************************************"
+        print data
+        print "*************************************************"
+        # remove restangularize "edit" field. probably a better way
+        # to do this on the javascript side
+        data.pop('edit')
+
+manager = flask.ext.restless.APIManager(app, session=session)
+manager.create_api(
+    TimeSeries,
+    url_prefix=API_URL_PREFIX,
+#    validation_exceptions=[DBValidationError],
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
+manager.create_api(
+    DataDirectory,
+    url_prefix=API_URL_PREFIX,
+#    validation_exceptions=[DBValidationError],
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
+manager.create_api(
+    User,
+    url_prefix=API_URL_PREFIX,
+#    validation_exceptions=[DBValidationError],
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
+
 if __name__ == '__main__':
+    Base.metadata.create_all(dbengine)
     app.run(host='0.0.0.0',port=8080,debug=True)

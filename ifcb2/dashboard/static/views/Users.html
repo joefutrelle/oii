@@ -1,0 +1,54 @@
+
+
+<h1 class="page-header">IFCB Users</h1>
+
+<div ng-if="alert" class="alert alert-danger">
+    {{alert}}
+</div>
+
+<table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>SuperAdmin</th>
+            <th>Admin</th>
+            <th>API User</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody ng-repeat="user in users">
+            <tr ng-if="!user.edit">
+                <td>{{user.name}}</td>
+                <td>{{user.email}}</td>
+                <td>{{user.superadmin}}</td>
+                <td>{{user.admin}}</td>
+                <td>{{user.apiuser}}</td>
+                <td>
+                    <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
+                    <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="removeUser(user)">Remove</button>
+                    </div>
+                </td>
+            </tr>
+	    <!-- edit mode -->
+	    <tr ng-if="user.edit">
+                <td><input type="text" class="form-control" ng-model="user.name"></td>
+                <td><input type="text" class="form-control" ng-model="user.email"></td></td>
+                <td><input type="checkbox" class="form-control" ng-model="user.superadmin"></td>
+                <td><input type="checkbox" class="form-control" ng-model="user.admin"></td>
+                <td><input type="checkbox" class="form-control" ng-model="user.apiuser"></td>
+                <td>
+                  <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default" ng-click="saveUser(user)">Save</button>
+                    <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="removeUser(user)">Remove</button>
+                  </div>
+                </td>
+	    </tr>
+        </tbody>
+</table>
+
+<button type="button" class="btn btn-primary" ng-click="addNewUser()">Add New User</button>
+
+
+

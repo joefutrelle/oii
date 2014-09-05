@@ -1,0 +1,70 @@
+<!doctype html>
+<html data-ng-app="ifcbAdmin">
+    <head>
+        <title>IFCB Admin</title>
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/local.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular-route.min.js"></script>
+        <script src="js/lib/lodash.min.js"></script>
+        <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/restangular/1.2.2/restangular.min.js"></script>
+        <script src="js/ifcbadmin.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js" ></script>
+    </head>
+    <body>
+
+        <!-- top navbar -->
+        <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+          <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#">IFCB Admin</a>
+            </div>
+            <div class="navbar-collapse collapse">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="#/myaccount">MyAccount</a></li>
+                <li><a href="/logout">Logout</a></li>
+              </ul>
+              <form class="navbar-form navbar-right">
+                <input type="text" class="form-control" placeholder="Search...">
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- end top navbar -->
+
+        <!-- start fluid container -->
+        <div class="container-fluid">
+
+          <!-- side navbar -->
+          <div class="row" ng-controller="NavigationCtrl">
+            <div class="col-sm-3 col-md-2 sidebar">
+              <ul class="nav nav-sidebar">
+                <li ng-class="{ active: isCurrentPath('/time_series') }"><a href="#/time_series">Time Series</a></li>
+                <li ng-class="{ active: isCurrentPath('/users') }"><a href="#/users">Users</a></li>
+                <li ng-class="{ active: isCurrentPath('/myaccount') }"><a href="#/myaccount">My Account</a></li>
+              </ul>
+          </div>
+          <!-- end side navbar -->
+
+          <!-- start main page content -->
+          <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+
+            <!-- start template -->
+            <div data-ng-view=""></div>
+            <!-- end template -->
+
+          </div>
+          <!-- start main page content -->
+        </div>
+        <!-- end fluid container -->
+
+
+
+    </body>
+</html>
