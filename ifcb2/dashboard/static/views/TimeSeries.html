@@ -14,7 +14,8 @@
                 <button type="button" class="btn btn-default" ng-click="editTimeSeries(ts)">Edit</button>
                 <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
-        <h4 class="list-group-item-heading">{{ ts.description }} ({{ ts.label }})</h4>
+	<!-- FIXME the link below assumes the whole webapp is running at the top of the web server -->
+        <h4 class="list-group-item-heading"><a href="/{{ts.label}}/">{{ ts.description }} ({{ ts.label }})</a></h4>
 	<h4 class="list-group-item-heading">Enabled = {{ ts.enabled }}; Live = {{ ts.live }}</h4>
         <p class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
             ({{ path.product_type }}) {{ path.path }}

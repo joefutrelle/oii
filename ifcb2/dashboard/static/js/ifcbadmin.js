@@ -93,6 +93,13 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
                 $scope.removePath(ts, ts.data_dirs[i]);
             }
         }
+	// perform accession on the time series (FIXME this may be slow!)
+	// FIXME this uses jQuery
+	accession_url = "/" + ts.label + "/api/accession";
+	console.log("hitting " + accession_url);
+	$.getJSON(accession_url, function(r) {
+	    console.log(r);
+	});
         if(ts.id) {
             // timeseries group already exists on server. update.
             ts.patch().then(function(serverResponse) {

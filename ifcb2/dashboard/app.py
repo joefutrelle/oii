@@ -60,7 +60,7 @@ from sqlalchemy.pool import StaticPool
 dbengine = create_engine(SQLITE_URL,
                     connect_args={'check_same_thread':False},
                     poolclass=StaticPool,
-                    echo=True)
+                         echo=False)
 Session = sessionmaker(bind=dbengine)
 session = Session()
 
@@ -271,7 +271,7 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
 ### data validation and accession ###
 
 @app.route('/api/accession')
-@app.route('/api/accession/<ts_label>')
+@app.route('/<ts_label>/api/accession')
 def accession(ts_label=None):
     results = []
     tss = []
