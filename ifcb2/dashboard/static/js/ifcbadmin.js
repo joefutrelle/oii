@@ -97,30 +97,31 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 	// perform accession on the time series (FIXME this may be slow!)
 	// FIXME this uses jQuery
 	accession_url = "/" + ts.label + "/api/accession";
-	console.log("hitting " + accession_url);
+	$scope.alert = "Saving time series...";
 	$.getJSON(accession_url, function(r) {
-	    console.log(r);
+	    var total = r.total
+	    $scope.alert = total + " bin(s) found";
+            if(ts.id) {
+		// timeseries group already exists on server. update.
+		ts.patch().then(function(serverResponse) {
+                    delete ts.edit;
+                    $scope.alert = null;
+		}, function(serverResponse) {
+                    console.log(serverResponse);
+                    $scope.alert = serverResponse.data.validation_errors;
+		});
+            } else {
+		// new timeseries group. post to server.
+		baseTimeSeries.post(ts).then(function(serverResponse) {
+                    // copy server response to scope object
+                    angular.copy(serverResponse, ts);
+                    $scope.alert = null;
+		}, function(serverResponse) {
+                    console.log(serverResponse);
+                    $scope.alert = serverResponse.data.validation_errors;
+		});
+            }
 	});
-        if(ts.id) {
-            // timeseries group already exists on server. update.
-            ts.patch().then(function(serverResponse) {
-                delete ts.edit;
-                $scope.alert = null;
-            }, function(serverResponse) {
-                console.log(serverResponse);
-                $scope.alert = serverResponse.data.validation_errors;
-            });
-        } else {
-            // new timeseries group. post to server.
-            baseTimeSeries.post(ts).then(function(serverResponse) {
-                // copy server response to scope object
-                angular.copy(serverResponse, ts);
-                $scope.alert = null;
-            }, function(serverResponse) {
-                console.log(serverResponse);
-                $scope.alert = serverResponse.data.validation_errors;
-            });
-        }
     }
 
     // remove timeseries group
