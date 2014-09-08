@@ -13,7 +13,8 @@ fix_utc(Base)
 class Product(Base):
     __tablename__ = 'products'
 
-    pid = Column('pid', String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    pid = Column('pid', String)
     state = Column('state', String, default='available')
     event = Column('event', String, default='new')
     message = Column('message', String)
@@ -62,15 +63,16 @@ class Dependency(Base):
 
     DEFAULT_ROLE='any'
 
-    upstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
-    downstream_id = Column(String, ForeignKey('products.pid'), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    upstream_id = Column(String, ForeignKey('products.id'))
+    downstream_id = Column(String, ForeignKey('products.id'))
     role = Column(String, default=DEFAULT_ROLE, nullable=False)
 
     upstream = relationship(Product,
-                            primaryjoin=upstream_id==Product.pid,
+                            primaryjoin=upstream_id==Product.id,
                             backref=backref('downstream_dependencies', cascade='all,delete-orphan'))
     downstream = relationship(Product,
-                              primaryjoin=downstream_id==Product.pid,
+                              primaryjoin=downstream_id==Product.id,
                               backref=backref('upstream_dependencies', cascade='all,delete-orphan'))
 
     # proxy for upstream product's state
@@ -78,9 +80,9 @@ class Dependency(Base):
 
     def __repr__(self):
         if self.role==Dependency.DEFAULT_ROLE:
-            return '<%s depends on %s>' % (self.downstream_id, self.upstream_id)
+            return '<%s depends on %s>' % (self.downstream, self.upstream)
         else:
-            return '<%s depends on %s %s>' % (self.downstream_id, self.role, self.upstream_id)
+            return '<%s depends on %s (as %s)>' % (self.downstream, self.role, self.upstream)
 
 # queries that range across entire product dependency hierarchies
 # requires that an SQLA session be passed into each call
