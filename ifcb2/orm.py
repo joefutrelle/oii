@@ -15,8 +15,12 @@ from sqlalchemy.sql.expression import func
 from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
 from oii.times import text2utcdatetime
+from oii.orm_utils import fix_utc
 
 Base = declarative_base()
+
+# make sure all timestamps roundtrip as UTC
+fix_utc(Base)
 
 class TimeSeries(Base):
     __tablename__ = 'time_series'
@@ -53,7 +57,7 @@ class Bin(Base):
     skip = Column(Boolean, default=False)
 
     def __repr__(self):
-        return '<Bin %s:%s>' % (self.ts_label, self.lid)
+        return '<Bin %s:%s @ %s>' % (self.ts_label, self.lid, self.sample_time)
 
 class File(Base):
     __tablename__ = 'fixity'
