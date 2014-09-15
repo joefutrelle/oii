@@ -239,12 +239,31 @@ def with_inc_exc(solution_generator,include=None,exclude=None):
 
 # apply block-level modifications such as distinct, rename, include/exclude, count, and nth
 def with_block(S,expr,bindings={}):
+    return with_post_block(with_pre_block(S,expr,bindings),expr,bindings)
+
+# apply block-level modifications *before* the inner block produces solutions
+def with_pre_block(S,expr,bindings={}):
     bindings = flatten(bindings)
     # include/exclude
     include = parse_vars_arg(expr,'include')
     exclude = parse_vars_arg(expr,'exclude')
     if include is not None or exclude is not None:
         S = with_inc_exc(S,include,exclude)
+    # rename/as
+    rename = parse_vars_arg(expr,'rename')
+    rename_as = parse_vars_arg(expr,'as')
+    try:
+        aliases = dict((o,n) for o,n in zip(rename,rename_as))
+        S = with_aliases(S,aliases)
+    except TypeError:
+        pass
+    # now yield from the stack of solution generators
+    for s in S:
+        yield s
+
+# apply block-level modifiers *after* the inner block produces solutions
+def with_post_block(S,expr,bindings={}):
+    bindings = flatten(bindings)
     # distinct
     distinct = parse_vars_arg(expr,'distinct')
     if distinct is not None:
@@ -256,14 +275,6 @@ def with_block(S,expr,bindings={}):
         nth = int(nth)
     if count is not None or nth is not None:
         S = with_count(S,count,nth)
-    # rename/as
-    rename = parse_vars_arg(expr,'rename')
-    rename_as = parse_vars_arg(expr,'as')
-    try:
-        aliases = dict((o,n) for o,n in zip(rename,rename_as))
-        S = with_aliases(S,aliases)
-    except TypeError:
-        pass
     # now yield from the stack of solution generators
     for s in S:
         yield s
@@ -312,10 +323,10 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
         else:
             # wrap the solution generator in with_block
             def SS():
-                for s in with_block(solution_generator,expr,bindings):
+                for s in with_pre_block(solution_generator,expr,bindings):
                     for ss in local_block(list(expr),s):
                         yield ss
-            S = SS()
+            S = with_post_block(SS(),expr,bindings)
         # now recur
         for s in S:
             for ss in rest(expr,s):
