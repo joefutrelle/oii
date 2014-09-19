@@ -88,40 +88,35 @@ class Dependency(Base):
 # requires that an SQLA session be passed into each call
 
 class Products(object):
-    @staticmethod
-    def count(session):
-        return session.query(Product).count()
-    @staticmethod
-    def add_dep(session, downstream, upstream, role=None):
+    def __init__(self, session):
+        self.session = session
+    def count(self):
+        return self.session.query(Product).count()
+    def add_dep(self, downstream, upstream, role=None):
         d = Dependency(downstream=downstream, upstream=upstream, role=role)
-        session.add(d)
-    @staticmethod
-    def younger_than(session, ago):
+        self.session.add(d)
+    def younger_than(self, ago):
         """find all products whose events occurred more recently than ago ago.
         ago must be a datetime.timedelta"""
         now = utcdtnow()
-        return session.query(Product).\
+        return self.session.query(Product).\
             filter(Product.ts > now - ago)
-    @staticmethod
-    def older_than(session, ago):
+    def older_than(self, ago):
         """find all products whose events occurred longer than ago ago.
         ago must be a datetime.timedelta"""
         now = utcdtnow()
-        return session.query(Product).\
+        return self.session.query(Product).\
             filter(Product.ts < now - ago)
-    @staticmethod
-    def roots(session):
+    def roots(self):
         """return all roots; that is, products with no dependencies"""
-        return session.query(Product).filter(~Product.depends_on.any())
-    @staticmethod
-    def leaves(session):
+        return self.session.query(Product).filter(~Product.depends_on.any())
+    def leaves(self):
         """return all leaves; that is, products with no dependents"""
-        return session.query(Product).filter(~Product.dependents.any())
-    @staticmethod
-    def get_next(session, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available'):
+        return self.session.query(Product).filter(~Product.dependents.any())
+    def get_next(self, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available'):
         """find any product that is in state state and whose upstream dependencies are all in
         dep_state and satisfy all the specified roles, and lock it for update"""
-        return session.query(Product).\
+        return self.session.query(Product).\
             join(Product.upstream_dependencies).\
             filter(Product.state==state).\
             filter(Dependency.state==dep_state).\
@@ -131,19 +126,18 @@ class Products(object):
             having(func.count(distinct(Dependency.role))==len(set(roles))).\
             with_lockmode('update').\
             first()
-    @staticmethod
-    def delete_intermediate(session, state='available', dep_state='available'):
+    def delete_intermediate(self, state='available', dep_state='available'):
         """delete all products that
         - are in 'state'
         - have any dependencies (in other words, not "root" products")
         - have any dependents, all of which are in 'dep_state'
         default is to find available products that no unavailable products depend on"""
-        for product in session.query(Product).\
+        for product in self.session.query(Product).\
             filter(Product.state==state).\
             filter(Product.depends_on.any()).\
             filter(Product.dependents.any()).\
             filter(~Product.dependents.any(Product.state!=dep_state)).\
             with_lockmode('update'):
-            session.delete(product)
-        session.commit()
+            self.session.delete(product)
+        self.session.commit()
 

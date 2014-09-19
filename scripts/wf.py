@@ -48,13 +48,13 @@ for p_lid in [s['product'] for s in p_lids]:
 session.add_all(P.values())
 
 for dep in R.wf.deps(pid):
-    Products.add_dep(session, P[dep['product']], P[dep['upstream_product']], dep['role'])
+    Products(session).add_dep(P[dep['product']], P[dep['upstream_product']], dep['role'])
 
 session.commit()
 
 def do_work():
     for worker_roles in [['color'], ['gray'], ['overlay','background']]:
-        p = Products.get_next(session, worker_roles)
+        p = Products(session).get_next(worker_roles)
         if p is not None:
             p.changed('start', 'running')
             session.commit()
