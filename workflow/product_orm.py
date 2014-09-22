@@ -140,4 +140,11 @@ class Products(object):
             with_lockmode('update'):
             self.session.delete(product)
         self.session.commit()
-
+    def expire(self, ago, state='running', new_state='waiting'):
+        """if a product has not had an event since ago ago (see older_than),
+        and is in state, change its state to new_state"""
+        if state == new_state:
+            raise ValueError('state and new_state are both %s' % state)
+        for p in self.older_than(ago).filter(Product.state==state):
+            p.changed('expired', new_state)
+        self.session.commit()
