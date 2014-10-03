@@ -1,5 +1,6 @@
 import time
 import sys
+from datetime import timedelta
 
 import sqlalchemy
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, func, distinct
@@ -54,13 +55,14 @@ session.commit()
 
 def do_work():
     for worker_roles in [['color'], ['gray'], ['overlay','background']]:
-        p = Products(session).get_next(worker_roles)
+        p = Products(session).start_next(worker_roles)
         if p is not None:
-            p.changed('start', 'running')
-            session.commit()
             for wr in worker_roles:
                 print 'using %s for %s' % (p.deps_for_role(wr), wr)
             time.sleep(1)
+            print 'allowing stuff to expire'
+            Products(session).expire(timedelta(seconds=2))
+            print 'Product %s in state %s' % (p, p.state)
             p.changed('complete', 'available')
             session.commit()
             print 'Completed %s' % p

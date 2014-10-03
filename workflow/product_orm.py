@@ -126,6 +126,18 @@ class Products(object):
             having(func.count(distinct(Dependency.role))==len(set(roles))).\
             with_lockmode('update').\
             first()
+    def start_next(self, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available', new_state='running', event='start', message=None):
+        """find any product that is in state state and whose upstream dependencies are all in
+        dep_state and satisfy all the specified roles, atomically set it to the new state with
+        the given event and message values. If no product is in the state queried, will return
+        None instead"""
+        p = self.get_next(roles)
+        if p is not None:
+            p.changed(event, new_state, message)
+            self.session.commit()
+            return p
+        else:
+            return None
     def delete_intermediate(self, state='available', dep_state='available'):
         """delete all products that
         - are in 'state'
