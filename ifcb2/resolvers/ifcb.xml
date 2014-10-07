@@ -98,17 +98,19 @@
 	 return all possible candidate paths -->
     <rule name="raw_path">
       <var name="filename">${bin_lid}.${extension}</var>
-      <!-- otherwise we're in a schema-dependent directory structure -->
-      <first>
-	<test var="schema_version" eq="v1">
-	  <var name="raw_path">${root}/IFCB${instrument}_${yearday}/${filename}</var>
-	</test>
-	<test var="schema_version" eq="v2">
-	  <var name="raw_path">${root}/D${year}/D${yearday}/${filename}</var>
-	</test>
-      </first>
-      <!-- sometimes the directory structure is flat -->
-      <var name="raw_path">${root}/${filename}</var>
+      <any>
+	<!-- schema-dependent directory structures -->
+	<first>
+	  <test var="schema_version" eq="v1">
+	    <var name="raw_path">${root}/IFCB${instrument}_${yearday}/${filename}</var>
+	  </test>
+	  <test var="schema_version" eq="v2">
+	    <var name="raw_path">${root}/D${year}/D${yearday}/${filename}</var>
+	  </test>
+	</first>
+	<!-- alternately, a flat directory structure -->
+	<var name="raw_path">${root}/${filename}</var>
+      </any>
     </rule>
     <rule name="find_raw_file" nth="1">
       <invoke rule="ifcb.files.raw_path"/>
