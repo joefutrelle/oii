@@ -18,7 +18,7 @@ class Product(Base):
     state = Column('state', String, default='available')
     event = Column('event', String, default='new')
     message = Column('message', String)
-    ts = Column('ts', DateTime(timezone=True), default=utcdtnow)
+    ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # is the ref to utcdtnow correct?
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
@@ -131,7 +131,7 @@ class Products(object):
         dep_state and satisfy all the specified roles, atomically set it to the new state with
         the given event and message values. If no product is in the state queried, will return
         None instead"""
-        p = self.get_next(roles)
+        p = self.get_next(roles, state, dep_state)
         if p is not None:
             p.changed(event, new_state, message)
             self.session.commit()
