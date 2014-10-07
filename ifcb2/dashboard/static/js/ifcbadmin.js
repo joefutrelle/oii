@@ -101,27 +101,27 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 	$.getJSON(accession_url, function(r) {
 	    var total = r.total
 	    $scope.alert = total + " bin(s) found";
-            if(ts.id) {
-		// timeseries group already exists on server. update.
-		ts.patch().then(function(serverResponse) {
-                    delete ts.edit;
-                    $scope.alert = null;
-		}, function(serverResponse) {
-                    console.log(serverResponse);
-                    $scope.alert = serverResponse.data.validation_errors;
-		});
-            } else {
-		// new timeseries group. post to server.
-		baseTimeSeries.post(ts).then(function(serverResponse) {
-                    // copy server response to scope object
-                    angular.copy(serverResponse, ts);
-                    $scope.alert = null;
-		}, function(serverResponse) {
-                    console.log(serverResponse);
-                    $scope.alert = serverResponse.data.validation_errors;
-		});
-            }
 	});
+        if(ts.id) {
+	    // timeseries group already exists on server. update.
+	    ts.patch().then(function(serverResponse) {
+                delete ts.edit;
+                $scope.alert = null;
+	    }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+	    });
+        } else {
+	    // new timeseries group. post to server.
+	    baseTimeSeries.post(ts).then(function(serverResponse) {
+                // copy server response to scope object
+                angular.copy(serverResponse, ts);
+                $scope.alert = null;
+	    }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+	    });
+        }
     }
 
     // remove timeseries group
