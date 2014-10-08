@@ -37,14 +37,15 @@ def api(url):
     return BASE_URL + url
 
 P = {}
-requests.get(api('/create/available/%s' % pid))
+requests.get(api('/create/%s' % pid)) # raw is available
 p_lids = list(R.wf.products(pid))
 for p_lid in [s['product'] for s in p_lids]:
-    requests.get(api('/create/waiting/%s' % p_lid))
+    requests.post(api('/create/%s' % p_lid),data=dict(state='waiting'))
 
 for dep in R.wf.deps(pid):
     dp, up, r = dep['product'], dep['upstream_product'], dep['role']
-    requests.get(api('/depend/%s/on/%s/as/%s' % (dp, up, r)))
+    form = dict(upstream=up, role=r)
+    requests.post(api('/depend/%s' % dp),data=form)
 
 def do_work():
     for worker_roles in [['color'], ['gray'], ['overlay','background']]:
@@ -58,7 +59,8 @@ def do_work():
             #print 'allowing stuff to expire'
             #Products(session).expire(timedelta(seconds=2))
             print 'Product %s in state %s' % (pid, state)
-            requests.get(api('/changed/%s/%s/%s' % ('complete', 'available', pid)))
+            form = dict(state='available',event='completed')
+            requests.post(api('/update/%s' % pid),data=form)
             print 'Completed %s' % pid
             return True
 

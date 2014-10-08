@@ -2,7 +2,7 @@ from oii.times import utcdtnow
 from oii.orm_utils import fix_utc
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -14,7 +14,7 @@ class Product(Base):
     __tablename__ = 'products'
 
     id = Column(Integer, primary_key=True)
-    pid = Column('pid', String)
+    pid = Column('pid', String, unique=True)
     state = Column('state', String, default='available')
     event = Column('event', String, default='new')
     message = Column('message', String)
@@ -74,6 +74,8 @@ class Dependency(Base):
     downstream = relationship(Product,
                               primaryjoin=downstream_id==Product.id,
                               backref=backref('upstream_dependencies', cascade='all,delete-orphan'))
+
+    UniqueConstraint('upstream_id','downstream_id','role')
 
     # proxy for upstream product's state
     state = association_proxy('upstream', 'state')

@@ -75,21 +75,24 @@ def product2json(product):
 ############# ENDPOINTS ##################
 
 # create an product in a given initial state
+# (default "available")
 # returns a JSON representation of the product
-@app.route('/create/<state>/<path:pid>')
-@app.route('/create/<state>/<path:pid>')
-def create(state,pid):
-    if state is None:
-        state = 'available'
+@app.route('/create/<path:pid>',methods=['GET','POST'])
+def create(pid):
+    state = request.form.get('state',default='available')
     p = Product(state=state, pid=pid)
     session.add(p)
     session.commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
 # change the state of an object, and record the type of
-# event that this state change is associated with
-@app.route('/changed/<event>/<new_state>/<path:pid>')
-def changed(event,new_state,pid):
+# event that this state change is associated with.
+# if no event is specified, the default is "heartbeat".
+# if no state is specified, the default is "updated".
+@app.route('/update/<path:pid>',methods=['POST'])
+def changed(pid):
+    event = request.form.get('event',default='heartbeat')
+    new_state = request.form.get('state',default='updated')
     try:
         p = session.query(Product).filter(Product.pid==pid).first()
     except:
@@ -100,14 +103,21 @@ def changed(event,new_state,pid):
 
 # assert a dependency between a downstream product and an upstream product,
 # where that dependency is associated with a role that the upstream product
-# plays in the production of the downstream product
-@app.route('/depend/<path:down_pid>/on/<path:up_pid>/as/<role>')
-def depend(down_pid, up_pid, role):
+# plays in the production of the downstream product. the default role is 'any'.
+# products must already have been created with 'create'--they are not implicitly
+# created
+@app.route('/depend/<path:down_pid>',methods=['POST'])
+def depend(down_pid):
+    try:
+        up_pid = request.form['upstream']
+    except KeyError:
+        abort(400)
+    role = request.form.get('role',default='any')
     try:
         dp = session.query(Product).filter(Product.pid==down_pid).first()
         up = session.query(Product).filter(Product.pid==up_pid).first()
     except:
-        raise
+        abort(404)
     Products(session).add_dep(dp, up, role)
     session.commit()
     return Response(product2json(dp), mimetype=MIME_JSON) # FIXME
@@ -115,7 +125,8 @@ def depend(down_pid, up_pid, role):
 # find a product whose upstream dependencies are all in the given state
 # (default "available") and atomically change its state to a new one
 # (default "running")
-@app.route('/start_next/<path:role_list>')
+# FIXME allow POST to specify state
+@app.route('/start_next/<path:role_list>',methods=['GET','POST'])
 def start_next(role_list):
     roles = role_list.split('/')
     p = Products(session).start_next(roles)
