@@ -75,15 +75,19 @@ def product2json(product):
     return json.dumps(product2dict(product))
 
 ############ ORM utils ################
-def do_create(pid,state='available'):
-    p = Product(state=state, pid=pid)
+def do_create(pid,state='available',event='create'):
+    p = Product(event=event, state=state, pid=pid)
     session.add(p)
+    return p
+
+# commit a change, and if it results in an integrity error,
+# return the given HTTP error status code
+def do_commit(error_status=500):
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
-        abort(500)
-    return p
+        abort(error_status)
 
 ############# ENDPOINTS ##################
 
@@ -94,6 +98,7 @@ def do_create(pid,state='available'):
 def create(pid):
     state = request.form.get('state',default='available')
     p = do_create(pid, state)
+    do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
 # change the state of an object, and record the type of
@@ -101,15 +106,15 @@ def create(pid):
 # if no event is specified, the default is "heartbeat".
 # if no state is specified, the default is "updated".
 @app.route('/update/<path:pid>',methods=['POST'])
-def changed(pid):
+def update(pid):
     event = request.form.get('event',default='heartbeat')
     new_state = request.form.get('state',default='updated')
-    try:
-        p = session.query(Product).filter(Product.pid==pid).first()
-    except:
-        abort(404)
-    p.changed(event, new_state)
-    session.commit()
+    p = session.query(Product).filter(Product.pid==pid).first()
+    if p is None:
+        p = do_create(pid, state=new_state, event=event)
+    else:
+        p.changed(event, new_state)
+    do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
 # assert a dependency between a downstream product and an upstream product,
@@ -131,7 +136,7 @@ def depend(down_pid):
     if up is None:
         abort(404)
     Products(session).add_dep(dp, up, role)
-    session.commit()
+    do_commit()
     return Response(product2json(dp), mimetype=MIME_JSON) # FIXME
 
 # find a product whose upstream dependencies are all in the given state
@@ -142,6 +147,7 @@ def depend(down_pid):
 def start_next(role_list):
     roles = role_list.split('/')
     p = Products(session).start_next(roles)
+    # note that start_next commits and handles errors
     if p is None:
         abort(404)
     else:
