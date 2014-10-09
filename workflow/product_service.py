@@ -6,6 +6,7 @@ import re
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from oii.times import iso8601
@@ -19,7 +20,8 @@ MIME_JSON='application/json'
 # eventually the session cofiguration should
 # go in its own class.
 #SQLITE_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-SQLITE_URL='sqlite:///product_service_test.db'
+#SQLITE_URL='sqlite:///product_service_test.db'
+SQLITE_URL='sqlite://'
 
 from sqlalchemy.pool import StaticPool
 dbengine = create_engine(SQLITE_URL,
@@ -72,6 +74,17 @@ def product2dict(product):
 def product2json(product):
     return json.dumps(product2dict(product))
 
+############ ORM utils ################
+def do_create(pid,state='available'):
+    p = Product(state=state, pid=pid)
+    session.add(p)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        abort(500)
+    return p
+
 ############# ENDPOINTS ##################
 
 # create an product in a given initial state
@@ -80,9 +93,7 @@ def product2json(product):
 @app.route('/create/<path:pid>',methods=['GET','POST'])
 def create(pid):
     state = request.form.get('state',default='available')
-    p = Product(state=state, pid=pid)
-    session.add(p)
-    session.commit()
+    p = do_create(pid, state)
     return Response(product2json(p), mimetype=MIME_JSON)
 
 # change the state of an object, and record the type of
@@ -113,10 +124,11 @@ def depend(down_pid):
     except KeyError:
         abort(400)
     role = request.form.get('role',default='any')
-    try:
-        dp = session.query(Product).filter(Product.pid==down_pid).first()
-        up = session.query(Product).filter(Product.pid==up_pid).first()
-    except:
+    dp = session.query(Product).filter(Product.pid==down_pid).first()
+    if dp is None:
+        dp = do_create(down_pid,'waiting')
+    up = session.query(Product).filter(Product.pid==up_pid).first()
+    if up is None:
         abort(404)
     Products(session).add_dep(dp, up, role)
     session.commit()

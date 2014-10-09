@@ -38,9 +38,9 @@ def api(url):
 
 P = {}
 requests.get(api('/create/%s' % pid)) # raw is available
-p_lids = list(R.wf.products(pid))
-for p_lid in [s['product'] for s in p_lids]:
-    requests.post(api('/create/%s' % p_lid),data=dict(state='waiting'))
+#p_lids = list(R.wf.products(pid))
+#for p_lid in [s['product'] for s in p_lids]:
+#    requests.post(api('/create/%s' % p_lid),data=dict(state='waiting'))
 
 for dep in R.wf.deps(pid):
     dp, up, r = dep['product'], dep['upstream_product'], dep['role']
