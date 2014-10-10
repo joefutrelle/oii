@@ -10,8 +10,8 @@ resolver_xml = """
 <namespace name="wf">
   <rule name="pid" uses="pid" distinct="pid lid product extension">
     <var name="reid">[a-zA-Z][a-zA-Z0-9]*</var>
-    <match var="pid" pattern="([^_.]+)(_(${reid}))?(.(${reid}))?"
-	   groups="lid - product - extension"/>
+    <match var="pid" pattern="([^_.]+)(?:_(${reid}))?(?:\.(${reid}))?"
+	   groups="lid product extension"/>
   </rule>
   <rule name="deps" uses="pid" distinct="pid product upstream_product role">
     <invoke rule="wf.pid" using="pid" distinct="pid lid"/>
