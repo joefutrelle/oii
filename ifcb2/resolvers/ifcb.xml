@@ -119,13 +119,8 @@
     <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
       <var name="extension">hdr</var>
       <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="hdr_path"/>
-      <all>
-	<var name="extension">
-	  <val>adc</val>
-	  <val>adc.mod</val>
-	</var>
-	<invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
-      </all>
+      <var name="extension">adc</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
       <var name="extension">roi</var>
       <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="roi_path"/>
     </rule>
