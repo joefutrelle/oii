@@ -3,6 +3,7 @@ import numpy as np
 from oii.ifcb2.formats.adc import TRIGGER, LEFT, BOTTOM, WIDTH, HEIGHT
 
 STITCHED='stitched'
+PAIR='pair'
 
 def overlaps(t1, t2):
     if t1[TRIGGER] == t2[TRIGGER]:
@@ -36,6 +37,7 @@ def list_stitched_targets(targets):
     targets = [t.copy() for t in targets] # consume iterator non-destructively
     Bs = []
     for a,b in find_pairs(targets):
+        a[PAIR] = (a.copy(), b)
         (a[LEFT], a[BOTTOM], a[WIDTH], a[HEIGHT]) = stitched_box([a,b])
         a[STITCHED] = 1
         b[STITCHED] = 0
@@ -60,6 +62,5 @@ def stitch_raw(targets,images,box=None,background=0):
         ry = roi[BOTTOM] - y
         rw = rx + roi[WIDTH]
         rh = ry + roi[HEIGHT]
-        print s[rx:rw,ry:rh].shape, image.shape
         s[rx:rw,ry:rh] = image
     return s
