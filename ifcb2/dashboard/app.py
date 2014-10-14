@@ -45,7 +45,7 @@ from oii.ifcb2.accession import fast_accession
 # keys
 from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
-from oii.ifcb2.stitching import STITCHED
+from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 
 # constants
 
@@ -422,8 +422,8 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
         (w,h) = t.size
         return 0 - (w * h)
     adc = Adc(adc_path, schema_version)
-    # using read_target means we don't stitch. this is simply for performance.
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
+    stitched_targets = list_stitched_targets(get_targets(adc, bin_pid))
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in stitched_targets]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -478,9 +478,15 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     with open(roi_path,'rb') as roi_file:
         for tile in layout:
             target = tile.image # in mosaic API, the record is called 'image'
-            # FIXME 1. replace PIL 2. use fast stitching
-            image = PIL.Image.fromarray(read_target_image(target, roi_path))
-            image_layout.append(Tile(image, tile.size, tile.position))
+            # FIXME 1. replace PIL
+            if PAIR in target:
+                (a,b) = target[PAIR]
+                a_image = read_target_image(a, file=roi_file)
+                b_image = read_target_image(b, file=roi_file)
+                image = stitch_raw((a,b),(a_image,b_image))
+            else:
+                image = read_target_image(target, file=roi_file)
+            image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
     #pil_format = filename2format('foo.%s' % extension)
