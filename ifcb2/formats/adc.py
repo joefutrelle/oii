@@ -46,3 +46,12 @@ class Adc(object):
         gt_fn = get_resolver().ifcb.adc.get_target
         target = next(gt_fn(adc_file=self.adc_file, schema_version=self.schema_version, target=targetNumber),None)
         return self._cast_target(target)
+    def get_some_targets(self, offset=1, limit=1):
+        offset = int(offset)
+        # FIXME optimize
+        targets = []
+        for target_number in range(offset, offset+limit):
+            target = self.get_target(target_number)
+            if target is not None:
+                targets.append(target)
+        return targets

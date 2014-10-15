@@ -120,13 +120,19 @@ def get_data_roots(ts_label, product_type='raw'):
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
 
-def get_targets(adc, bin_pid):
-    # unstitched for now
+def get_unstitched_targets(adc, bin_pid):
     us_targets = add_pids(adc.get_targets(),bin_pid)
     for us_target in us_targets:
         # claim all are unstitched
         us_target[STITCHED] = False
         yield us_target
+
+def get_targets(adc, bin_pid, stitched=True):
+    us_targets = list(get_unstitched_targets(adc, bin_pid))
+    if stitched:
+        return list_stitched_targets(us_targets)
+    else:
+        return us_targets
 
 @memoize(ttl=30,key=lambda args: frozenset(args[0].items()))
 def get_fileset(parsed):
@@ -303,6 +309,23 @@ def accession(ts_label=None):
 
 ### bins, targets, and products ###
 
+def get_target_metadata(target):
+    """given target metadata, clean it up"""
+    del target[PAIR]
+    return target
+
+def get_target_image(target, path=None, file=None, raw_stitch=True):
+    if PAIR in target:
+        (a,b) = target[PAIR]
+        a_image = read_target_image(a, path=path, file=file)
+        b_image = read_target_image(b, path=path, file=file)
+        if raw_stitch:
+            return stitch_raw((a,b),(a_image,b_image))
+        else:
+            return stitch_raw((a,b),(a_image,b_image)) # FIXME full stitch
+    else:
+        return read_target_image(target, path=path, file=file)
+
 @app.route('/<path:pid>')
 def hello_world(pid):
     try:
@@ -331,8 +354,13 @@ def hello_world(pid):
     timestamp = get_timestamp(parsed)
     if 'target' in parsed:
         canonical_bin_pid = canonicalize(url_root, time_series, bin_lid)
-        target_no = parsed['target']
-        target = adc.get_target(target_no)
+        target_no = int(parsed['target'])
+        # pull three targets, then find any stitched pair
+        targets = adc.get_some_targets(target_no-1, 3)
+        targets = list_stitched_targets(targets)
+        for t in targets:
+            if t[TARGET_NUMBER] == target_no:
+                target = t
         add_pid(target, canonical_bin_pid)
         if extension == 'json':
             return Response(json.dumps(target),mimetype=MIME_JSON)
@@ -340,13 +368,15 @@ def hello_world(pid):
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
             if product=='raw':
-                img = read_target_image(target, roi_path)
+                img = get_target_image(target, roi_path)
                 return Response(as_bytes(img,mimetype),mimetype=mimetype)
             if product=='blob':
                 return serve_blob_image(parsed, mimetype)
             if product=='blob_outline':
-                img = read_target_image(target, roi_path)
+                img = get_target_image(target, roi_path)
                 return serve_blob_image(parsed, mimetype, outline=True, target_img=img)
+        # not an image, so remove stitching information from metadata
+        target = get_target_metadata(target)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
@@ -422,8 +452,7 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
         (w,h) = t.size
         return 0 - (w * h)
     adc = Adc(adc_path, schema_version)
-    stitched_targets = list_stitched_targets(get_targets(adc, bin_pid))
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in stitched_targets]
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -479,13 +508,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         for tile in layout:
             target = tile.image # in mosaic API, the record is called 'image'
             # FIXME 1. replace PIL
-            if PAIR in target:
-                (a,b) = target[PAIR]
-                a_image = read_target_image(a, file=roi_file)
-                b_image = read_target_image(b, file=roi_file)
-                image = stitch_raw((a,b),(a_image,b_image))
-            else:
-                image = read_target_image(target, file=roi_file)
+            image = get_target_image(target, file=roi_file, raw_stitch=True)
             image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))

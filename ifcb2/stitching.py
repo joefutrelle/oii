@@ -3,7 +3,7 @@ import numpy as np
 from oii.ifcb2.formats.adc import TRIGGER, LEFT, BOTTOM, WIDTH, HEIGHT
 
 STITCHED='stitched'
-PAIR='pair'
+PAIR='_pair'
 
 def overlaps(t1, t2):
     if t1[TRIGGER] == t2[TRIGGER]:
