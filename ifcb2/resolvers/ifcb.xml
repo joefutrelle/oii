@@ -14,6 +14,7 @@
     <!-- integer (zero-padding allowed) -->
     <var name="re.int">([0-9]+)</var>
   </rule>
+  <!-- permanent identifier (PID) parsing -->
   <rule name="pid" uses="pid">
     <!-- separate namespace part from rest of pid -->
     <match var="pid" pattern="(.*/)?(.*)" groups="namespace suffix"/>
@@ -56,6 +57,141 @@
       </match>
     </all>
   </rule>
+  <namespace name="files">
+    <!-- given a parsed pid including extension, and a root directory,
+	 return all possible candidate paths -->
+    <rule name="file_path">
+      <!-- pass in "filename" -->
+      <!-- first, try schema-independent flat structure -->
+      <var name="file_path">${root}/${filename}</var>
+      <!-- now compute schema-dependent day directory names -->
+      <first>
+	<test var="schema_version" eq="v1">
+	  <var name="day_dir">IFCB${instrument}_${yearday}</var>
+	</test>
+	<test var="schema_version" eq="v2">
+	  <var name="day_dir">
+	    <!-- 2014 and on directory structure -->
+	    <val>D${yearday}</val>
+	    <!-- pre-2014 directory structure -->
+	    <val>D${year}/D${yearday}</val>
+	  </var>
+	</test>
+      </first>
+      <var name="file_path">
+	<!-- 2014 and on directory structure -->
+	<val>${root}/${year}/${day_dir}/${filename}</val>
+	<!-- pre-2014 directory structure -->
+	<val>${root}/${day_dir}/${filename}</val>
+      </var>
+    </rule>
+    <!-- given a parsed pid and root directory, find a raw file -->
+    <rule name="find_raw_file" nth="1">
+      <var name="filename">${bin_lid}.${extension}</var>
+      <invoke rule="ifcb.files.file_path"/>
+      <path match="${file_path}"/>
+    </rule>
+    <!-- given a parsed pid and root directory, find a raw fileset -->
+    <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
+      <var name="extension">hdr</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="file_path" as="hdr_path"/>
+      <var name="extension">adc</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="file_path" as="adc_path"/>
+      <var name="extension">roi</var>
+      <invoke rule="ifcb.files.find_raw_file" rename="file_path" as="roi_path"/>
+    </rule>
+    <rule name="list_raw_filesets" uses="root">
+      <!-- strategy: list hdr files, then look for corresponding adc and roi files -->
+      <any>
+	<var name="data_dir">${root}</var>
+	<path var="data_dir" match="${root}/IFCB*"/>
+	<path var="year_dir" match="${root}/D*">
+	  <path var="data_dir" match="${year_dir}/D*"/>
+	</path>
+      </any>
+      <path var="hdr_path" match="${data_dir}/*.hdr"/>
+      <match var="hdr_path" pattern="(.*/(.*))\.hdr$" groups="basename lid"/>
+      <!-- look for other files in the same dir -->
+      <path var="roi_path" match="${basename}.roi"/>
+      <path var="adc_path" match="${basename}.adc"/>
+    </rule>
+    <!-- products -->
+    <rule name="product_path">
+      <!-- generate appropriate product filename -->
+      <first>
+	<test var="product" eq="blobs">
+	  <var name="filename">${bin_lid}_blobs_v2.zip</var>
+	</test>
+	<test var="product" eq="features">
+	  <var name="filename">${bin_lid}_fea_v2.csv</var>
+	</test>
+      </first>
+      <any>
+	<!-- use the >=2014 standard directory patterns -->
+	<invoke rule="ifcb.files.file_path"/>
+	<!-- if they don't work, try obsolete directory structures -->
+	<first>
+	  <test var="product" eq="blobs">
+	    <var name="file_path">${root}/${year}/${yearday}/${filename}</var>
+	  </test>
+	  <test var="product" eq="features">
+	    <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
+	  </test>
+	</first>
+      </any>
+      <log>candidate pathname = ${file_path}</log>
+    </rule>
+    <rule name="find_product" nth="1">
+      <invoke rule="ifcb.files.product_path" rename="file_path" as="product_path"/>
+      <path match="${product_path}"/>
+    </rule>
+    <!-- detecting data directories -->
+    <rule name="validate_data_dir" uses="root product" nth="1">
+      <!-- FIXME this needs updating for 2014 directory layout -->
+      <first>
+	<!-- raw filesets -->
+	<test var="product" eq="raw">
+	  <!-- try each extension -->
+	  <split group="extension" value="adc hdr roi"/>
+	  <var name="name_glob">*.${extension}</var>
+	  <!-- try flat, v1, and v2 directory layouts -->
+	  <!-- FIXME try 2014 layout -->
+	  <any>
+	    <path match="${root}/${name_glob}"/>
+	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
+	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
+	  </any>
+	</test>
+	<!-- blobs -->
+	<test var="product" eq="blobs">
+	  <var name="name_glob">*_blobs_v*.zip</var>
+	  <!-- try the yyyy/yyyymmdd directory layout -->
+	  <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
+	</test>
+	<test var="product" eq="features">
+	  <var name="name_glob">*_fea_v*.csv</var>
+	  <!-- try the featuresyyyy_vn directory layout -->
+	  <path match="${root}/features[0-9]*_v[0-9]*/${name_glob}"/>
+	</test>
+      </first>
+    </rule>
+    <rule name="find_data_dirs" uses="root" distinct="directory product">
+      <!-- identify all data directories including their product type -->
+      <any>
+	<all include="directory product" nth="1">
+	  <!-- use the validate_data_dir on each product type -->
+	  <split group="product" value="raw blobs features"/>
+	  <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
+	</all>
+	<!-- recursively descend into any subdirectories -->
+	<all>
+	  <path var="root" match="${root}/*/"/>
+	  <invoke rule="ifcb.files.find_data_dirs" include="directory product"/>
+	</all>
+      </any>
+    </rule>
+  </namespace>
+  <!-- ADC parsing -->
   <namespace name="adc">
     <!-- return the column scheme for a given schema -->
     <rule name="schema" uses="schema_version">
@@ -91,114 +227,6 @@
       <invoke rule="ifcb.adc.parse" using="adc_file schema_version" retain=" "/>
       <test var="height" gt="0"/>
       <test var="width" gt="0"/>
-    </rule>
-  </namespace>
-  <namespace name="files">
-    <!-- given a parsed pid including extension, and a root directory,
-	 return all possible candidate paths -->
-    <rule name="raw_path">
-      <var name="filename">${bin_lid}.${extension}</var>
-      <any>
-	<!-- schema-dependent directory structures -->
-	<first>
-	  <test var="schema_version" eq="v1">
-	    <var name="raw_path">${root}/IFCB${instrument}_${yearday}/${filename}</var>
-	  </test>
-	  <test var="schema_version" eq="v2">
-	    <var name="raw_path">${root}/D${year}/D${yearday}/${filename}</var>
-	  </test>
-	</first>
-	<!-- alternately, a flat directory structure -->
-	<var name="raw_path">${root}/${filename}</var>
-      </any>
-    </rule>
-    <rule name="find_raw_file" nth="1">
-      <invoke rule="ifcb.files.raw_path"/>
-      <path match="${raw_path}"/>
-    </rule>
-    <rule name="find_raw_fileset" include="hdr_path adc_path roi_path">
-      <var name="extension">hdr</var>
-      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="hdr_path"/>
-      <var name="extension">adc</var>
-      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="adc_path"/>
-      <var name="extension">roi</var>
-      <invoke rule="ifcb.files.find_raw_file" rename="raw_path" as="roi_path"/>
-    </rule>
-    <rule name="list_raw_filesets" uses="root">
-      <!-- strategy: list hdr files, then look for corresponding adc and roi files -->
-      <any>
-	<var name="data_dir">${root}</var>
-	<path var="data_dir" match="${root}/IFCB*"/>
-	<path var="year_dir" match="${root}/D*">
-	  <path var="data_dir" match="${year_dir}/D*"/>
-	</path>
-      </any>
-      <path var="hdr_path" match="${data_dir}/*.hdr"/>
-      <match var="hdr_path" pattern="(.*/(.*))\.hdr$" groups="basename lid"/>
-      <!-- look for other files in the same dir -->
-      <path var="roi_path" match="${basename}.roi"/>
-      <any>
-	<path var="adc_path" match="${basename}.adc"/>
-	<!-- FIXME needs to also work with .adc.mod files -->
-      </any>
-    </rule>
-    <!-- products -->
-    <rule name="product_path">
-      <first>
-	<test var="product" eq="blobs">
-	  <var name="product_path">${root}/${year}/${yearday}/${bin_lid}_blobs_v2.zip</var>
-	</test>
-	<test var="product" eq="features">
-	  <var name="product_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
-	</test>
-      </first>
-    </rule>
-    <rule name="find_product">
-      <invoke rule="ifcb.files.product_path"/>
-      <path match="${product_path}"/>
-    </rule>
-    <!-- detecting data directories -->
-    <rule name="validate_data_dir" uses="root product" nth="1">
-      <first>
-	<!-- raw filesets -->
-	<test var="product" eq="raw">
-	  <!-- try each extension -->
-	  <split group="extension" value="adc hdr roi"/>
-	  <var name="name_glob">*.${extension}</var>
-	  <!-- try flat, v1, and v2 directory layouts -->
-	  <any>
-	    <path match="${root}/${name_glob}"/>
-	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
-	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
-	  </any>
-	</test>
-	<!-- blobs -->
-	<test var="product" eq="blobs">
-	  <var name="name_glob">*_blobs_v*.zip</var>
-	  <!-- try the yyyy/yyyymmdd directory layout -->
-	  <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
-	</test>
-	<test var="product" eq="features">
-	  <var name="name_glob">*_fea_v*.csv</var>
-	  <!-- try the featuresyyyy_vn directory layout -->
-	  <path match="${root}/features[0-9]*_v[0-9]*/${name_glob}"/>
-	</test>
-      </first>
-    </rule>
-    <rule name="find_data_dirs" uses="root" distinct="directory product">
-      <!-- identify all data directories including their product type -->
-      <any>
-	<all include="directory product" nth="1">
-	  <!-- use the validate_data_dir on each product type -->
-	  <split group="product" value="raw blobs features"/>
-	  <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
-	</all>
-	<!-- recursively descend into any subdirectories -->
-	<all>
-	  <path var="root" match="${root}/*/"/>
-	  <invoke rule="ifcb.files.find_data_dirs" include="directory product"/>
-	</all>
-      </any>
     </rule>
   </namespace>
 </namespace>
