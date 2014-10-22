@@ -139,7 +139,6 @@
 	  </test>
 	</first>
       </any>
-      <log>candidate pathname = ${file_path}</log>
     </rule>
     <rule name="find_product" nth="1">
       <invoke rule="ifcb.files.product_path" rename="file_path" as="product_path"/>
