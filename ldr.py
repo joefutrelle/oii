@@ -381,11 +381,11 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
                     yield s
             else:
                 for sub_val_expr in sub_val_exprs:
-                    var_val = ScopedExpr(sub_val_expr).text
+                    var_val = ScopedExpr(sub_val_expr, bindings).text
                     for s in rest(expr,{var_name:var_val}):
                         yield s
         except UnboundVariable, uv:
-            logging.warn('var: unbound variable in template "%s": %s' % (expr.raw_text, uv))
+            logging.warn('var %s: unbound variable in template "%s": %s' % (var_name, expr.raw_text, uv))
             return # miss
     # The vars expression is the plural of var, for multiple assignment
     # with any regex as a delimiter between variable values.
