@@ -311,7 +311,10 @@ def accession(ts_label=None):
 
 def get_target_metadata(target):
     """given target metadata, clean it up"""
-    del target[PAIR]
+    try:
+        del target[PAIR]
+    except KeyError:
+        pass # it's OK, this target isn't stitched
     return target
 
 def get_target_image(target, path=None, file=None, raw_stitch=True):
