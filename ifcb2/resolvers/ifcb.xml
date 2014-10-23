@@ -105,8 +105,11 @@
       <any>
 	<var name="data_dir">${root}</var>
 	<path var="data_dir" match="${root}/IFCB*"/>
-	<path var="year_dir" match="${root}/D*">
-	  <path var="data_dir" match="${year_dir}/D*"/>
+	<path var="year_dir" match="${root}/[0-9]*">
+	  <any>
+	    <path var="data_dir" match="${year_dir}/D*"/>
+	    <path var="data_dir" match="${year_dir}/IFCB*"/>
+	  </any>
 	</path>
       </any>
       <path var="hdr_path" match="${data_dir}/*.hdr"/>
@@ -146,7 +149,6 @@
     </rule>
     <!-- detecting data directories -->
     <rule name="validate_data_dir" uses="root product" nth="1">
-      <!-- FIXME this needs updating for 2014 directory layout -->
       <first>
 	<!-- raw filesets -->
 	<test var="product" eq="raw">
@@ -156,6 +158,8 @@
 	  <!-- try flat, v1, and v2 directory layouts -->
 	  <!-- FIXME try 2014 layout -->
 	  <any>
+	    <path match="${root}/[0-9]*/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/>
+	    <path match="${root}/[0-9]*/D[0-9]*/${name_glob}"/>
 	    <path match="${root}/${name_glob}"/>
 	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
 	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
