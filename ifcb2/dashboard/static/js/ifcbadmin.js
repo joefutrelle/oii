@@ -200,12 +200,16 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
     }
 }]);
 
+// instrument controller
+ifcbAdmin.controller('InstrumentCtrl', ['$scope', function ($scope) {
+    $scope.instruments = [];
+}]);
+
 // my account controller
 ifcbAdmin.controller('AccountCtrl', ['$scope', function ($scope) {
 
     $scope.myaccount = [];
 }]);
-
 
 // define application routes
 ifcbAdmin.config(['$routeProvider', function($routeProvider) {
@@ -222,6 +226,10 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             controller: 'AccountCtrl',
             templateUrl: 'views/MyAccount.html'
             }).
+	when('/instruments', {
+	    controller: 'InstrumentCtrl',
+	    templateUrl: 'views/Instruments.html'
+	    }).
         otherwise({
             redirectTo: '/time_series'
         });
