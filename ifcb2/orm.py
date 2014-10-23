@@ -76,6 +76,17 @@ class File(Base):
     def __repr__(self):
         return '<File %s %d %s>' % (self.filename, self.length, self.sha1)
 
+class Instrument(Base):
+    __tablename__ = 'instruments'
+
+    id = Column(Integer,primary_key=True)
+    name = Column(String,unique=True)
+    data_path = Column(String)
+    last_polled = Column(DateTime(timezone=True))
+    time_series_id = Column(Integer, ForeignKey('time_series.id'))
+
+    time_series = relationship('TimeSeries')
+
 class User(Base):
     __tablename__ = 'users'
 
