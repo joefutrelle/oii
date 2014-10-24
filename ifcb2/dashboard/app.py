@@ -241,6 +241,18 @@ def volume(ts_label):
 
 ### feed API ###
 
+@app.route('/<ts_label>/api/feed/elapsed')
+@app.route('/<ts_label>/api/feed/elapsed/<timestamp>')
+def elapsed(ts_label,timestamp=None):
+    if timestamp is not None:
+        timestamp = struct_time2utcdatetime(parse_date_param(timestamp))
+    with Feed(session, ts_label) as feed:
+        try:
+            delta = feed.elapsed(timestamp=timestamp)
+            return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
+        except IndexError:
+            abort(404)
+
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
     ts = struct_time2utcdatetime(parse_date_param(timestamp))

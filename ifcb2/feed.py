@@ -28,9 +28,11 @@ class Feed(object):
             Bin.sample_time >= start_time, Bin.sample_time <= end_time,\
             ~Bin.skip))
     def time_range(self, start_time=None, end_time=None):
+        """all bins in a given time range"""
         return self._ts_query(start_time, end_time).\
             order_by(Bin.sample_time)
     def daily_data_volume(self, start_time=None, end_time=None):
+        """data volume in GB per day over the given time range"""
         start_time, end_time = _time_range_params(start_time, end_time)
         return self.session.query(cast(func.sum(File.length) / 1073741824.0, Numeric(6,2)), func.count(File.id) / 3, func.DATE(Bin.sample_time)).\
             filter(and_(Bin.ts_label==self.ts_label, Bin.sample_time >= start_time, Bin.sample_time <= end_time, ~Bin.skip)).\
@@ -38,7 +40,7 @@ class Feed(object):
             group_by(func.DATE(Bin.sample_time)).\
             order_by(func.DATE(Bin.sample_time))
     def nearest(self,n=1,timestamp=None):
-        """timestamp must be a utc datetime, defaults to now"""
+        """nearest bin. timestamp must be a utc datetime, defaults to now"""
         if timestamp is None:
             timestamp = utcdtnow()
         n_before = self._ts_query(end_time=timestamp).\
@@ -52,12 +54,14 @@ class Feed(object):
         cand = list(n_before) + list(n_after)
         return sorted(cand, key=lambda b: timestamp - datetime2utcdatetime(b.sample_time))[:n]
     def latest(self,n=25,timestamp=None):
+        """most recent n bins from the given timestamp (defaults to now)"""
         if timestamp is None:
             timestamp = utcdtnow()
         return self._ts_query(end_time=timestamp).\
             order_by(desc(Bin.sample_time)).\
             limit(n)
     def after(self,bin_lid,n=1):
+        """n bins after a given one"""
         return self.session.query(Bin).\
             filter(Bin.ts_label==self.ts_label).\
             filter(~Bin.skip).\
@@ -67,6 +71,7 @@ class Feed(object):
             order_by(Bin.sample_time).\
             limit(n)
     def before(self,bin_lid,n=1):
+        """n bins before a given one"""
         return self.session.query(Bin).\
             filter(Bin.ts_label==self.ts_label).\
             filter(~Bin.skip).\
@@ -75,5 +80,13 @@ class Feed(object):
                    as_scalar()).\
             order_by(desc(Bin.sample_time)).\
             limit(n)
+    ## metrics
+    def elapsed(self,timestamp=None):
+        """time elapsed since latest bin at the given time (default now) (utc datetime).
+        returns a timedelta"""
+        if timestamp is None:
+            timestamp = utcdtnow()
+        latest = self.latest(1,timestamp)[0]
+        return timestamp - latest.sample_time
                 
 
