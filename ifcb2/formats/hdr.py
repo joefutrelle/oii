@@ -30,7 +30,14 @@ def parse_hdr(lines):
     if lines[0] == 'Imaging FlowCytobot Acquisition Software version 2.0; May 2010':
         props = { CONTEXT: [lines[0]] } # FIXME parse
     elif re.match(r'^softwareVersion:',lines[0]):
-        props = { CONTEXT: [lines[0]] } # FIXME parse
+        props = { CONTEXT: [lines[0]] }
+        for line in lines[1:]:
+            try:
+                k, v = re.split(r': ',line)
+                props[k] = v
+            except ValueError:
+                # not valid RFC 822. Ignore.
+                pass
     else:
         # "context" is what the text on lines 2-4 is called in the header file
         props = { CONTEXT: [line.strip('"') for line in lines[:-2]] }
@@ -39,8 +46,13 @@ def parse_hdr(lines):
             columns = re.split(' +',re.sub('"','',lines[-2])) # columns of metadata in CSV format
             values = re.split(' +',re.sub(r'[",]',' ',lines[-1]).strip()) # values of those columns in CSV format
             # for each column take the string and cast it to the schema's column type
-            for (column, (name, cast), value) in zip(HDR_COLUMNS, HDR_SCHEMA, values):
-                props[name] = cast(value)
+            for (column, (name, _), value) in zip(HDR_COLUMNS, HDR_SCHEMA, values):
+                if name in props:
+                    props[name] = value
+    # cast any properties we know about in the schema
+    for name, cast in HDR_SCHEMA:
+        if name in props:
+            props[name] = cast(props[name])
     return props
 
 def parse_hdr_file(path):

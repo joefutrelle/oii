@@ -1,3 +1,4 @@
+import re
 import os
 from datetime import datetime
 
@@ -5,6 +6,44 @@ from oii.times import text2utcdatetime
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Bin, File
+
+from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
+
+# variables from IFCB resolver
+HDR_PATH='hdr_path'
+ADC_PATH='adc_path'
+ROI_PATH='roi_path'
+
+def compute_fixity(fs, fast=False):
+    """fs - fileset"""
+    paths = [fs[HDR_PATH], fs[ADC_PATH], fs[ROI_PATH]]
+    filetypes = ['hdr','adc','roi']
+    for path,filetype in zip(paths,filetypes):
+        now = datetime.now()
+        length = os.stat(path).st_size
+        name = os.path.basename(path)
+        # skip checksumming, because it's slow
+        if fast:
+            checksum = '(placeholder)'
+        else:
+            checksum = sha1_file(path)
+        yield File(local_path=path, filename=name, length=length, filetype=filetype, sha1=checksum, fix_time=now)
+
+def compute_bin_metrics(fs, b):
+    """fs - fileset, b - bin"""
+    # hdr - temp / humidity
+    hdr_path = fs[HDR_PATH]
+    parsed_hdr = parse_hdr_file(hdr_path)
+    b.humidity = parsed_hdr.get(HUMIDITY)
+    b.temperature = parsed_hdr.get(TEMPERATURE)
+    # adc - triggers, duration
+    adc_path = fs[ADC_PATH]
+    with open(adc_path) as adc:
+        for line in adc:
+            pass
+    triggers, seconds = re.split(r',',line)[:2]
+    b.triggers = int(triggers)
+    b.duration = float(seconds)
 
 def fast_accession(session, ts_label, root):
     """accession without checksumming or integrity checks"""
@@ -22,20 +61,15 @@ def fast_accession(session, ts_label, root):
         if existing_bin:
             continue
         n_new += 1
+        if n_new % 1000 == 0: # periodically commit
+            session.commit()
         ts = text2utcdatetime(parsed['timestamp'], parsed['timestamp_format'])
         b = Bin(ts_label=ts_label, lid=lid, sample_time=ts)
         session.add(b)
         # now make fixity entries
-        now = datetime.now()
-        paths = [fs['hdr_path'], fs['adc_path'], fs['roi_path']]
-        filetypes = ['hdr','adc','roi']
-        for path,filetype in zip(paths,filetypes):
-            length = os.stat(path).st_size
-            name = os.path.basename(path)
-            # skip checksumming, because it's slow
-            #checksum = sha1_file(path)
-            checksum = '(placeholder)'
-            f = File(local_path=path, filename=name, length=length, filetype=filetype, sha1=checksum, fix_time=now)
+        for f in compute_fixity(fs, fast=True):
             b.files.append(f)
+        # now compute bin metrics
+        compute_bin_metrics(fs, b)
     session.commit()
     return (n_new, n_total)

@@ -5,12 +5,11 @@ import time
 
 import pytz
 
-import sqlalchemy as sqla
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, ForeignKey
-from sqlalchemy.orm import sessionmaker, relationship, backref
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import Column, ForeignKey, and_, or_, desc
+from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric
 from sqlalchemy.sql.expression import func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship, backref
 
 from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
@@ -55,6 +54,11 @@ class Bin(Base):
     lid = Column(String, unique=True)
     sample_time = Column(DateTime(timezone=True))
     skip = Column(Boolean, default=False)
+
+    triggers = Column(Integer)
+    duration = Column(Numeric)
+    temperature = Column(Numeric)
+    humidity = Column(Numeric)
 
     def __repr__(self):
         return '<Bin %s:%s @ %s>' % (self.ts_label, self.lid, self.sample_time)
