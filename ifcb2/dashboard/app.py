@@ -138,8 +138,6 @@ def get_targets(adc, bin_pid, stitched=True):
 def get_fileset(parsed):
     time_series = parsed['ts_label']
     data_roots = list(get_data_roots(time_series))
-    schema_version = parsed[SCHEMA_VERSION]
-    adc_cols = parsed[ADC_COLS].split(' ')
     return parsed_pid2fileset(parsed,data_roots)
 
 @memoize(ttl=30,key=lambda args: frozenset(args[0].items() + [args[1]]))
@@ -478,6 +476,7 @@ def hello_world(pid):
         if product != 'short':
             targets = get_targets(adc, canonical_pid)
         if extension=='csv':
+            adc_cols = parsed[ADC_COLS].split(' ')
             lines = targets2csv(targets,adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
