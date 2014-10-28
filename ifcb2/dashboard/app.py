@@ -471,6 +471,9 @@ def hello_world(pid):
             return serve_blob_bin(parsed)
         if product=='features':
             return serve_features_bin(parsed)
+        if product=='xy': # a view, more than a product
+            tmpl = dict(pid=canonical_pid, x_axis='left', y_axis='bottom', static=STATIC)
+            return template_response('scatter.html',**tmpl)
         # gonna need targets unless heft is medium or below
         targets = []
         if product != 'short':

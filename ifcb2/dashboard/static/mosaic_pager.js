@@ -32,8 +32,9 @@
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
 		    .append('<div class="imagepager_paging">page <span class="imagepager_page_number"></span>, showing <span class="imagepager_rois_shown">?</span> of <span class="imagepager_rois_total">?</span> target(s)</div>')
 		    .append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
-		    .append(' (<span class="imagepager_date timeago"></span>)')
-		    .append('<span> (<a href="'+pid+'.adc">ADC</a></span>')
+		    .append(' (<span class="imagepager_date timeago"></span>)<br>')
+		    .append('<span>View: <a href="'+pid+'_xy.html">x/y</a></span> ')
+		    .append('<span>Download: <a href="'+pid+'.adc">ADC</a></span>')
 		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
 		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')
 		    .append('<span> <a href="'+pid+'.csv">CSV</a></span>')
@@ -42,7 +43,7 @@
 		    .append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
 		    .append('<span> <a href="'+pid+'_blob.zip">blobs ZIP</a></span>')
 		    .append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
-		    .append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a>)</span>')
+		    .append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a></span>')
 		    .find('span').addClass('bin_label').end()
 		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
