@@ -88,5 +88,3 @@ class Feed(object):
             timestamp = utcdtnow()
         latest = self.latest(1,timestamp)[0]
         return timestamp - latest.sample_time
-                
-

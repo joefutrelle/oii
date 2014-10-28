@@ -63,6 +63,13 @@ class Bin(Base):
     def __repr__(self):
         return '<Bin %s:%s @ %s>' % (self.ts_label, self.lid, self.sample_time)
 
+    @property
+    def trigger_rate(self):
+        if self.duration is None:
+            return 0
+        else:
+            return self.triggers / self.duration
+
 class File(Base):
     __tablename__ = 'fixity'
 

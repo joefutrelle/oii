@@ -226,8 +226,13 @@ def serve_timeseries(ts_label=None, pid=None):
     template['base_url'] = request.url_root
     return template_response('timeseries.html', **template)
 
+### feed / metrics API ###
+
+## metrics ##
+
 ### data volume by day ###
-@app.route('/<ts_label>/api/volume')
+@app.route('/<ts_label>/api/volume') # deprecated
+@app.route('/<ts_label>/api/feed/volume')
 def volume(ts_label):
     dv = []
     with Feed(session, ts_label) as feed:
@@ -239,8 +244,13 @@ def volume(ts_label):
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
 
-### feed API ###
+def canonicalize_bin(ts_label, b):
+    return {
+        'pid': canonicalize(request.url_root, ts_label, b.lid),
+        'date': iso8601(b.sample_time.timetuple())
+    }
 
+# elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
 @app.route('/<ts_label>/api/feed/elapsed/<timestamp>')
 def elapsed(ts_label,timestamp=None):
@@ -253,15 +263,32 @@ def elapsed(ts_label,timestamp=None):
         except IndexError:
             abort(404)
 
+@app.route('/<ts_label>/api/feed/trigger_rate')
+@app.route('/<ts_label>/api/feed/trigger_rate/<timestamp>')
+@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>')
+@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>/<timestamp>')
+def trigger_rate(ts_label,timestamp=None,n=1):
+    if timestamp is not None:
+        timestamp = struct_time2utcdatetime(parse_date_param(timestamp))
+    with Feed(session, ts_label) as feed:
+        result = []
+        for b in feed.latest(n,timestamp):
+            r = canonicalize_bin(ts_label, b)
+            r['trigger_rate'] = float(b.trigger_rate)
+            result.append(r)
+    return Response(json.dumps(result), mimetype=MIME_JSON)
+
+### feed ####
+
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
 def nearest(ts_label, timestamp):
     ts = struct_time2utcdatetime(parse_date_param(timestamp))
     with Feed(session, ts_label) as feed:
         for bin in feed.nearest(timestamp=ts):
             break
-    sample_time_str = iso8601(bin.sample_time.timetuple())
-    pid = canonicalize(request.url_root, ts_label, bin.lid)
-    resp = dict(pid=pid, date=sample_time_str)
+    #sample_time_str = iso8601(bin.sample_time.timetuple())
+    #pid = canonicalize(request.url_root, ts_label, bin.lid)
+    resp = canonicalize_bin(ts_label, bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/<after_before>/pid/<path:pid>')
