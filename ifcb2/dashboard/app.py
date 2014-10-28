@@ -263,21 +263,50 @@ def elapsed(ts_label,timestamp=None):
         except IndexError:
             abort(404)
 
-@app.route('/<ts_label>/api/feed/trigger_rate')
-@app.route('/<ts_label>/api/feed/trigger_rate/<timestamp>')
-@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>')
-@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>/<timestamp>')
-def trigger_rate(ts_label,timestamp=None,n=1):
+def ts_metric(ts_label, callback, timestamp=None, n=1):
     if timestamp is not None:
         timestamp = struct_time2utcdatetime(parse_date_param(timestamp))
     with Feed(session, ts_label) as feed:
         result = []
         for b in feed.latest(n,timestamp):
             r = canonicalize_bin(ts_label, b)
-            r['trigger_rate'] = float(b.trigger_rate)
+            r.update(callback(b))
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/feed/trigger_rate')
+@app.route('/<ts_label>/api/feed/trigger_rate/<timestamp>')
+@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>')
+@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>/<timestamp>')
+def trigger_rate(ts_label,timestamp=None,n=1):
+    def callback(b):
+        return {
+            'trigger_rate': float(b.trigger_rate)
+        }
+    return ts_metric(ts_label,callback,timestamp,n)
+
+@app.route('/<ts_label>/api/feed/temperature')
+@app.route('/<ts_label>/api/feed/temperature/<timestamp>')
+@app.route('/<ts_label>/api/feed/temperature/n/<int:n>')
+@app.route('/<ts_label>/api/feed/temperature/n/<int:n>/<timestamp>')
+def temperature(ts_label,timestamp=None,n=1):
+    def callback(b):
+        return {
+            'temperature': float(b.temperature)
+        }
+    return ts_metric(ts_label,callback,timestamp,n)
+
+@app.route('/<ts_label>/api/feed/humidity')
+@app.route('/<ts_label>/api/feed/humidity/<timestamp>')
+@app.route('/<ts_label>/api/feed/humidity/n/<int:n>')
+@app.route('/<ts_label>/api/feed/humidity/n/<int:n>/<timestamp>')
+def humidity(ts_label,timestamp=None,n=1):
+    def callback(b):
+        return {
+            'humidity': float(b.humidity)
+        }
+    return ts_metric(ts_label,callback,timestamp,n)
+    
 ### feed ####
 
 @app.route('/<ts_label>/api/feed/nearest/<timestamp>')
