@@ -9,6 +9,7 @@ from array import array
 from zipfile import ZipFile
 from lxml import html
 from StringIO import StringIO
+from datetime import timedelta
 
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 import flask.ext.sqlalchemy
@@ -22,10 +23,11 @@ import numpy as np
 from skimage.segmentation import find_boundaries
 
 from oii.utils import coalesce, memoize
-from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
+from oii.times import iso8601, parse_date_param, struct_time2utcdatetime, utcdtnow
 from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
 from oii.image.mosaic import Tile
+from oii.webapi.utils import UrlConverter, DatetimeConverter
 
 # FIXME this is used for old PIL-based mosaic compositing API
 from oii.image.pil.utils import filename2format, thumbnail
@@ -66,6 +68,8 @@ session = Session()
 
 STATIC='/static/'
 app = Flask(__name__)
+app.url_map.converters['url'] = UrlConverter
+app.url_map.converters['datetime'] = DatetimeConverter
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -231,10 +235,11 @@ def serve_timeseries(ts_label=None, pid=None):
 ### data volume by day ###
 @app.route('/<ts_label>/api/volume') # deprecated
 @app.route('/<ts_label>/api/feed/volume')
-def volume(ts_label):
+@app.route('/<ts_label>/api/feed/volume/start/<datetime:start>/end/<datetime:end>')
+def volume(ts_label,start=None,end=None):
     dv = []
     with Feed(session, ts_label) as feed:
-        for row in feed.daily_data_volume():
+        for row in feed.daily_data_volume(start,end):
             dv.append({
                 'gb': float(row[0]),
                 'bin_count': row[1],
@@ -250,10 +255,8 @@ def canonicalize_bin(ts_label, b):
 
 # elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
-@app.route('/<ts_label>/api/feed/elapsed/<timestamp>')
+@app.route('/<ts_label>/api/feed/elapsed/<datetime:timestamp>')
 def elapsed(ts_label,timestamp=None):
-    if timestamp is not None:
-        timestamp = struct_time2utcdatetime(parse_date_param(timestamp))
     with Feed(session, ts_label) as feed:
         try:
             delta = feed.elapsed(timestamp=timestamp)
@@ -261,57 +264,64 @@ def elapsed(ts_label,timestamp=None):
         except IndexError:
             abort(404)
 
-def ts_metric(ts_label, callback, timestamp=None, n=1):
-    if timestamp is not None:
-        timestamp = struct_time2utcdatetime(parse_date_param(timestamp))
+def ts_metric(ts_label, callback, start=None, end=None, s=None):
+    if s is None:
+        s = 86400
+    if end is None:
+        end = utcdtnow()
+    if start is None:
+        start = end - timedelta(seconds=s)
     with Feed(session, ts_label) as feed:
         result = []
-        for b in feed.latest(n,timestamp):
+        for b in feed.time_range(start, end):
             r = canonicalize_bin(ts_label, b)
             r.update(callback(b))
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/trigger_rate')
-@app.route('/<ts_label>/api/feed/trigger_rate/<timestamp>')
-@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>')
-@app.route('/<ts_label>/api/feed/trigger_rate/n/<int:n>/<timestamp>')
-def trigger_rate(ts_label,timestamp=None,n=1):
+@app.route('/<ts_label>/api/feed/trigger_rate/last/<int:s>')
+@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/trigger_rate/start/<datetime:start>/end/<datetime:end>')
+def trigger_rate(ts_label,start=None,end=None,s=None):
     def callback(b):
         return {
             'trigger_rate': float(b.trigger_rate)
         }
-    return ts_metric(ts_label,callback,timestamp,n)
+    return ts_metric(ts_label,callback,start,end,s)
 
 @app.route('/<ts_label>/api/feed/temperature')
-@app.route('/<ts_label>/api/feed/temperature/<timestamp>')
-@app.route('/<ts_label>/api/feed/temperature/n/<int:n>')
-@app.route('/<ts_label>/api/feed/temperature/n/<int:n>/<timestamp>')
-def temperature(ts_label,timestamp=None,n=1):
+@app.route('/<ts_label>/api/feed/temperature/last/<int:s>')
+@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/temperature/start/<datetime:start>/end/<datetime:end>')
+def temperature(ts_label,start=None,end=None,s=None):
     def callback(b):
         return {
             'temperature': float(b.temperature)
         }
-    return ts_metric(ts_label,callback,timestamp,n)
+    return ts_metric(ts_label,callback,start,end,s)
 
 @app.route('/<ts_label>/api/feed/humidity')
-@app.route('/<ts_label>/api/feed/humidity/<timestamp>')
-@app.route('/<ts_label>/api/feed/humidity/n/<int:n>')
-@app.route('/<ts_label>/api/feed/humidity/n/<int:n>/<timestamp>')
-def humidity(ts_label,timestamp=None,n=1):
+@app.route('/<ts_label>/api/feed/humidity/last/<int:s>')
+@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/humidity/start/<datetime:start>/end/<datetime:end>')
+def humidity(ts_label,start=None,end=None,s=None):
     def callback(b):
         return {
             'humidity': float(b.humidity)
         }
-    return ts_metric(ts_label,callback,timestamp,n)
+    return ts_metric(ts_label,callback,start,end,s)
     
 ### feed ####
 
-@app.route('/<ts_label>/api/feed/nearest/<timestamp>')
+@app.route('/<ts_label>/api/feed/nearest/<datetime:timestamp>')
 def nearest(ts_label, timestamp):
-    ts = struct_time2utcdatetime(parse_date_param(timestamp))
+    #ts = struct_time2utcdatetime(parse_date_param(timestamp))
     with Feed(session, ts_label) as feed:
-        for bin in feed.nearest(timestamp=ts):
+        for bin in feed.nearest(timestamp=timestamp):
             break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
