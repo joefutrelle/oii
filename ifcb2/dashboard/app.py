@@ -481,13 +481,28 @@ def hello_world(pid):
             return serve_blob_bin(parsed)
         if product=='features':
             return serve_features_bin(parsed)
-        if product=='xy': # a view, more than a product
-            tmpl = dict(pid=canonical_pid, x_axis='left', y_axis='bottom', static=STATIC)
-            return template_response('scatter.html',**tmpl)
         # gonna need targets unless heft is medium or below
         targets = []
         if product != 'short':
             targets = get_targets(adc, canonical_pid)
+        # handle some target views other than the standard ones
+        if product=='xy': # a view, more than a product
+            if extension=='csv':
+                def t2c():
+                    yield 'pid,left,bottom'
+                    for t in targets:
+                        yield '%s,%s,%s' % (t['pid'], t['left'], t['bottom'])
+                return Response('\n'.join(list(t2c()))+'\n',mimetype='text/csv')
+            else:
+                tmpl = {
+                    'pid': canonical_pid,
+                    'endpoint': '%s_xy.csv' % canonical_pid,
+                    'x_axis': 'left',
+                    'y_axis': 'bottom',
+                    'static': STATIC
+                }
+                return template_response('scatter.html',**tmpl)
+        # not a special view, handle representations of targets
         if extension=='csv':
             adc_cols = parsed[ADC_COLS].split(' ')
             lines = targets2csv(targets,adc_cols)

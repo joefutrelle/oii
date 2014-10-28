@@ -53,7 +53,7 @@ function timeseries_add(e, pid, timeseries) {
 	$('#roi_image').empty().css('display','none');
 	// set the address for back button
 	if(pushHistory == undefined || pushHistory) {
-	    historyPushState({pid:pid, mosaic_state:{}}, pid, '/'+timeseries+'/dashboard/pid/'+pid);
+	    historyPushState({pid:pid, mosaic_state:{}}, pid, '/'+timeseries+'/dashboard/'+pid);
 	}
 	// update date label on timeline control
 	$.getJSON(pid+'_short.json', function(r) { // need date information
