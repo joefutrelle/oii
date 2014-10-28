@@ -1,5 +1,6 @@
 # web utils
 from oii.utils import jsons
+from oii.times import iso8601, parse_date_param, struct_time2utcdatetime
 from flask import Response
 from werkzeug.routing import BaseConverter
 import re
@@ -21,3 +22,14 @@ class UrlConverter(BaseConverter):
     def to_url(self, value):
         return value
 
+# iso8601 timestamp to utc datetime
+class DatetimeConverter(BaseConverter):
+    def __init__(self, url_map):
+        super(DatetimeConverter, self).__init__(url_map)
+        self.regex = r'\d+-?\d+-?\d+([^/]+\d+:?\d+(:?\d)?)?Z?'
+    def to_python(self, value):
+        if value is None:
+            return None
+        return struct_time2utcdatetime(parse_date_param(value))
+    def to_url(self, value):
+        return iso8601(value.timetuple())
