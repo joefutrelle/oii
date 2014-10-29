@@ -2,6 +2,16 @@
 <html>
 <meta charset="utf-8">
 
+<!--
+this Jinja template takes the following params:
+- {{static}} - URL of static content
+- {{endpoint}} - a JSON endpoint that returns ROI PID / x / y cols
+- {{x_axis}} - x axis var
+- {{y_axis}} - y axis var
+- {{x_axis_label}} - x axis label
+- {{y_axis_label}} - y axis label
+-->
+
 <!-- Example based on http://bl.ocks.org/mbostock/3887118 -->
 <!-- Tooltip example from http://www.d3noob.org/2013/01/adding-tooltips-to-d3js-graph.html -->
 
@@ -81,8 +91,11 @@ d3.csv("{{endpoint}}", function(error, data) {
   });
 
   // don't want dots overlapping axis, so add in buffer to data domain
-  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
-  yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+  // range should take up 0.95 of available space
+  var x_padding = (d3.max(data,xValue) - d3.min(data,xValue)) * 0.05;
+  var y_padding = (d3.max(data,yValue) - d3.min(data,yValue)) * 0.05;
+  xScale.domain([d3.min(data, xValue)-x_padding, d3.max(data, xValue)+x_padding]);
+  yScale.domain([d3.min(data, yValue)-y_padding, d3.max(data, yValue)+y_padding]);
 
   // x-axis
   svg.append("g")
@@ -94,7 +107,7 @@ d3.csv("{{endpoint}}", function(error, data) {
       .attr("x", width)
       .attr("y", -6)
       .style("text-anchor", "end")
-      .text("left");
+      .text("{{x_axis_label}}");
 
   // y-axis
   svg.append("g")
@@ -106,7 +119,7 @@ d3.csv("{{endpoint}}", function(error, data) {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("top");
+      .text("{{y_axis_label}}");
 
   // draw dots
   svg.selectAll(".dot")

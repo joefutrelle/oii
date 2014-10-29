@@ -34,6 +34,7 @@
 		    .append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
 		    .append(' (<span class="imagepager_date timeago"></span>)<br>')
 		    .append('<span>View: <a href="'+pid+'_xy.html">x/y</a></span> ')
+		    .append('<span> <a href="'+pid+'_fs.html">f/s</a></span>')
 		    .append('<span>Download: <a href="'+pid+'.adc">ADC</a></span>')
 		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
 		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')

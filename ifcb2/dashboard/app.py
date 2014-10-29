@@ -440,6 +440,25 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
     else:
         return read_target_image(target, path=path, file=file)
 
+def scatter_csv(targets,x_axis,y_axis):
+    def t2c():
+        yield 'pid,%s,%s' % (x_axis, y_axis)
+        for t in targets:
+            yield '%s,%s,%s' % (t['pid'], t[x_axis], t[y_axis])
+    return Response('\n'.join(list(t2c()))+'\n',mimetype='text/csv')
+
+def scatter_view(pid,view,x_axis,y_axis):
+    tmpl = {
+        'pid': pid,
+        'endpoint': '%s_%s.csv' % (pid, view),
+        'x_axis': x_axis,
+        'x_axis_label': x_axis,
+        'y_axis': y_axis,
+        'y_axis_label': y_axis,
+        'static': STATIC
+    }
+    return template_response('scatter.html',**tmpl)
+
 @app.route('/<path:pid>')
 def hello_world(pid):
     try:
@@ -523,20 +542,19 @@ def hello_world(pid):
         # handle some target views other than the standard ones
         if product=='xy': # a view, more than a product
             if extension=='csv':
-                def t2c():
-                    yield 'pid,left,bottom'
-                    for t in targets:
-                        yield '%s,%s,%s' % (t['pid'], t['left'], t['bottom'])
-                return Response('\n'.join(list(t2c()))+'\n',mimetype='text/csv')
+                return scatter_csv(targets,'left','bottom')
             else:
-                tmpl = {
-                    'pid': canonical_pid,
-                    'endpoint': '%s_xy.csv' % canonical_pid,
-                    'x_axis': 'left',
-                    'y_axis': 'bottom',
-                    'static': STATIC
-                }
-                return template_response('scatter.html',**tmpl)
+                return scatter_view(canonical_pid,'xy','left','bottom')
+        if product=='fs': # another scatter view
+            # f/s for schema version v1 is fluorescenceLow / scatteringLow
+            if schema_version=='v1':
+                f_axis, s_axis = 'fluorescenceLow', 'scatteringLow'
+            else:
+                f_axis, s_axis = 'pmtA', 'pmtB'
+            if extension=='csv':
+                return scatter_csv(targets,f_axis,s_axis)
+            else:
+                return scatter_view(canonical_pid,'fs',f_axis,s_axis)
         # not a special view, handle representations of targets
         if extension=='csv':
             adc_cols = parsed[ADC_COLS].split(' ')
