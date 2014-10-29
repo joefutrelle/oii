@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta, datetime
+from oii.utils import sha1_file
 import calendar
 import time
 
@@ -15,6 +16,8 @@ from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
 from oii.times import text2utcdatetime
 from oii.orm_utils import fix_utc
+
+CHECKSUM_PLACEHOLDER='(placeholder)'
 
 Base = declarative_base()
 
@@ -86,6 +89,34 @@ class File(Base):
 
     def __repr__(self):
         return '<File %s %d %s>' % (self.filename, self.length, self.sha1)
+
+    def compute_fixity(self,fast=False):
+        """compute fixity, overwriting existing fixity"""
+        """requires that local_path is correct"""
+        self.fix_time = datetime.now()
+        self.length = os.stat(self.local_path).st_size
+        self.filename = os.path.basename(self.local_path)
+        # skip checksumming, because it's slow
+        if fast:
+            self.sha1 = CHECKSUM_PLACEHOLDER
+        else:
+            self.sha1 = sha1_file(self.local_path)
+
+    def check_fixity(self,fast=False):
+        status = {
+            'exists': False,
+            'length': False,
+            'filename': False,
+            'sha1': False
+        }
+        if os.path.exists(self.local_path):
+            if fast:
+                sha1 = CHECKSUM_PLACEHOLDER
+            else:
+                sha1 = sha1_file(self.local_path)
+            status['sha1'] = self.sha1==sha1
+            status['length'] = self.length==os.state(self.local_path).st_size
+        return status
 
 class Instrument(Base):
     __tablename__ = 'instruments'

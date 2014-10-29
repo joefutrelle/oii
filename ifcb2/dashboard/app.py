@@ -386,10 +386,10 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 def get_files(parsed):
-    try:
-        b = session.query(Bin).filter(Bin.lid==parsed['lid']).first()
-    except StopIteration:
-        abort(404)
+    print 'lookin fer %s' % parsed['lid']
+    b = session.query(Bin).filter(Bin.lid==parsed['lid']).first()
+    if b is None:
+        return []
     result = []
     for f in b.files:
         result.append({
@@ -410,6 +410,10 @@ def files(ts_label, pid):
         abort(404)
     result = get_files(parsed)
     return Response(json.dumps(result), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/files/check/<path:pid>')
+def check_files(ts_label, pid):
+    pass
 
 ### data validation and accession ###
 

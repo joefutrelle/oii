@@ -2,6 +2,7 @@ import re
 import os
 from datetime import datetime
 
+from oii.utils import sha1_file
 from oii.times import text2utcdatetime
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.identifiers import parse_pid
@@ -19,15 +20,9 @@ def compute_fixity(fs, fast=False):
     paths = [fs[HDR_PATH], fs[ADC_PATH], fs[ROI_PATH]]
     filetypes = ['hdr','adc','roi']
     for path,filetype in zip(paths,filetypes):
-        now = datetime.now()
-        length = os.stat(path).st_size
-        name = os.path.basename(path)
-        # skip checksumming, because it's slow
-        if fast:
-            checksum = '(placeholder)'
-        else:
-            checksum = sha1_file(path)
-        yield File(local_path=path, filename=name, length=length, filetype=filetype, sha1=checksum, fix_time=now)
+        f = File(local_path=path, filetype=filetype)
+        f.compute_fixity(fast=fast)
+        yield f
 
 def compute_bin_metrics(fs, b):
     """fs - fileset, b - bin"""
@@ -68,6 +63,7 @@ def fast_accession(session, ts_label, root):
         session.add(b)
         # now make fixity entries
         for f in compute_fixity(fs, fast=True):
+            print f
             b.files.append(f)
         # now compute bin metrics
         compute_bin_metrics(fs, b)
