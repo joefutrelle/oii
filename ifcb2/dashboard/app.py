@@ -205,6 +205,8 @@ def serve_about():
 
 ### timeseries endpoints ###
 
+METRICS=['trigger_rate', 'temperature', 'humidity']
+
 @app.route('/')
 @app.route('/<ts_label>')
 @app.route('/<ts_label>/')
@@ -212,7 +214,11 @@ def serve_about():
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<path:pid>')
 def serve_timeseries(ts_label=None, pid=None):
-    template = dict(static=STATIC, time_series=ts_label)
+    template = {
+        'static': STATIC,
+        'time_series': ts_label,
+        'all_metrics': METRICS
+    }
     if pid is not None:
         template['pid'] = pid
     # fetch time series information
