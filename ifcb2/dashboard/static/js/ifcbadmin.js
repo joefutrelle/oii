@@ -183,7 +183,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // create new timeseries
     $scope.addNewUser = function() {
-	user = {name:'Joe Schmo',email:'schmo@joetown.com',password:'supersecret',edit:'true'};
+	user = {name:'',email:'',password:'supersecret',edit:'true'};
         $scope.users.push(user);
         return true;
     }

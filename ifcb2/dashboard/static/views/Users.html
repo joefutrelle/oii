@@ -33,8 +33,8 @@
             </tr>
 	    <!-- edit mode -->
 	    <tr ng-if="user.edit">
-                <td><input type="text" class="form-control" ng-model="user.name"></td>
-                <td><input type="text" class="form-control" ng-model="user.email"></td></td>
+                <td><input type="text" class="form-control" placeholder="John Smith" ng-model="user.name"></td>
+                <td><input type="text" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
                 <td><input type="checkbox" class="form-control" ng-model="user.superadmin"></td>
                 <td><input type="checkbox" class="form-control" ng-model="user.admin"></td>
                 <td><input type="checkbox" class="form-control" ng-model="user.apiuser"></td>
