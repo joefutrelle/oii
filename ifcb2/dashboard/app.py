@@ -691,10 +691,10 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 API_URL_PREFIX = '/admin/api/v1'
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
+    print "*************************************************"
+    print data
+    print "*************************************************"
     if data.has_key('edit'):
-        print "*************************************************"
-        print data
-        print "*************************************************"
         # remove restangularize "edit" field. probably a better way
         # to do this on the javascript side
         data.pop('edit')
@@ -719,7 +719,8 @@ manager.create_api(
     url_prefix=API_URL_PREFIX,
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor], 'PATCH':[patch_single_preprocessor],},
+    exclude_columns=['password',]
     )
 
 if __name__ == '__main__':

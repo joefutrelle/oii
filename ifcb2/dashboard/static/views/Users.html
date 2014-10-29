@@ -6,6 +6,10 @@
     {{alert}}
 </div>
 
+<div class="text-right">
+    <button type="button" class="btn btn-primary" ng-click="addNewUser()">Add New User</button>
+</div>
+
 <table class="table">
         <thead>
           <tr>
@@ -18,8 +22,8 @@
           </tr>
         </thead>
         <tbody ng-repeat="user in users">
-            <tr ng-if="!user.edit">
-                <td>{{user.name}}</td>
+            <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
+                <td><strong>{{user.name}}</strong></td>
                 <td>{{user.email}}</td>
                 <td ng-if="user.superadmin"><span class="glyphicon glyphicon-ok"></span></td>
                 <td ng-if="!user.superadmin"><span class="glyphicon glyphicon-remove"></span></td>
@@ -30,7 +34,8 @@
                 <td>
                     <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
-                    <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="removeUser(user)">Remove</button>
+                    <button ng-if="!user.disabled" type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
+                    <button ng-if="user.disabled" type="button" class="btn btn-warning" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
                     </div>
                 </td>
             </tr>
@@ -50,8 +55,6 @@
 	    </tr>
         </tbody>
 </table>
-
-<button type="button" class="btn btn-primary" ng-click="addNewUser()">Add New User</button>
 
 
 

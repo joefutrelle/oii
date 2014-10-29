@@ -183,7 +183,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // create new user
     $scope.addNewUser = function() {
-	user = {name:'',email:'',password:'supersecret',edit:'true'};
+	user = {name:'', email:'', edit:true, disabled:false};
         $scope.users.push(user);
         return true;
     }
@@ -197,10 +197,12 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         user.edit = true;
     }
 
-    // remove user
-    $scope.removeUser = function(user) {
-        user.remove().then(function() {
-            $scope.users = _.without($scope.users, user);
+    // disable user
+    $scope.toggleUser = function(user) {
+        tmpuser = user.clone();
+        tmpuser.disabled = !tmpuser.disabled;
+        tmpuser.patch().then(function(serverResponse) {
+            user.disabled = !user.disabled;
         });
     }
 }]);
