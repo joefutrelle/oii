@@ -383,7 +383,26 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
         sample_time_str = iso8601(bin.sample_time.timetuple())
         pid = canonicalize(request.url_root, ts_label, bin.lid)
         resp.append(dict(pid=pid, date=sample_time_str))
-    return Response(json.dumps(resp), mimetype='application/json')
+    return Response(json.dumps(resp), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/files/<path:pid>')
+def files(ts_label, pid):
+    try:
+        parsed = parse_pid(pid)
+        b = session.query(Bin).filter(Bin.lid==parsed['lid']).first()
+    except StopIteration:
+        abort(404)
+    result = []
+    for f in b.files:
+        result.append({
+            'filename': f.filename,
+            'filetype': f.filetype,
+            'length': f.length,
+            'sha1': f.sha1,
+            'fix_time': iso8601(f.fix_time.timetuple()),
+            'local_path': f.local_path
+        })
+    return Response(json.dumps(result), mimetype=MIME_JSON)
 
 ### data validation and accession ###
 
@@ -555,6 +574,7 @@ def hello_world(pid):
                 return scatter_csv(targets,f_axis,s_axis)
             else:
                 return scatter_view(canonical_pid,'fs',f_axis,s_axis)
+        # end of views
         # not a special view, handle representations of targets
         if extension=='csv':
             adc_cols = parsed[ADC_COLS].split(' ')
