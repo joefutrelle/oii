@@ -39,7 +39,9 @@ var margin = {top: 20, right: 20, bottom: 30, left: 50},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-var parseDate = d3.time.format('%Y-%m-%dT%H:%M:%SZ').parse;
+var iso8601_format = d3.time.format('%Y-%m-%dT%H:%M:%SZ');
+var iso8601_short = d3.time.format('%Y-%m-%dT%H:%MZ');
+var parseDate = iso8601_format.parse;
 
 var x = d3.time.scale()
     .range([0, width]);
@@ -49,7 +51,8 @@ var y = d3.scale.linear()
 
 var xAxis = d3.svg.axis()
     .scale(x)
-    .orient("bottom");
+    .orient("bottom")
+    .tickFormat(iso8601_short);
 
 var yAxis = d3.svg.axis()
     .scale(y)
