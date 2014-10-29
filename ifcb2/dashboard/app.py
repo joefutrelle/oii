@@ -314,7 +314,36 @@ def humidity(ts_label,start=None,end=None,s=None):
             'humidity': float(b.humidity)
         }
     return ts_metric(ts_label,callback,start,end,s)
+
+## metric views ##
+
+# FIXME configurable time range
+def view_metric(ts_label,metric):
+    with Feed(session, ts_label) as feed:
+        # FIXME configurable time range
+        for b in feed.latest():
+            break
+        then = iso8601(b.sample_time.timetuple())
+        tmpl = {
+            'static': STATIC,
+            'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
+            'metric': metric,
+            'y_label': metric
+        }
+        return template_response('step_graph.html',**tmpl)
     
+@app.route('/<ts_label>/trigger_rate.html')
+def view_trigger_rate(ts_label):
+    return view_metric(ts_label,'trigger_rate')
+
+@app.route('/<ts_label>/temperature.html')
+def view_temperature(ts_label):
+    return view_metric(ts_label,'temperature')
+
+@app.route('/<ts_label>/humidity.html')
+def view_humidity(ts_label):
+    return view_metric(ts_label,'humidity')
+
 ### feed ####
 
 @app.route('/<ts_label>/api/feed/nearest/<datetime:timestamp>')
