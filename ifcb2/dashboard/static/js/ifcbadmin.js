@@ -181,18 +181,23 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         }
     }
 
-    // create new timeseries
+    // create new user
     $scope.addNewUser = function() {
 	user = {name:'',email:'',password:'supersecret',edit:'true'};
         $scope.users.push(user);
         return true;
     }
 
+    // cancel new user creation
+    $scope.cancelUser = function(user) {
+        $scope.users = _.without($scope.users, user);
+    }
+
     $scope.editUser = function(user) {
         user.edit = true;
     }
 
-    // remove timeseries group
+    // remove user
     $scope.removeUser = function(user) {
         user.remove().then(function() {
             $scope.users = _.without($scope.users, user);

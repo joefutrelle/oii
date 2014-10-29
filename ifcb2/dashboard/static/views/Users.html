@@ -40,8 +40,8 @@
                 <td><input type="checkbox" class="form-control" ng-model="user.apiuser"></td>
                 <td>
                   <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-default" ng-click="saveUser(user)">Save</button>
-                    <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="removeUser(user)">Remove</button>
+                    <button type="button" class="btn btn-primary" ng-disabled="!user.name || !user.email" ng-click="saveUser(user)">Save</button>
+                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(user)">Cancel</button>
                   </div>
                 </td>
 	    </tr>
