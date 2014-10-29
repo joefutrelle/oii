@@ -385,10 +385,8 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
         resp.append(dict(pid=pid, date=sample_time_str))
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/files/<path:pid>')
-def files(ts_label, pid):
+def get_files(parsed):
     try:
-        parsed = parse_pid(pid)
         b = session.query(Bin).filter(Bin.lid==parsed['lid']).first()
     except StopIteration:
         abort(404)
@@ -402,6 +400,15 @@ def files(ts_label, pid):
             'fix_time': iso8601(f.fix_time.timetuple()),
             'local_path': f.local_path
         })
+    return result
+
+@app.route('/<ts_label>/api/files/<path:pid>')
+def files(ts_label, pid):
+    try:
+        parsed = parse_pid(pid)
+    except StopIteration:
+        abort(404)
+    result = get_files(parsed)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 ### data validation and accession ###
@@ -595,7 +602,8 @@ def hello_world(pid):
                 'properties': props,
                 'targets': targets,
                 'target_pids': [t['pid'] for t in targets],
-                'date': timestamp
+                'date': timestamp,
+                'files': get_files(parsed) # note: ORM call!
             }
             return template_response('bin.html', **template)
         if extension=='json':

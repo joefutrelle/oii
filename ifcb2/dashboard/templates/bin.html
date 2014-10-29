@@ -28,7 +28,31 @@ $(document).ready(function() {
   </div>
 {% endfor %}
   </div>
+
+<!-- fixity -->
+<div>
 <table class="major">
+<tr class="tbl">
+  <th class="tbl">filename</th>
+  <th class="tbl">length</th>
+  <th class="tbl">sha1</th>
+  <th class="tbl">fixed</th>
+  <th class="tbl">local path</th>
+</tr>
+{% for file in files %}
+  <tr class="tbl">
+    <td class="tbl"><a href="{{time_series}}/{{file.filename}}">{{file.filename}}</a></td>
+    <td class="tbl">{{file.length}}</td>
+    <td class="tbl">{{file.sha1}}</td>
+    <td class="tbl">{{file.fix_time}}</td>
+    <td class="tbl">{{file.local_path}}</td>
+  </tr>
+{% endfor %}
+</table>
+</div>
+
+<!-- targets -->
+<div><table class="major">
 <tr class="tbl">
   <th class="tbl">#/trigger</th>
   <th class="tbl">pid</th>
@@ -42,4 +66,5 @@ $(document).ready(function() {
   </tr>
 {% endfor %}
 </table>
+</div>
 {% endblock content %}
