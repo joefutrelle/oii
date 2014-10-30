@@ -441,6 +441,7 @@ def accession(ts_label=None):
                     'total': n_total
                 })
             except:
+                raise # FIXME
                 results.append({
                     'time_series': ts.label,
                     'data_dir': ddir.path,

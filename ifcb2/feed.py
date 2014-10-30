@@ -45,12 +45,12 @@ class Feed(object):
             timestamp = utcdtnow()
         n_before = self._ts_query(end_time=timestamp).\
                    order_by(desc(Bin.sample_time)).\
-                   limit(n)
+                   limit(n).all()
         min_date = datetime2utcdatetime(n_before[-1].sample_time)
         max_date = timestamp + (timestamp - min_date)
         n_after = self._ts_query(start_time=timestamp, end_time=max_date).\
                   order_by(Bin.sample_time).\
-                  limit(n)
+                  limit(n).all()
         cand = list(n_before) + list(n_after)
         return sorted(cand, key=lambda b: timestamp - datetime2utcdatetime(b.sample_time))[:n]
     def latest(self,n=25,timestamp=None):

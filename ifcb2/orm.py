@@ -58,17 +58,17 @@ class Bin(Base):
     sample_time = Column(DateTime(timezone=True))
     skip = Column(Boolean, default=False)
 
-    triggers = Column(Integer)
-    duration = Column(Numeric)
-    temperature = Column(Numeric)
-    humidity = Column(Numeric)
+    triggers = Column(Integer,default=0)
+    duration = Column(Numeric,default=0)
+    temperature = Column(Numeric,default=0)
+    humidity = Column(Numeric,default=0)
 
     def __repr__(self):
         return '<Bin %s:%s @ %s>' % (self.ts_label, self.lid, self.sample_time)
 
     @property
     def trigger_rate(self):
-        if self.duration is None:
+        if self.duration is None or self.duration<0.1:
             return 0
         else:
             return self.triggers / self.duration

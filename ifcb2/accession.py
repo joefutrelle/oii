@@ -2,6 +2,8 @@ import re
 import os
 from datetime import datetime
 
+from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
+
 from oii.utils import sha1_file
 from oii.times import text2utcdatetime
 from oii.ifcb2 import get_resolver
@@ -33,12 +35,14 @@ def compute_bin_metrics(fs, b):
     b.temperature = parsed_hdr.get(TEMPERATURE)
     # adc - triggers, duration
     adc_path = fs[ADC_PATH]
+    line = None
     with open(adc_path) as adc:
         for line in adc:
             pass
-    triggers, seconds = re.split(r',',line)[:2]
-    b.triggers = int(triggers)
-    b.duration = float(seconds)
+    if line is not None:
+        triggers, seconds = re.split(r',',line)[:2]
+        b.triggers = int(triggers)
+        b.duration = float(seconds)
 
 def fast_accession(session, ts_label, root):
     """accession without checksumming or integrity checks"""
@@ -51,7 +55,7 @@ def fast_accession(session, ts_label, root):
             parsed = parse_pid(lid)
         except:
             raise
-        existing_bin = session.query(Bin).filter(Bin.lid==lid).first()
+        existing_bin = session.query(Bin).filter(and_(Bin.lid==lid,Bin.ts_label==ts_label)).first()
         n_total += 1
         if existing_bin:
             continue
@@ -60,12 +64,15 @@ def fast_accession(session, ts_label, root):
             session.commit()
         ts = text2utcdatetime(parsed['timestamp'], parsed['timestamp_format'])
         b = Bin(ts_label=ts_label, lid=lid, sample_time=ts)
-        session.add(b)
         # now make fixity entries
         for f in compute_fixity(fs, fast=True):
-            print f
+            session.add(f)
             b.files.append(f)
         # now compute bin metrics
-        compute_bin_metrics(fs, b)
+        try:
+            compute_bin_metrics(fs, b)
+        except:
+            pass # FIXME warn
+        session.add(b)
     session.commit()
     return (n_new, n_total)
