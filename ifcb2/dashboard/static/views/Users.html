@@ -44,8 +44,8 @@
             </tr>
 	    <!-- edit mode -->
 	    <tr ng-if="user.edit">
-                <td><input type="text" class="form-control" placeholder="John Smith" ng-model="user.name"></td>
-                <td><input type="text" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
+                <td><input type="text" class="form-control" placeholder="John Smith" ng-model="user.name" ng-minlength="3" ng-maxlength="255" required></td>
+                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
                 <td><input type="checkbox" ng-model="user.administrator"></td>
                 <td><input type="checkbox" ng-model="user.instrument_manager"></td>
                 <td><input type="checkbox" ng-model="user.data_series_manager"></td>
