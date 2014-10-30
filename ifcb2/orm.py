@@ -106,16 +106,16 @@ class File(Base):
         status = {
             'exists': False,
             'length': False,
-            'filename': False,
             'sha1': False
         }
         if os.path.exists(self.local_path):
+            status['exists'] = True
             if fast:
                 sha1 = CHECKSUM_PLACEHOLDER
             else:
                 sha1 = sha1_file(self.local_path)
             status['sha1'] = self.sha1==sha1
-            status['length'] = self.length==os.state(self.local_path).st_size
+            status['length'] = self.length==os.stat(self.local_path).st_size
         return status
 
 class Instrument(Base):

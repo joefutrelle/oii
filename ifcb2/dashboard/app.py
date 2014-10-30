@@ -15,7 +15,7 @@ from flask import Flask, Response, abort, request, render_template, render_templ
 import flask.ext.sqlalchemy
 import flask.ext.restless
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 
 import numpy as np
@@ -385,27 +385,38 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
         resp.append(dict(pid=pid, date=sample_time_str))
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-def get_files(parsed):
-    print 'lookin fer %s' % parsed['lid']
-    b = session.query(Bin).filter(Bin.lid==parsed['lid']).first()
+def parsed2files(parsed):
+    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
     if b is None:
-        return []
-    result = []
-    for f in b.files:
-        result.append({
-            'filename': f.filename,
-            'filetype': f.filetype,
-            'length': f.length,
-            'sha1': f.sha1,
-            'fix_time': iso8601(f.fix_time.timetuple()),
-            'local_path': f.local_path
-        })
-    return result
+        abort(404)
+    return b.files
+
+def pid2files(ts_label,pid):
+    parsed = { 'ts_label': ts_label }
+    try:
+        parsed.update(parse_pid(pid))
+    except StopIteration:
+        abort(404)
+    return parsed2files(parsed)
+
+def file2dict(f):
+    return {
+        'filename': f.filename,
+        'filetype': f.filetype,
+        'length': f.length,
+        'sha1': f.sha1,
+        'fix_time': iso8601(f.fix_time.timetuple()),
+        'local_path': f.local_path
+    }
+
+def get_files(parsed):
+    return [file2dict(f) for f in parsed2files(parsed)]
 
 @app.route('/<ts_label>/api/files/<path:pid>')
-def files(ts_label, pid):
+def serve_files(ts_label, pid):
+    parsed = { 'ts_label': ts_label }
     try:
-        parsed = parse_pid(pid)
+        parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
     result = get_files(parsed)
@@ -413,7 +424,14 @@ def files(ts_label, pid):
 
 @app.route('/<ts_label>/api/files/check/<path:pid>')
 def check_files(ts_label, pid):
-    pass
+    # FIXME handle ts_label + lid
+    # FIXME fast
+    result = []
+    for f in pid2files(ts_label,pid):
+        check = f.check_fixity(fast=True)
+        check.update({'file':file2dict(f)})
+        result.append(check)
+    return Response(json.dumps(result), mimetype=MIME_JSON)
 
 ### data validation and accession ###
 
