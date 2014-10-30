@@ -47,8 +47,7 @@ def parse_hdr(lines):
             values = re.split(' +',re.sub(r'[",]',' ',lines[-1]).strip()) # values of those columns in CSV format
             # for each column take the string and cast it to the schema's column type
             for (column, (name, _), value) in zip(HDR_COLUMNS, HDR_SCHEMA, values):
-                if name in props:
-                    props[name] = value
+                props[name] = value
     # cast any properties we know about in the schema
     for name, cast in HDR_SCHEMA:
         if name in props:
