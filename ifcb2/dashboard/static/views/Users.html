@@ -15,8 +15,9 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <th>SuperAdmin</th>
             <th>Admin</th>
+            <th>Instrument<br>Manager</th>
+            <th>Data Series<br>Manager</th>
             <th>API User</th>
             <th></th>
           </tr>
@@ -25,12 +26,14 @@
             <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
                 <td><strong>{{user.name}}</strong></td>
                 <td>{{user.email}}</td>
-                <td ng-if="user.superadmin"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.superadmin"><span class="glyphicon glyphicon-remove"></span></td>
-                <td ng-if="user.admin"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.admin"><span class="glyphicon glyphicon-remove"></span></td>
-                <td ng-if="user.apiuser"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.apiuser"><span class="glyphicon glyphicon-remove"></span></td>
+                <td ng-if="user.administrator"><span class="glyphicon glyphicon-ok"></span></td>
+                <td ng-if="!user.administrator"><span class="glyphicon glyphicon-remove"></span></td>
+                <td ng-if="user.instrument_manager"><span class="glyphicon glyphicon-ok"></span></td>
+                <td ng-if="!user.instrument_manager"><span class="glyphicon glyphicon-remove"></span></td>
+                <td ng-if="user.data_series_manager"><span class="glyphicon glyphicon-ok"></span></td>
+                <td ng-if="!user.data_series_manager"><span class="glyphicon glyphicon-remove"></span></td>
+                <td ng-if="user.api_user"><span class="glyphicon glyphicon-ok"></span></td>
+                <td ng-if="!user.api_user"><span class="glyphicon glyphicon-remove"></span></td>
                 <td>
                     <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
@@ -43,9 +46,10 @@
 	    <tr ng-if="user.edit">
                 <td><input type="text" class="form-control" placeholder="John Smith" ng-model="user.name"></td>
                 <td><input type="text" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
-                <td><input type="checkbox" ng-model="user.superadmin"></td>
-                <td><input type="checkbox" ng-model="user.admin"></td>
-                <td><input type="checkbox" ng-model="user.apiuser"></td>
+                <td><input type="checkbox" ng-model="user.administrator"></td>
+                <td><input type="checkbox" ng-model="user.instrument_manager"></td>
+                <td><input type="checkbox" ng-model="user.data_series_manager"></td>
+                <td><input type="checkbox" ng-model="user.api_user"></td>
                 <td>
                   <div class="btn-group pull-right">
                     <button type="button" class="btn btn-primary" ng-disabled="!user.name || !user.email" ng-click="saveUser(user)">Save</button>

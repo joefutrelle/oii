@@ -135,10 +135,12 @@ class User(Base):
     id = Column(Integer,primary_key=True)
     email = Column(String,unique=True)
     name = Column(String)
-    password = Column(String)
-    admin = Column(Boolean, default=False)
-    superadmin = Column(Boolean, default=False)
-    apiuser = Column(Boolean, default=False)
+    password = Column(String, default=False)
+    administrator = Column(Boolean, default=False)
+    instrument_manager = Column(Boolean, default=False)
+    data_series_manager = Column(Boolean, default=False)
+    api_user = Column(Boolean, default=False)
+    disabled = Column(Boolean, default=False)
 
     def __repr__(self):
         return "<User(email='%s')>" % self.email

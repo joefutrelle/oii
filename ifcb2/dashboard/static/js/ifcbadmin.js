@@ -156,7 +156,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
             + ' error while loading data from server.'
     });
 
-    // save timeseries group to server
+    // save user to server
     $scope.saveUser = function(user) {
         if(user.id) {
             // user already exists on server. update.
@@ -197,7 +197,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         user.edit = true;
     }
 
-    // disable user
+    // disable user toggle
     $scope.toggleUser = function(user) {
         tmpuser = user.clone();
         tmpuser.disabled = !tmpuser.disabled;
