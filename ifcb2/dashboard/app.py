@@ -66,6 +66,11 @@ app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
 
+# register security blueprint
+SECURITY_URL_PREFIX = '/sec'
+app.register_blueprint(security.security_blueprint,
+    url_prefix=SECURITY_URL_PREFIX)
+
 ### generic flask utils ###
 def parse_params(path, **defaults):
     """Parse a path fragment and convert to dict.
