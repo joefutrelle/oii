@@ -15,9 +15,6 @@ from flask import Flask, Response, abort, request, render_template, render_templ
 import flask.ext.sqlalchemy
 import flask.ext.restless
 
-from sqlalchemy import create_engine, and_
-from sqlalchemy.orm import sessionmaker
-
 import numpy as np
 
 from skimage.segmentation import find_boundaries
@@ -34,6 +31,7 @@ from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
+from oii.ifcb2.session import session
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
@@ -52,19 +50,6 @@ from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_ra
 # constants
 
 MIME_JSON='application/json'
-
-# eventually the session cofiguration should
-# go in its own class.
-#SQLITE_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-SQLITE_URL='sqlite:///ifcb_admin.db'
-
-from sqlalchemy.pool import StaticPool
-dbengine = create_engine(SQLITE_URL,
-                    connect_args={'check_same_thread':False},
-                    poolclass=StaticPool,
-                         echo=False)
-Session = sessionmaker(bind=dbengine)
-session = Session()
 
 STATIC='/static/'
 app = Flask(__name__)
@@ -337,7 +322,7 @@ def view_metric(ts_label,metric):
             'y_label': metric
         }
         return template_response('step_graph.html',**tmpl)
-    
+
 @app.route('/<ts_label>/trigger_rate.html')
 def view_trigger_rate(ts_label):
     return view_metric(ts_label,'trigger_rate')
@@ -717,7 +702,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
 
-### admin API hacked right on in ####
 
 API_URL_PREFIX = '/admin/api/v1'
 
@@ -755,5 +739,6 @@ manager.create_api(
     )
 
 if __name__ == '__main__':
+    from oii.ifcb2.session import dbengine
     Base.metadata.create_all(dbengine)
     app.run(host='0.0.0.0',port=8080,debug=True)
