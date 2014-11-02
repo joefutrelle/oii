@@ -33,6 +33,8 @@ from oii.ifcb2 import get_resolver
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session
 
+from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint, user_blueprint
+
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
 
@@ -55,6 +57,13 @@ STATIC='/static/'
 app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
 app.url_map.converters['datetime'] = DatetimeConverter
+
+# register the admin blueprint right up front
+# API_URL_PREFIX should move to a config area some time
+API_URL_PREFIX = '/admin/api/v1'
+app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -701,42 +710,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
-
-
-API_URL_PREFIX = '/admin/api/v1'
-
-def patch_single_preprocessor(instance_id=None, data=None, **kw):
-    print "*************************************************"
-    print data
-    print "*************************************************"
-    if data.has_key('edit'):
-        # remove restangularize "edit" field. probably a better way
-        # to do this on the javascript side
-        data.pop('edit')
-
-manager = flask.ext.restless.APIManager(app, session=session)
-manager.create_api(
-    TimeSeries,
-    url_prefix=API_URL_PREFIX,
-#    validation_exceptions=[DBValidationError],
-    methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
-    )
-manager.create_api(
-    DataDirectory,
-    url_prefix=API_URL_PREFIX,
-#    validation_exceptions=[DBValidationError],
-    methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
-    )
-manager.create_api(
-    User,
-    url_prefix=API_URL_PREFIX,
-#    validation_exceptions=[DBValidationError],
-    methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor], 'PATCH':[patch_single_preprocessor],},
-    exclude_columns=['password',]
-    )
 
 if __name__ == '__main__':
     from oii.ifcb2.session import dbengine
