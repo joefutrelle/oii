@@ -34,6 +34,7 @@ from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint, user_blueprint
+from oii.ifcb2.dashboard import security
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
