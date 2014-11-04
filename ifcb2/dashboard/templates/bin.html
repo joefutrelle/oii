@@ -38,6 +38,7 @@ $(document).ready(function() {
   <th class="tbl">sha1</th>
   <th class="tbl">fixed</th>
   <th class="tbl">local path</th>
+  <th class="tbl">status</th>
 </tr>
 {% for file in files %}
   <tr class="tbl">
@@ -46,10 +47,21 @@ $(document).ready(function() {
     <td class="tbl">{{file.sha1}}</td>
     <td class="tbl">{{file.fix_time}}</td>
     <td class="tbl">{{file.local_path}}</td>
+    <td class="tbl">
+      {% for k,v in file.check.items() %}
+        {% if not v %}
+          <span class="status_bad">{{k}}</span>
+	{% else %}
+          <span class="status_good">{{k}}</span>
+        {% endif %}
+      {% endfor %}
+    </td>
   </tr>
 {% endfor %}
 </table>
 </div>
+
+<p></p><!-- I know, I should use CSS -->
 
 <!-- targets -->
 <div><table class="major">

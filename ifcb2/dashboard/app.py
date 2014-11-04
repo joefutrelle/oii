@@ -15,6 +15,8 @@ from flask import Flask, Response, abort, request, render_template, render_templ
 import flask.ext.sqlalchemy
 import flask.ext.restless
 
+from sqlalchemy import and_
+
 import numpy as np
 
 from skimage.segmentation import find_boundaries
@@ -409,8 +411,14 @@ def file2dict(f):
         'local_path': f.local_path
     }
 
-def get_files(parsed):
-    return [file2dict(f) for f in parsed2files(parsed)]
+def get_files(parsed,check=False):
+    result = []
+    for f in parsed2files(parsed):
+        d = file2dict(f)
+        if check:
+            d['check'] = f.check_fixity(fast=True)
+        result.append(d)
+    return result
 
 @app.route('/<ts_label>/api/files/<path:pid>')
 def serve_files(ts_label, pid):
@@ -426,11 +434,12 @@ def serve_files(ts_label, pid):
 def check_files(ts_label, pid):
     # FIXME handle ts_label + lid
     # FIXME fast
-    result = []
-    for f in pid2files(ts_label,pid):
-        check = f.check_fixity(fast=True)
-        check.update({'file':file2dict(f)})
-        result.append(check)
+    parsed = { 'ts_label': ts_label }
+    try:
+        parsed.update(parse_pid(pid))
+    except StopIteration:
+        abort(404)
+    result = get_files(parsed,check=True)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 ### data validation and accession ###
@@ -626,8 +635,9 @@ def hello_world(pid):
                 'targets': targets,
                 'target_pids': [t['pid'] for t in targets],
                 'date': timestamp,
-                'files': get_files(parsed) # note: ORM call!
+                'files': get_files(parsed,check=True) # note: ORM call!
             }
+            print get_files(parsed)
             return template_response('bin.html', **template)
         if extension=='json':
             if product=='short':

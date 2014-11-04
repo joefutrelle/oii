@@ -63,7 +63,9 @@
     <rule name="file_path">
       <!-- pass in "filename" -->
       <!-- first, try schema-independent flat structure -->
-      <var name="file_path">${root}/${filename}</var>
+      <hit>
+	<var name="file_path">${root}/${filename}</var>
+      </hit>
       <!-- now compute schema-dependent day directory names -->
       <first>
 	<test var="schema_version" eq="v1">
