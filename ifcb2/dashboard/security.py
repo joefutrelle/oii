@@ -14,4 +14,16 @@ def login():
 def logout():
     return "<h3>IFCB Logout Page</h3>"
 
+@security_blueprint.route('/test_public')
+def public():
+    return "<h3>IFCB public test page.</h3>"
+
+@security_blueprint.route('/test_user')
+def user():
+    return "<h3>IFCB user test page.</h3>"
+
+@security_blueprint.route('/test_admin')
+def admin():
+    return "<h3>IFCB admin test page.</h3>"
+
 
