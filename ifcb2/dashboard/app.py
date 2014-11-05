@@ -35,7 +35,8 @@ from oii.ifcb2 import get_resolver
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session
 
-from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint, user_blueprint
+from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
+from oii.ifcb2.dashboard.admin_api import user_blueprint, password_blueprint
 from oii.ifcb2.dashboard import security
 
 from oii.ifcb2.feed import Feed
@@ -67,11 +68,14 @@ API_URL_PREFIX = '/admin/api/v1'
 app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 
 # register security blueprint
 SECURITY_URL_PREFIX = '/sec'
 app.register_blueprint(security.security_blueprint,
     url_prefix=SECURITY_URL_PREFIX)
+
+print app.url_map
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
