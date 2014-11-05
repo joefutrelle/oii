@@ -74,8 +74,7 @@ app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 SECURITY_URL_PREFIX = '/sec'
 app.register_blueprint(security.security_blueprint,
     url_prefix=SECURITY_URL_PREFIX)
-
-print app.url_map
+# print app.url_map
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

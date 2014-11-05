@@ -208,6 +208,14 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
             user.is_enabled = !user.is_enabled;
         });
     }
+
+    $scope.setPassword = function(user,pasword) {
+        pwchange = Restangular.one('users', user.id).getList('setpassword');
+        pwchange.post({'pasword':password}).then(function(serverResponse) {
+            console.log(serverResponse);
+        });
+    }
+
 }]);
 
 // instrument controller
