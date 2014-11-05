@@ -130,17 +130,25 @@ class Instrument(Base):
     time_series = relationship('TimeSeries')
 
 class User(Base):
+    """data model must conform to flask-user expectations here
+    http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""
     __tablename__ = 'users'
 
-    id = Column(Integer,primary_key=True)
-    email = Column(String,unique=True)
-    name = Column(String)
-    password = Column(String, default=False)
-    administrator = Column(Boolean, default=False)
-    instrument_manager = Column(Boolean, default=False)
-    data_series_manager = Column(Boolean, default=False)
-    api_user = Column(Boolean, default=False)
-    disabled = Column(Boolean, default=False)
+    id = Column(Integer, primary_key=True)
+    # User Authentication information
+    username = Column(String(50), nullable=False, unique=True)
+    password = Column(String(255), nullable=False, default='')
+    reset_password_token = Column(String(100), nullable=False, default='')
+    # User Email information
+    email = Column(String(255), nullable=False, unique=True)
+    confirmed_at = Column(DateTime())
+    # User information
+    is_enabled = Column(Boolean(), nullable=False, default=False)
+    first_name = Column(String(50), nullable=False, default='')
+    last_name = Column(String(50), nullable=False, default='')
+
+    def is_active(self):
+      return self.is_enabled
 
     def __repr__(self):
         return "<User(email='%s')>" % self.email

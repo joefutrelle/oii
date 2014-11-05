@@ -15,17 +15,19 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
+            <!-- auth will be restored later
             <th>Admin</th>
             <th>Instrument<br>Manager</th>
             <th>Data Series<br>Manager</th>
-            <th>API User</th>
+            <th>API User</th> -->
             <th></th>
           </tr>
         </thead>
         <tbody ng-repeat="user in users">
             <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
-                <td><strong>{{user.name}}</strong></td>
+                <td><strong>{{user.first_name}} {{user.last_name}}</strong></td>
                 <td>{{user.email}}</td>
+                <!-- authorization will be back later
                 <td ng-if="user.administrator"><span class="glyphicon glyphicon-ok"></span></td>
                 <td ng-if="!user.administrator"><span class="glyphicon glyphicon-remove"></span></td>
                 <td ng-if="user.instrument_manager"><span class="glyphicon glyphicon-ok"></span></td>
@@ -34,25 +36,26 @@
                 <td ng-if="!user.data_series_manager"><span class="glyphicon glyphicon-remove"></span></td>
                 <td ng-if="user.api_user"><span class="glyphicon glyphicon-ok"></span></td>
                 <td ng-if="!user.api_user"><span class="glyphicon glyphicon-remove"></span></td>
+                -->
                 <td>
                     <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
-                    <button ng-if="!user.disabled" type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
-                    <button ng-if="user.disabled" type="button" class="btn btn-warning" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
+                    <button ng-if="user.is_enabled" type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
+                    <button ng-if="!user.is_enabled" type="button" class="btn btn-warning" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
                     </div>
                 </td>
             </tr>
 	    <!-- edit mode -->
 	    <tr ng-if="user.edit">
-                <td><input type="text" class="form-control" placeholder="John Smith" ng-model="user.name" ng-minlength="3" ng-maxlength="255" required></td>
+                <td><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></td>
                 <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
-                <td><input type="checkbox" ng-model="user.administrator"></td>
+                <!-- <td><input type="checkbox" ng-model="user.administrator"></td>
                 <td><input type="checkbox" ng-model="user.instrument_manager"></td>
                 <td><input type="checkbox" ng-model="user.data_series_manager"></td>
-                <td><input type="checkbox" ng-model="user.api_user"></td>
+                <td><input type="checkbox" ng-model="user.api_user"></td> -->
                 <td>
                   <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-primary" ng-disabled="!user.name || !user.email" ng-click="saveUser(user)">Save</button>
+                    <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.first_name || !user.email" ng-click="saveUser(user)">Save</button>
                     <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(user)">Cancel</button>
                   </div>
                 </td>

@@ -158,6 +158,9 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // save user to server
     $scope.saveUser = function(user) {
+        // user will log in with email + password
+        // so here username will always be set to email address
+        user.username = user.email;
         if(user.id) {
             // user already exists on server. update.
             user.patch().then(function(serverResponse) {
@@ -183,7 +186,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // create new user
     $scope.addNewUser = function() {
-	user = {name:'', email:'', edit:true, disabled:false};
+	user = {first_name:'', last_name:'', email:'', is_enabled:true, edit:true};
         $scope.users.push(user);
         return true;
     }
@@ -200,9 +203,9 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
     // disable user toggle
     $scope.toggleUser = function(user) {
         tmpuser = user.clone();
-        tmpuser.disabled = !tmpuser.disabled;
+        tmpuser.is_enabled = !tmpuser.is_enabled;
         tmpuser.patch().then(function(serverResponse) {
-            user.disabled = !user.disabled;
+            user.is_enabled = !user.is_enabled;
         });
     }
 }]);
