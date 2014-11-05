@@ -209,11 +209,20 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
         });
     }
 
-    $scope.setPassword = function(user,pasword) {
-        pwchange = Restangular.one('users', user.id).getList('setpassword');
-        pwchange.post({'pasword':password}).then(function(serverResponse) {
-            console.log(serverResponse);
-        });
+    $scope.setPassword = function(user) {
+        $scope.userpw = user;
+    }
+
+    $scope.cancelPassword = function(user) {
+        $scope.userpw = false;
+    }
+
+    $scope.pushPassword = function() {
+        $scope.userpw = false;
+        //pwchange = Restangular.one('users', user.id).getList('setpassword');
+        //pwchange.post({'pasword':password}).then(function(serverResponse) {
+        //    console.log(serverResponse);
+        //});
     }
 
 }]);
