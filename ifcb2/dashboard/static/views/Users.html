@@ -47,7 +47,12 @@
             </tr>
 	    <!-- edit mode -->
 	    <tr ng-if="user.edit">
-                <td><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></td>
+                <td>
+                    <div class="row">
+                        <div class="col-md-6"><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-6"><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></div>
+                    </div>
+                </td>
                 <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
                 <!-- <td><input type="checkbox" ng-model="user.administrator"></td>
                 <td><input type="checkbox" ng-model="user.instrument_manager"></td>
