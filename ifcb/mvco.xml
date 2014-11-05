@@ -12,13 +12,15 @@
       <value>OkeanosExplorerNov2013_IFCB101,OkeanosExplorerNov2013_IFCB101</value>
       <value>TaraOceansPolarCircle_IFCB013,TaraOceansPolarCircle</value>
       <value>IFCB101_GEOCAPE_GOMEX2013,IFCB101_GEOCAPE_GOMEX2013</value>
+      <value>IFCB102_MBARI_Apr2014,IFCB102_MBARI_Apr2014</value>
+      <value>IFCB2_C211A_SEA2007,IFCB2_C211A_SEA2007</value>
     </var>
     <match var="ignore" pattern="([^,]*),(.*)" groups="time_series name">
       <hit/>
     </match>
   </resolver>
   <resolver name="time_series">
-    <var name="base_url">http://demi.whoi.edu/</var>
+    <var name="base_url">http://demi.whoi.edu/</var><!-- FIXME test server -->
     <var name="namespace">${base_url}${time_series}/</var>
     <var name="bot_name">&lt;a href="/about"&gt;Imaging FlowCytobot&lt;a&gt;</var>
     <match var="time_series" value="mvco">
@@ -27,12 +29,12 @@
       <hit/>
     </match>
     <match var="time_series" value="Healy1101">
-      <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1101&lt;a&gt;</var>
+      <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/sites/icescapedata"&gt;ICESCAPE-Healy1101&lt;a&gt;</var>
       <var name="dbname">healy1101</var>
       <hit/>
     </match>
     <match var="time_series" value="Healy1001">
-      <var name="title">${bot_name} @ &lt;a href="http://www.espo.nasa.gov/icescape/"&gt;ICESCAPE-Healy1001&lt;a&gt;</var>
+      <var name="title">${bot_name} @ &lt;a href="http://www.whoi.edu/sites/icescapedata"&gt;ICESCAPE-Healy1001&lt;a&gt;</var>
       <var name="dbname">healy1001</var>
       <hit/>
     </match>
@@ -76,6 +78,16 @@
       <var name="dbname">${time_series}</var>
       <hit/>
     </match>
+    <match var="time_series" value="IFCB102_MBARI_Apr2014">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
+    <match var="time_series" value="IFCB2_C211A_SEA2007">
+      <var name="title">${bot_name} @ ${time_series}</var>
+      <var name="dbname">${time_series}</var>
+      <hit/>
+    </match>
   </resolver>
  <resolver name="pid">
     <match var="pid" groups="namespace time_series lid bin_lid instrument date yearday year day time - target - product - extension"
@@ -96,28 +108,29 @@
     </match>
   </resolver>
   <resolver name="data_roots">
+    <var name="nas_data">/mnt/nas1_ifcb_data</var>
+    <var name="nas_products">/mnt/nas1_ifcb_products</var>
     <!-- MVCO time series -->
     <match var="time_series" value="mvco">
+      <var name="ts_dir">MVCO</var>
       <match var="product" value="raw">
 	<hit name="root">
-	  <value>/data/vol3/adcmod</value> <!-- look here first, it shadows unmodified adc data -->
-	  <value>/data/vol3</value>
+	  <value>${nas_data}/${ts_dir}/data</value>
 	  <value>/data/vol1</value>
-	  <value>/data/vol2</value>
 	</hit>
       </match>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" pattern="blob.*">
-	<hit name="root">/data/vol4/blobs</hit>
+	<hit name="root">
+	  <value>${product_dir}/blobs</value>
+	  <value>/data/vol4/blobs</value>
+	</hit>
       </match>
       <match var="product" pattern="features">
-	<hit name="root">
-	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
-	</hit>
+	<hit name="root">${product_dir}/features</hit>
       </match>
       <match var="product" pattern="class_scores">
-	<hit name="root">
-	  <value>/mnt/g_work_ifcb1/ifcb_data_mvco_jun06</value>
-	</hit>
+	<hit name="root">${product_dir}/class</hit>
       </match>
     </match>
     <!-- MVCO beads series -->
@@ -137,6 +150,9 @@
       <match var="product" pattern="blob.*">
 	<hit name="root">/mnt/healy1101/blobs</hit>
       </match>
+      <match var="product" pattern="features">
+	<hit name="root">/mnt/healy1101/features</hit>
+      </match>
     </match>
     <!-- Healy 1001 time series -->
     <match var="time_series" value="Healy1001">
@@ -146,6 +162,9 @@
       <match var="product" pattern="blob.*">
 	<hit name="root">/mnt/healy1001/blobs</hit>
       </match>
+      <match var="product" pattern="features">
+	<hit name="root">/mnt/healy1001/features</hit>
+      </match>
     </match>
     <!-- Salt Pond time series -->
     <match var="time_series" value="saltpond">
@@ -154,37 +173,46 @@
       </match>
       <match var="product" pattern="blob.*">
 	<hit name="root">/data/vol4/blobs/saltpond</hit>
+	<hit name="root">/mnt/saltpond/blobs</hit>
       </match>
     </match>
     <!-- Ditylum lab series -->
     <match var="time_series" value="ditylum">
+      <var name="ts_dir">${time_series}</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" value="raw">
-	<hit name="root">/mnt/rob2/proposals/NASA_2012/Ditylum_temperature/data</hit>
+	<!--hit name="root">/mnt/rob2/proposals/NASA_2012/Ditylum_temperature/data</hit-->
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
       </match>
       <match var="product" pattern="blob.*">
-	<hit name="root">/data/vol4/blobs/ditylum</hit>
+	<!--hit name="root">/data/vol4/blobs/ditylum</hit-->
+	<hit name="root">${product_dir}/blobs</hit>
       </match>
     </match>
     <match var="time_series" value="OkeanosExplorerAug2013_IFCB014">
+      <var name="ts_dir">IFCB014_OkeanosExplorerAug2013</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" value="raw">
-	<hit name="root">/mnt/${time_series}</hit>
+	<hit name="root">${nas_data}/${ts_dir}/data/continuous</hit>
       </match>
       <match var="product" value="blob.*">
-	<hit name="root">/mnt/${time_series}/blobs</hit>
+	<hit name="root">${product_dir}/blobs</hit>
       </match>
       <match var="product" value="features">
-	<hit name="root">/mnt/${time_series}/features</hit>
+	<hit name="root">${product_dir}/features</hit>
       </match>
     </match>
     <match var="time_series" value="OkeanosExplorerAug2013_IFCB010">
+      <var name="ts_dir">IFCB010_OkeanosExplorerAug2013</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" value="raw">
-	<hit name="root">/mnt/${time_series}</hit>
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
       </match>
       <match var="product" value="blob.*">
-	<hit name="root">/mnt/${time_series}/blobs</hit>
+	<hit name="root">${product_dir}/blobs</hit>
       </match>
       <match var="product" value="features">
-	<hit name="root">/mnt/${time_series}/features</hit>
+	<hit name="root">${product_dir}/features</hit>
       </match>
     </match>
     <match var="time_series" value="OkeanosExplorerNov2013_IFCB101">
@@ -199,25 +227,59 @@
       </match>
     </match>
     <match var="time_series" value="TaraOceansPolarCircle_IFCB013">
+      <var name="ts_dir">IFCB013_TaraOceansPolarCircle</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" value="raw">
-	<hit name="root">/mnt/${time_series}</hit>
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
       </match>
       <match var="product" value="blob.*">
-	<hit name="root">/mnt/${time_series}/blobs</hit>
+	<hit name="root">${product_dir}/blobs</hit>
       </match>
       <match var="product" value="features">
-	<hit name="root">/mnt/${time_series}/features</hit>
+	<hit name="root">${product_dir}/features</hit>
       </match>
     </match>
     <match var="time_series" value="IFCB101_GEOCAPE_GOMEX2013">
+      <var name="ts_dir">${time_series}</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
       <match var="product" value="raw">
-	<hit name="root">/mnt/${time_series}</hit>
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
       </match>
       <match var="product" value="blob.*">
-	<hit name="root">/mnt/${time_series}/blobs</hit>
+	<hit name="root">${product_dir}/blobs</hit>
       </match>
       <match var="product" value="features">
-	<hit name="root">/mnt/${time_series}/features</hit>
+	<hit name="root">${product_dir}/features</hit>
+      </match>
+    </match>
+    <match var="time_series" value="IFCB102_MBARI_Apr2014">
+      <var name="ts_dir">${time_series}</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
+      <match var="product" value="raw">
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">${product_dir}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">${product_dir}/features</hit>
+      </match>
+    </match>
+    <match var="time_series" value="IFCB2_C211A_SEA2007">
+      <var name="ts_dir">${time_series}</var>
+      <var name="product_dir">${nas_products}/${ts_dir}</var>
+      <match var="product" value="raw">
+	<hit name="root">${nas_data}/${ts_dir}/data</hit>
+      </match>
+      <match var="product" value="blob.*">
+	<hit name="root">${product_dir}/blobs</hit>
+      </match>
+      <match var="product" value="features">
+	<hit name="root">${product_dir}/features</hit>
+      </match>
+      <match var="product" value="class_scores">
+	<!-- not sure what to do here -->
+	<hit name="root">${product_dir}/class</hit>
       </match>
     </match>
   </resolver>
@@ -236,6 +298,9 @@
       <path match="${root}/${filename}"/>
       <!-- try v2 patterns -->
       <path match="${root}/D${year}/D${year}${day}/${filename}"/>
+      <!-- try >=2014 patterns (post NAS) -->
+      <path match="${root}/${year}/D${year}${day}/${filename}"/>
+      <path match="${root}/${year}/${instrument}_${year}_${day}/${filename}"/>
     </any>
   </resolver>
   <resolver name="blobs">
@@ -244,6 +309,7 @@
     <import name="data_roots"/>
     <var name="filename">${bin_lid}_blobs_v2.zip</var>
     <hit>${root}/${year}/${yearday}/${filename}</hit>
+    <hit>${root}/D${year}/D${yearday}/${filename}</hit>
   </resolver>
   <resolver name="mvco_blob">
     <import name="blobs"/>
