@@ -2,6 +2,11 @@ from flask import Blueprint
 from flask.ext import login
 from flask.ext import user
 
+class SecurityConfig(object):
+    USER_PASSWORD_HASH_MODE = 'passlib'
+    USER_PASSWORD_HASH      = 'bcrypt'
+    SECRET_KEY              = 'adoijfaeo@@@@@^^^^1284u'
+
 login_manager = login.LoginManager()
 
 security_blueprint = Blueprint('security', __name__)

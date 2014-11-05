@@ -1,10 +1,18 @@
 from flask import Flask, Blueprint
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
-from oii.ifcb2.session import session
-from flask.ext.user import UserManager
+from oii.ifcb2.session import session, dbengine
+from oii.ifcb2.dashboard.security import SecurityConfig
+from flask.ext.user import UserManager, SQLAlchemyAdapter
 
 app = Flask(__name__)
+# add app security configurations
+app.config.from_object(__name__+'.SecurityConfig')
+
+# setup user_manager
+db_adapter = SQLAlchemyAdapter(dbengine, User)
+user_manager = UserManager(db_adapter,app)
+
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
     print "*************************************************"
@@ -49,7 +57,7 @@ def set_password(instid):
         return "User not found", 404
     # should eventually perform check in password complexity
     if request.form.has_key('password') and request.form['password']:
-        user.password = UserManager().hash_password(request.form['password'])
+        user.password = user_manager.hash_password(request.form['password'])
         session.commit()
         return "password updated for user %s" % user.email, 200
     else:
