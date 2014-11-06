@@ -62,9 +62,19 @@ STATIC='/static/'
 app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
 app.url_map.converters['datetime'] = DatetimeConverter
+
+# load Flask-User configuration and init
+# this gets us authn/authz and session management
 app.config.from_object('oii.ifcb2.dashboard.security_config')
 db_adapter = SQLAlchemyAdapter(dbengine, User)
 user_manager = UserManager(db_adapter, app)
+
+# register security blueprint
+# this may go away later, since flask-user takes care of
+# most of our security requirements
+SECURITY_URL_PREFIX = '/sec'
+app.register_blueprint(security.security_blueprint,
+    url_prefix=SECURITY_URL_PREFIX)
 
 # register the admin blueprint right up front
 # API_URL_PREFIX should move to a config area some time
@@ -73,12 +83,6 @@ app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
-
-# register security blueprint
-SECURITY_URL_PREFIX = '/sec'
-app.register_blueprint(security.security_blueprint,
-    url_prefix=SECURITY_URL_PREFIX)
-# print app.url_map
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

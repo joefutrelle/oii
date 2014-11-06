@@ -10,7 +10,7 @@ from sqlalchemy import Column, ForeignKey, and_, or_, desc
 from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import relationship, backref
 from oii.ifcb2.session import ScopedSession
 from flask.ext.user import UserMixin
 
@@ -18,11 +18,12 @@ from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
 from oii.times import text2utcdatetime
 from oii.orm_utils import fix_utc
-from oii.ifcb2.session import session
 
 CHECKSUM_PLACEHOLDER='(placeholder)'
 
 Base = declarative_base()
+# the scoped_session property is bound here in order to provide
+# compatibility between our Users orm class and the Flask-Users module
 Base.query = ScopedSession.query_property()
 
 # make sure all timestamps roundtrip as UTC

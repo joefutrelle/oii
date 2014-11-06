@@ -1,17 +1,8 @@
 from flask import Blueprint
-from flask.ext import login
-from flask.ext import user
 from flask_user import login_required
 
 security_blueprint = Blueprint('security', __name__)
 
-@security_blueprint.route('/login')
-def login():
-    return "<h3>IFCB Login Page</h3>"
-
-@security_blueprint.route('/logout')
-def logout():
-    return "<h3>IFCB Logout Page</h3>"
 
 @security_blueprint.route('/test_public')
 def public():

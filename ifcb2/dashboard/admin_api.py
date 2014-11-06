@@ -6,13 +6,13 @@ from oii.ifcb2.session import session, dbengine
 from flask.ext.user import UserManager, SQLAlchemyAdapter
 
 app = Flask(__name__)
-# add app security configurations
-app.config.from_object('oii.ifcb2.dashboard.security_config')
 
-# setup user_manager
+# add app security configurations and setup setup user_manager
+# this is being done so we can use the user_manager.hash_password() function
+# below, without trying to cross-import from app.py
+app.config.from_object('oii.ifcb2.dashboard.security_config')
 db_adapter = SQLAlchemyAdapter(dbengine, User)
 user_manager = UserManager(db_adapter,app)
-
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
     print "*************************************************"
