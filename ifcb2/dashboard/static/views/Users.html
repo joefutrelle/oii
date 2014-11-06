@@ -13,9 +13,9 @@
         </div>
         <div class="panel-body">
             <i>Update password for {{userpw.email}}.</i>
-            <div class="passwordinput"><input type="password" class="form-control" placeholder="password must be 8 characters or longer" ng-model="user.password" ng-minlength="8" ng-maxlength="255" required></div>
+            <div class="passwordinput"><input type="password" class="form-control" placeholder="password must be 8 characters or longer" ng-model="userpw.password" ng-minlength="8" ng-maxlength="255" required></div>
             <div><div class="btn-group">
-                <button type="button" class="btn btn-primary" ng-disabled="!user.password" ng-click="pushPassword()">Set Password</button>
+                <button type="button" class="btn btn-primary" ng-disabled="!userpw.password" ng-click="pushPassword()">Set Password</button>
                 <button type="button" class="btn btn-default" ng-confirm-click="cancelPassword()">Cancel</button>
             </div></div>
         </div>

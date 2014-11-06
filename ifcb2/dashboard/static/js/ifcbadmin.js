@@ -218,11 +218,11 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
     }
 
     $scope.pushPassword = function() {
-        $scope.userpw = false;
-        //pwchange = Restangular.one('users', user.id).getList('setpassword');
-        //pwchange.post({'pasword':password}).then(function(serverResponse) {
-        //    console.log(serverResponse);
-        //});
+        var pwchange = Restangular.one("setpassword", $scope.userpw.id);
+        pwchange.customPOST({'password':$scope.userpw.password},'',{},{}).then(function(serverResponse) {
+            console.log(serverResponse);
+            $scope.userpw = false;
+        });
     }
 
 }]);

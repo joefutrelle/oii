@@ -1,4 +1,5 @@
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, request
+import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session, dbengine
@@ -50,14 +51,15 @@ user_blueprint = manager.create_api_blueprint(
 
 password_blueprint = Blueprint('password', __name__)
 
-@password_blueprint.route('/users/<int:instid>/setpassword', methods=['POST'])
+@password_blueprint.route('/setpassword/<int:instid>', methods=['POST'])
 def set_password(instid):
+    data = json.loads(request.data)
     user = session.query(User).filter_by(id=instid).first()
     if not user:
         return "User not found", 404
     # should eventually perform check in password complexity
-    if request.form.has_key('password') and request.form['password']:
-        user.password = user_manager.hash_password(request.form['password'])
+    if data.has_key('password') and data['password']:
+        user.password = user_manager.hash_password(data['password'])
         session.commit()
         return "password updated for user %s" % user.email, 200
     else:
