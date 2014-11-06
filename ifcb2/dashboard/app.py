@@ -14,6 +14,7 @@ from datetime import timedelta
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 import flask.ext.sqlalchemy
 import flask.ext.restless
+from flask.ext.user import UserManager, SQLAlchemyAdapter
 
 from sqlalchemy import and_
 
@@ -33,7 +34,7 @@ from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
-from oii.ifcb2.session import session
+from oii.ifcb2.session import session, dbengine
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
 from oii.ifcb2.dashboard.admin_api import user_blueprint, password_blueprint
@@ -61,6 +62,9 @@ STATIC='/static/'
 app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
 app.url_map.converters['datetime'] = DatetimeConverter
+app.config.from_object('oii.ifcb2.dashboard.security_config')
+db_adapter = SQLAlchemyAdapter(dbengine, User)
+user_manager = UserManager(db_adapter, app)
 
 # register the admin blueprint right up front
 # API_URL_PREFIX should move to a config area some time

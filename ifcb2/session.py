@@ -1,7 +1,7 @@
 
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine, and_
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 
 # eventually the session cofiguration should
@@ -13,5 +13,5 @@ dbengine = create_engine(SQLITE_URL,
                     connect_args={'check_same_thread':False},
                     poolclass=StaticPool,
                          echo=False)
-Session = sessionmaker(bind=dbengine)
-session = Session()
+ScopedSession = scoped_session(sessionmaker(bind=dbengine))
+session = ScopedSession()

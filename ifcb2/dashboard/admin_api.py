@@ -3,12 +3,11 @@ import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session, dbengine
-from oii.ifcb2.dashboard.security import SecurityConfig
 from flask.ext.user import UserManager, SQLAlchemyAdapter
 
 app = Flask(__name__)
 # add app security configurations
-app.config.from_object(__name__+'.SecurityConfig')
+app.config.from_object('oii.ifcb2.dashboard.security_config')
 
 # setup user_manager
 db_adapter = SQLAlchemyAdapter(dbengine, User)

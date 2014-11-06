@@ -1,13 +1,7 @@
 from flask import Blueprint
 from flask.ext import login
 from flask.ext import user
-
-class SecurityConfig(object):
-    USER_PASSWORD_HASH_MODE = 'passlib'
-    USER_PASSWORD_HASH      = 'bcrypt'
-    SECRET_KEY              = 'adoijfaeo@@@@@^^^^1284u'
-
-login_manager = login.LoginManager()
+from flask_user import login_required
 
 security_blueprint = Blueprint('security', __name__)
 
@@ -24,10 +18,12 @@ def public():
     return "<h3>IFCB public test page.</h3>"
 
 @security_blueprint.route('/test_user')
+@login_required
 def user():
-    return "<h3>IFCB user test page.</h3>"
+    return '<h3>IFCB user test page.</h3><br><br><a href="/user/sign-out">Logout</a>'
 
 @security_blueprint.route('/test_admin')
+@login_required
 def admin():
     return "<h3>IFCB admin test page.</h3>"
 
