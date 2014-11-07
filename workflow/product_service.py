@@ -75,10 +75,23 @@ def product2json(product):
     return json.dumps(product2dict(product))
 
 ############ ORM utils ################
-def do_create(pid,state='available',event='create'):
-    p = Product(event=event, state=state, pid=pid)
+STATE='state'
+EVENT='event'
+MESSAGE='message'
+
+def product_params(form,defaults):
+    params = {}
+    for k in [STATE, EVENT, MESSAGE]:
+        params[k] = form.get(k,default=defaults.get(k,None))
+    return params
+
+def do_create(pid,params):
+    p = Product(pid=pid, state=params[STATE], event=params[EVENT], message=params[MESSAGE])
     session.add(p)
     return p
+
+def do_update(p,params):
+    p.changed(state=params[STATE], event=params[EVENT], message=params[MESSAGE])
 
 # commit a change, and if it results in an integrity error,
 # return the given HTTP error status code
@@ -96,10 +109,34 @@ def do_commit(error_status=500):
 # returns a JSON representation of the product
 @app.route('/create/<path:pid>',methods=['GET','POST'])
 def create(pid):
-    state = request.form.get('state',default='available')
-    p = do_create(pid, state)
+    params = product_params(request.form, defaults={STATE:'available'})
+    p = do_create(pid, params)
     do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
+
+# delete a product regardless of its state or dependencies
+@app.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
+def delete(pid):
+    p = session.query(Product).filter(Product.pid==pid).first()
+    if p is None:
+        abort(404)
+    else:
+        session.delete(p)
+        do_commit()
+        return Response(dict(deleted=p), mimetype=MIME_JSON)
+
+# delete a product and all its ancestors
+@app.route('/delete_tree/<path:pid>',methods=['GET','POST','DELETE'])
+def delete_tree(pid):
+    p = session.query(Product).filter(Product.pid==pid).first()
+    if p is None:
+        abort(404)
+    else:
+        td = [p] + list(p.ancestors)
+        for d in td:
+            session.delete(d)
+        do_commit()
+        return Response(dict(deleted=td), mimetype=MIME_JSON)
 
 # change the state of an object, and record the type of
 # event that this state change is associated with.
@@ -107,22 +144,23 @@ def create(pid):
 # if no state is specified, the default is "updated".
 @app.route('/update/<path:pid>',methods=['POST'])
 def update(pid):
-    event = request.form.get('event',default='heartbeat')
-    new_state = request.form.get('state',default='updated')
-    message = request.form.get('message',default=None)
+    params = product_params(request.form, defaults={
+        EVENT: 'heartbeat',
+        STATE: 'updated'
+    })
     p = session.query(Product).filter(Product.pid==pid).first()
     if p is None:
-        p = do_create(pid, state=new_state, event=event, message=message)
+        p = do_create(pid, params)
     else:
-        p.changed(event, new_state, message)
+        do_update(p, params)
     do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
 # assert a dependency between a downstream product and an upstream product,
 # where that dependency is associated with a role that the upstream product
 # plays in the production of the downstream product. the default role is 'any'.
-# products must already have been created with 'create'--they are not implicitly
-# created
+# products are implicitly created and so form arguments are accepted for
+# state, event, and message
 @app.route('/depend/<path:down_pid>',methods=['POST'])
 def depend(down_pid):
     try:
@@ -130,9 +168,12 @@ def depend(down_pid):
     except KeyError:
         abort(400)
     role = request.form.get('role',default='any')
+    params = product_params(request.form, defaults={
+        STATE: 'waiting'
+    })
     dp = session.query(Product).filter(Product.pid==down_pid).first()
     if dp is None:
-        dp = do_create(down_pid,'waiting')
+        dp = do_create(down_pid,params)
     up = session.query(Product).filter(Product.pid==up_pid).first()
     if up is None:
         abort(404)

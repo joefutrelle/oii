@@ -25,9 +25,12 @@ class Product(Base):
 
     def changed(self, event, state='updated', message=None, ts=None):
         """call when the product's state changes."""
-        self.event = event
-        self.state = state
-        self.message = message
+        if event is not None:
+            self.event = event
+        if state is not None:
+            self.state = state
+        if message is not None:
+            self.message = message
         if ts is None:
             ts = utcdtnow()
         self.ts = ts
