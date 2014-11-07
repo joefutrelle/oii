@@ -28,13 +28,13 @@
         <div ng-if="ts.edit">
             <button type="button" class="btn btn-default pull-right" ng-click="saveTimeSeries(ts)">Save</button>
             <h4 class="list-group-item-heading">
-                <div class="input-group col-md-3">
+                <div class="input-group col-md-4">
                     <span class="input-group-addon">Label</span>
                     <input type="text" class="form-control" ng-model="ts.label">
                 </div>
             </h4>
             <h4 class="list-group-item-heading">
-                <div class="input-group col-md-3">
+                <div class="input-group col-md-5">
                     <span class="input-group-addon">Description</span>
                     <input type="text" class="form-control" ng-model="ts.description">
                 </div>
@@ -42,20 +42,20 @@
             <h4 class="list-group-item-heading">
                 <div class="input-group col-md-3">
                     <span class="input-group-addon">Enabled</span>
-		    <select ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
+                    <select class="form-control btn btn-default dropdown-toggle" ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
                 </div>
             </h4>
             <h4 class="list-group-item-heading">
                 <div class="input-group col-md-3">
                     <span class="input-group-addon">Live</span>
-		    <select ng-model="ts.live" ng-options="a for a in [true, false]"></select>
+		    <select class="form-control btn btn-default dropdown-toggle" ng-model="ts.live" ng-options="a for a in [true, false]"></select>
                 </div>
             </h4>
             <div class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
                 <div class="input-group input-group-sm col-md-5">
                     <span class="input-group-addon">Path</span>
                     <input type="text" class="form-control" ng-model="path.path">
-		    <select ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features']"></select>
+		    <select class="form-control btn btn-default dropdown-toggle" ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features']"></select>
                     <span class="input-group-btn">
                         <button class="btn btn-default" type="button" ng-click="removePath(ts,path)">-</button>
                     </span>
