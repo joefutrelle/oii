@@ -39,9 +39,6 @@ for n in range(5):
     ping_pid = gen_id()
     job_pid = gen_id()
     print 'pinging: %s <- %s' % (job_pid, ping_pid)
-    requests.get(api('/create/%s' % ping_pid), data={
-        'message': 'scheduled wakeup'
-    })
     requests.post(api('/depend/%s' % job_pid), data={
         'upstream': ping_pid,
         'role': 'acq_wakeup'
