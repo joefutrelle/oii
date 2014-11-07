@@ -20,8 +20,8 @@ MIME_JSON='application/json'
 # eventually the session cofiguration should
 # go in its own class.
 #SQLITE_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-#SQLITE_URL='sqlite:///product_service_test.db'
-SQLITE_URL='sqlite://'
+SQLITE_URL='sqlite:///product_service_test.db'
+#SQLITE_URL='sqlite://'
 
 from sqlalchemy.pool import StaticPool
 dbengine = create_engine(SQLITE_URL,
@@ -109,11 +109,12 @@ def create(pid):
 def update(pid):
     event = request.form.get('event',default='heartbeat')
     new_state = request.form.get('state',default='updated')
+    message = request.form.get('message',default=None)
     p = session.query(Product).filter(Product.pid==pid).first()
     if p is None:
-        p = do_create(pid, state=new_state, event=event)
+        p = do_create(pid, state=new_state, event=event, message=message)
     else:
-        p.changed(event, new_state)
+        p.changed(event, new_state, message)
     do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
