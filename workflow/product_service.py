@@ -86,7 +86,10 @@ def product_params(form,defaults):
     return params
 
 def do_create(pid,params):
-    p = Product(pid=pid, state=params[STATE], event=params[EVENT], message=params[MESSAGE])
+    p = Product(pid=pid,
+                state=params.get(STATE,None),
+                event=params.get(EVENT,None),
+                message=params.get(MESSAGE,None))
     session.add(p)
     return p
 
@@ -176,7 +179,10 @@ def depend(down_pid):
         dp = do_create(down_pid,params)
     up = session.query(Product).filter(Product.pid==up_pid).first()
     if up is None:
-        abort(404)
+        up = do_create(up_pid,params={
+            STATE: 'available',
+            EVENT: 'implicit_create'
+        })
     Products(session).add_dep(dp, up, role)
     do_commit()
     return Response(product2json(dp), mimetype=MIME_JSON) # FIXME
