@@ -26,7 +26,10 @@
         </div>
         <!-- time series edit view -->
         <div ng-if="ts.edit">
-            <button type="button" class="btn btn-default pull-right" ng-click="saveTimeSeries(ts)">Save</button>
+            <div class="btn-group pull-right">
+                <button type="button" class="btn btn-default" ng-click="saveTimeSeries(ts)">Save</button>
+                <button type="button" class="btn btn-default" ng-click="cancelTimeSeries(ts)">Cancel</button>
+            </div>
             <h4 class="list-group-item-heading">
                 <div class="input-group col-md-4">
                     <span class="input-group-addon">Label</span>
