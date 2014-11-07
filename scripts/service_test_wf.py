@@ -19,10 +19,7 @@ def do_work():
             break
         if d is not None:
             print 'skipping %s' % job_pid
-            requests.post(api('/update/%s' % job_pid), data={
-                'state': 'available',
-                'event': 'skipped'
-            })
+            requests.delete(api('/delete_tree/%s' % job_pid))
         d = r.json()
         job_pid = d['pid']
     if d is None:
@@ -31,7 +28,8 @@ def do_work():
     print 'completing %s' % job_pid
     requests.post(api('/update/%s' % job_pid), data={
         'state': 'available',
-        'event': 'completed'
+        'event': 'completed',
+        'message': 'acquisition done'
     })
     return True
 
@@ -41,7 +39,9 @@ for n in range(5):
     ping_pid = gen_id()
     job_pid = gen_id()
     print 'pinging: %s <- %s' % (job_pid, ping_pid)
-    requests.get(api('/create/%s' % ping_pid))
+    requests.get(api('/create/%s' % ping_pid), data={
+        'message': 'scheduled wakeup'
+    })
     requests.post(api('/depend/%s' % job_pid), data={
         'upstream': ping_pid,
         'role': 'acq_wakeup'
