@@ -61,6 +61,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     // initialize local scope
     var baseTimeSeries = Restangular.all('time_series');
     $scope.alert = null;
+    var restore = {};
 
     // load iniital data from api
     baseTimeSeries.getList().then(function(serverResponse) {
@@ -84,6 +85,8 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // mark timeseries group for editing
     $scope.editTimeSeries = function(ts) {
+        restore[ts.id] = {};
+        angular.copy(ts, restore[ts.id]);
         ts.edit = true;
     }
 
@@ -91,7 +94,9 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
     $scope.cancelTimeSeries = function(ts) {
         if (ts.id) {
             // cancel edit on saved timeseries
-            ts.edit = false;
+            // restore unedited copy
+            angular.copy(restore[ts.id], ts);
+            delete restore[ts.id];
         } else {
             // cancel creation of new timeseries
             $scope.time_series  = _.without($scope.time_series, ts);
@@ -119,6 +124,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 	    // timeseries group already exists on server. update.
 	    ts.patch().then(function(serverResponse) {
                 delete ts.edit;
+                delete restore[ts.id];
                 $scope.alert = null;
 	    }, function(serverResponse) {
                 console.log(serverResponse);
@@ -164,6 +170,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
     // initialize local scope
     var baseTimeSeries = Restangular.all('time_series');
     $scope.alert = null;
+    var restore = {};
 
     // load iniital data from api
     baseTimeSeries.getList().then(function(serverResponse) {
@@ -192,6 +199,8 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
 
     // mark timeseries group for editing
     $scope.editInstrument = function(instr) {
+        restore[instr.id] = {};
+        angular.copy(instr, restore[instr.id]);
         instr.edit = true;
     }
 
@@ -199,7 +208,9 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
     $scope.cancelInstrument = function(instr) {
         if (instr.id) {
             // cancel edit on saved timeseries
-            instr.edit = false;
+            // restore unedited copy
+            angular.copy(restore[instr.id], instr);
+            delete restore[instr.id];
         } else {
             // cancel creation of new timeseries
             $scope.instruments  = _.without($scope.instruments, instr);
@@ -211,7 +222,8 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
         if(instr.id) {
         // timeseries group already exists on server. update.
         instr.patch().then(function(serverResponse) {
-                angular.copy(serverResponse, instr);
+                delete instr.edit;
+                delete restore[instr.id];
                 $scope.alert = null;
         }, function(serverResponse) {
                 console.log(serverResponse);
@@ -246,6 +258,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
     // initialize local scope
     var baseUsers = Restangular.all('users');
     $scope.alert = null;
+    var restore = {};
 
     // load iniital data from api
     baseUsers.getList().then(function(serverResponse) {
@@ -265,6 +278,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
             // user already exists on server. update.
             user.patch().then(function(serverResponse) {
                 delete user.edit;
+                delete restore[user.id];
                 $scope.alert = null;
             }, function(serverResponse) {
                 console.log(serverResponse);
@@ -293,10 +307,19 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // cancel new user creation
     $scope.cancelUser = function(user) {
-        $scope.users = _.without($scope.users, user);
+        if (user.id) {
+            // cancel edit on saved timeseries
+            // restore unedited copy
+            angular.copy(restore[user.id], user);
+            delete restore[user.id];
+        } else {
+            $scope.users = _.without($scope.users, user);
+        }
     }
 
     $scope.editUser = function(user) {
+        restore[user.id] = {}
+        angular.copy(user, restore[user.id]);
         user.edit = true;
     }
 
