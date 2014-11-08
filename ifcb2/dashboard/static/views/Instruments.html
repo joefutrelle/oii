@@ -24,24 +24,24 @@
                 <button type="button" class="btn btn-default" ng-disabled="!instr.name || !instr.data_path || !instr.time_series_id" ng-click="saveInstrument(instr)">Save</button>
                 <button type="button" class="btn btn-default" ng-click="cancelInstrument(instr)">Cancel</button>
             </div>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-4">
+            <div class="row ifcbformrow"><div class="col-md-4">
+                <div class="input-group">
                     <span class="input-group-addon">Name</span>
                     <input type="text" class="form-control" ng-model="instr.name">
                 </div>
-            </h4>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-5">
+            </div></div>
+            <div class="row ifcbformrow"><div class="col-md-5">
+                <div class="input-group">
                     <span class="input-group-addon">Path</span>
                     <input type="text" class="form-control" ng-model="instr.data_path">
                 </div>
-            </h4>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-3">
+            </div></div>
+            <div class="row ifcbformrow"><div class="col-md-4">
+                <div class="input-group">
                     <span class="input-group-addon">Time Series</span>
-                    <select class="form-control btn btn-default dropdown-toggle" ng-model="instr.time_series_id" ng-options="ts.id as ts.label for ts in time_series"></select>
+                    <select class="form-control-lf" ng-model="instr.time_series_id" ng-options="ts.id as ts.label for ts in time_series"></select>
                 </div>
-            </h4>
+            </div></div>
         </div>
     </div>
 </div>

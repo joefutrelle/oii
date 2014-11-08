@@ -30,30 +30,30 @@
                 <button type="button" class="btn btn-default" ng-click="saveTimeSeries(ts)">Save</button>
                 <button type="button" class="btn btn-default" ng-click="cancelTimeSeries(ts)">Cancel</button>
             </div>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-4">
+            <div class="row ifcbformrow"><div class="col-md-4">
+                <div class="input-group">
                     <span class="input-group-addon">Label</span>
                     <input type="text" class="form-control" ng-model="ts.label">
                 </div>
-            </h4>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-5">
+            </div></div>
+            <div class="row ifcbformrow"><div class="col-md-5">
+                <div class="input-group">
                     <span class="input-group-addon">Description</span>
                     <input type="text" class="form-control" ng-model="ts.description">
                 </div>
-            </h4>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-3">
+            </div></div>
+            <div class="row ifcbformrow"><div class="col-md-3">
+                <div class="input-group">
                     <span class="input-group-addon">Enabled</span>
-                    <select class="form-control btn btn-default dropdown-toggle" ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
+                    <select class="form-control-lf" ng-model="ts.enabled" ng-options="a for a in [true, false]"></select>
                 </div>
-            </h4>
-            <h4 class="list-group-item-heading">
-                <div class="input-group col-md-3">
+            </div></div>
+            <div class="row ifcbformrow"><div class="col-md-3">
+                <div class="input-group">
                     <span class="input-group-addon">Live</span>
-		    <select class="form-control btn btn-default dropdown-toggle" ng-model="ts.live" ng-options="a for a in [true, false]"></select>
+		    <select class="form-control-lf" ng-model="ts.live" ng-options="a for a in [true, false]"></select>
                 </div>
-            </h4>
+            </div></div>
             <div class="list-group-item-text" data-ng-repeat="path in ts.data_dirs">
                 <div class="input-group input-group-sm col-md-5">
                     <span class="input-group-addon">Path</span>
