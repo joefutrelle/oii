@@ -22,9 +22,10 @@ from oii.orm_utils import fix_utc
 CHECKSUM_PLACEHOLDER='(placeholder)'
 
 Base = declarative_base()
+BaseAuth = declarative_base()
 # the scoped_session property is bound here in order to provide
 # compatibility between our Users orm class and the Flask-Users module
-Base.query = ScopedSession.query_property()
+BaseAuth.query = ScopedSession.query_property()
 
 # make sure all timestamps roundtrip as UTC
 fix_utc(Base)
@@ -134,7 +135,7 @@ class Instrument(Base):
 
     time_series = relationship('TimeSeries')
 
-class User(Base, UserMixin):
+class User(BaseAuth, UserMixin):
     """data model must conform to flask-user expectations here
     http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""
     __tablename__ = 'users'

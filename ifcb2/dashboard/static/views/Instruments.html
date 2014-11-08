@@ -1,1 +1,51 @@
+
 <h1 class="page-header">Instruments</h1>
+
+<div ng-if="alert" class="alert alert-danger">
+  {{alert}}
+</div>
+
+<div class="list-group">
+    <div class="list-group-item" data-ng-repeat="instr in instruments">
+        <!-- time series display view -->
+        <div ng-if="!instr.edit">
+            <div class="btn-group pull-right">
+                <button type="button" class="btn btn-default" ng-click="editInstrument(instr)">Edit</button>
+                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{instr.name}}' instrument?" ng-confirm-condition="true" ng-confirm-click="removeInstrument(instr)">Remove</button>
+            </div>
+    <!-- FIXME the link below assumes the whole webapp is running at the top of the web server -->
+        <h4 class="list-group-item-heading">Name: {{instr.name}}</h4>
+        <p class="list-group-item-text">Path: {{instr.data_path}}</p>
+        <p class="list-group-item-text">Time Series: {{instr.time_series.label}}</p>
+        </div>
+        <!-- time series edit view -->
+        <div ng-if="instr.edit">
+            <div class="btn-group pull-right">
+                <button type="button" class="btn btn-default" ng-disabled="!instr.name || !instr.data_path || !instr.time_series_id" ng-click="saveInstrument(instr)">Save</button>
+                <button type="button" class="btn btn-default" ng-click="cancelInstrument(instr)">Cancel</button>
+            </div>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-4">
+                    <span class="input-group-addon">Name</span>
+                    <input type="text" class="form-control" ng-model="instr.name">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-5">
+                    <span class="input-group-addon">Path</span>
+                    <input type="text" class="form-control" ng-model="instr.data_path">
+                </div>
+            </h4>
+            <h4 class="list-group-item-heading">
+                <div class="input-group col-md-3">
+                    <span class="input-group-addon">Time Series</span>
+                    <select class="form-control btn btn-default dropdown-toggle" ng-model="instr.time_series_id" ng-options="ts.id as ts.label for ts in time_series"></select>
+                </div>
+            </h4>
+        </div>
+    </div>
+</div>
+
+<button type="button" class="btn btn-primary" ng-click="addNewInstrument()">Add New Instrument</button>
+
+<!-- <p><pre>instruments = {{instruments | json}}</pre></p> -->

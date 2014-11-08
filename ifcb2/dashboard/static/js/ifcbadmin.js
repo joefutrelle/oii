@@ -55,16 +55,8 @@ ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope,
     };
 }]);
 
-ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
-    $scope.truefalse = [{
-        id: 1,
-        name: "True"
-    }, {
-        id: 2,
-        name: "False"
-    }];
-    $scope.selected_test = 3;
+ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
     // initialize local scope
     var baseTimeSeries = Restangular.all('time_series');
@@ -161,6 +153,93 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
 }]);
 
+
+ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
+
+
+    // initialize local scope
+    var baseInstruments = Restangular.all('instruments');
+    $scope.alert = null;
+
+    // initialize local scope
+    var baseTimeSeries = Restangular.all('time_series');
+    $scope.alert = null;
+
+    // load iniital data from api
+    baseTimeSeries.getList().then(function(serverResponse) {
+        $scope.time_series = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
+
+    // load iniital data from api
+    baseInstruments.getList().then(function(serverResponse) {
+        $scope.instruments = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
+
+    // create new timeseries
+    $scope.addNewInstrument = function() {
+        $scope.instruments.push({name:'',data_path:'',edit:true});
+        return true;
+    }
+
+
+    // mark timeseries group for editing
+    $scope.editInstrument = function(instr) {
+        instr.edit = true;
+    }
+
+    // mark timeseries group for editing
+    $scope.cancelInstrument = function(instr) {
+        if (instr.id) {
+            // cancel edit on saved timeseries
+            instr.edit = false;
+        } else {
+            // cancel creation of new timeseries
+            $scope.instruments  = _.without($scope.instruments, instr);
+        }
+    }
+
+    // save timeseries group to server
+    $scope.saveInstrument = function(instr) {
+        if(instr.id) {
+        // timeseries group already exists on server. update.
+        instr.patch().then(function(serverResponse) {
+                angular.copy(serverResponse, instr);
+                $scope.alert = null;
+        }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+        });
+        } else {
+        // new timeseries group. post to server.
+        baseInstruments.post(instr).then(function(serverResponse) {
+                // copy server response to scope object
+                angular.copy(serverResponse, instr);
+                $scope.alert = null;
+        }, function(serverResponse) {
+                console.log(serverResponse);
+                $scope.alert = serverResponse.data.validation_errors;
+        });
+        }
+    }
+
+    // remove timeseries group
+    $scope.removeInstrument = function(instr) {
+        instr.remove().then(function() {
+            $scope.instruments = _.without($scope.instruments, instr);
+        });
+    }
+
+}]);
+
+
 // users controller
 ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
@@ -248,10 +327,6 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
 }]);
 
-// instrument controller
-ifcbAdmin.controller('InstrumentCtrl', ['$scope', function ($scope) {
-    $scope.instruments = [];
-}]);
 
 // my account controller
 ifcbAdmin.controller('AccountCtrl', ['$scope', function ($scope) {
@@ -274,9 +349,9 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             controller: 'AccountCtrl',
             templateUrl: 'views/MyAccount.html'
             }).
-	when('/instruments', {
-	    controller: 'InstrumentCtrl',
-	    templateUrl: 'views/Instruments.html'
+        when('/instruments', {
+            controller: 'InstrumentCtrl',
+            templateUrl: 'views/Instruments.html'
 	    }).
         otherwise({
             redirectTo: '/time_series'

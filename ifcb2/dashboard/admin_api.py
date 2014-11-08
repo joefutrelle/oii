@@ -1,7 +1,7 @@
 from flask import Flask, Blueprint, request
 import json
 import flask.ext.restless
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Instrument
 from oii.ifcb2.session import session, dbengine
 from flask.ext.user import UserManager, SQLAlchemyAdapter
 
@@ -38,6 +38,13 @@ manager_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
     preprocessors={'PATCH_SINGLE':[patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
+    )
+instrument_blueprint = manager.create_api_blueprint(
+    Instrument,
+    #url_prefix=API_URL_PREFIX,
+#    validation_exceptions=[DBValidationError],
+    methods=['GET', 'POST', 'DELETE','PATCH'],
+    preprocessors={'PATCH_SINGLE': [patch_single_preprocessor], 'POST':[patch_single_preprocessor]}
     )
 user_blueprint = manager.create_api_blueprint(
     User,
