@@ -33,7 +33,7 @@ from oii.webapi.utils import UrlConverter, DatetimeConverter
 from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User
+from oii.ifcb2.orm import Base, BaseAuth, Bin, TimeSeries, DataDirectory, User
 from oii.ifcb2.session import session, dbengine
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
@@ -742,4 +742,5 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 if __name__ == '__main__':
     from oii.ifcb2.session import dbengine
     Base.metadata.create_all(dbengine)
+    BaseAuth.metadata.create_all(dbengine)
     app.run(host='0.0.0.0',port=8080,debug=True)

@@ -153,8 +153,26 @@ class User(BaseAuth, UserMixin):
     first_name = Column(String(50), nullable=False, default='')
     last_name = Column(String(50), nullable=False, default='')
 
+    roles = relationship('Role', secondary='user_roles',
+                backref=backref('users', lazy='dynamic'))
+
     def is_active(self):
       return self.is_enabled
 
     def __repr__(self):
         return "<User(email='%s')>" % self.email
+
+class Role(BaseAuth):
+    __tablename__ = 'roles'
+    id = Column(Integer(), primary_key=True)
+    name = Column(String(50), unique=True)
+
+# Define UserRoles model
+class UserRoles(BaseAuth):
+    __tablename__ = 'user_roles'
+    id = Column(Integer(), primary_key=True)
+    user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
+    role_id = Column(Integer(), ForeignKey('roles.id', ondelete='CASCADE'))
+    users = relationship('User')
+    roles = relationship('Role')
+
