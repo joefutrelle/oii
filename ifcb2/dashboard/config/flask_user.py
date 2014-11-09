@@ -74,3 +74,39 @@ USER_ENABLE_RETYPE_PASSWORD    = True      # Prompt for `retype password` in:
                                            #   - reset password forms.
 
 USER_ENABLE_USERNAME           = False      # Register and Login with username
+
+# URLs
+USER_CHANGE_PASSWORD_URL      = '/sec/change-password'
+USER_CHANGE_USERNAME_URL      = '/sec/change-username'
+USER_CONFIRM_EMAIL_URL        = '/sec/confirm-email/<token>'
+USER_EMAIL_ACTION_URL         = '/sec/email/<id>/<action>'     # v0.5.1 and up
+USER_FORGOT_PASSWORD_URL      = '/sec/forgot-password'
+USER_LOGIN_URL                = '/sec/login'
+USER_LOGOUT_URL               = '/sec/logout'
+USER_MANAGE_EMAILS_URL        = '/sec/manage-emails'
+USER_REGISTER_URL             = '/sec/register'
+USER_RESEND_CONFIRM_EMAIL_URL = '/sec/resend-confirm-email'    # v0.5.0 and up
+USER_RESET_PASSWORD_URL       = '/sec/reset-password/<token>'
+
+""" # Form template files
+USER_CHANGE_PASSWORD_TEMPLATE           = 'flask_user/change_password.html'
+USER_CHANGE_USERNAME_TEMPLATE           = 'flask_user/change_username.html'
+USER_FORGOT_PASSWORD_TEMPLATE           = 'flask_user/forgot_password.html'
+USER_LOGIN_TEMPLATE                     = 'flask_user/login.html'
+USER_MANAGE_EMAILS_TEMPLATE             = 'flask_user/manage_emails.html'           # v0.5.1 and up
+USER_REGISTER_TEMPLATE                  = 'flask_user/register.html'
+USER_RESEND_CONFIRM_EMAIL_TEMPLATE      = 'flask_user/resend_confirm_email.html'    # v0.5.0 and up
+USER_RESET_PASSWORD_TEMPLATE            = 'flask_user/reset_password.html'
+
+# Place the Login form and the Register form on one page:
+# Only works for Flask-User v0.4.9 and up
+USER_LOGIN_TEMPLATE                     = 'flask_user/login_or_register.html'
+USER_REGISTER_TEMPLATE                  = 'flask_user/login_or_register.html'
+
+# Email template files                  # Defaults
+USER_CONFIRM_EMAIL_EMAIL_TEMPLATE       = 'flask_user/emails/confirm_email'
+USER_FORGOT_PASSWORD_EMAIL_TEMPLATE     = 'flask_user/emails/forgot_password'
+USER_PASSWORD_CHANGED_EMAIL_TEMPLATE    = 'flask_user/emails/password_changed'
+USER_REGISTERED_EMAIL_TEMPLATE          = 'flask_user/emails/registered'
+USER_USERNAME_CHANGED_EMAIL_TEMPLATE    = 'flask_user/emails/username_changed'
+"""

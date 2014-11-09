@@ -57,11 +57,15 @@ from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_ra
 # constants
 
 MIME_JSON='application/json'
-
 STATIC='/static/'
+
 app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
 app.url_map.converters['datetime'] = DatetimeConverter
+
+print dir(app)
+print app.template_folder
+print app.static_url_path
 
 # load Flask-User configuration and init
 # this gets us authn/authz and session management
