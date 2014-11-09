@@ -256,11 +256,21 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
 ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
 
     // initialize local scope
+    var baseRoles = Restangular.all('roles');
     var baseUsers = Restangular.all('users');
     $scope.alert = null;
     var restore = {};
 
     // load iniital data from api
+    baseRoles.getList().then(function(serverResponse) {
+        $scope.roles = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
+
+
     baseUsers.getList().then(function(serverResponse) {
         $scope.users = serverResponse;
     }, function(errorResponse) {

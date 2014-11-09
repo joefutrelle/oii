@@ -9,7 +9,7 @@ SQLITE_URL='sqlite:///ifcb_admin.db'
 dbengine = create_engine(SQLITE_URL,
                     connect_args={'check_same_thread':False},
                     poolclass=StaticPool,
-                         echo=True)
+                         echo=False)
 # scoped sessions are enabled here in order to provide
 # compatibility between our Users orm class and the Flask-Users module
 ScopedSession = scoped_session(sessionmaker(bind=dbengine))

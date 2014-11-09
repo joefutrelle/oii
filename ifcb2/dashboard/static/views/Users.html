@@ -31,11 +31,7 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <!-- auth will be restored later
-            <th>Admin</th>
-            <th>Instrument<br>Manager</th>
-            <th>Data Series<br>Manager</th>
-            <th>API User</th> -->
+            <th>Roles</th>
             <th></th>
           </tr>
         </thead>
@@ -43,16 +39,11 @@
             <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
                 <td><strong>{{user.first_name}} {{user.last_name}}</strong></td>
                 <td>{{user.email}}</td>
-                <!-- authorization will be back later
-                <td ng-if="user.administrator"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.administrator"><span class="glyphicon glyphicon-remove"></span></td>
-                <td ng-if="user.instrument_manager"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.instrument_manager"><span class="glyphicon glyphicon-remove"></span></td>
-                <td ng-if="user.data_series_manager"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.data_series_manager"><span class="glyphicon glyphicon-remove"></span></td>
-                <td ng-if="user.api_user"><span class="glyphicon glyphicon-ok"></span></td>
-                <td ng-if="!user.api_user"><span class="glyphicon glyphicon-remove"></span></td>
-                -->
+                <!-- <td ng-repeat="role in roles">
+                    <span ng-if="isMember(role,user)" class="glyphicon glyphicon-ok"></span>
+                    <span ng-if="!isMember(role,user)" class="glyphicon glyphicon-remove"></span>
+                </td> -->
+                <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                     <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
@@ -66,15 +57,14 @@
 	    <tr ng-if="user.edit">
                 <td>
                     <div class="row">
-                        <div class="col-md-6"><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required></div>
-                        <div class="col-md-6"><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></div>
                     </div>
                 </td>
-                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td></td>
-                <!-- <td><input type="checkbox" ng-model="user.administrator"></td>
-                <td><input type="checkbox" ng-model="user.instrument_manager"></td>
-                <td><input type="checkbox" ng-model="user.data_series_manager"></td>
-                <td><input type="checkbox" ng-model="user.api_user"></td> -->
+                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td>
+                <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                   <div class="btn-group pull-right">
                     <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.first_name || !user.email" ng-click="saveUser(user)">Save</button>
@@ -84,6 +74,9 @@
 	    </tr>
         </tbody>
 </table>
+
+<!-- <p><pre>roles = {{roles | json}}</pre></p>
+<p><pre>users = {{users | json}}</pre></p> -->
 
 
 

@@ -33,11 +33,11 @@ from oii.webapi.utils import UrlConverter, DatetimeConverter
 from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
-from oii.ifcb2.orm import Base, BaseAuth, Bin, TimeSeries, DataDirectory, User
+from oii.ifcb2.orm import Base, BaseAuth, Bin, TimeSeries, DataDirectory, User, Role
 from oii.ifcb2.session import session, dbengine
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
-from oii.ifcb2.dashboard.admin_api import user_blueprint, password_blueprint, instrument_blueprint
+from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint, instrument_blueprint
 from oii.ifcb2.dashboard import security
 
 from oii.ifcb2.feed import Feed
@@ -83,6 +83,7 @@ app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(instrument_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 
 ### generic flask utils ###
@@ -741,6 +742,31 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 
 if __name__ == '__main__':
     from oii.ifcb2.session import dbengine
+    # init database
     Base.metadata.create_all(dbengine)
     BaseAuth.metadata.create_all(dbengine)
+    # init roles and test users
+    # this should go somewhere else later
+    for role in ['Admin','Instrument','Time Series', 'API']:
+        if not session.query(Role).filter_by(name=role).count():
+            r = Role(name=role)
+            session.add(r)
+            session.commit()
+    if not session.query(User).filter_by(email='admin@whoi.edu').count():
+        u = User(
+            first_name='Test', last_name='Admin',
+            email='admin@whoi.edu', username='admin@whoi.edu',
+            is_enabled=True)
+        r = session.query(Role).filter_by(name='Admin').first()
+        u.roles.append(r)
+        session.add(u)
+        session.commit()
+    if not session.query(User).filter_by(email='user@whoi.edu').count():
+        u = User(
+            first_name='Test', last_name='User',
+            email='user@whoi.edu', username='user@whoi.edu',
+            is_enabled=True)
+        session.add(u)
+        session.commit()
+    # finally, start the application
     app.run(host='0.0.0.0',port=8080,debug=True)

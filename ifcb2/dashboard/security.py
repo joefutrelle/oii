@@ -1,5 +1,5 @@
 from flask import Blueprint
-from flask_user import login_required
+from flask_user import login_required, roles_required
 
 security_blueprint = Blueprint('security', __name__)
 
@@ -14,7 +14,7 @@ def user():
     return '<h3>IFCB user test page.</h3><br><br><a href="/user/sign-out">Logout</a>'
 
 @security_blueprint.route('/test_admin')
-@login_required
+@roles_required('Admin')
 def admin():
     return "<h3>IFCB admin test page.</h3>"
 
