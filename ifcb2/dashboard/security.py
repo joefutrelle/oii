@@ -16,6 +16,6 @@ def user():
 @security_blueprint.route('/test_admin')
 @roles_required('Admin')
 def admin():
-    return "<h3>IFCB admin test page.</h3>"
+    return '<h3>IFCB admin test page.</h3><br><br><a href="/user/sign-out">Logout</a>'
 
 

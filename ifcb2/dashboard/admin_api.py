@@ -10,7 +10,7 @@ app = Flask(__name__)
 # add app security configurations and setup setup user_manager
 # this is being done so we can use the user_manager.hash_password() function
 # below, without trying to cross-import from app.py
-app.config.from_object('oii.ifcb2.dashboard.security_config')
+app.config.from_object('oii.ifcb2.dashboard.config.flask_user')
 db_adapter = SQLAlchemyAdapter(dbengine, User)
 user_manager = UserManager(db_adapter,app)
 

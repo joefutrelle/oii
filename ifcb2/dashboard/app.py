@@ -65,7 +65,7 @@ app.url_map.converters['datetime'] = DatetimeConverter
 
 # load Flask-User configuration and init
 # this gets us authn/authz and session management
-app.config.from_object('oii.ifcb2.dashboard.security_config')
+app.config.from_object('oii.ifcb2.dashboard.config.flask_user')
 db_adapter = SQLAlchemyAdapter(dbengine, User)
 user_manager = UserManager(db_adapter, app)
 
