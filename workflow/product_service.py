@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from oii.times import iso8601
 
 from oii.workflow.product_orm import Base, Product, Dependency, Products
+from oii.workflow.async_notify import async_config, async_wakeup
 
 # constants
 
@@ -31,6 +32,10 @@ dbengine = create_engine(SQLITE_URL,
 Session = sessionmaker(bind=dbengine)
 session = Session()
 
+# configure async notification
+async_config()
+
+# configure Flask
 STATIC='/static/'
 app = Flask(__name__)
 
@@ -200,6 +205,12 @@ def start_next(role_list):
         abort(404)
     else:
         return Response(product2json(p), mimetype=MIME_JSON)
+
+# wake up workers
+@app.route('/wakeup')
+def wakeup():
+    async_wakeup()
+    return Response('{"status":"success"}',mimetype=MIME_JSON)
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)
