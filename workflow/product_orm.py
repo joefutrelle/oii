@@ -11,20 +11,25 @@ Base = declarative_base()
 fix_utc(Base)
 
 class Product(Base):
+    """Represents a data product, or proxy object representing a desired outcome,
+    that is in some current state and is a node in a product dependency DAG.
+    For example a file of processed data file derived from two input data files
+    file: in that case there would be three products, and two dependency
+    relationships between the output file and the two input files."""
     __tablename__ = 'products'
 
-    id = Column(Integer, primary_key=True)
-    pid = Column('pid', String, unique=True)
-    state = Column('state', String, default='available')
-    event = Column('event', String, default='new')
-    message = Column('message', String)
-    ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # is the ref to utcdtnow correct?
+    id = Column(Integer, primary_key=True) # row ID
+    pid = Column('pid', String, unique=True) # persistent ID of product
+    state = Column('state', String, default='available') # current state
+    event = Column('event', String, default='new') # most recent state transition event
+    message = Column('message', String) # event log message
+    ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # time of event
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
 
     def changed(self, event, state='updated', message=None, ts=None):
-        """call when the product's state changes."""
+        """call to record the event of a product state change"""
         if event is not None:
             self.event = event
         if state is not None:
@@ -62,6 +67,12 @@ class Product(Base):
         return '<Product %s (%s) @ %s>' % (self.pid, self.state, self.ts)
 
 class Dependency(Base):
+    """Represents a depdenency between two products. The dependency is
+    one-way (proceeds from "upstream" to "downstream") and is associated
+    with a role identifying the type of relationship the dependency represents.
+    For example a quotient depends upstream on a numerator and on a denominator.
+    In this model products do not have explicit types, only dependencies have
+    explicit roles."""
     __tablename__ = 'dependencies'
 
     DEFAULT_ROLE='any'

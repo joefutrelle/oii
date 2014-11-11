@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from oii.times import iso8601
 
 from oii.workflow.product_orm import Base, Product, Dependency, Products
-from oii.workflow.async_notify import async_config, async_wakeup
+from oii.workflow.async import async_config, async_wakeup
 
 # constants
 

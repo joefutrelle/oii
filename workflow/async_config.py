@@ -1,15 +1,9 @@
 from kombu.common import Broadcast
 
-from oii.workflow.async_notify import WAKEUP_TASK
+from oii.workflow.async import WAKEUP_TASK
 
-#CELERY_IMPORTS = (
-#    'oii.workflow.celery_broadcast.wakeup',
-#)
+WAKEUP_QUEUE='async_wakeup'
 
-CELERY_QUEUES = (Broadcast('wakeup'), )
-CELERY_ROUTES = {
-    WAKEUP_TASK: {
-        'queue': 'wakeup'
-    }
-}
+CELERY_QUEUES = (Broadcast(WAKEUP_QUEUE),)
+CELERY_ROUTES = { WAKEUP_TASK: { 'queue': WAKEUP_QUEUE } }
 
