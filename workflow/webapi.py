@@ -11,7 +11,8 @@ from sqlalchemy.orm import sessionmaker
 
 from oii.times import iso8601
 
-from oii.workflow.product_orm import Base, Product, Dependency, Products
+from oii.workflow.orm import Base, Product, Dependency, Products
+from oii.workflow.orm import STATE, EVENT, MESSAGE, WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
 
 # constants
@@ -70,9 +71,9 @@ def product2dict(product):
     return {
         'id': product.id,
         'pid': product.pid,
-        'state': product.state,
-        'event': product.event,
-        'message': product.message,
+        STATE: product.state,
+        EVENT: product.event,
+        MESSAGE: product.message,
         'ts': iso8601(product.ts.timetuple())
     }
 
@@ -80,9 +81,6 @@ def product2json(product):
     return json.dumps(product2dict(product))
 
 ############ ORM utils ################
-STATE='state'
-EVENT='event'
-MESSAGE='message'
 
 def product_params(form,defaults):
     params = {}
@@ -117,7 +115,9 @@ def do_commit(error_status=500):
 # returns a JSON representation of the product
 @app.route('/create/<path:pid>',methods=['GET','POST'])
 def create(pid):
-    params = product_params(request.form, defaults={STATE:'available'})
+    params = product_params(request.form, defaults={
+        STATE: AVAILABLE
+    })
     p = do_create(pid, params)
     do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
@@ -148,13 +148,16 @@ def delete_tree(pid):
 
 # change the state of an object, and record the type of
 # event that this state change is associated with.
+# event, state, and messages should be specified.
 # if no event is specified, the default is "heartbeat".
-# if no state is specified, the default is "updated".
+# if no state is specified, the default is "running"
+# if no message is specified, the default is None
 @app.route('/update/<path:pid>',methods=['POST'])
 def update(pid):
     params = product_params(request.form, defaults={
-        EVENT: 'heartbeat',
-        STATE: 'updated'
+        EVENT: HEARTBEAT,
+        STATE: RUNNING,
+        MESSAGE: None
     })
     p = session.query(Product).filter(Product.pid==pid).first()
     if p is None:
@@ -168,16 +171,17 @@ def update(pid):
 # where that dependency is associated with a role that the upstream product
 # plays in the production of the downstream product. the default role is 'any'.
 # products are implicitly created and so form arguments are accepted for
-# state, event, and message
+# state, event, and message for the downstream product. any implicitly created
+# upstream product is placed in the 'available' state
 @app.route('/depend/<path:down_pid>',methods=['POST'])
 def depend(down_pid):
     try:
-        up_pid = request.form['upstream']
+        up_pid = request.form[UPSTREAM]
     except KeyError:
         abort(400)
-    role = request.form.get('role',default='any')
+    role = request.form.get(ROLE,default=ANY)
     params = product_params(request.form, defaults={
-        STATE: 'waiting'
+        STATE: WAITING
     })
     dp = session.query(Product).filter(Product.pid==down_pid).first()
     if dp is None:
@@ -185,8 +189,9 @@ def depend(down_pid):
     up = session.query(Product).filter(Product.pid==up_pid).first()
     if up is None:
         up = do_create(up_pid,params={
-            STATE: 'available',
-            EVENT: 'implicit_create'
+            STATE: AVAILABLE,
+            EVENT: 'implicit_create',
+            MESSAGE: 'dependency of %s' % down_pid
         })
     Products(session).add_dep(dp, up, role)
     do_commit()
@@ -210,7 +215,7 @@ def start_next(role_list):
 @app.route('/wakeup')
 def wakeup():
     async_wakeup()
-    return Response('{"status":"success"}',mimetype=MIME_JSON)
+    return Response(json.dumps(dict(status='success')),mimetype=MIME_JSON)
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)

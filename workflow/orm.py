@@ -6,8 +6,32 @@ from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, Big
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
+# keys for use in the database and webapi
+
+# state and states
+STATE='state'
+WAITING='waiting'
+RUNNING='running'
+AVAILABLE='available'
+
+# event and events
+EVENT='event'
+HEARTBEAT='heartbeat'
+
+# message
+MESSAGE='message'
+
+# role and roles
+ROLE='role'
+ANY='any'
+
+# dependencies
+UPSTREAM='upstream'
+
+# declarative SQLAlchemy ORM
 Base = declarative_base()
 
+# UTC timezone used throughout
 fix_utc(Base)
 
 class Product(Base):
@@ -20,15 +44,15 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True) # row ID
     pid = Column('pid', String, unique=True) # persistent ID of product
-    state = Column('state', String, default='available') # current state
-    event = Column('event', String, default='new') # most recent state transition event
+    state = Column('state', String, default=AVAILABLE) # current state
+    event = Column('event', String, default='created') # most recent state transition event
     message = Column('message', String) # event log message
     ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # time of event
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
 
-    def changed(self, event, state='updated', message=None, ts=None):
+    def changed(self, event, state=RUNNING, message=HEARTBEAT, ts=None):
         """call to record the event of a product state change"""
         if event is not None:
             self.event = event
@@ -75,12 +99,10 @@ class Dependency(Base):
     explicit roles."""
     __tablename__ = 'dependencies'
 
-    DEFAULT_ROLE='any'
-
     id = Column(Integer, primary_key=True)
     upstream_id = Column(String, ForeignKey('products.id'))
     downstream_id = Column(String, ForeignKey('products.id'))
-    role = Column(String, default=DEFAULT_ROLE, nullable=False)
+    role = Column(String, default=ANY, nullable=False)
 
     upstream = relationship(Product,
                             primaryjoin=upstream_id==Product.id,
@@ -95,7 +117,7 @@ class Dependency(Base):
     state = association_proxy('upstream', 'state')
 
     def __repr__(self):
-        if self.role==Dependency.DEFAULT_ROLE:
+        if self.role==ANY:
             return '<%s depends on %s>' % (self.downstream, self.upstream)
         else:
             return '<%s depends on %s (as %s)>' % (self.downstream, self.role, self.upstream)
@@ -129,7 +151,7 @@ class Products(object):
     def leaves(self):
         """return all leaves; that is, products with no dependents"""
         return self.session.query(Product).filter(~Product.dependents.any())
-    def get_next(self, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available'):
+    def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
         dep_state and satisfy all the specified roles, and lock it for update"""
         return self.session.query(Product).\
@@ -142,7 +164,7 @@ class Products(object):
             having(func.count(distinct(Dependency.role))==len(set(roles))).\
             with_lockmode('update').\
             first()
-    def start_next(self, roles=[Dependency.DEFAULT_ROLE], state='waiting', dep_state='available', new_state='running', event='start', message=None):
+    def start_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):
         """find any product that is in state state and whose upstream dependencies are all in
         dep_state and satisfy all the specified roles, atomically set it to the new state with
         the given event and message values. If no product is in the state queried, will return
@@ -154,7 +176,7 @@ class Products(object):
             return p
         else:
             return None
-    def delete_intermediate(self, state='available', dep_state='available'):
+    def delete_intermediate(self, state=AVAILABLE, dep_state=AVAILABLE):
         """delete all products that
         - are in 'state'
         - have any dependencies (in other words, not "root" products")
@@ -168,7 +190,7 @@ class Products(object):
             with_lockmode('update'):
             self.session.delete(product)
         self.session.commit()
-    def expire(self, ago, state='running', new_state='waiting'):
+    def expire(self, ago, state=RUNNING, new_state=WAITING):
         """if a product has not had an event since ago ago (see older_than),
         and is in state, change its state to new_state"""
         if state == new_state:
