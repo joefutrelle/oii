@@ -62,10 +62,6 @@
 	 return all possible candidate paths -->
     <rule name="file_path">
       <!-- pass in "filename" -->
-      <!-- first, try schema-independent flat structure -->
-      <hit>
-	<var name="file_path">${root}/${filename}</var>
-      </hit>
       <!-- now compute schema-dependent day directory names -->
       <first>
 	<test var="schema_version" eq="v1">
@@ -83,12 +79,21 @@
       <var name="file_path">
 	<!-- 2014 and on directory structure -->
 	<val>${root}/${year}/${day_dir}/${filename}</val>
-	<!-- pre-2014 directory structure -->
+	<!-- alternately, try schema-independent flat structure -->
+	<val>${root}/${filename}</val>
+	<!-- finally, try pre-2014 directory structure -->
 	<val>${root}/${day_dir}/${filename}</val>
       </var>
     </rule>
-    <!-- given a parsed pid and root directory, find a raw file -->
+    <!-- given a pid and root directory, find preferred raw path -->
+    <rule name="raw_destination">
+      <invoke rule="ifcb.pid"/>
+      <var name="filename">${bin_lid}.${extension}</var>
+      <invoke rule="ifcb.files.file_path" nth="1"/>
+    </rule>
+    <!-- given a pid and root directory, find a raw file in any likely location -->
     <rule name="find_raw_file" nth="1">
+      <invoke rule="ifcb.pid"/>
       <var name="filename">${bin_lid}.${extension}</var>
       <invoke rule="ifcb.files.file_path"/>
       <path match="${file_path}"/>
