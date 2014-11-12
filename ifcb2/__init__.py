@@ -4,6 +4,14 @@ from oii.utils import memoize, search_path
 from oii import ldr
 from oii.ldr import Resolver
 
+# keys and constants
+HDR='hdr'
+ADC='adc'
+ROI='roi'
+HDR_PATH='hdr_path'
+ADC_PATH='adc_path'
+ROI_PATH='roi_path'
+
 IFCB_RESOLVER_BASE_PATH='oii/ifcb2/resolvers'
 
 @memoize()
