@@ -165,7 +165,7 @@ class Instrument(Base):
             if HDR in s and ADC in s and ROI in s:
                 yield (lid, s)
 
-class User(Base, UserMixin):
+class User(BaseAuth, UserMixin):
     """data model must conform to flask-user expectations here
     http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""
     __tablename__ = 'users'
