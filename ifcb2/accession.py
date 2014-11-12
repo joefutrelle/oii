@@ -6,21 +6,16 @@ from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 
 from oii.utils import sha1_file
 from oii.times import text2utcdatetime
-from oii.ifcb2 import get_resolver
+from oii.ifcb2 import get_resolver, HDR, ADC, ROI, HDR_PATH, ADC_PATH, ROI_PATH
 from oii.ifcb2.identifiers import parse_pid
 from oii.ifcb2.orm import Bin, File
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
 
-# variables from IFCB resolver
-HDR_PATH='hdr_path'
-ADC_PATH='adc_path'
-ROI_PATH='roi_path'
-
 def compute_fixity(fs, fast=False):
     """fs - fileset"""
     paths = [fs[HDR_PATH], fs[ADC_PATH], fs[ROI_PATH]]
-    filetypes = ['hdr','adc','roi']
+    filetypes = [HDR,ADC,ROI]
     for path,filetype in zip(paths,filetypes):
         f = File(local_path=path, filetype=filetype)
         f.compute_fixity(fast=fast)

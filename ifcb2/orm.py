@@ -17,8 +17,13 @@ from flask.ext.user import UserMixin
 from oii.times import text2utcdatetime
 from oii.resolver import parse_stream
 from oii.times import text2utcdatetime
+from oii.utils import remove_extension
 from oii.orm_utils import fix_utc
+from oii.ifcb2 import HDR, ADC, ROI, HDR_PATH, ADC_PATH, ROI_PATH
 
+FILE_CHECKSUM='sha1'
+FILE_LENGTH='length'
+FILE_EXISTS='exists'
 CHECKSUM_PLACEHOLDER='(placeholder)'
 
 Base = declarative_base()
@@ -110,18 +115,18 @@ class File(Base):
 
     def check_fixity(self,fast=False):
         status = {
-            'exists': False,
-            'length': False,
-            'sha1': False
+            FILE_EXISTS: False,
+            FILE_LENGTH: False,
+            FILE_CHECKSUM: False
         }
         if os.path.exists(self.local_path):
-            status['exists'] = True
+            status[FILE_EXISTS] = True
             if fast:
                 sha1 = CHECKSUM_PLACEHOLDER
             else:
                 sha1 = sha1_file(self.local_path)
-            status['sha1'] = self.sha1==sha1
-            status['length'] = self.length==os.stat(self.local_path).st_size
+            status[FILE_CHECKSUM] = self.sha1==sha1
+            status[FILE_LENGTH] = self.length==os.stat(self.local_path).st_size
         return status
 
 class Instrument(Base):
@@ -135,7 +140,32 @@ class Instrument(Base):
 
     time_series = relationship('TimeSeries')
 
-class User(BaseAuth, UserMixin):
+    def list_filesets(self):
+        """list all filesets currently present in the data directory,
+        and return the full pathname of each file as a tuple suitable
+        for constructing a dictionary from, like this
+        (LID, {
+            HDR: {full path of header file}
+            ADC: {full path of ADC file}
+            ROI: {full path of ROI file}
+        })"""
+        # first figure out which file goes with which LID
+        # and ignore files that aren't RAW data files
+        sets = {}
+        for fname in os.listdir(self.data_path):
+            (lid, pext) = os.path.splitext(fname)
+            pext = pext[1:]
+            if not pext in [HDR, ADC, ROI]:
+                continue
+            if not lid in sets:
+                sets[lid] = {}
+            sets[lid][pext] = os.path.join(self.data_path, fname)
+        # now yield all complete filesets
+        for lid,s in sets.items(): # FIXME sort by LID descending
+            if HDR in s and ADC in s and ROI in s:
+                yield (lid, s)
+
+class User(Base, UserMixin):
     """data model must conform to flask-user expectations here
     http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""
     __tablename__ = 'users'

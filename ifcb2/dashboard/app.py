@@ -424,12 +424,12 @@ def file2dict(f):
         'local_path': f.local_path
     }
 
-def get_files(parsed,check=False):
+def get_files(parsed,check=False,fast=True):
     result = []
     for f in parsed2files(parsed):
         d = file2dict(f)
         if check:
-            d['check'] = f.check_fixity(fast=True)
+            d['check'] = f.check_fixity(fast=fast)
         result.append(d)
     return result
 
@@ -452,7 +452,7 @@ def check_files(ts_label, pid):
         parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
-    result = get_files(parsed,check=True)
+    result = get_files(parsed,check=True,fast=True) # FIXME set fast to false
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 ### data validation and accession ###
