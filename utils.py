@@ -15,6 +15,7 @@ import sys
 from datetime import timedelta
 from multiprocessing import Pool
 from types import GeneratorType
+from shutil import copyfileobj
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -141,6 +142,34 @@ def gen_id(namespace=''):
             prev = sha1(prev + entropy).hexdigest()
         genid_prev_id = prev
     return namespace + prev
+
+def safe_copy(src_path, dest_path):
+    """copy a file to another location as atomically as possible"""
+    dest_dir = os.path.dirname(dest_path)
+    # ensure directory exists
+    try:
+        os.makedirs(dest_dir)
+    except:
+        pass
+    if not os.path.isdir(dest_dir):
+        # well, making the directory didn't work
+        raise IOError
+    tmp_fn = os.path.join(dest_dir,gen_id())
+    def safe_remove_tmp():
+        try:
+            os.remove(tmp_fn)
+        except:
+            pass
+    try:
+        with open(src_path,'rb') as src_fo:
+            with open(tmp_fn,'wb') as dest_fo:
+                copyfileobj(src_fo,dest_fo)
+        os.rename(tmp_fn,dest_path)
+    except:
+        safe_remove_tmp()
+        raise
+    finally:
+        safe_remove_tmp()
 
 def scatter(fn,argses,callback=None,processes=None):
     """Extremely simple multiprocessing.
