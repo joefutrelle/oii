@@ -47,6 +47,10 @@ class TimeSeries(Base):
     def __repr__(self):
         return "<TimeSeries '%s'>" % self.label
 
+    @property
+    def destination_dirs(self):
+        return filter(lambda dd: dd.destination, self.data_dirs)
+
 class DataDirectory(Base):
     __tablename__ = 'data_dirs'
 
@@ -54,8 +58,10 @@ class DataDirectory(Base):
     time_series_id = Column(Integer, ForeignKey('time_series.id'))
     product_type = Column(String, default='raw')
     path = Column(String)
+    destination = Column(Boolean, default=True)
+    priority = Column(Integer, default=1)
     time_series = relationship('TimeSeries',
-                      backref=backref('data_dirs', cascade="all, delete-orphan", order_by=id))
+                               backref=backref('data_dirs', cascade="all, delete-orphan", order_by=(priority, id)))
 
     def __repr__(self):
         return "<DataDirectory '%s'>" % self.path
