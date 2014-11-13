@@ -140,32 +140,6 @@ class Instrument(Base):
 
     time_series = relationship('TimeSeries')
 
-    def list_filesets(self):
-        """list all filesets currently present in the data directory,
-        and return the full pathname of each file as a tuple suitable
-        for constructing a dictionary from, like this
-        (LID, {
-            HDR: {full path of header file}
-            ADC: {full path of ADC file}
-            ROI: {full path of ROI file}
-        })"""
-        # first figure out which file goes with which LID
-        # and ignore files that aren't RAW data files
-        sets = {}
-        for fname in os.listdir(self.data_path):
-            (lid, pext) = os.path.splitext(fname)
-            pext = pext[1:]
-            if not pext in [HDR, ADC, ROI]:
-                continue
-            if not lid in sets:
-                sets[lid] = {}
-            sets[lid][pext] = os.path.join(self.data_path, fname)
-        # now yield all complete filesets
-        for lid in sorted(sets,reverse=True):
-            s = sets[lid]
-            if HDR in s and ADC in s and ROI in s:
-                yield (lid, s)
-
 class User(BaseAuth, UserMixin):
     """data model must conform to flask-user expectations here
     http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""

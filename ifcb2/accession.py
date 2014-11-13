@@ -39,6 +39,33 @@ def compute_bin_metrics(fs, b):
         b.triggers = int(triggers)
         b.duration = float(seconds)
 
+def list_filesets(instrument):
+    """list all filesets currently present in the data directory,
+    and return the full pathname of each file as a tuple suitable
+    for constructing a dictionary from, like this
+    (LID, {
+        HDR: {full path of header file}
+        ADC: {full path of ADC file}
+        ROI: {full path of ROI file}
+    })"""
+    # first figure out which file goes with which LID
+    # and ignore files that aren't RAW data files
+    sets = {}
+    src_dir = instrument.data_path
+    for fname in os.listdir(src_dir):
+        (lid, pext) = os.path.splitext(fname)
+        pext = pext[1:]
+        if not pext in [HDR, ADC, ROI]:
+            continue
+        if not lid in sets:
+            sets[lid] = {}
+        sets[lid][pext] = os.path.join(src_dir, fname)
+    # now yield all complete filesets
+    for lid in sorted(sets,reverse=True):
+        s = sets[lid]
+        if HDR in s and ADC in s and ROI in s:
+            yield (lid, s)
+
 def fast_accession(session, ts_label, root):
     """accession without checksumming or integrity checks"""
     raw_filesets = get_resolver().ifcb.files.list_raw_filesets(root)
