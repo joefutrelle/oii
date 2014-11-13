@@ -1,5 +1,7 @@
 import os
 
+from oii.utils import safe_copy, compare_files
+
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, HDR, ADC, ROI
 from oii.ifcb2.files import NotFound, pid2fileset
@@ -54,3 +56,11 @@ def get_copy_from(instrument):
                     dest_path = s['file_path']
                     yield (src_path, dest_path)
                     break # only need one destination
+
+def do_copy(instrument):
+    for src,dest in get_copy_from(instrument):
+        # if necessary, safe-copy the file
+        if not os.path.exists(dest):
+            safe_copy(src,dest)
+            compare_files(src,dest,size=True)
+            yield dest

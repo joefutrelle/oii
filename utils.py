@@ -171,6 +171,34 @@ def safe_copy(src_path, dest_path):
     finally:
         safe_remove_tmp()
 
+def compare_files(src,dest,name=True,size=False,checksum=False):
+    """compare two files to make sure theyre the same. checks include:
+    - name: file names (not any of the rest of the paths) match
+    - size: sizes match
+    - checksum: checksums match (warning! slow for large files)
+    automatically checks that both exist.
+    return True on successful match, False otherwise"""
+    if not os.path.isfile(src):
+        return False
+    if not os.path.isfile(dest):
+        return False
+    if name:
+        src_name = os.path.basename(src)
+        dest_name = os.path.basename(dest)
+        if not src_name == dest_name:
+            return False
+    if size:
+        src_size = os.stat(src).st_size
+        dest_size = os.stat(dest).st_size
+        if src_size != dest_size:
+            return False
+    if checksum:
+        src_checksum = sha1_file(src)
+        dest_checksum = sha1_file(dest)
+        if src_checksum != dest_checksum:
+            return False
+    return True
+        
 def scatter(fn,argses,callback=None,processes=None):
     """Extremely simple multiprocessing.
     Parameters:
