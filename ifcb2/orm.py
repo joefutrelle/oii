@@ -161,7 +161,8 @@ class Instrument(Base):
                 sets[lid] = {}
             sets[lid][pext] = os.path.join(self.data_path, fname)
         # now yield all complete filesets
-        for lid,s in sets.items(): # FIXME sort by LID descending
+        for lid in sorted(sets,reverse=True):
+            s = sets[lid]
             if HDR in s and ADC in s and ROI in s:
                 yield (lid, s)
 
