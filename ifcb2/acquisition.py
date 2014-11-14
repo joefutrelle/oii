@@ -3,8 +3,12 @@ import os
 from oii.utils import safe_copy, compare_files
 
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
-from oii.ifcb2 import get_resolver, HDR, ADC, ROI
+from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
 from oii.ifcb2.files import NotFound, pid2fileset
+from oii.ifcb2.accession import ACCESSION_ROLE
+
+WILD_PRODUCT='wild'
+RAW_PRODUCT='raw'
 
 def list_filesets(instrument):
     """list all filesets currently present in the data directory,
@@ -54,13 +58,31 @@ def get_copy_from(instrument):
                 for s in get_resolver().ifcb.files.raw_destination(pid=pid,root=dest_dir_path):
                     src_path = src_fs[ext]
                     dest_path = s['file_path']
-                    yield (src_path, dest_path)
+                    yield (lid, src_path, dest_path)
                     break # only need one destination
 
 def do_copy(instrument):
-    for src,dest in get_copy_from(instrument):
+    for lid,src,dest in get_copy_from(instrument):
         # if necessary, safe-copy the file
         if not os.path.exists(dest):
             safe_copy(src,dest)
             compare_files(src,dest,size=True)
-            yield dest
+            yield (lid,src,dest)
+
+def as_product(pid,product):
+    return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
+
+def schedule_accession(client,pid):
+    """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
+    pid must not be a local id--it must be namspace-scoped"""
+    upstream_pid = as_product(pid,WILD_PRODUCT)
+    downstream_pid = as_product(pid,RAW_PRODUCT)
+    client.depend(downstream_pid, upstream_pid, ACCESSION_ROLE)
+
+def copy_work(instrument,client,callback=None):
+    ts_label = instrument.time_series.label
+    for lid, src, dest in do_copy(instrument):
+        pid = '%s/%s' % (ts_label, lid)
+        schedule_accession(client,pid)
+        if callback is not None:
+            callback(lid)

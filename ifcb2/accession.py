@@ -12,6 +12,8 @@ from oii.ifcb2.orm import Bin, File
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
 
+ACCESSION_ROLE='accession'
+
 def compute_fixity(fs, fast=False):
     """fs - fileset"""
     paths = [fs[HDR_PATH], fs[ADC_PATH], fs[ROI_PATH]]

@@ -57,6 +57,12 @@
       </match>
     </all>
   </rule>
+  <!-- given a pid and a product, rewrite the PID with the given product and
+  return as pid. No extension is returned on the pid -->
+  <rule name="as_product" uses="pid product">
+    <invoke rule="ifcb.pid" exclude="product"/>
+    <var name="pid">${namespace}${lid}_${product}</var>
+  </rule>
   <namespace name="files">
     <!-- given a parsed pid including extension, and a root directory,
 	 return all possible candidate paths -->

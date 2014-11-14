@@ -32,7 +32,7 @@ class Deposit(object):
         
 if __name__=='__main__':
     d = Deposit('http://localhost:5063')
-    zipfile = 'IFCB5_2013_088_666666_blobs_v2.zip'
-    pid = 'http://ifcb-data.whoi.edu/mvco/IFCB5_2013_088_666666'
+    zipfile = 'IFCB8_2010_202_001921_blobs_v2.zip'
+    pid = 'http://128.128.14.24/healy/IFCB8_2010_202_001921'
     d.deposit(pid,zipfile)
 

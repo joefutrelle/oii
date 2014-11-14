@@ -5,6 +5,10 @@ from oii import ldr
 from oii.ldr import Resolver
 
 # keys and constants
+PID='pid'
+LID='lid'
+TS_LABEL='ts_label'
+
 HDR='hdr'
 ADC='adc'
 ROI='roi'
@@ -13,6 +17,9 @@ ADC_PATH='adc_path'
 ROI_PATH='roi_path'
 
 IFCB_RESOLVER_BASE_PATH='oii/ifcb2/resolvers'
+
+class ResolverError(Exception):
+    pass
 
 @memoize()
 def locate_resolver(name):
