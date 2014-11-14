@@ -9,8 +9,10 @@ class WorkflowClient(object):
         return self.base_url + url
     def wakeup(self):
         return requests.get(self.api('/wakeup'))
-    def start_next(self,role):
-        return requests.get(self.api('/start_next/%s' % role))
+    def start_next(self,roles):
+        if isinstance(roles,basestring):
+            roles = [roles]
+        return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
     def delete(self,pid):
         return requests.delete(self.api('/delete/%s' % pid))
     def delete_tree(self,pid):
