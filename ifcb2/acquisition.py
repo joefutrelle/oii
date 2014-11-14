@@ -62,12 +62,15 @@ def get_copy_from(instrument):
                     break # only need one destination
 
 def do_copy(instrument):
+    lids = set()
     for lid,src,dest in get_copy_from(instrument):
         # if necessary, safe-copy the file
         if not os.path.exists(dest):
             safe_copy(src,dest)
             compare_files(src,dest,size=True)
-            yield (lid,src,dest)
+            if lid not in lids:
+                yield lid
+            lids.add(lid)
 
 def as_product(pid,product):
     return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
@@ -81,7 +84,7 @@ def schedule_accession(client,pid):
 
 def copy_work(instrument,client,callback=None):
     ts_label = instrument.time_series.label
-    for lid, src, dest in do_copy(instrument):
+    for lid in do_copy(instrument):
         pid = '%s/%s' % (ts_label, lid)
         schedule_accession(client,pid)
         if callback is not None:
