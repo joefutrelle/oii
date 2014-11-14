@@ -88,11 +88,14 @@ def product_params(form,defaults):
         params[k] = form.get(k,default=defaults.get(k,None))
     return params
 
+def params2product(pid,params):
+    return Product(pid=pid,
+                   state=params.get(STATE,None),
+                   event=params.get(EVENT,None),
+                   message=params.get(MESSAGE,None))
+
 def do_create(pid,params):
-    p = Product(pid=pid,
-                state=params.get(STATE,None),
-                event=params.get(EVENT,None),
-                message=params.get(MESSAGE,None))
+    p = params2product(pid, params)
     session.add(p)
     return p
 
@@ -125,7 +128,7 @@ def create(pid):
 # delete a product regardless of its state or dependencies
 @app.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
 def delete(pid):
-    p = session.query(Product).filter(Product.pid==pid).first()
+    p = Products(session).get_product(pid)
     if p is None:
         abort(404)
     else:
@@ -136,15 +139,8 @@ def delete(pid):
 # delete a product and all its ancestors
 @app.route('/delete_tree/<path:pid>',methods=['GET','POST','DELETE'])
 def delete_tree(pid):
-    p = session.query(Product).filter(Product.pid==pid).first()
-    if p is None:
-        abort(404)
-    else:
-        td = [p] + list(p.ancestors)
-        for d in td:
-            session.delete(d)
-        do_commit()
-        return Response(dict(deleted=td), mimetype=MIME_JSON)
+    Products(session).delete_tree(pid).commit()
+    return Response(dict(tree_deleted=pid), mimetype=MIME_JSON)
 
 # change the state of an object, and record the type of
 # event that this state change is associated with.
@@ -159,11 +155,9 @@ def update(pid):
         STATE: RUNNING,
         MESSAGE: None
     })
-    p = session.query(Product).filter(Product.pid==pid).first()
-    if p is None:
-        p = do_create(pid, params)
-    else:
-        do_update(p, params)
+    new_p = params2product(pid, params)
+    p = Products(session).get_product(pid, create=new_p)
+    do_update(p, params)
     do_commit()
     return Response(product2json(p), mimetype=MIME_JSON)
 
@@ -183,17 +177,15 @@ def depend(down_pid):
     params = product_params(request.form, defaults={
         STATE: WAITING
     })
-    dp = session.query(Product).filter(Product.pid==down_pid).first()
-    if dp is None:
-        dp = do_create(down_pid,params)
+    ps = Products(session)
+    dp = ps.get_product(down_pid, create=params2product(down_pid, params))
     up = session.query(Product).filter(Product.pid==up_pid).first()
-    if up is None:
-        up = do_create(up_pid,params={
-            STATE: AVAILABLE,
-            EVENT: 'implicit_create',
-            MESSAGE: 'dependency of %s' % down_pid
-        })
-    Products(session).add_dep(dp, up, role)
+    up = ps.get_product(up_pid, create=params2product(up_pid, {
+        STATE: AVAILABLE,
+        EVENT: 'implicit_create',
+        MESSAGE: 'dependency of %s' % down_pid
+    }))
+    ps.add_dep(dp, up, role)
     do_commit()
     return Response(product2json(dp), mimetype=MIME_JSON) # FIXME
 

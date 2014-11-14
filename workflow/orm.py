@@ -128,11 +128,25 @@ class Dependency(Base):
 class Products(object):
     def __init__(self, session):
         self.session = session
+    def commit(self):
+        try:
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+            raise
+    def get_product(self,pid,create=None):
+        p = self.session.query(Product).filter(Product.pid==pid).first()
+        if not p and create is not None:
+            self.session.add(create)
+            return create
+        else:
+            return p
     def count(self):
         return self.session.query(Product).count()
     def add_dep(self, downstream, upstream, role=None):
         d = Dependency(downstream=downstream, upstream=upstream, role=role)
         self.session.add(d)
+        return self
     def younger_than(self, ago):
         """find all products whose events occurred more recently than ago ago.
         ago must be a datetime.timedelta"""
@@ -172,10 +186,18 @@ class Products(object):
         p = self.get_next(roles, state, dep_state)
         if p is not None:
             p.changed(event, new_state, message)
-            self.session.commit()
+            self.commit()
             return p
         else:
             return None
+    def delete_tree(self,pid):
+        p = self.get_product(pid)
+        if p is None:
+            return self
+        td = [p] + list(p.ancestors)
+        for d in td:
+            self.session.delete(d)
+        return self
     def delete_intermediate(self, state=AVAILABLE, dep_state=AVAILABLE):
         """delete all products that
         - are in 'state'
