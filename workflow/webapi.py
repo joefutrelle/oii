@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker
 from oii.times import iso8601
 
 from oii.workflow.orm import Base, Product, Dependency, Products
-from oii.workflow.orm import STATE, EVENT, MESSAGE, WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
+from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
 
 # constants
@@ -84,7 +85,7 @@ def product2json(product):
 
 def product_params(form,defaults):
     params = {}
-    for k in [STATE, EVENT, MESSAGE]:
+    for k in [STATE, EVENT, MESSAGE, NEW_STATE]:
         params[k] = form.get(k,default=defaults.get(k,None))
     return params
 
@@ -111,6 +112,12 @@ def do_commit(error_status=500):
         session.rollback()
         abort(error_status)
 
+def product_response(p,error_code=404):
+    if p is None:
+        abort(error_code)
+    else:
+        return Response(product2json(p), mimetype=MIME_JSON)
+
 ############# ENDPOINTS ##################
 
 # create an product in a given initial state
@@ -123,7 +130,7 @@ def create(pid):
     })
     p = do_create(pid, params)
     do_commit()
-    return Response(product2json(p), mimetype=MIME_JSON)
+    return product_response(p)
 
 # delete a product regardless of its state or dependencies
 @app.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
@@ -159,7 +166,7 @@ def update(pid):
     p = Products(session).get_product(pid, create=new_p)
     do_update(p, params)
     do_commit()
-    return Response(product2json(p), mimetype=MIME_JSON)
+    return product_response(p)
 
 # assert a dependency between a downstream product and an upstream product,
 # where that dependency is associated with a role that the upstream product
@@ -187,7 +194,7 @@ def depend(down_pid):
     }))
     ps.add_dep(dp, up, role)
     do_commit()
-    return Response(product2json(dp), mimetype=MIME_JSON) # FIXME
+    return product_response(dp)
 
 # find a product whose upstream dependencies are all in the given state
 # (default "available") and atomically change its state to a new one
@@ -198,10 +205,19 @@ def start_next(role_list):
     roles = role_list.split('/')
     p = Products(session).start_next(roles)
     # note that start_next commits and handles errors
-    if p is None:
-        abort(404)
-    else:
-        return Response(product2json(p), mimetype=MIME_JSON)
+    return product_response(p)
+
+@app.route('/update_if/<path:pid>',methods=['POST'])
+def update_if(pid):
+    print 'in update_if'
+    kw = product_params(request.form, defaults={
+        STATE: WAITING,
+        NEW_STATE: RUNNING
+    })
+    p = Products(session).\
+        update_if(pid, state=kw[STATE], new_state=kw[NEW_STATE],
+                  event=kw[EVENT], message=kw[MESSAGE])
+    return product_response(p)
 
 # wake up workers
 @app.route('/wakeup')

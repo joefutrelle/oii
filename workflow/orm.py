@@ -10,6 +10,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 # state and states
 STATE='state'
+NEW_STATE='new_state'
 WAITING='waiting'
 RUNNING='running'
 AVAILABLE='available'
@@ -165,6 +166,13 @@ class Products(object):
     def leaves(self):
         """return all leaves; that is, products with no dependents"""
         return self.session.query(Product).filter(~Product.dependents.any())
+    def _update_commit(self, product=None, event=None, new_state=None, message=None):
+        if product is not None:
+            product.changed(event, new_state, message)
+            self.commit()
+            return product
+        else:
+            return None
     def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
         dep_state and satisfy all the specified roles, and lock it for update"""
@@ -184,12 +192,15 @@ class Products(object):
         the given event and message values. If no product is in the state queried, will return
         None instead"""
         p = self.get_next(roles, state, dep_state)
-        if p is not None:
-            p.changed(event, new_state, message)
-            self.commit()
-            return p
-        else:
-            return None
+        return self._update_commit(p, event, new_state, message)
+    def update_if(self, pid, state=WAITING, new_state=RUNNING, event='update_if', message=None):
+        """atomically change the state of the given product, but only if it's
+        in the specified current state"""
+        p = self.session.query(Product).\
+            filter(Product.state==state).\
+            with_lockmode('update').\
+            first()
+        return self._update_commit(p, event, new_state, message)
     def delete_tree(self,pid):
         p = self.get_product(pid)
         if p is None:
