@@ -42,9 +42,12 @@ def async_config(config_module='oii.workflow.async_config'):
     see configuration notes above"""
     async.config_from_object(config_module)
 
-def async_wakeup():
+def async_wakeup(payload=None):
     """asynchronously wake up all workers. must be configged"""
-    async.send_task(WAKEUP_TASK)
+    if payload is None:
+        async.send_task(WAKEUP_TASK)
+    else:
+        async.send_task(WAKEUP_TASK, [payload])
 
 if __name__=='__main__':
     # configure client

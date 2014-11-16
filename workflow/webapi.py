@@ -221,10 +221,11 @@ def update_if(pid):
                   event=kw[EVENT], message=kw[MESSAGE])
     return product_response(p)
 
-# wake up workers
+# wake up workers optionally with a pid payload
 @app.route('/wakeup')
-def wakeup():
-    async_wakeup()
+@app.route('/wakeup/<path:pid>')
+def wakeup(pid=None):
+    async_wakeup(pid)
     return Response(json.dumps(dict(status='success')),mimetype=MIME_JSON)
 
 if __name__ == '__main__':

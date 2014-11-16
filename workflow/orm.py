@@ -8,6 +8,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 # keys for use in the database and webapi
 
+PID='pid'
+
 # state and states
 STATE='state'
 NEW_STATE='new_state'

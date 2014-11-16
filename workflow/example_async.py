@@ -3,9 +3,9 @@ import sys
 from datetime import timedelta
 
 from oii.utils import gen_id
-from oii.workflow.client import WorkflowClient
+from oii.workflow.client import WorkflowClient, isok
 from oii.workflow.async import async, WAKEUP_TASK
-from oii.workflow.orm import STATE, EVENT, MESSAGE, ROLE
+from oii.workflow.orm import PID, STATE, EVENT, MESSAGE, ROLE
 from oii.workflow.orm import AVAILABLE, UPSTREAM
 
 import requests
@@ -14,44 +14,50 @@ BASE_URL = 'http://localhost:8080'
 
 PING_ROLE='acq_ping_role'
 
+WAKEUP_KEY='oii.workflow.example_async.singleton'
+
 client = WorkflowClient(BASE_URL)
 
 def do_work():
-    d = None
-    while True:
-        # acquire a job
-        r = client.start_next(PING_ROLE)
-        # no more work, so we either found some or didn't
-        if r.status_code == 404:
-            break
-        # found a job
-        if d is not None:
-            # so skip the one we were just about to do
-            print 'skipping %s' % job_pid
-            client.delete_tree(job_pid)
-        # remember this job for next iteration
-        d = r.json()
-        job_pid = d['pid']
-    # turns out we never found a job
-    if d is None:
-        print 'nothing to do'
+    def acquire_jobs():
+        while True:
+            # acquire a job
+            r = client.start_next(PING_ROLE)
+            if isok(r):
+                job = r.json()
+                yield job[PID]
+            else:
+                return
+    jobs = list(acquire_jobs())
+    if not jobs:
+        print 'DONE no more work'
         return False
+    # delete all but one job
+    for job in jobs[:-1]:
+        print 'WAITING -> (delete) %s' % job
+        client.delete_tree(job)
+    job = jobs[-1]
     # we found a job, so say we did it
-    print 'completing %s' % job_pid
+    print 'WAITING -> RUNNING %s' % job
     # update product state
-    client.update(job_pid, state=AVAILABLE,
-                  event='completed',
+    client.update(job, state=AVAILABLE,
+                  event='work',
                   message='said we did it')
+    print 'RUNNING -> AVAILABLE %s' % job
     return True
 
 @async.task(name=WAKEUP_TASK)
-def do_a_buncha_work():
-    print 'starting work'
+def do_a_buncha_work(payload):
+    if payload != WAKEUP_KEY:
+        print 'NOT WAKING UP for %s' % payload
+        return
+
+    print 'AWAKE'
 
     while do_work():
-        print 'looking for more work'
+        print 'NEXT looking for more work'
 
-    print 'done working'
+    print 'DONE'
 
 def create_work():
     print 'creating work'
@@ -60,10 +66,10 @@ def create_work():
         ping_pid = gen_id()
         job_pid = gen_id()
         print 'pinging: %s <- %s' % (job_pid, ping_pid)
-        client.depend(job_pid, ping_pid, PING_ROLE)
+        assert isok(client.depend(job_pid, ping_pid, PING_ROLE))
 
     print 'waking up'
-    client.wakeup()
+    assert isok(client.wakeup(WAKEUP_KEY))
 
 if __name__=='__main__':
     create_work()
