@@ -3,6 +3,8 @@ import mimetypes
 import json
 import re
 
+import httplib as http
+
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 
 from sqlalchemy import create_engine
@@ -40,6 +42,7 @@ async_config()
 # configure Flask
 STATIC='/static/'
 app = Flask(__name__)
+app.DEBUG=True
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -105,18 +108,18 @@ def do_update(p,params):
 
 # commit a change, and if it results in an integrity error,
 # return the given HTTP error status code
-def do_commit(error_status=500):
+def do_commit(error_status=http.INTERNAL_SERVER_ERROR):
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
         abort(error_status)
 
-def product_response(p,error_code=404):
+def product_response(p,error_code=http.NOT_FOUND,success_code=http.OK):
     if p is None:
         abort(error_code)
     else:
-        return Response(product2json(p), mimetype=MIME_JSON)
+        return Response(product2json(p), mimetype=MIME_JSON, status=success_code)
 
 ############# ENDPOINTS ##################
 
@@ -129,8 +132,8 @@ def create(pid):
         STATE: AVAILABLE
     })
     p = do_create(pid, params)
-    do_commit()
-    return product_response(p)
+    do_commit(error_status=http.CONFLICT) # commit error indicates object already exists
+    return product_response(p, success_code=http.CREATED)
 
 # delete a product regardless of its state or dependencies
 @app.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
@@ -209,7 +212,6 @@ def start_next(role_list):
 
 @app.route('/update_if/<path:pid>',methods=['POST'])
 def update_if(pid):
-    print 'in update_if'
     kw = product_params(request.form, defaults={
         STATE: WAITING,
         NEW_STATE: RUNNING

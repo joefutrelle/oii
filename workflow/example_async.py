@@ -39,11 +39,9 @@ def do_work():
     # we found a job, so say we did it
     print 'completing %s' % job_pid
     # update product state
-    client.update(job_pid, {
-        STATE: AVAILABLE,
-        EVENT: 'completed',
-        MESSAGE: 'said we did it'
-    })
+    client.update(job_pid, state=AVAILABLE,
+                  event='completed',
+                  message='said we did it')
     return True
 
 @async.task(name=WAKEUP_TASK)
