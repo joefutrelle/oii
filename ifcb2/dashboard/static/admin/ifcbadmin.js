@@ -367,6 +367,12 @@ ifcbAdmin.controller('AccountCtrl', ['$scope', function ($scope) {
     $scope.myaccount = [];
 }]);
 
+// my account controller
+ifcbAdmin.controller('KeychainCtrl', ['$scope', function ($scope) {
+
+    $scope.keychain = [];
+}]);
+
 // define application routes
 ifcbAdmin.config(['$routeProvider', function($routeProvider) {
     $routeProvider.
@@ -386,6 +392,10 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
             controller: 'InstrumentCtrl',
             templateUrl: 'instruments/Instruments.html'
 	    }).
+        when('/keychain', {
+            controller: 'KeyChainCtrl',
+            templateUrl: 'keychain/Keychain.html'
+        }).
         otherwise({
             redirectTo: '/time_series'
         });
