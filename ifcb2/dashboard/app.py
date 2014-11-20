@@ -772,6 +772,7 @@ if __name__ == '__main__':
         u = User(
             first_name='Test', last_name='Admin',
             email='admin@whoi.edu', username='admin@whoi.edu',
+            password=user_manager.hash_password('12345678'),
             is_enabled=True)
         r = session.query(Role).filter_by(name='Admin').first()
         u.roles.append(r)
@@ -781,6 +782,7 @@ if __name__ == '__main__':
         u = User(
             first_name='Test', last_name='User',
             email='user@whoi.edu', username='user@whoi.edu',
+            password=user_manager.hash_password('12345678'),
             is_enabled=True)
         session.add(u)
         session.commit()
