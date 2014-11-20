@@ -192,6 +192,7 @@ class APIKeys(BaseAuth):
     __tablename__ = 'api_keys'
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
-    token = Column(String(50), nullable=False, unique=True)
+    name = Column(String(255), nullable=False, unique=True)
+    token = Column(String(255), nullable=False, unique=True)
 
 
