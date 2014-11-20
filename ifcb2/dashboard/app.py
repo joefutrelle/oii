@@ -1,4 +1,4 @@
-import os
+import os, inspect
 import mimetypes
 import json
 from time import strptime
@@ -11,7 +11,8 @@ from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
 
-from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
+from flask import Flask, Response, abort, request, render_template
+from flask import render_template_string, redirect, send_from_directory
 import flask.ext.sqlalchemy
 import flask.ext.restless
 from flask.ext.user import UserManager, SQLAlchemyAdapter
@@ -39,6 +40,8 @@ from oii.ifcb2.session import session, dbengine
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
 from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint, instrument_blueprint
 from oii.ifcb2.dashboard import security
+from oii.ifcb2.dashboard.security import roles_required
+
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
@@ -55,9 +58,10 @@ from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 
 # constants
-
 MIME_JSON='application/json'
 STATIC='/static/'
+ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
+    inspect.currentframe()))),'admin')
 
 app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
@@ -68,23 +72,6 @@ app.url_map.converters['datetime'] = DatetimeConverter
 app.config.from_object('oii.ifcb2.dashboard.config.flask_user')
 db_adapter = SQLAlchemyAdapter(dbengine, User)
 user_manager = UserManager(db_adapter, app)
-
-# register security blueprint
-# this may go away later, since flask-user takes care of
-# most of our security requirements
-SECURITY_URL_PREFIX = '/sec'
-app.register_blueprint(security.security_blueprint,
-    url_prefix=SECURITY_URL_PREFIX)
-
-# register the admin blueprint right up front
-# API_URL_PREFIX should move to a config area some time
-API_URL_PREFIX = '/admin/api/v1'
-app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
-app.register_blueprint(instrument_blueprint, url_prefix=API_URL_PREFIX)
-app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
-app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
-app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
-app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -205,6 +192,35 @@ def serve_blob_image(parsed, mimetype, outline=False, target_img=None):
             return Response(as_bytes(blob, mimetype), mimetype=mimetype)
 
 ############# ENDPOINTS ##################
+
+# register security blueprint
+# this may go away later, since flask-user takes care of
+# most of our security requirements
+SECURITY_URL_PREFIX = '/sec'
+app.register_blueprint(security.security_blueprint,
+    url_prefix=SECURITY_URL_PREFIX)
+
+# register the admin blueprint right up front
+# API_URL_PREFIX should move to a config area some time
+API_URL_PREFIX = '/admin/api/v1'
+app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(instrument_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
+
+# serve admin interface
+@app.route('/admin')
+@roles_required('Admin')
+def admin_root():
+    print os.path.join(ADMIN_APP_DIR,'ifcbadmin.html')
+    return send_from_directory(ADMIN_APP_DIR, 'ifcbadmin.html')
+
+@app.route('/admin/<path:filename>')
+@roles_required('Admin')
+def serve_static_admin(filename):
+    return send_from_directory(ADMIN_APP_DIR, filename)
 
 @app.route('/api')
 @app.route('/api.html')

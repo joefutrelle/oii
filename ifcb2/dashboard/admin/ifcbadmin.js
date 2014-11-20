@@ -59,23 +59,23 @@ ifcbAdmin.config(['$routeProvider', function($routeProvider) {
     $routeProvider.
         when('/time_series', {
             controller: 'TimeSeriesCtrl',
-            templateUrl: 'timeseries/TimeSeries.html'
+            templateUrl: '/admin/timeseries/TimeSeries.html'
             }).
         when('/users', {
             controller: 'UserCtrl',
-            templateUrl: 'users/Users.html'
+            templateUrl: '/admin/users/Users.html'
             }).
         when('/myaccount', {
             controller: 'AccountCtrl',
-            templateUrl: 'myaccount/MyAccount.html'
+            templateUrl: '/admin/myaccount/MyAccount.html'
             }).
         when('/instruments', {
             controller: 'InstrumentCtrl',
-            templateUrl: 'instruments/Instruments.html'
+            templateUrl: '/admin/instruments/Instruments.html'
 	    }).
         when('/keychain', {
             controller: 'KeyChainCtrl',
-            templateUrl: 'keychain/Keychain.html'
+            templateUrl: '/admin/keychain/Keychain.html'
         }).
         otherwise({
             redirectTo: '/time_series'
