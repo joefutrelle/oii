@@ -41,7 +41,7 @@ preprocessors = {
     'PATCH_SINGLE': [admin_api_auth, patch_single_preprocessor],
     'PATCH_MANY': [admin_api_auth, patch_single_preprocessor],
     'PATCH': [admin_api_auth, patch_single_preprocessor],
-    'POST': [admin_api_auth],
+    'POST': [admin_api_auth, patch_single_preprocessor],
     'DELETE':[admin_api_auth, patch_single_preprocessor]
     }
 
