@@ -1,5 +1,5 @@
 from flask import Blueprint
-from flask_user import login_required, roles_required
+from flask_user import login_required, roles_required, current_user
 
 security_blueprint = Blueprint('security', __name__)
 
