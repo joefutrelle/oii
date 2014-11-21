@@ -8,8 +8,8 @@ import httplib as http
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 
 from sqlalchemy import create_engine
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from oii.times import iso8601
 
@@ -33,8 +33,8 @@ dbengine = create_engine(SQLITE_URL,
                     connect_args={'check_same_thread':False},
                     poolclass=StaticPool,
                          echo=False)
-Session = sessionmaker(bind=dbengine)
-session = Session()
+ScopedSession = scoped_session(sessionmaker(bind=dbengine))
+session = ScopedSession()
 
 # configure async notification
 async_config()
@@ -108,12 +108,12 @@ def do_update(p,params):
 
 # commit a change, and if it results in an integrity error,
 # return the given HTTP error status code
-def do_commit(error_status=http.INTERNAL_SERVER_ERROR):
+def do_commit(error_code=http.INTERNAL_SERVER_ERROR):
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
-        abort(error_status)
+        abort(error_code)
 
 def product_response(p,error_code=http.NOT_FOUND,success_code=http.OK):
     if p is None:
@@ -132,7 +132,7 @@ def create(pid):
         STATE: AVAILABLE
     })
     p = do_create(pid, params)
-    do_commit(error_status=http.CONFLICT) # commit error indicates object already exists
+    do_commit(error_code=http.CONFLICT) # commit error indicates object already exists
     return product_response(p, success_code=http.CREATED)
 
 # delete a product regardless of its state or dependencies
@@ -140,7 +140,7 @@ def create(pid):
 def delete(pid):
     p = Products(session).get_product(pid)
     if p is None:
-        abort(404)
+        abort(http.NOT_FOUND)
     else:
         session.delete(p)
         do_commit()
@@ -182,7 +182,7 @@ def depend(down_pid):
     try:
         up_pid = request.form[UPSTREAM]
     except KeyError:
-        abort(400)
+        abort(http.BAD_REQUEST)
     role = request.form.get(ROLE,default=ANY)
     params = product_params(request.form, defaults={
         STATE: WAITING
@@ -219,7 +219,7 @@ def update_if(pid):
     p = Products(session).\
         update_if(pid, state=kw[STATE], new_state=kw[NEW_STATE],
                   event=kw[EVENT], message=kw[MESSAGE])
-    return product_response(p)
+    return product_response(p, error_code=http.CONFLICT)
 
 # wake up workers optionally with a pid payload
 @app.route('/wakeup')
@@ -230,4 +230,4 @@ def wakeup(pid=None):
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)
-    app.run(host='0.0.0.0',port=8080,debug=True)
+    app.run(host='0.0.0.0',port=8080,debug=True,processes=6)
