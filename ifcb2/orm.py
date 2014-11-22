@@ -194,7 +194,7 @@ class APIKeys(BaseAuth):
     user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
     name = Column(String(255), nullable=False, unique=True)
     token = Column(String(255), nullable=False, unique=True)
-    datetime_created = Column(DateTime(timezone=True))
-    datetime_last_used = Column(DateTime(timezone=True))
+    datetime_created = Column(DateTime(timezone=True), nullable=True, default=None)
+    datetime_last_used = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow())
 
 

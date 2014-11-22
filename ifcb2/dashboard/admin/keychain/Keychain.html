@@ -1,1 +1,56 @@
 <h1 class="page-header">API Keychain</h1>
+
+<div class="row" ng-if="newkey"><div class="col-md-6">
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h3 class="panel-title">API Key Generation Tool</h3>
+        </div>
+        <div ng-show="!keyview" class="panel-body">
+            <div class="row ifcbformrow"><div class="col-md-11">
+                <select class="form-control-lf" ng-model="user" ng-options="user.id as (user.first_name+' '+user.last_name) for user in users">
+                    <option value="">-- Select User --</option>
+                </select>
+            </div></div>
+            <div>&nbsp;</div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" ng-disabled="!user" ng-confirm-click="generateKey()">Generate Key</button>
+                <button type="button" class="btn btn-default" ng-confirm-click="cancelKey()">Cancel</button>
+            </div>
+        </div>
+        <div ng-show="keyview" class="panel-body">
+            <div>Here is your key:<br>
+            <strong>{{keyview}}<strong></div>
+            <div>&nbsp;</div>
+            <button type="button" class="btn btn-primary" ng-confirm-click="cancelKey()">Got It!</button>
+        </div>
+    </div>
+</div></div>
+
+
+<div class="text-right" ng-if="!newkey">
+    <button type="button" class="btn btn-primary" ng-click="createKey()">Add New Key</button>
+</div>
+
+<table class="table">
+    <thead>
+      <tr>
+        <th>Key&nbsp;Name</th>
+        <th>User</th>
+        <th>Created</th>
+        <th>Last&nbsp;Used</th>
+        <th>Access</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr ng-repeat="key in keychain">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>
+                <button type="button" class="btn btn-default" ng-confirm-click="revokeKey(key)">Revoke</button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
