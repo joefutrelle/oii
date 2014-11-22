@@ -6,6 +6,12 @@
             <h3 class="panel-title">API Key Generation Tool</h3>
         </div>
         <div ng-show="!keyview" class="panel-body">
+            <div class="row ifcbformrow"><div class="col-md-12">
+                <div class="input-group">
+                    <span class="input-group-addon">Key Name</span>
+                    <input type="text" class="form-control" ng-model="name" placeholder="identifier for this key">
+                </div>
+            </div></div>
             <div class="row ifcbformrow"><div class="col-md-11">
                 <select class="form-control-lf" ng-model="user" ng-options="user.id as (user.first_name+' '+user.last_name) for user in users">
                     <option value="">-- Select User --</option>
@@ -13,13 +19,13 @@
             </div></div>
             <div>&nbsp;</div>
             <div class="btn-group">
-                <button type="button" class="btn btn-primary" ng-disabled="!user" ng-confirm-click="generateKey()">Generate Key</button>
+                <button type="button" class="btn btn-primary" ng-disabled="!user || !name" ng-confirm-click="generateKey(user,name)">Generate Key</button>
                 <button type="button" class="btn btn-default" ng-confirm-click="cancelKey()">Cancel</button>
             </div>
         </div>
         <div ng-show="keyview" class="panel-body">
-            <div>Here is your key:<br>
-            <strong>{{keyview}}<strong></div>
+            <div>Here is your new API key. This will be displayed only once.<br>
+            <strong>{{keyview}}</strong></div>
             <div>&nbsp;</div>
             <button type="button" class="btn btn-primary" ng-confirm-click="cancelKey()">Got It!</button>
         </div>
@@ -43,12 +49,12 @@
     </thead>
     <tbody>
         <tr ng-repeat="key in keychain">
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td><strong>{{key.name}}</strong></td>
+            <td>{{key.user.first_name}} {{key.user.last_name}}</td>
+            <td>{{key.datetime_created}}</td>
+            <td>{{key.datetime_last_used}}</td>
             <td>
-                <button type="button" class="btn btn-default" ng-confirm-click="revokeKey(key)">Revoke</button>
+                <button type="button" ng-disabled="!lockme" class="btn btn-default" ng-confirm-message="Are you sure you want to revoke the '{{key.name}}' API key?" ng-confirm-condition="true" ng-confirm-click="revokeKey(key)">Revoke</button>
             </td>
         </tr>
     </tbody>

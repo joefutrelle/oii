@@ -38,7 +38,8 @@ from oii.ifcb2.orm import Base, BaseAuth, Bin, TimeSeries, DataDirectory, User, 
 from oii.ifcb2.session import session, dbengine
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
-from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint, instrument_blueprint
+from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint
+from oii.ifcb2.dashboard.admin_api import instrument_blueprint, keychain_blueprint
 from oii.ifcb2.dashboard import security
 from oii.ifcb2.dashboard.security import roles_required
 
@@ -209,6 +210,7 @@ app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(keychain_blueprint, url_prefix=API_URL_PREFIX)
 
 # serve admin interface
 @app.route('/admin')

@@ -1,8 +1,12 @@
+import random, string
 from flask import Blueprint
 from flask_user import login_required, roles_required, current_user
 
-security_blueprint = Blueprint('security', __name__)
+def maketoken():
+    s = string.ascii_uppercase + string.digits + string.ascii_lowercase
+    return ''.join(random.choice(s) for _ in range(40))
 
+security_blueprint = Blueprint('security', __name__)
 
 @security_blueprint.route('/test_public')
 def public():

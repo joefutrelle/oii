@@ -167,8 +167,6 @@ class User(BaseAuth, UserMixin):
     roles = relationship('Role', secondary='user_roles',
                 backref=backref('users', lazy='dynamic'))
 
-    api_keys = relationship('APIKeys', backref=backref('users'))
-
     def is_active(self):
       return self.is_enabled
 
@@ -188,13 +186,17 @@ class UserRoles(BaseAuth):
     users = relationship('User')
     roles = relationship('Role')
 
-class APIKeys(BaseAuth):
+class APIKey(BaseAuth):
     __tablename__ = 'api_keys'
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
     name = Column(String(255), nullable=False, unique=True)
     token = Column(String(255), nullable=False, unique=True)
-    datetime_created = Column(DateTime(timezone=True), nullable=True, default=None)
-    datetime_last_used = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow())
+    datetime_late_user = Column(DateTime(timezone=True), nullable=True, default=None)
+    datetime_created = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow())
+
+    user = relationship("User", backref=backref('api_keys', order_by=id))
+
+
 
 
