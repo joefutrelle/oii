@@ -53,7 +53,6 @@ ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope,
     };
 }]);
 
-
 // define application routes
 ifcbAdmin.config(['$routeProvider', function($routeProvider) {
     $routeProvider.

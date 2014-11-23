@@ -1,7 +1,6 @@
 
-ifcbAdmin.controller('KeyChainCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
+ifcbAdmin.controller('KeyChainCtrl', ['$scope', 'UserService', 'Restangular', function ($scope, UserService, Restangular) {
 
-    var baseUsers = Restangular.all('users');
     var baseKeychain = Restangular.all('api_keys');
     $scope.newkey = false;
 
@@ -17,16 +16,13 @@ ifcbAdmin.controller('KeyChainCtrl', ['$scope', 'Restangular', function ($scope,
 
     refreshKeychain();
 
-    baseUsers.getList().then(function(serverResponse) {
+    UserService.list.then(function(serverResponse) {
         $scope.users = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
         $scope.alert = 'Unexpected ' + errorResponse.status.toString()
             + ' error while loading data from server.'
     });
-
-
-
 
     baseKeychain.getList().then(function(serverResponse) {
         $scope.keychain = serverResponse;

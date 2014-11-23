@@ -1,5 +1,5 @@
 // my account controller
-ifcbAdmin.controller('AccountCtrl', ['$scope', function ($scope) {
+ifcbAdmin.controller('AccountCtrl', ['$scope', 'UserService', function ($scope, UserService) {
 
     $scope.myaccount = [];
 }]);

@@ -1,16 +1,14 @@
 
 
 // users controller
-ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
+ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Restangular', function ($scope, UserService, RoleService, Restangular) {
 
     // initialize local scope
-    var baseRoles = Restangular.all('roles');
-    var baseUsers = Restangular.all('users');
     $scope.alert = null;
     var restore = {};
 
     // load iniital data from api
-    baseRoles.getList().then(function(serverResponse) {
+    RoleService.list.then(function(serverResponse) {
         $scope.roles = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
@@ -18,8 +16,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
             + ' error while loading data from server.'
     });
 
-
-    baseUsers.getList().then(function(serverResponse) {
+    UserService.list.then(function(serverResponse) {
         $scope.users = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
@@ -44,7 +41,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
             });
         } else {
             // new user. post to server.
-            baseUsers.post(user).then(function(serverResponse) {
+            UserService.post(user).then(function(serverResponse) {
                 // copy server response to scope object
                 angular.copy(serverResponse, user);
                 $scope.alert = null;
@@ -58,8 +55,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'Restangular', function ($scope, Res
 
     // create new user
     $scope.addNewUser = function() {
-    user = {first_name:'', last_name:'', email:'', is_enabled:true, edit:true};
-        $scope.users.push(user);
+        $scope.users.push(UserService.newUser());
         return true;
     }
 

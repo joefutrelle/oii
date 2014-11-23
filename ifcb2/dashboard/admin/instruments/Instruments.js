@@ -1,17 +1,12 @@
-ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
+ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeriesService', 'Restangular', function ($scope, InstrumentService, TimeSeriesService, Restangular) {
 
 
     // initialize local scope
-    var baseInstruments = Restangular.all('instruments');
-    $scope.alert = null;
-
-    // initialize local scope
-    var baseTimeSeries = Restangular.all('time_series');
     $scope.alert = null;
     var restore = {};
 
     // load iniital data from api
-    baseTimeSeries.getList().then(function(serverResponse) {
+    TimeSeriesService.list.then(function(serverResponse) {
         $scope.time_series = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
@@ -20,7 +15,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
     });
 
     // load iniital data from api
-    baseInstruments.getList().then(function(serverResponse) {
+    InstrumentService.list.then(function(serverResponse) {
         $scope.instruments = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
@@ -30,7 +25,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
 
     // create new timeseries
     $scope.addNewInstrument = function() {
-        $scope.instruments.push({name:'',data_path:'',edit:true});
+        $scope.instruments.push(InstrumentService.new());
         return true;
     }
 
@@ -69,7 +64,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'Restangular', function ($scop
         });
         } else {
         // new timeseries group. post to server.
-        baseInstruments.post(instr).then(function(serverResponse) {
+        InstrumentService.post(instr).then(function(serverResponse) {
                 // copy server response to scope object
                 angular.copy(serverResponse, instr);
                 $scope.alert = null;

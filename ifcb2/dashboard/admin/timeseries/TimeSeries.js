@@ -1,14 +1,13 @@
 
 
-ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scope, Restangular) {
+ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', 'Restangular', function ($scope, TimeSeriesService, Restangular) {
 
     // initialize local scope
-    var baseTimeSeries = Restangular.all('time_series');
     $scope.alert = null;
     var restore = {};
 
     // load iniital data from api
-    baseTimeSeries.getList().then(function(serverResponse) {
+    TimeSeriesService.list.then(function(serverResponse) {
         $scope.time_series = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
@@ -18,7 +17,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
-        $scope.time_series.push({label:'',description:'',data_dirs:[{path:'',product_type:'raw'}],edit:'true'});
+        $scope.time_series.push(TimeSeriesService.newTimeSeries());
         return true;
     }
 
@@ -76,7 +75,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', function ($scop
         });
         } else {
         // new timeseries group. post to server.
-        baseTimeSeries.post(ts).then(function(serverResponse) {
+        TimeSeriesService.post(ts).then(function(serverResponse) {
                 // copy server response to scope object
                 angular.copy(serverResponse, ts);
                 $scope.alert = null;
