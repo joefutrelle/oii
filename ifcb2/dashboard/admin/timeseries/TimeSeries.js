@@ -1,6 +1,6 @@
 
 
-ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', 'Restangular', function ($scope, TimeSeriesService, Restangular) {
+ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function ($scope, TimeSeriesService) {
 
     // initialize local scope
     $scope.alert = null;

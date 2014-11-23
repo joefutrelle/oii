@@ -24,6 +24,7 @@ ifcbAdmin.service('TimeSeriesService', ['Restangular', function (Restangular) {
 ifcbAdmin.service('InstrumentService', ['Restangular', function (Restangular) {
 
     var baseInstruments = Restangular.all('instruments');
+
     this.list = baseInstruments.getList();
     this.post = baseInstruments.post;
 
@@ -35,8 +36,7 @@ ifcbAdmin.service('InstrumentService', ['Restangular', function (Restangular) {
 
 ifcbAdmin.service('UserService', ['Restangular', function (Restangular) {
 
-    var baseUsers = Restangular.all('users');
-    this.list = baseUsers.getList();
+    var baseUsers = Restangular.all('users');this.list = baseUsers.getList();
     this.post = baseUsers.post;
 
     this.new = function() {

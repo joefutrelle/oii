@@ -23,7 +23,7 @@
 </div></div>
 
 <div class="text-right">
-    <button type="button" class="btn btn-primary" ng-click="addNewUser()">Add New User</button>
+    <button type="button" class="btn btn-primary" ng-disabled="newuser" ng-click="addNewUser()">Add New User</button>
 </div>
 
 <table class="table">
@@ -35,6 +35,26 @@
             <th></th>
           </tr>
         </thead>
+        <tbody ng-if="newuser">
+            <tr>
+                <td>
+                    <div class="row">
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="newuser.first_name" ng-minlength="3" ng-maxlength="255" required></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="newuser.last_name" ng-minlength="3" ng-maxlength="255" required></div>
+                    </div>
+                </td>
+                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="newuser.email"></td>
+                <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
+                <td>
+                  <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-primary" ng-disabled="!newuser.first_name || !newuser.last_name || !newuser.email" ng-click="saveUser(newuser)">Save</button>
+                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(newuser)">Cancel</button>
+                  </div>
+                </td>
+            </tr>
+        </tbody>
         <tbody ng-repeat="user in users">
             <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
                 <td><strong>{{user.first_name}} {{user.last_name}}</strong></td>
@@ -67,7 +87,7 @@
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                   <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.first_name || !user.email" ng-click="saveUser(user)">Save</button>
+                    <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.last_name || !user.email" ng-click="saveUser(user)">Save</button>
                     <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(user)">Cancel</button>
                   </div>
                 </td>

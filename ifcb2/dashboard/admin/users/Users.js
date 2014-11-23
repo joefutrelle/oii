@@ -5,6 +5,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
 
     // initialize local scope
     $scope.alert = null;
+    $scope.newuser = false;
     var restore = {};
 
     // load iniital data from api
@@ -43,7 +44,8 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
             // new user. post to server.
             UserService.post(user).then(function(serverResponse) {
                 // copy server response to scope object
-                angular.copy(serverResponse, user);
+                $scope.users.push(serverResponse);
+                $scope.newuser = false;
                 $scope.alert = null;
             }, function(serverResponse) {
         console.log("OK, that didn't work"); // FIXME debug
@@ -55,8 +57,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
 
     // create new user
     $scope.addNewUser = function() {
-        $scope.users.push(UserService.newUser());
-        return true;
+        $scope.newuser = UserService.new();
     }
 
     // cancel new user creation
@@ -67,7 +68,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
             angular.copy(restore[user.id], user);
             delete restore[user.id];
         } else {
-            $scope.users = _.without($scope.users, user);
+            $scope.newuser = false;
         }
     }
 
