@@ -26,22 +26,25 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
             // user already exists on server. update.
             // copy "now editing" object to user object
             angular.copy($scope.editing[user.id], user);
-            user.patch().then(function(serverResponse) {
+            // save to server
+            UserService.update(user).then(function(serverResponse) {
+                // successful response. delete from "now editing" list
                 delete $scope.editing[user.id];
                 $scope.alert = null;
             }, function(serverResponse) {
+                // failed! throw error
                 console.log(serverResponse);
                 $scope.alert = serverResponse.data.validation_errors;
             });
         } else {
             // new user. post to server.
-            UserService.post(user).then(function(serverResponse) {
+            UserService.save(user).then(function(serverResponse) {
                 // copy server response to scope object
-                $scope.users.push(serverResponse);
+                $scope.users.list.push(serverResponse);
                 $scope.newuser = false;
                 $scope.alert = null;
             }, function(serverResponse) {
-        console.log("OK, that didn't work"); // FIXME debug
+                // failed! throw error
                 console.log(serverResponse);
                 $scope.alert = serverResponse.data.validation_errors;
             });

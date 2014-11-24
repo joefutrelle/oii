@@ -13,14 +13,19 @@ ifcbAdmin.service('UserService', ['Restangular', function (Restangular) {
             + ' error while loading data from server.'
     });
 
-    // creates a new, unsaved user object
+    // create a new, unsaved user object
     this.new = function() {
         return {first_name:'', last_name:'', email:'', is_enabled:true}
     }
 
-    // saves a user object to the server
+    // save a user object to the server and return a promise
     this.save = function(user) {
+        return baseUsers.post(user);
+    }
 
+    // update a user object on the server and return a promise
+    this.update = function(user) {
+        return user.patch();
     }
 
 }]);
