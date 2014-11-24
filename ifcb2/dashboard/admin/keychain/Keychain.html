@@ -54,7 +54,7 @@
             <td>{{key.datetime_created}}</td>
             <td>{{key.datetime_last_used}}</td>
             <td>
-                <button type="button" ng-disabled="!lockme" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to revoke the '{{key.name}}' API key?" ng-confirm-condition="true" ng-confirm-click="revokeKey(key)">Revoke</button>
+                <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to revoke the '{{key.name}}' API key?" ng-confirm-condition="true" ng-confirm-click="revokeKey(key)">Revoke</button>
             </td>
         </tr>
     </tbody>
