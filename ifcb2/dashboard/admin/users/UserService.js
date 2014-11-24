@@ -28,4 +28,10 @@ ifcbAdmin.service('UserService', ['Restangular', function (Restangular) {
         return user.patch();
     }
 
+    // update user password and return promise
+    this.updatePassword = function(user, password) {
+        var pwchange = Restangular.one("setpassword", user.id);
+        return pwchange.customPOST({'password':password},'',{},{})
+    }
+
 }]);

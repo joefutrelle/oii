@@ -8,15 +8,6 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     $scope.users= UserService;
     $scope.editing = {};
 
-    // load iniital data from api
-    RoleService.list.then(function(serverResponse) {
-        $scope.roles = serverResponse;
-    }, function(errorResponse) {
-        console.log(errorResponse);
-        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
-            + ' error while loading data from server.'
-    });
-
     // save user to server
     $scope.saveUser = function(user) {
         // user will log in with email + password
@@ -34,7 +25,8 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
             }, function(serverResponse) {
                 // failed! throw error
                 console.log(serverResponse);
-                $scope.alert = serverResponse.data.validation_errors;
+                $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+                    + ' error while loading data from server.';
             });
         } else {
             // new user. post to server.
@@ -46,7 +38,8 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
             }, function(serverResponse) {
                 // failed! throw error
                 console.log(serverResponse);
-                $scope.alert = serverResponse.data.validation_errors;
+                $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+                    + ' error while loading data from server.';
             });
         }
     }
@@ -81,12 +74,17 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
         }
     }
 
-    // disable user toggle
+    // toggle user status
     $scope.toggleUser = function(user) {
         tmpuser = user.clone();
         tmpuser.is_enabled = !tmpuser.is_enabled;
-        tmpuser.patch().then(function(serverResponse) {
+        UserService.update(tmpuser).then(function(serverResponse) {
             user.is_enabled = !user.is_enabled;
+        }, function(serverResponse) {
+            // failed! throw error
+            console.log(serverResponse);
+            $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+                + ' error while loading data from server.';
         });
     }
 
@@ -99,10 +97,14 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     }
 
     $scope.pushPassword = function() {
-        var pwchange = Restangular.one("setpassword", $scope.userpw.id);
-        pwchange.customPOST({'password':$scope.userpw.password},'',{},{}).then(function(serverResponse) {
+        UserService.updatePassword($scope.userpw, $scope.userpw.password).then(function(serverResponse) {
             console.log(serverResponse);
             $scope.userpw = false;
+        }, function(serverResponse) {
+            // failed! throw error
+            console.log(serverResponse);
+            $scope.alert = 'Unexpected ' + errorResponse.status.toString()
+                + ' error while loading data from server.';
         });
     }
 
