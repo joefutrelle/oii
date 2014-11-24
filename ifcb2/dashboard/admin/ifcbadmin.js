@@ -48,8 +48,9 @@ ifcbAdmin.directive('ngConfirmClick', [function() {
 
 // nav controller
 ifcbAdmin.controller('NavigationCtrl', ['$scope', '$location', function ($scope, $location) {
-    $scope.isCurrentPath = function (path) {
-      return $location.path() == path;
+    $scope.navClass = function (page) {
+        var currentRoute = $location.path().substring(1) || 'home';
+        return page === currentRoute ? 'active' : '';
     };
 }]);
 
