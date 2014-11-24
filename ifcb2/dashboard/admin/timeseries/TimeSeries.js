@@ -17,7 +17,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
 
     // create new timeseries
     $scope.addNewTimeSeries = function() {
-        $scope.time_series.push(TimeSeriesService.newTimeSeries());
+        $scope.time_series.push(TimeSeriesService.new());
         return true;
     }
 
