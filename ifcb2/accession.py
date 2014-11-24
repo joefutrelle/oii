@@ -93,10 +93,7 @@ class Accession(object):
             # now compute fixity
             self.compute_fixity(b,fileset)
             # now compute bin metrics
-            try:
-                self.compute_bin_metrics(b,fileset)
-            except:
-                pass # FIXME warn
+            compute_bin_metrics(b,fileset)
             self.session.add(b)
         self.session.commit()
         return n_total, n_new
