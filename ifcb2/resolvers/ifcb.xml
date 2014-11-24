@@ -97,9 +97,8 @@
       <var name="filename">${bin_lid}.${extension}</var>
       <invoke rule="ifcb.files.file_path" nth="1"/>
     </rule>
-    <!-- given a pid and root directory, find a raw file in any likely location -->
+    <!-- given a parsed pid and root directory, find a raw file in any likely location -->
     <rule name="find_raw_file" nth="1">
-      <invoke rule="ifcb.pid"/>
       <var name="filename">${bin_lid}.${extension}</var>
       <invoke rule="ifcb.files.file_path"/>
       <path match="${file_path}"/>
