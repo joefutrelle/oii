@@ -6,8 +6,8 @@ from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 
 from oii.utils import sha1_file
 from oii.times import text2utcdatetime
-from oii.ifcb2 import get_resolver, HDR, ADC, ROI, HDR_PATH, ADC_PATH, ROI_PATH
-from oii.ifcb2.identifiers import parse_pid
+from oii.ifcb2 import get_resolver, HDR, ADC, ROI, HDR_PATH, ADC_PATH, ROI_PATH, LID
+from oii.ifcb2.identifiers import parse_pid, get_timestamp
 from oii.ifcb2.orm import Bin, File
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
@@ -24,7 +24,7 @@ def compute_fixity(fs, fast=False):
         f.compute_fixity(fast=fast)
         yield f
 
-def compute_bin_metrics(fs, b):
+def compute_bin_metrics(b, fs):
     """fs - fileset, b - bin"""
     # hdr - temp / humidity
     hdr_path = fs[HDR_PATH]
@@ -42,35 +42,50 @@ def compute_bin_metrics(fs, b):
         b.triggers = int(triggers)
         b.duration = float(seconds)
 
-def fast_accession(session, ts_label, root):
-    """accession without checksumming or integrity checks"""
-    raw_filesets = get_resolver().ifcb.files.list_raw_filesets(root)
-    n_total = 0
-    n_new = 0
-    for fs in raw_filesets:
-        lid = fs['lid']
-        try:
-            parsed = parse_pid(lid)
-        except:
-            raise
-        existing_bin = session.query(Bin).filter(and_(Bin.lid==lid,Bin.ts_label==ts_label)).first()
-        n_total += 1
-        if existing_bin:
-            continue
-        n_new += 1
-        if n_new % 1000 == 0: # periodically commit
-            session.commit()
-        ts = text2utcdatetime(parsed['timestamp'], parsed['timestamp_format'])
-        b = Bin(ts_label=ts_label, lid=lid, sample_time=ts)
+def list_filesets(root):
+    return get_resolver().ifcb.files.list_raw_filesets(root)
+
+class Accession(object):
+    def __init__(self,session,ts_label,fast=False):
+        """session = IFCB ORM session"""
+        self.session = session
+        self.ts_label = ts_label
+        self.fast = fast
+    def bin_exists(self,lid):
+        if self.session.query(Bin).filter(and_(Bin.lid==lid,Bin.ts_label==self.ts_label)).first():
+            return True
+        return False
+    def new_bin(self,lid):
+        parsed = parse_pid(lid)
+        sample_time = get_timestamp(parsed)
+        return Bin(ts_label=self.ts_label, lid=lid, sample_time=sample_time)
+    def integrity(self,fileset):
+        """stub"""
+        return True
+    def compute_fixity(self,b,fileset):
+        """b = Bin instance,
+        fileset = fileset structure"""
         # now make fixity entries
-        for f in compute_fixity(fs, fast=True):
-            session.add(f)
+        for f in compute_fixity(fileset, fast=self.fast):
             b.files.append(f)
-        # now compute bin metrics
-        try:
-            compute_bin_metrics(fs, b)
-        except:
-            pass # FIXME warn
-        session.add(b)
-    session.commit()
-    return (n_new, n_total)
+    def do_accession(self, root):
+        n_total = 0
+        n_new = 0
+        for fileset in list_filesets(root):
+            lid = fileset[LID] # get LID from fileset
+            n_total += 1
+            if self.bin_exists(lid): # make sure it doesn't exist
+                continue
+            if n_new % 1000 == 0: # periodically commit
+                session.commit()
+            b = self.new_bin(lid) # create new bin
+            # now compute fixity
+            self.compute_fixity(b,fileset)
+            # now compute bin metrics
+            try:
+                self.compute_bin_metrics(b,fileset)
+            except:
+                pass # FIXME warn
+            session.add(b)
+        session.commit()
+        return (n_total, n_new)
