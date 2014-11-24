@@ -2,6 +2,8 @@
 
 <h1 class="page-header">IFCB Users</h1>
 
+{{userz.nana}}
+
 <div ng-if="alert" class="alert alert-danger">
     {{alert}}
 </div>
@@ -55,8 +57,8 @@
                 </td>
             </tr>
         </tbody>
-        <tbody ng-repeat="user in users">
-            <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
+        <tbody ng-repeat="user in users.list">
+            <tr ng-if="!isEditing(user)" ng-class="{'text-muted': user.disabled}">
                 <td><strong>{{user.first_name}} {{user.last_name}}</strong></td>
                 <td>{{user.email}}</td>
                 <!-- <td ng-repeat="role in roles">
@@ -74,21 +76,21 @@
                 </td>
             </tr>
 	    <!-- edit mode -->
-	    <tr ng-if="user.edit">
+	    <tr ng-if="isEditing(user)">
                 <td>
                     <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="editing[user.id].first_name" ng-minlength="3" ng-maxlength="255" required></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="editing[user.id].last_name" ng-minlength="3" ng-maxlength="255" required></div>
                     </div>
                 </td>
-                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td>
+                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="editing[user.id].email"></td>
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                   <div class="btn-group pull-right">
                     <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.last_name || !user.email" ng-click="saveUser(user)">Save</button>
-                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(user)">Cancel</button>
+                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(editing[user.id])">Cancel</button>
                   </div>
                 </td>
 	    </tr>
@@ -96,7 +98,8 @@
 </table>
 
 <!-- <p><pre>roles = {{roles | json}}</pre></p>
-<p><pre>users = {{users | json}}</pre></p> -->
+<p><pre>users = {{users.list | json}}</pre></p> -->
+<p><pre>editing = {{editing | json}}</pre></p>
 
 
 

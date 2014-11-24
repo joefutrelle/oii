@@ -1,13 +1,26 @@
 
 ifcbAdmin.service('UserService', ['Restangular', function (Restangular) {
 
-    this.list = false;
+    var baseUsers = Restangular.all('users');
+    var thisUserService = this;
 
-    var baseUsers = Restangular.all('users');this.list = baseUsers.getList();
-    this.post = baseUsers.post;
+    // fetch initial user list
+    baseUsers.getList().then(function(serverResponse) {
+        thisUserService.list = serverResponse;
+    }, function(errorResponse) {
+        console.log(errorResponse);
+        thisUserService.alert = 'Unexpected ' + errorResponse.status.toString()
+            + ' error while loading data from server.'
+    });
 
+    // creates a new, unsaved user object
     this.new = function() {
-        return {first_name:'', last_name:'', email:'', is_enabled:true, edit:true}
+        return {first_name:'', last_name:'', email:'', is_enabled:true}
+    }
+
+    // saves a user object to the server
+    this.save = function(user) {
+
     }
 
 }]);

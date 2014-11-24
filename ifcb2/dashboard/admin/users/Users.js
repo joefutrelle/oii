@@ -4,21 +4,13 @@
 ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Restangular', function ($scope, UserService, RoleService, Restangular) {
 
     // initialize local scope
-    $scope.alert = null;
     $scope.newuser = false;
-    var restore = {};
+    $scope.users= UserService;
+    $scope.editing = {};
 
     // load iniital data from api
     RoleService.list.then(function(serverResponse) {
         $scope.roles = serverResponse;
-    }, function(errorResponse) {
-        console.log(errorResponse);
-        $scope.alert = 'Unexpected ' + errorResponse.status.toString()
-            + ' error while loading data from server.'
-    });
-
-    UserService.list.then(function(serverResponse) {
-        $scope.users = serverResponse;
     }, function(errorResponse) {
         console.log(errorResponse);
         $scope.alert = 'Unexpected ' + errorResponse.status.toString()
@@ -32,9 +24,10 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
         user.username = user.email;
         if(user.id) {
             // user already exists on server. update.
+            // copy "now editing" object to user object
+            angular.copy($scope.editing[user.id], user);
             user.patch().then(function(serverResponse) {
-                delete user.edit;
-                delete restore[user.id];
+                delete $scope.editing[user.id];
                 $scope.alert = null;
             }, function(serverResponse) {
                 console.log(serverResponse);
@@ -63,19 +56,26 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     // cancel new user creation
     $scope.cancelUser = function(user) {
         if (user.id) {
-            // cancel edit on saved timeseries
-            // restore unedited copy
-            angular.copy(restore[user.id], user);
-            delete restore[user.id];
+            // cancel edit on existing user
+            delete $scope.editing[user.id];
         } else {
+            // canel edit on new user
             $scope.newuser = false;
         }
     }
 
     $scope.editUser = function(user) {
-        restore[user.id] = {}
-        angular.copy(user, restore[user.id]);
-        user.edit = true;
+        // copy user into "now editing"
+        $scope.editing[user.id] = {}
+        angular.copy(user, $scope.editing[user.id]);
+    }
+
+    $scope.isEditing = function(user) {
+        if (user.id in $scope.editing) {
+            return true
+        } else {
+            return false
+        }
     }
 
     // disable user toggle
