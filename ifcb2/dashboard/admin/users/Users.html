@@ -17,8 +17,8 @@
             <i>Update password for {{userpw.email}}.</i>
             <div class="passwordinput"><input type="password" class="form-control" placeholder="password must be 8 characters or longer" ng-model="userpw.password" ng-minlength="8" ng-maxlength="255" required></div>
             <div><div class="btn-group">
-                <button type="button" class="btn btn-primary" ng-disabled="!userpw.password" ng-click="pushPassword()">Set Password</button>
-                <button type="button" class="btn btn-default" ng-confirm-click="cancelPassword()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" ng-disabled="!userpw.password" ng-click="pushPassword()">Set Password</button>
+                <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelPassword()">Cancel</button>
             </div></div>
         </div>
     </div>
@@ -51,8 +51,8 @@
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                   <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-primary" ng-disabled="!newuser.first_name || !newuser.last_name || !newuser.email" ng-click="saveUser(newuser)">Save</button>
-                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(newuser)">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" ng-disabled="!newuser.first_name || !newuser.last_name || !newuser.email" ng-click="saveUser(newuser)">Save</button>
+                    <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelUser(newuser)">Cancel</button>
                   </div>
                 </td>
             </tr>
@@ -68,10 +68,10 @@
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                     <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-default" ng-click="editUser(user)">Edit</button>
-                    <button type="button" class="btn btn-default" ng-click="setPassword(user)">Set Password</button>
-                    <button ng-if="user.is_enabled" type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
-                    <button ng-if="!user.is_enabled" type="button" class="btn btn-warning" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
+                    <button type="button" class="btn btn-default btn-sm" ng-click="editUser(user)">Edit</button>
+                    <button type="button" class="btn btn-default btn-sm" ng-click="setPassword(user)">Set Password</button>
+                    <button ng-if="user.is_enabled" type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
+                    <button ng-if="!user.is_enabled" type="button" class="btn btn-warning btn-sm" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
                     </div>
                 </td>
             </tr>
@@ -88,9 +88,9 @@
                 <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="editing[user.id].email"></td>
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
-                  <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-primary" ng-disabled="!user.first_name || !user.last_name || !user.email" ng-click="saveUser(user)">Save</button>
-                    <button type="button" class="btn btn-default" ng-confirm-click="cancelUser(editing[user.id])">Cancel</button>
+                  <div class="btn-group pull-right btn-sm">
+                    <button type="button" class="btn btn-primary btn-sm" ng-disabled="!user.first_name || !user.last_name || !user.email" ng-click="saveUser(user)">Save</button>
+                    <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelUser(editing[user.id])">Cancel</button>
                   </div>
                 </td>
 	    </tr>
@@ -98,8 +98,8 @@
 </table>
 
 <!-- <p><pre>roles = {{roles | json}}</pre></p>
-<p><pre>users = {{users.list | json}}</pre></p> -->
-<p><pre>editing = {{editing | json}}</pre></p>
+<p><pre>users = {{users.list | json}}</pre></p>
+<p><pre>editing = {{editing | json}}</pre></p> -->
 
 
 

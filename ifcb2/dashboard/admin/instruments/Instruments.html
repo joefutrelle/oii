@@ -10,8 +10,8 @@
         <!-- time series display view -->
         <div ng-if="!instr.edit">
             <div class="btn-group pull-right">
-                <button type="button" class="btn btn-default" ng-click="editInstrument(instr)">Edit</button>
-                <button type="button" class="btn btn-default" ng-confirm-message="Are you sure you want to remove the '{{instr.name}}' instrument?" ng-confirm-condition="true" ng-confirm-click="removeInstrument(instr)">Remove</button>
+                <button type="button" class="btn btn-default btn-sm" ng-click="editInstrument(instr)">Edit</button>
+                <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to remove the '{{instr.name}}' instrument?" ng-confirm-condition="true" ng-confirm-click="removeInstrument(instr)">Remove</button>
             </div>
     <!-- FIXME the link below assumes the whole webapp is running at the top of the web server -->
         <h4 class="list-group-item-heading">Name: {{instr.name}}</h4>
@@ -21,8 +21,8 @@
         <!-- time series edit view -->
         <div ng-if="instr.edit">
             <div class="btn-group pull-right">
-                <button type="button" class="btn btn-default" ng-disabled="!instr.name || !instr.data_path || !instr.time_series_id" ng-click="saveInstrument(instr)">Save</button>
-                <button type="button" class="btn btn-default" ng-click="cancelInstrument(instr)">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" ng-disabled="!instr.name || !instr.data_path || !instr.time_series_id" ng-click="saveInstrument(instr)">Save</button>
+                <button type="button" class="btn btn-default btn-sm" ng-click="cancelInstrument(instr)">Cancel</button>
             </div>
             <div class="row ifcbformrow"><div class="col-md-4">
                 <div class="input-group">

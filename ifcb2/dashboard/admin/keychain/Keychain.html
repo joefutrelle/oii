@@ -19,15 +19,15 @@
             </div></div>
             <div>&nbsp;</div>
             <div class="btn-group">
-                <button type="button" class="btn btn-primary" ng-disabled="!user || !name" ng-confirm-click="generateKey(user,name)">Generate Key</button>
-                <button type="button" class="btn btn-default" ng-confirm-click="cancelKey()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" ng-disabled="!user || !name" ng-confirm-click="generateKey(user,name)">Generate Key</button>
+                <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelKey()">Cancel</button>
             </div>
         </div>
         <div ng-show="keyview" class="panel-body">
             <div>Here is your new API key. This will be displayed only once.<br>
             <strong>{{keyview}}</strong></div>
             <div>&nbsp;</div>
-            <button type="button" class="btn btn-primary" ng-confirm-click="cancelKey()">Got It!</button>
+            <button type="button" class="btn btn-primary btn-sm" ng-confirm-click="cancelKey()">Got It!</button>
         </div>
     </div>
 </div></div>
@@ -54,7 +54,7 @@
             <td>{{key.datetime_created}}</td>
             <td>{{key.datetime_last_used}}</td>
             <td>
-                <button type="button" ng-disabled="!lockme" class="btn btn-default" ng-confirm-message="Are you sure you want to revoke the '{{key.name}}' API key?" ng-confirm-condition="true" ng-confirm-click="revokeKey(key)">Revoke</button>
+                <button type="button" ng-disabled="!lockme" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to revoke the '{{key.name}}' API key?" ng-confirm-condition="true" ng-confirm-click="revokeKey(key)">Revoke</button>
             </td>
         </tr>
     </tbody>
