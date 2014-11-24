@@ -1,5 +1,4 @@
-from time import strptime
-
+from oii.times import text2utcdatetime
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.formats.adc import TARGET_NUMBER
 
@@ -26,8 +25,8 @@ def parse_pid(pid):
         raise
 
 def get_timestamp(parsed_pid):
-    """extract the timestamp from a parsed pid"""
-    return strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT])
+    """extract the timestamp from a parsed pid and return it as a UTC datetime"""
+    return text2utcdatetime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT])
 
 def target_pid(bin_pid,target_number=1):
     """bin_pid must have no product or extension,

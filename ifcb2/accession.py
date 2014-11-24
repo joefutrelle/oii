@@ -8,7 +8,7 @@ from oii.utils import sha1_file
 from oii.times import text2utcdatetime
 from oii.ifcb2 import get_resolver, HDR, ADC, ROI, HDR_PATH, ADC_PATH, ROI_PATH, LID
 from oii.ifcb2.identifiers import parse_pid, get_timestamp
-from oii.ifcb2.orm import Bin, File
+from oii.ifcb2.orm import Bin, File, TimeSeries
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
 
@@ -67,17 +67,28 @@ class Accession(object):
         fileset = fileset structure"""
         # now make fixity entries
         for f in compute_fixity(fileset, fast=self.fast):
+            print 'fixity %s' % f
             b.files.append(f)
-    def do_accession(self, root):
-        n_total = 0
-        n_new = 0
-        for fileset in list_filesets(root):
+    def get_time_series(self):
+        return self.session.query(TimeSeries).filter(and_(TimeSeries.label==self.ts_label,TimeSeries.enabled)).first()
+    def list_filesets(self):
+        ts = self.get_time_series()
+        if ts is None:
+            return
+        for dd in ts.data_dirs:
+            if dd.product_type != 'raw':
+                continue
+            for fs in list_filesets(dd.path):
+                yield fs
+    def accede(self):
+        n_total, n_new = 0, 0
+        for fileset in self.list_filesets():
             lid = fileset[LID] # get LID from fileset
             n_total += 1
             if self.bin_exists(lid): # make sure it doesn't exist
                 continue
             if n_new % 1000 == 0: # periodically commit
-                session.commit()
+                self.session.commit()
             b = self.new_bin(lid) # create new bin
             # now compute fixity
             self.compute_fixity(b,fileset)
@@ -86,6 +97,6 @@ class Accession(object):
                 self.compute_bin_metrics(b,fileset)
             except:
                 pass # FIXME warn
-            session.add(b)
-        session.commit()
-        return (n_total, n_new)
+            self.session.add(b)
+        self.session.commit()
+        return n_total, n_new
