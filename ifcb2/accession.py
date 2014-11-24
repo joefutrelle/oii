@@ -12,6 +12,7 @@ from oii.ifcb2.orm import Bin, File
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
 
+FIXITY_ROLE='fixity'
 ACCESSION_ROLE='accession'
 
 def compute_fixity(fs, fast=False):

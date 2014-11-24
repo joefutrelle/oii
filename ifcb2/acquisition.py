@@ -5,9 +5,10 @@ from oii.utils import safe_copy, compare_files
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
 from oii.ifcb2.files import NotFound, pid2fileset
-from oii.ifcb2.accession import ACCESSION_ROLE
+from oii.ifcb2.accession import ACCESSION_ROLE, FIXITY_ROLE
 
 WILD_PRODUCT='wild'
+FIXED_PRODUCT='fixed'
 RAW_PRODUCT='raw'
 
 def list_filesets(instrument):
@@ -78,9 +79,11 @@ def as_product(pid,product):
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
     pid must not be a local id--it must be namspace-scoped"""
-    upstream_pid = as_product(pid,WILD_PRODUCT)
-    downstream_pid = as_product(pid,RAW_PRODUCT)
-    client.depend(downstream_pid, upstream_pid, ACCESSION_ROLE)
+    wild_pid = as_product(pid,WILD_PRODUCT)
+    fixed_pid = as_product(pid,FIXED_PRODUCT)
+    raw_pid = as_product(pid,RAW_PRODUCT)
+    client.depend(fixed_pid, raw_pid, FIXITY_ROLE)
+    client.depend(raw_pid, fixed_pid, ACCESSION_ROLE)
 
 def copy_work(instrument,client,callback=None):
     ts_label = instrument.time_series.label
