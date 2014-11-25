@@ -9,7 +9,7 @@ def maketoken():
     s = string.ascii_uppercase + string.digits + string.ascii_lowercase
     return ''.join(random.choice(s) for _ in range(40))
 
-def token_roles_required(*required_roles):
+def api_roles_required(*required_roles):
     def wrapper(func):
         @wraps(func)
         def decorated_view(*args, **kwargs):
@@ -53,7 +53,7 @@ def admin():
     return '<h3>IFCB admin test page.</h3><br><br><a href="/sec/logout">Logout</a>'
 
 @security_blueprint.route('/test_admin_api')
-@token_roles_required('Admin')
+@api_roles_required('Admin')
 def admin_api():
     return '<h3>IFCB admin api test page.</h3><br><br><a href="/sec/logout">Logout</a>'
 
