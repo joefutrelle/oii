@@ -60,6 +60,8 @@ class WorkflowClient(object):
             UPSTREAM: upstream,
             ROLE: role
         })
+    def expire(self):
+        return requests.post(self.api('/expire'))
 
 class Mutex(WorkflowClient):
     """Use a specific workflow product as a mutex. Requires cooperation
@@ -73,17 +75,19 @@ class Mutex(WorkflowClient):
     oii.utils.retry can be used if polling is desired.
     Transparently creates the mutex product if it does not exist, but
     does not delete it; the delete() method can be used for that."""
-    def __init__(self, mutex_pid, base_url=None):
+    def __init__(self, mutex_pid, ttl=None, base_url=None):
         super(Mutex,self).__init__(base_url)
         self.mutex_pid = mutex_pid
+        self.ttl = ttl
     def __enter__(self):
         # attempt to create mutex
-        r = self.create(self.mutex_pid, state=WAITING)
+        r = self.create(self.mutex_pid, state=WAITING, ttl=self.ttl)
         # CREATED or CONFLICT are both OK because it means the mutex exists
         if r.status_code not in (http.CREATED, http.CONFLICT):
             raise Busy("mutex %s busy" % self.mutex_pid)
         # attempt to win the race to put the mutex in the RUNNING state
-        r = self.update_if(self.mutex_pid, state=WAITING, new_state=RUNNING)
+        # and change the ttl if necessary
+        r = self.update_if(self.mutex_pid, state=WAITING, new_state=RUNNING, ttl=self.ttl)
         if r.status_code == http.OK: # won the race
             return self
         raise Busy("mutex %s busy" % self.mutex_pid) # lost the race

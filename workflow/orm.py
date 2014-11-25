@@ -1,10 +1,12 @@
-from oii.times import utcdtnow
-from oii.orm_utils import fix_utc
+from datetime import timedelta
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
+
+from oii.times import utcdtnow
+from oii.orm_utils import fix_utc
 
 # keys for use in the database and webapi
 
@@ -16,6 +18,11 @@ NEW_STATE='new_state'
 WAITING='waiting'
 RUNNING='running'
 AVAILABLE='available'
+
+# expiration and timestamp
+TS='ts'
+EXPIRES='expires'
+TTL='ttl'
 
 # event and events
 EVENT='event'
@@ -51,11 +58,13 @@ class Product(Base):
     event = Column('event', String, default='created') # most recent state transition event
     message = Column('message', String) # event log message
     ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # time of event
+    ttl = Column('ttl', Integer, default=None) # time-to-live in seconds, or none for never expire
+    expires = Column('expires', DateTime(timezone=True), default=None)
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
 
-    def changed(self, event, state=RUNNING, message=HEARTBEAT, ts=None):
+    def changed(self, event, state=RUNNING, message=HEARTBEAT, ts=None, ttl=None):
         """call to record the event of a product state change"""
         if event is not None:
             self.event = event
@@ -66,6 +75,9 @@ class Product(Base):
         if ts is None:
             ts = utcdtnow()
         self.ts = ts
+        if ttl is not None:
+            self.ttl = int(ttl)
+            self.expires = self.ts + timedelta(seconds=self.ttl)
 
     def deps_for_role(self, role):
         return [ud.upstream for ud in self.upstream_dependencies if ud.role==role]
@@ -168,9 +180,9 @@ class Products(object):
     def leaves(self):
         """return all leaves; that is, products with no dependents"""
         return self.session.query(Product).filter(~Product.dependents.any())
-    def _update_commit(self, product=None, event=None, new_state=None, message=None):
+    def _update_commit(self, product=None, event=None, new_state=None, message=None, ttl=None):
         if product is not None:
-            product.changed(event, new_state, message)
+            product.changed(event, new_state, message, ttl=ttl)
             self.commit()
             return product
         else:
@@ -195,14 +207,14 @@ class Products(object):
         None instead"""
         p = self.get_next(roles, state, dep_state)
         return self._update_commit(p, event, new_state, message)
-    def update_if(self, pid, state=WAITING, new_state=RUNNING, event='update_if', message=None):
+    def update_if(self, pid, state=WAITING, new_state=RUNNING, event='update_if', message=None, ttl=None):
         """atomically change the state of the given product, but only if it's
         in the specified current state"""
         p = self.session.query(Product).\
             filter(and_(Product.pid==pid,Product.state==state)).\
             with_lockmode('update').\
             first()
-        return self._update_commit(p, event, new_state, message)
+        return self._update_commit(p, event, new_state, message, ttl)
     def delete_tree(self,pid):
         p = self.get_product(pid)
         if p is None:
@@ -225,11 +237,18 @@ class Products(object):
             with_lockmode('update'):
             self.session.delete(product)
         self.session.commit()
-    def expire(self, ago, state=RUNNING, new_state=WAITING):
-        """if a product has not had an event since ago ago (see older_than),
-        and is in state, change its state to new_state"""
+    def expire(self, state=RUNNING, new_state=WAITING, event='expired', message=None, **kw):
+        """allow products to expire whose most recent event is older
+        than their TTL allows"""
         if state == new_state:
             raise ValueError('state and new_state are both %s' % state)
-        for p in self.older_than(ago).filter(Product.state==state):
+        now = utcdtnow()
+        n = 0
+        for p in self.session.query(Product).\
+            filter(Product.expires.isnot(None)).\
+            filter(now > Product.expires).\
+            with_lockmode('update'):
             p.changed('expired', new_state)
+            n += 1
         self.session.commit()
+        return n
