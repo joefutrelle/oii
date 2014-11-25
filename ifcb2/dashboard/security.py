@@ -24,7 +24,7 @@ def token_roles_required(*required_roles):
                     if apikey.user.has_roles(*required_roles):
                         # the submitted token has been matched to a user
                         # with the required roles. mark status as authorized
-                        authorization = True
+                        authorized = True
             # not not authorized, stop request processing and
             # return json 401
             if not authorized:
