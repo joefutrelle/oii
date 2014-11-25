@@ -30,8 +30,7 @@ from oii.image.mosaic import Tile
 from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
-from oii.ifcb2.orm import Base, BaseAuth, Bin, TimeSeries, DataDirectory, User, Role
-from oii.ifcb2.session import session, dbengine
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
 from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint
@@ -55,6 +54,7 @@ from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 
 from oii.ifcb2.dashboard.flasksetup import app
+from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
 # constants
 MIME_JSON='application/json'
@@ -750,7 +750,6 @@ if __name__ == '__main__':
     from oii.ifcb2.session import dbengine
     # init database
     Base.metadata.create_all(dbengine)
-    BaseAuth.metadata.create_all(dbengine)
     # init roles and test users
     # this should go somewhere else later
     for role in ['Admin','Instrument','Time Series', 'API']:

@@ -27,10 +27,6 @@ FILE_EXISTS='exists'
 CHECKSUM_PLACEHOLDER='(placeholder)'
 
 Base = declarative_base()
-BaseAuth = declarative_base()
-# the scoped_session property is bound here in order to provide
-# compatibility between our Users orm class and the Flask-Users module
-BaseAuth.query = ScopedSession.query_property()
 
 # make sure all timestamps roundtrip as UTC
 fix_utc(Base)
@@ -146,7 +142,7 @@ class Instrument(Base):
 
     time_series = relationship('TimeSeries')
 
-class User(BaseAuth, UserMixin):
+class User(Base, UserMixin):
     """data model must conform to flask-user expectations here
     http://pythonhosted.org/Flask-User/data_models.html#all-in-one-user-datamodel"""
     __tablename__ = 'users'
@@ -166,6 +162,9 @@ class User(BaseAuth, UserMixin):
 
     roles = relationship('Role', secondary='user_roles',
                 backref=backref('users', lazy='dynamic'))
+    # the scoped_session property is bound here in order to provide
+    # compatibility between our Users orm class and the Flask-Users module
+    query = ScopedSession.query_property()
 
     def is_active(self):
       return self.is_enabled
@@ -173,20 +172,22 @@ class User(BaseAuth, UserMixin):
     def __repr__(self):
         return "<User(email='%s')>" % self.email
 
-class Role(BaseAuth):
+class Role(Base):
     __tablename__ = 'roles'
     id = Column(Integer(), primary_key=True)
     name = Column(String(50), unique=True)
+    query = ScopedSession.query_property()
 
-class UserRoles(BaseAuth):
+class UserRoles(Base):
     __tablename__ = 'user_roles'
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
     role_id = Column(Integer(), ForeignKey('roles.id', ondelete='CASCADE'))
     users = relationship('User')
     roles = relationship('Role')
+    query = ScopedSession.query_property()
 
-class APIKey(BaseAuth):
+class APIKey(Base):
     __tablename__ = 'api_keys'
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id', ondelete='CASCADE'))
