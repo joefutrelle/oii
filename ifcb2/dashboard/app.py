@@ -11,11 +11,8 @@ from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
 
-from flask import Flask, Response, abort, request, render_template
+from flask import Response, abort, request, render_template
 from flask import render_template_string, redirect, send_from_directory
-import flask.ext.sqlalchemy
-import flask.ext.restless
-from flask.ext.user import UserManager, SQLAlchemyAdapter
 
 from sqlalchemy import and_
 
@@ -28,7 +25,6 @@ from oii.times import iso8601, parse_date_param, struct_time2utcdatetime, utcdtn
 from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
 from oii.image.mosaic import Tile
-from oii.webapi.utils import UrlConverter, DatetimeConverter
 
 # FIXME this is used for old PIL-based mosaic compositing API
 from oii.image.pil.utils import filename2format, thumbnail
@@ -58,21 +54,13 @@ from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP,
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 
+from oii.ifcb2.dashboard.flasksetup import app
+
 # constants
 MIME_JSON='application/json'
 STATIC='/static/'
 ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()))),'admin')
-
-app = Flask(__name__)
-app.url_map.converters['url'] = UrlConverter
-app.url_map.converters['datetime'] = DatetimeConverter
-
-# load Flask-User configuration and init
-# this gets us authn/authz and session management
-app.config.from_object('oii.ifcb2.dashboard.config.flask_user')
-db_adapter = SQLAlchemyAdapter(dbengine, User)
-user_manager = UserManager(db_adapter, app)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

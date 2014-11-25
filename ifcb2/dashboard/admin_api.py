@@ -1,20 +1,10 @@
-from flask import Flask, Blueprint, request
+from flask import Blueprint, request
 import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 from oii.ifcb2.orm import Instrument, APIKey
-from oii.ifcb2.session import session, dbengine
-from flask.ext.user import UserManager, SQLAlchemyAdapter
 from oii.ifcb2.dashboard.security import roles_required, current_user, maketoken
-
-app = Flask(__name__)
-
-# add app security configurations and setup setup user_manager
-# this is being done so we can use the user_manager.hash_password() function
-# below, without trying to cross-import from app.py
-app.config.from_object('oii.ifcb2.dashboard.config.flask_user')
-db_adapter = SQLAlchemyAdapter(dbengine, User)
-user_manager = UserManager(db_adapter,app)
+from oii.ifcb2.dashboard.flasksetup import app, manager
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
     print "*************************************************"
@@ -32,8 +22,6 @@ def admin_api_auth(instance_id=None, data=None, **kw):
         allow = True
     if not allow:
         raise flask.ext.restless.ProcessingException('Not Authorized',401)
-
-manager = flask.ext.restless.APIManager(app, session=session)
 
 # assign admin_api_auth to all preprocessors
 preprocessors = {
