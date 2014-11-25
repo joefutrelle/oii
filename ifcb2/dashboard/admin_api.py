@@ -108,7 +108,7 @@ def genkey(instid):
         key.name = data['name']
         key.user = user
         token = maketoken()
-        key.token = user_manager.hash_password(token)
+        key.token = token #encrypt later
         session.add(key)
         session.commit()
         return json.dumps({'token':token})
