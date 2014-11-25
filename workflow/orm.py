@@ -2,7 +2,7 @@ from oii.times import utcdtnow
 from oii.orm_utils import fix_utc
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -199,7 +199,7 @@ class Products(object):
         """atomically change the state of the given product, but only if it's
         in the specified current state"""
         p = self.session.query(Product).\
-            filter(Product.state==state).\
+            filter(and_(Product.pid==pid,Product.state==state)).\
             with_lockmode('update').\
             first()
         return self._update_commit(p, event, new_state, message)

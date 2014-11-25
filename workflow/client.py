@@ -8,11 +8,15 @@ from oii.workflow.orm import ROLE, ANY
 from oii.workflow.orm import HEARTBEAT
 from oii.workflow.orm import UPSTREAM
 
+DEFAULT_BASE_URL='http://localhost:8080'
+
 def isok(r):
     return r.status_code < 400
 
 class WorkflowClient(object):
-    def __init__(self, base_url='http://localhost:8080'):
+    def __init__(self, base_url=None):
+        if base_url is None:
+            base_url = DEFAULT_BASE_URL
         self.base_url = base_url
     def api(self, url):
         return self.base_url + url
