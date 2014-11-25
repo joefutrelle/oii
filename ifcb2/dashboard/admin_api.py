@@ -5,6 +5,7 @@ from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 from oii.ifcb2.orm import Instrument, APIKey
 from oii.ifcb2.dashboard.security import roles_required, current_user, maketoken
 from oii.ifcb2.dashboard.flasksetup import app, manager, session, user_manager
+from passlib.hash import sha256_crypt
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
     print "*************************************************"
@@ -108,7 +109,7 @@ def genkey(instid):
         key.name = data['name']
         key.user = user
         token = maketoken()
-        key.token = user_manager.hash_password(token)
+        key.token = token #encrypt later
         session.add(key)
         session.commit()
         return json.dumps({'token':token})
