@@ -8,7 +8,17 @@ from oii.workflow.orm import ROLE, ANY
 from oii.workflow.orm import HEARTBEAT
 from oii.workflow.orm import UPSTREAM
 
+import httplib as http
+
 DEFAULT_BASE_URL='http://localhost:8080'
+
+class Busy(Exception):
+    """A mutex is busy"""
+    pass
+
+class InconsistentState(Exception):
+    """The workflow products are in a logically inconsistent state"""
+    pass
 
 def isok(r):
     return r.status_code < 400
@@ -51,32 +61,39 @@ class WorkflowClient(object):
             ROLE: role
         })
 
-class Oneshot(object):
-    """used for a single thing that has to be done
-    periodically but only have one process at a time doing it
-    and don't accumulate a backlog of jobs.
-    - initiator calls create, which creates product in
-    WAITING state. if that fails, work is already underway
-    and initiator returns. if it succeeds, wakes up workers.
-    - worker wakes up, calls acquire attempts to update the product from
-    WAITING to RUNNING. if that succeeds, it does work and
-    calls release. if not, it terminates. if the client fails
-    to call release, other workflow ORM clients can force the mutex
-    to expire."""
-    def __init__(self, client, pid=None):
-        self.client = client
-        if pid is None:
-            pid = get_id()
-        self.pid = pid
-    def create(self):
-        """create mutex and wake up all workers"""
-        if isok(self.client.create(self.pid, state=WAITING)):
-            self.client.wakeup(self.pid)
-    def acquire(self):
-        # default state transition is WAITING -> RUNNING
-        return isok(self.client.update_if(self.pid))
-    def heartbeat(self):
-        return self.client.heartbeat(self.pid)
-    def release(self):
-        # done working, clean slate
-        self.client.delete(self.pid)
+class Mutex(WorkflowClient):
+    """Use a specific workflow product as a mutex. Requires cooperation
+    between clients. Use with the "with" statement, like this:
+
+    with Mutex({mutex product pid}, {client base URL}):
+        {do some stuff}
+
+    the "with" statement will raise Busy if the mutex is not available.
+    There is no blocking form of this; a retry decorator such as
+    oii.utils.retry can be used if polling is desired.
+    Transparently creates the mutex product if it does not exist, but
+    does not delete it; the delete() method can be used for that."""
+    def __init__(self, mutex_pid, base_url=None):
+        super(Mutex,self).__init__(base_url)
+        self.mutex_pid = mutex_pid
+    def __enter__(self):
+        # attempt to create mutex
+        r = self.create(self.mutex_pid, state=WAITING)
+        # CREATED or CONFLICT are both OK because it means the mutex exists
+        if r.status_code not in (http.CREATED, http.CONFLICT):
+            raise Busy("mutex %s busy" % self.mutex_pid)
+        # attempt to win the race to put the mutex in the RUNNING state
+        r = self.update_if(self.mutex_pid, state=WAITING, new_state=RUNNING)
+        if r.status_code == http.OK: # won the race
+            return self
+        raise Busy("mutex %s busy" % self.mutex_pid) # lost the race
+    def __exit__(self, exc_type, exc_value, traceback):
+        # attempt to release the mutex into the WAITING state
+        r = self.update_if(self.mutex_pid, state=RUNNING, new_state=WAITING)
+        if r.status_code == http.CONFLICT:
+            # another client has forced the mutex out of the RUNNING state
+            raise InconsistentState("mutex %s in inconsistent state" % self.mutex_pid)
+        elif r.status_code != http.OK:
+            # not enough information to know what is wrong
+            raise RuntimeError("mutex %s in unknown state" % self.mutex_pid)
+        return False # allow exceptions to propagate
