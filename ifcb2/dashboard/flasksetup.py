@@ -10,6 +10,9 @@ app = Flask(__name__)
 app.url_map.converters['url'] = UrlConverter
 app.url_map.converters['datetime'] = DatetimeConverter
 
+# load Flask configuration file
+app.config.from_object('oii.ifcb2.dashboard.config.flask_config')
+
 # load Flask-User configuration and init
 # this gets us authn/authz and session management
 app.config.from_object('oii.ifcb2.dashboard.config.flask_user')

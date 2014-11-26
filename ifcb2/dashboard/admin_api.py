@@ -1,4 +1,5 @@
 from flask import Blueprint, request
+from sys import stdout
 import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
@@ -7,9 +8,10 @@ from oii.ifcb2.dashboard.security import roles_required, current_user, maketoken
 from oii.ifcb2.dashboard.flasksetup import app, manager, session, user_manager
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
-    print "*************************************************"
-    print data
-    print "*************************************************"
+    if app.config['DEBUG']:
+        # running in debug mode. show data
+        stdout.write("request data: %s\n" % str(data))
+        stdout.flush()
     if data.has_key('edit'):
         # remove restangularize "edit" field. probably a better way
         # to do this on the javascript side
