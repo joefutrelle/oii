@@ -63,7 +63,7 @@ user_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
     preprocessors=preprocessors,
-    exclude_columns=['password',]
+    exclude_columns=['password','api_keys']
     )
 role_blueprint = manager.create_api_blueprint(
     Role,
