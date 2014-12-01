@@ -2,6 +2,9 @@ import re
 from oii.ifcb2 import get_resolver
 from oii.utils import memoize
 
+SCHEMA_VERSION_1 = 'v1'
+SCHEMA_VERSION_2 = 'v2'
+
 TARGET_NUMBER='targetNumber'
 TRIGGER = 'trigger'
 # location of ROI in camera field in pixels
@@ -26,7 +29,7 @@ def get_schema(schema_version):
     return schema
 
 class Adc(object):
-    def __init__(self, adc_file, schema_version='v2'):
+    def __init__(self, adc_file, schema_version=SCHEMA_VERSION_2):
         self.adc_file = adc_file
         self.schema_version = schema_version
         self.schema = get_schema(schema_version)

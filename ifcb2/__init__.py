@@ -9,6 +9,8 @@ PID='pid'
 LID='lid'
 TS_LABEL='ts_label'
 
+SCHEMA_VERSION='schema_version'
+
 HDR='hdr'
 ADC='adc'
 ROI='roi'

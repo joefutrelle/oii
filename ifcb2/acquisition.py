@@ -1,14 +1,15 @@
 import os
 
+from collections import Counter
+
 from oii.utils import safe_copy, compare_files
 
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
 from oii.ifcb2.files import NotFound, pid2fileset
-from oii.ifcb2.accession import ACCESSION_ROLE, FIXITY_ROLE
+from oii.ifcb2.accession import ACCESSION_ROLE
 
 WILD_PRODUCT='wild'
-FIXED_PRODUCT='fixed'
 RAW_PRODUCT='raw'
 
 def list_filesets(instrument):
@@ -39,7 +40,7 @@ def list_filesets(instrument):
             yield (lid, s)
 
 def get_copy_from(instrument):
-    """Return all raw file copy operations as tuples of
+    """Return copy operations for all filesets on the instrument as
     - src: source path in instrument data directory
     - dest: destination path according to time series data dir configuration."""
     # for each complete fileset in the instrument data directory,
@@ -63,32 +64,38 @@ def get_copy_from(instrument):
                     break # only need one destination
 
 def do_copy(instrument):
-    lids = set()
+    """Perform all necessary copy operations from the instrument to
+    its destination directory.
+    returns set of LIDs copied"""
+    lids = Counter()
     for lid,src,dest in get_copy_from(instrument):
         # if necessary, safe-copy the file
         if not os.path.exists(dest):
             safe_copy(src,dest)
-            compare_files(src,dest,size=True)
-            if lid not in lids:
+            if not compare_files(src,dest,size=True):
+                # file copy failed, this is bad
+                raise IOError('failed to copy %s to %s' % (src,dest))
+            lids[lid] += 1
+            if lids[lid] == 3: # fileset is complete
                 yield lid
-            lids.add(lid)
 
 def as_product(pid,product):
+    """compute a product pid given a pid and a product name"""
     return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
 
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
-    pid must not be a local id--it must be namspace-scoped"""
+    pid must not be a local id--it must be namespace-scoped"""
     wild_pid = as_product(pid,WILD_PRODUCT)
-    fixed_pid = as_product(pid,FIXED_PRODUCT)
     raw_pid = as_product(pid,RAW_PRODUCT)
-    client.depend(fixed_pid, raw_pid, FIXITY_ROLE)
-    client.depend(raw_pid, fixed_pid, ACCESSION_ROLE)
+    client.depend(raw_pid, wild_pid, ACCESSION_ROLE)
 
 def copy_work(instrument,client,callback=None):
+    """what an acquisition worker does"""
     ts_label = instrument.time_series.label
     for lid in do_copy(instrument):
         pid = '%s/%s' % (ts_label, lid)
         schedule_accession(client,pid)
+        client.wakeup(ACCESSION_ROLE)
         if callback is not None:
             callback(lid)
