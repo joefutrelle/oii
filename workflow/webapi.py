@@ -2,6 +2,7 @@ import os
 import mimetypes
 import json
 import re
+from datetime import timedelta
 
 import httplib as http
 
@@ -14,7 +15,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from oii.times import iso8601
 
 from oii.workflow.orm import Base, Product, Dependency, Products
-from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
 
@@ -78,6 +79,7 @@ def product2dict(product):
         STATE: product.state,
         EVENT: product.event,
         MESSAGE: product.message,
+        TTL: product.ttl,
         'ts': iso8601(product.ts.timetuple())
     }
 
@@ -88,7 +90,7 @@ def product2json(product):
 
 def product_params(form,defaults):
     params = {}
-    for k in [STATE, EVENT, MESSAGE, NEW_STATE]:
+    for k in [STATE, EVENT, MESSAGE, NEW_STATE, TTL]:
         params[k] = form.get(k,default=defaults.get(k,None))
     return params
 
@@ -104,7 +106,7 @@ def do_create(pid,params):
     return p
 
 def do_update(p,params):
-    p.changed(state=params[STATE], event=params[EVENT], message=params[MESSAGE])
+    p.changed(state=params[STATE], event=params[EVENT], message=params[MESSAGE], ttl=params[TTL])
 
 # commit a change, and if it results in an integrity error,
 # return the given HTTP error status code
@@ -218,15 +220,28 @@ def update_if(pid):
     })
     p = Products(session).\
         update_if(pid, state=kw[STATE], new_state=kw[NEW_STATE],
-                  event=kw[EVENT], message=kw[MESSAGE])
+                  event=kw[EVENT], message=kw[MESSAGE], ttl=kw[TTL])
+    # FIXME could the above expression be simplified with **?
     return product_response(p, error_code=http.CONFLICT)
+
+@app.route('/expire',methods=['POST'])
+def expire():
+    kw = product_params(request.form, defaults={
+        STATE: RUNNING,
+        NEW_STATE: WAITING,
+        EVENT: 'expired'
+    })
+    n = Products(session).expire(**kw)
+    if n == 0:
+        abort(404)
+    return Response(dict(expired=n),mimetype=MIME_JSON)
 
 # wake up workers optionally with a pid payload
 @app.route('/wakeup')
 @app.route('/wakeup/<path:pid>')
 def wakeup(pid=None):
     async_wakeup(pid)
-    return Response(json.dumps(dict(status='success')),mimetype=MIME_JSON)
+    return Response(dict(status='success'),mimetype=MIME_JSON)
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)

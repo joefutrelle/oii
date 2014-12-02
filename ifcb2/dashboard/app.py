@@ -47,7 +47,6 @@ from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
 from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.hdr import parse_hdr_file
-from oii.ifcb2.accession import fast_accession
 # keys
 from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
@@ -460,40 +459,6 @@ def check_files(ts_label, pid):
         abort(404)
     result = get_files(parsed,check=True,fast=True) # FIXME set fast to false
     return Response(json.dumps(result), mimetype=MIME_JSON)
-
-### data validation and accession ###
-
-@app.route('/api/accession')
-@app.route('/<ts_label>/api/accession')
-def accession(ts_label=None):
-    results = []
-    tss = []
-    if ts_label is None:
-        for ts in session.query(TimeSeries).filter(TimeSeries.enabled):
-            results.append(ts)
-    else:
-        tss = [session.query(TimeSeries).filter(TimeSeries.label==ts_label).first()]
-    for ts in tss:
-        for ddir in ts.data_dirs:
-            if ddir.product_type != 'raw':
-                continue
-            try:
-                (n_new, n_total) = fast_accession(session, ts.label, ddir.path)
-                results.append({
-                    'time_series': ts.label,
-                    'data_dir': ddir.path,
-                    'status': 'found',
-                    'new': n_new,
-                    'total': n_total
-                })
-            except:
-                raise # FIXME
-                results.append({
-                    'time_series': ts.label,
-                    'data_dir': ddir.path,
-                    'status': 'not found'
-                });
-    return Response(json.dumps(results), mimetype='application/json')
 
 ### bins, targets, and products ###
 
