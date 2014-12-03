@@ -115,8 +115,8 @@ class Dependency(Base):
     __tablename__ = 'dependencies'
 
     id = Column(Integer, primary_key=True)
-    upstream_id = Column(String, ForeignKey('products.id'))
-    downstream_id = Column(String, ForeignKey('products.id'))
+    upstream_id = Column(Integer, ForeignKey('products.id'))
+    downstream_id = Column(Integer, ForeignKey('products.id'))
     role = Column(String, default=ANY, nullable=False)
 
     upstream = relationship(Product,
@@ -143,6 +143,7 @@ class Dependency(Base):
 class Products(object):
     def __init__(self, session):
         self.session = session
+        self.session.expire_all() # don't be stale!
     def commit(self):
         try:
             self.session.commit()
@@ -229,6 +230,7 @@ class Products(object):
         - have any dependencies (in other words, not "root" products")
         - have any dependents, all of which are in 'dep_state'
         default is to find available products that no unavailable products depend on"""
+        self.session.begin_nested()
         for product in self.session.query(Product).\
             filter(Product.state==state).\
             filter(Product.depends_on.any()).\
@@ -244,6 +246,7 @@ class Products(object):
             raise ValueError('state and new_state are both %s' % state)
         now = utcdtnow()
         n = 0
+        self.session.begin_nested()
         for p in self.session.query(Product).\
             filter(Product.expires.isnot(None)).\
             filter(now > Product.expires).\

@@ -8,7 +8,7 @@ from oii.workflow.client import WorkflowClient, Mutex, Busy
 
 import httplib as http
 
-PING_PID = 'ping_test'
+MUTEX_PID = 'my_mutex'
 
 def random_sleep():
     time.sleep(random.random())
@@ -16,24 +16,24 @@ def random_sleep():
 def worker(n):
     random_sleep()
     try:
-        client = Mutex(PING_PID, ttl=30)
+        mutex = Mutex(MUTEX_PID, ttl=30)
         # first attempt to expire any lingering products
-        client.expire()
-        with client:
+        mutex.expire()
+        with mutex:
             print 'START %d {' % n
             for i in range(2):
                 random_sleep()
-                client.heartbeat(PING_PID)
+                mutex.heartbeat(MUTEX_PID)
                 print '  work(%d)' % n
-            print '}'
+        print '}'
     except Busy:
-        print '# %d' % n
+        print '  skip(%d)' % n
     except:
         traceback.print_exc(file=sys.stdout)
 
 def do_work():
-    N=10
-    pool = Pool(3)
+    N=15
+    pool = Pool(5)
     for n in range(N):
         pool.apply_async(worker,[n],{})
     pool.close()
@@ -41,7 +41,7 @@ def do_work():
 
 def doit():
     do_work()
-    #WorkflowClient().delete(PING_PID)
+    #WorkflowClient().delete(MUTEX_PID)
 
 if __name__=='__main__':
     doit()

@@ -1,3 +1,4 @@
+from threading import Lock
 import os
 import mimetypes
 import json
@@ -8,7 +9,7 @@ import httplib as http
 
 from flask import Flask, Response, abort, request, render_template, render_template_string, redirect
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -25,17 +26,35 @@ MIME_JSON='application/json'
 
 # eventually the session cofiguration should
 # go in its own class.
-#SQLITE_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-SQLITE_URL='sqlite:///product_service_test.db'
-#SQLITE_URL='sqlite://'
+#DB_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
+DB_URL='sqlite:///product_service_test.db'
+#DB_URL='sqlite://'
+#DB_URL='postgresql://ifcb:ifcb@localhost/workflow'
 
 from sqlalchemy.pool import StaticPool
-dbengine = create_engine(SQLITE_URL,
-                    connect_args={'check_same_thread':False},
-                    poolclass=StaticPool,
-                         echo=False)
+dbengine = create_engine(
+    DB_URL,
+    connect_args={'check_same_thread': False},
+    poolclass=StaticPool,
+    echo=False
+)
 ScopedSession = scoped_session(sessionmaker(bind=dbengine))
 session = ScopedSession()
+
+# fix broken concurrency model in SQLite
+# see http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html?highlight=sqlite#serializable-isolation-savepoints-transactional-ddl
+
+@event.listens_for(dbengine, "connect")
+def do_connect(dbapi_connection, connection_record):
+    # disable pysqlite's emitting of the BEGIN statement entirely.
+    # also stops it from emitting COMMIT before any DDL.
+    dbapi_connection.isolation_level = None
+
+@event.listens_for(dbengine, "begin")
+def do_begin(conn):
+    # emit our own BEGIN with our desired locking behavior
+    # BEGIN IMMEDIATE will serialize all database access
+    conn.execute("BEGIN EXCLUSIVE")
 
 # configure async notification
 async_config()
@@ -191,7 +210,7 @@ def depend(down_pid):
     })
     ps = Products(session)
     dp = ps.get_product(down_pid, create=params2product(down_pid, params))
-    up = session.query(Product).filter(Product.pid==up_pid).first()
+    up = ps.session.query(Product).filter(Product.pid==up_pid).first()
     up = ps.get_product(up_pid, create=params2product(up_pid, {
         STATE: AVAILABLE,
         EVENT: 'implicit_create',
