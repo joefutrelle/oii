@@ -4,7 +4,7 @@ import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 from oii.ifcb2.orm import Instrument, APIKey
-from oii.ifcb2.dashboard.security import roles_required, current_user, maketoken
+from security import roles_required, current_user, maketoken
 from oii.ifcb2.dashboard.flasksetup import app, manager, session, user_manager
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
