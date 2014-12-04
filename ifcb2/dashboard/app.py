@@ -32,11 +32,11 @@ from oii.image.pil.utils import filename2format, thumbnail
 from oii.ifcb2 import get_resolver
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 
-from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
-from oii.ifcb2.dashboard.admin_api import role_blueprint, user_blueprint, password_blueprint
-from oii.ifcb2.dashboard.admin_api import instrument_blueprint, keychain_blueprint
-from oii.ifcb2.dashboard import security
-from oii.ifcb2.dashboard.security import roles_required
+from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
+from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint
+from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
+from oii.rbac import security
+from oii.rbac.security import roles_required
 
 
 from oii.ifcb2.feed import Feed
@@ -59,7 +59,7 @@ from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 MIME_JSON='application/json'
 STATIC='/static/'
 ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
-    inspect.currentframe()))),'admin')
+    inspect.currentframe()))),'../../rbac/admin')
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
