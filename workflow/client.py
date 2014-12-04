@@ -56,7 +56,7 @@ class WorkflowClient(object):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)
     def depend(self,pid, upstream, role):
-        return requests.create(self.api('/depend/%s' % pid), data={
+        return requests.put(self.api('/depend/%s' % pid), data={
             UPSTREAM: upstream,
             ROLE: role
         })
