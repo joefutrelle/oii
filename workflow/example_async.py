@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from oii.utils import gen_id
 from oii.workflow.client import WorkflowClient, isok
-from oii.workflow.async import async, WAKEUP_TASK
+from oii.workflow.async import async, wakeup_task, WAKEUP_TASK
 from oii.workflow.orm import PID, STATE, EVENT, MESSAGE, ROLE
 from oii.workflow.orm import AVAILABLE, UPSTREAM
 
@@ -46,7 +46,8 @@ def do_work():
     print 'RUNNING -> AVAILABLE %s' % job
     return True
 
-@async.task(name=WAKEUP_TASK)
+#@async.task(name=WAKEUP_TASK)
+@wakeup_task
 def do_a_buncha_work(payload):
     if payload != WAKEUP_KEY:
         print 'NOT WAKING UP for %s' % payload

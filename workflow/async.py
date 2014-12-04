@@ -49,6 +49,13 @@ def async_wakeup(payload=None):
     else:
         async.send_task(WAKEUP_TASK, [payload])
 
+# decorator for async.task(name=WAKEUP_TASK)
+def wakeup_task(func):
+    @async.task(name=WAKEUP_TASK)
+    def func_wrapper(*a,**kw):
+        func(*a,**kw)
+    return func_wrapper
+
 if __name__=='__main__':
     # configure client
     async_config()
