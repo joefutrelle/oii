@@ -12,6 +12,9 @@ from oii.workflow.async import async, WAKEUP_TASK
 def my_function():
     pass
 
+the function can also accept a single argument which is an arbitrary payload
+although said payload must be serializable
+
 default config is in oii.workflow.async_config
 
 any config needs to map the async_wakeup task to a broadcast queue
