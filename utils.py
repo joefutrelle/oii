@@ -131,7 +131,19 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
 
     return deco_retry
 
+def sizeof_fmt(num, suffix='B'):
+    """format a bytecount for human-readability.
+    by Fred Cirera, see 
+    http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+    """
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
 def gen_id(namespace=''):
+    """generate a unique global identifier"""
     global genid_prev_id
     with genid_prev_id_tl:
         prev = genid_prev_id
