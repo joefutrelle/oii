@@ -1,3 +1,6 @@
 .DS_Store
 *.pyc
+*~
+\#*\#
 ifcb_admin.db
+product_service_test.db
