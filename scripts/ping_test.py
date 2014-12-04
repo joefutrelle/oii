@@ -22,7 +22,7 @@ def worker(n):
                 random_sleep()
                 mutex.heartbeat()
                 print '  work(%d)' % n
-        print '}'
+            print '}'
     except Busy:
         print '  skip(%d)' % n
     except:

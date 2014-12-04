@@ -6,6 +6,7 @@ from oii.utils import safe_copy, compare_files
 
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
+from oii.ifcb2.identifiers import as_product
 from oii.ifcb2.files import NotFound, pid2fileset
 from oii.ifcb2.accession import ACCESSION_ROLE
 
@@ -78,10 +79,6 @@ def do_copy(instrument):
             lids[lid] += 1
             if lids[lid] == 3: # fileset is complete
                 yield lid
-
-def as_product(pid,product):
-    """compute a product pid given a pid and a product name"""
-    return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
 
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.

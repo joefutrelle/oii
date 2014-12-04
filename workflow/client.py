@@ -40,28 +40,28 @@ class WorkflowClient(object):
             roles = [roles]
         return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
     def create(self,pid,**d):
-        return requests.post(self.api('/create/%s' % pid), data=d)
+        return requests.put(self.api('/create/%s' % pid), data=d)
     def update_if(self,pid, **d):
         """d must contain STATE and NEW_STATE,
         d can also contain EVENT, MESSAGE"""
-        return requests.post(self.api('/update_if/%s' % pid), data=d)
+        return requests.patch(self.api('/update_if/%s' % pid), data=d)
     def delete(self,pid):
         return requests.delete(self.api('/delete/%s' % pid))
     def delete_tree(self,pid):
         return requests.delete(self.api('/delete_tree/%s' % pid))
     def update(self,pid, **d):
         """d can contain STATE, EVENT, MESSAGE"""
-        return requests.post(self.api('/update/%s' % pid), data=d)
+        return requests.patch(self.api('/update/%s' % pid), data=d)
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
-        return requests.post(self.api('/update/%s' % pid), data=d)
+        return requests.patch(self.api('/update/%s' % pid), data=d)
     def depend(self,pid, upstream, role):
-        return requests.post(self.api('/depend/%s' % pid), data={
+        return requests.create(self.api('/depend/%s' % pid), data={
             UPSTREAM: upstream,
             ROLE: role
         })
     def expire(self):
-        return requests.post(self.api('/expire'))
+        return requests.delete(self.api('/expire'))
 
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation

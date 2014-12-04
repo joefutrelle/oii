@@ -147,7 +147,7 @@ def product_response(p,error_code=http.NOT_FOUND,success_code=http.OK):
 # create an product in a given initial state
 # (default "available")
 # returns a JSON representation of the product
-@app.route('/create/<path:pid>',methods=['GET','POST'])
+@app.route('/create/<path:pid>',methods=['GET','POST','PUT'])
 def create(pid):
     params = product_params(request.form, defaults={
         STATE: AVAILABLE
@@ -179,7 +179,7 @@ def delete_tree(pid):
 # if no event is specified, the default is "heartbeat".
 # if no state is specified, the default is "running"
 # if no message is specified, the default is None
-@app.route('/update/<path:pid>',methods=['POST'])
+@app.route('/update/<path:pid>',methods=['POST','PATCH'])
 def update(pid):
     params = product_params(request.form, defaults={
         EVENT: HEARTBEAT,
@@ -198,7 +198,7 @@ def update(pid):
 # products are implicitly created and so form arguments are accepted for
 # state, event, and message for the downstream product. any implicitly created
 # upstream product is placed in the 'available' state
-@app.route('/depend/<path:down_pid>',methods=['POST'])
+@app.route('/depend/<path:down_pid>',methods=['POST','PUT'])
 def depend(down_pid):
     try:
         up_pid = request.form[UPSTREAM]
@@ -231,7 +231,7 @@ def start_next(role_list):
     # note that start_next commits and handles errors
     return product_response(p)
 
-@app.route('/update_if/<path:pid>',methods=['POST'])
+@app.route('/update_if/<path:pid>',methods=['POST','PATCH'])
 def update_if(pid):
     kw = product_params(request.form, defaults={
         STATE: WAITING,
@@ -243,7 +243,7 @@ def update_if(pid):
     # FIXME could the above expression be simplified with **?
     return product_response(p, error_code=http.CONFLICT)
 
-@app.route('/expire',methods=['POST'])
+@app.route('/expire',methods=['POST','DELETE'])
 def expire():
     kw = product_params(request.form, defaults={
         STATE: RUNNING,
