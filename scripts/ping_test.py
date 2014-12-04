@@ -16,14 +16,11 @@ def random_sleep():
 def worker(n):
     random_sleep()
     try:
-        mutex = Mutex(MUTEX_PID, ttl=30)
-        # first attempt to expire any lingering products
-        mutex.expire()
-        with mutex:
+        with Mutex(MUTEX_PID, ttl=30) as mutex:
             print 'START %d {' % n
             for i in range(2):
                 random_sleep()
-                mutex.heartbeat(MUTEX_PID)
+                mutex.heartbeat()
                 print '  work(%d)' % n
         print '}'
     except Busy:
