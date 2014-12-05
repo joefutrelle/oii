@@ -8,9 +8,11 @@ from oii.workflow.orm import ROLE, ANY
 from oii.workflow.orm import HEARTBEAT
 from oii.workflow.orm import UPSTREAM
 
+from oii.workflow.webapi import DEFAULT_PORT
+
 import httplib as http
 
-DEFAULT_BASE_URL='http://localhost:8080'
+DEFAULT_BASE_URL='http://localhost:%d' % DEFAULT_PORT
 
 class Busy(Exception):
     """A mutex is busy"""

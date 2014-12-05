@@ -10,13 +10,11 @@ from oii.workflow.orm import AVAILABLE, UPSTREAM
 
 import requests
 
-BASE_URL = 'http://localhost:8080'
-
 PING_ROLE='acq_ping_role'
 
 WAKEUP_KEY='oii.workflow.example_async.singleton'
 
-client = WorkflowClient(BASE_URL)
+client = WorkflowClient()
 
 def do_work():
     def acquire_jobs():

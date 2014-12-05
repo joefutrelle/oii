@@ -20,6 +20,8 @@ from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
 
+DEFAULT_PORT=9270
+
 # constants
 
 MIME_JSON='application/json'
@@ -264,4 +266,4 @@ def wakeup(pid=None):
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)
-    app.run(host='0.0.0.0',port=8080,debug=True,processes=6)
+    app.run(host='0.0.0.0',port=DEFAULT_PORT,debug=True,processes=6)
