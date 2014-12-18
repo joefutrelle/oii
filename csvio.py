@@ -1,15 +1,18 @@
 import csv
 import re
 
+NO_LIMIT=-1
+
 """Utilities for reading and writing CSV. uses source/sink from io"""
 
 def parse_csv_row(row, schema=None):
+    row = row[:len(schema)] # ignore trailing fields
     if schema is None:
         return dict(zip(range(len(row)), row))
     else:
         return dict([(colname,cast(value)) for (colname,cast),value in zip(schema,row)])
 
-def read_csv(source, schema=None, offset=0, limit=-1):
+def read_csv(source, schema=None, offset=0, limit=NO_LIMIT):
     with source as csvdata:
         for row in csv.reader(csvdata):
             if offset <= 0:
