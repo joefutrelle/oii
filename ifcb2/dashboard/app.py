@@ -482,17 +482,18 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
     else:
         return read_target_image(target, path=path, file=file)
 
-def scatter_csv(targets,x_axis,y_axis):
-    def t2c():
-        yield 'pid,%s,%s' % (x_axis, y_axis)
-        for t in targets:
-            yield '%s,%s,%s' % (t['pid'], t[x_axis], t[y_axis])
-    return Response('\n'.join(list(t2c()))+'\n',mimetype='text/csv')
+def scatter_json(targets,x_axis,y_axis):
+    d = [{
+        'pid': t[PID],
+        x_axis: t[x_axis],
+        y_axis: t[y_axis]
+    } for t in targets]
+    return Response(json.dumps(d), mimetype=MIME_JSON)
 
 def scatter_view(pid,view,x_axis,y_axis):
     tmpl = {
         'pid': pid,
-        'endpoint': '%s_%s.csv' % (pid, view),
+        'endpoint': '%s_%s.json' % (pid, view),
         'x_axis': x_axis,
         'x_axis_label': x_axis,
         'y_axis': y_axis,
@@ -583,8 +584,8 @@ def hello_world(pid):
             targets = get_targets(adc, canonical_pid)
         # handle some target views other than the standard ones
         if product=='xy': # a view, more than a product
-            if extension=='csv':
-                return scatter_csv(targets,'left','bottom')
+            if extension=='json':
+                return scatter_json(targets,'left','bottom')
             else:
                 return scatter_view(canonical_pid,'xy','left','bottom')
         if product=='fs': # another scatter view
@@ -593,8 +594,8 @@ def hello_world(pid):
                 f_axis, s_axis = 'fluorescenceLow', 'scatteringLow'
             else:
                 f_axis, s_axis = 'pmtA', 'pmtB'
-            if extension=='csv':
-                return scatter_csv(targets,f_axis,s_axis)
+            if extension=='json':
+                return scatter_json(targets,f_axis,s_axis)
             else:
                 return scatter_view(canonical_pid,'fs',f_axis,s_axis)
         # end of views
