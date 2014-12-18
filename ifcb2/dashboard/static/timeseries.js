@@ -68,7 +68,7 @@ function timeseries_add(e, pid, timeseries) {
 	});
     }
     // add the timeline control
-    $(e).append('<div class="major"><div class="h2">Data volume by day</div><br><div id="timeline"></div></div>').find('#timeline').timeline()
+    $('#title').append('<div class="h2">Data volume by day</div><br><div id="timeline"></div>').find('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
 	    updateDateLabel(timeline);
@@ -168,7 +168,7 @@ function timeseries_add(e, pid, timeseries) {
 	}
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
-    $('#title').closeBox();
+    $('#title_content').collapsing('title',true);
     // our date label goes below the timeline
     $(e).append('<div id="date_label" class="major"></div>');
     // now add a place to display the ROI image

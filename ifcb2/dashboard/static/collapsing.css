@@ -1,6 +1,8 @@
 .collapse_button {
    color: gray;
    cursor: pointer;
+   font-size: 10pt;
+   font-weight: normal;
 }
 .collapse_button_closed:before {
    content: '\025b6 ';

@@ -20,17 +20,19 @@ $(document).ready(function() {
 </script>
 {% endblock head %}
 {% block content %}
-<div id="title" class="major h1">
-  {{title|safe}}
-  <div class="dashboard_links">
-<span>View metrics:
-{% for m in all_metrics %}
-  <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
-{% endfor %}
-</span>
-<span>Switch to time series:
-<select id="ts_menu"></select>
-</span>
+<div id="title" class="major">
+  <div id="title_content">
+    <div class="title">{{title|safe}}</div>
+    <div class="dashboard_links">
+      <span>View metrics:
+      {% for m in all_metrics %}
+        <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
+      {% endfor %}
+      </span>
+      <span>Switch to time series:
+        <select id="ts_menu"></select>
+      </span>
+    </div>
   </div>
 </div>
 <div id="timeseries"></div>

@@ -141,6 +141,11 @@ div.h1 {
     font-size: 2em;
     font-weight: bold;
 }
+div.title {
+    padding: 3px;
+    font-size: 2em;
+    font-weight: bold;
+}
 div.h2 {
     margin-top: 0px;
     margin-bottom: 0px;
