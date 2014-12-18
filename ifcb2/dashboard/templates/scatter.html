@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% extends "master.html" %}
 <!--
 this Jinja template takes the following params:
 - {{static}} - URL of static content
@@ -8,16 +8,15 @@ this Jinja template takes the following params:
 - {{x_axis_label}} - x axis label
 - {{y_axis_label}} - y axis label
 -->
-<html>
-<head>
-  <title>Test</title>
-  <!-- jQuery -->
-  <script type="text/javascript" src="{{static}}lib/flot/jquery.min.js"></script>
+{% block head %}
+  {{ super() }}
   <!-- flot -->
   <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.js"></script>
   <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.selection.js"></script>
 <script type="text/javascript">
 $(document).ready(function() {
+    // first, add features to static HTML
+    $('#single_roi').closeBox().css('display','none');
     var plot_options = {
 	series: {
 	    points: {
@@ -35,9 +34,9 @@ $(document).ready(function() {
 	    color: "red"
 	}
     };
-    var ignoreNextClick = false;
     $("#scatter").append("Loading {{endpoint}} ..."); // FIXME
     var roi_pids = [];
+    $('#title').empty().html('{{endpoint|safe}}');
     $.getJSON("{{endpoint}}", function(r) {
 	console.log("Got JSON data");
 	var point_data = [];
@@ -46,7 +45,7 @@ $(document).ready(function() {
 	    roi_pids.push(point.pid);
 	});
 	var plot_data = {
-	    label: "{{endpoint}} {{x_axis_label}} x {{y_axis_label}}",
+	    label: "{{x_axis_label}} x {{y_axis_label}}",
 	    data: point_data,
 	    color: "black",
 	    points: {
@@ -57,21 +56,45 @@ $(document).ready(function() {
 	$("#scatter").empty().plot([plot_data], plot_options);
     });
     $("#scatter").bind("plotselected", function(evt, ranges) {
-	console.log(ranges);
-	ignoreNextClick = true;
+	console.log(evt);
+	$(evt.target).addClass("plotselected");
     });
     $("#scatter").bind("plotclick", function(evt, pos, item) {
-	if(item && !ignoreNextClick) {
-	    console.log(roi_pids[item.dataIndex]);
+	console.log(evt);
+	if($(evt.target).hasClass("plotselected")) {
+	    $(evt.target).removeClass("plotselected");
+	    return;
+	} else if(item) {
+	    roi_pid = roi_pids[item.dataIndex];
+	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
+	    $.getJSON(roi_pid+'.json', function(r) {
+		// use grayLoadingImage from image_pager to display the ROI
+		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
+		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
+		$('#single_roi').empty()
+		    .closeBox()
+		    .css('display','inline-block')
+		    .target_image(roi_pid, roi_width, roi_height)
+		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
+		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
+		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
+		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
+		    .append('<div><div class="target_metadata"></div></div>')
+		    .find('.target_metadata')
+		    .target_metadata(roi_pid)
+		    .collapsing('metadata',false)
+		    .end().css('float','right');
+	    });
 	}
-	ignoreNextClick = false;
     });
 })
 </script>
-</head>
-<body>
-<div id="main">
-  <div id="scatter" style="height: 780px;width:1024px;float:left"></div>
+{% endblock head %}
+{% block content %}
+<div>
+<div id="title" class="major h1"></div>
+<div id="single_roi" class="major target_image"></div>
+<div id="scatter" class="major" style="width:640px;height:480px"/>
 </div>
-</body>
-</html>
+<!-- end of content block FIXME debug -->
+{% endblock content %}
