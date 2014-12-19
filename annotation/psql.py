@@ -76,7 +76,7 @@ class PsqlAssignmentStore(AssignmentStore,PsqlStore):
 
 class TestPsqlAssignmentStore(TestCase):
     def test_stuff(self):
-        store = PsqlAssignmentStore('dbname=ifcb user=jfutrelle password=vNLH814i')
+        store = PsqlAssignmentStore('dbname=ifcb user=jfutrelle password=*****')
         store.create()
         assignments = [{
             "pid": "http://foo.bar/assignments/baz",
@@ -95,7 +95,7 @@ class TestPsqlAssignmentStore(TestCase):
 # tests
 class TestPsqlAnnotationStore(TestCase):
     def test_stuff(self):
-        store = PsqlAnnotationStore('dbname=ifcb user=jfutrelle password=vNLH814i')
+        store = PsqlAnnotationStore('dbname=ifcb user=jfutrelle password=*****')
         store.create()
         store.list_annotations(image='fish',annotator='cow',pid='zazz')
         ann = dict(pid='foo', image='bar')
