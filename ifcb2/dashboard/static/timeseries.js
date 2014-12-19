@@ -34,7 +34,7 @@ function timeseries_setup(e, pid, timeseries) {
 	    .append(iso8601utcTime.replace(/....Z/,'Z'))
 	    .css('margin-left',tts+'px');
     }
-    function showMosaic(pid, pushHistory) {
+    function showBin(pid, pushHistory) {
 	// remove any existing ROI image
 	$('#roi_image').empty().css('display','none');
 	// set the address for back button
@@ -55,16 +55,16 @@ function timeseries_setup(e, pid, timeseries) {
 	    });
 	});
 	// now draw a multi-page mosaic
-	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
+	$('#bin_view').css('display','block').trigger('drawBinDisplay',[pid]);
 	// add scatterplot (FIXME)
-	$('#scatter').css('display','block').trigger('show_bin',[pid,'xy']); // FIXME hardcoded
+	//$('#scatter').css('display','block').trigger('show_bin',[pid,'xy']); // FIXME hardcoded
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date, pushHistory, callback) {
 	var ds = date.toISOString();
 	// FIXME need to specify time series
 	$.getJSON('/'+timeseries+'/api/feed/nearest/'+ds, function(r) { // find the nearest bin
-	    showMosaic(r.pid, pushHistory);
+	    showBin(r.pid, pushHistory);
 	    if(callback != undefined) {
 		callback(r.pid);
 	    }
@@ -163,7 +163,7 @@ function timeseries_setup(e, pid, timeseries) {
 	// now tell the timeline plugin to draw it
 	// if a pid is selected, show it
 	if(pid != undefined) {
-	    showMosaic(pid, false);
+	    showBin(pid, false);
 	} else {
 	    showNearest(new Date(), false, function(nearest) {
 		historyPushState({pid:nearest, mosaic_state:{}}, nearest, '/'+timeseries);
@@ -199,16 +199,17 @@ function timeseries_setup(e, pid, timeseries) {
 		.find('.target_image').css('float','right');
 	});
     }
-    // and the mosaic pager is below that
-    $('#mosaic_pager')
+    // and the resizable bin view is below that
+    // e.g., containing the mosaic
+    $('#bin_view')
 	.closeBox()
-	.resizableMosaicPager(timeseries)
+	.resizableBinView(timeseries)
 	.bind('roi_click', function(event, roi_pid) {
 	    showRoi(event, roi_pid)
 	}).bind('goto_bin', function(event, bin_pid) {
-	    showMosaic(bin_pid);
+	    showBin(bin_pid);
 	});
-    // and the scatterplot is below that
+    // and the scatterplot is below that for debugging purposes
     $('#scatter')
 	.closeBox()
         .scatter()
@@ -223,10 +224,10 @@ function timeseries_setup(e, pid, timeseries) {
 	console.log(event);
 	if(event.state) {
 	    if(event.state.pid) {
-		showMosaic(event.state.pid, false);
+		showBin(event.state.pid, false);
 	    }
 	    if(event.state.mosaic_state) {
-		$('#mosaic_pager').trigger('restoreState', event.state.mosaic_state);
+		$('#bin_view').trigger('restoreState', event.state.mosaic_state);
 	    }
 	}
     };

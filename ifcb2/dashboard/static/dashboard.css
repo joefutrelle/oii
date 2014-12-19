@@ -71,19 +71,19 @@ img.logo {
   height: 50px;
   padding: 5px;
 }
-#mosaic_pager {
+#bin_view {
   float: left;
   margin-left: 0px;
   margin-top: 15px;
   font-size: 10px;
 }
-.mosaic_controls {
+.bin_view_controls {
   clear: both;
   text-align: center;
   margin-bottom: 5px;
   white-space: nowrap;
 }
-.mosaic_next_prev {
+.bin_view_next_prev {
     /*clear: both;*/
   float: left;
   margin-top: 5px;

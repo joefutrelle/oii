@@ -31,21 +31,8 @@
 		// list of images in hand, create the image pager
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
 		    .append('<div class="imagepager_paging">page <span class="imagepager_page_number"></span>, showing <span class="imagepager_rois_shown">?</span> of <span class="imagepager_rois_total">?</span> target(s)</div>')
-		    .append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
-		    .append(' (<span class="imagepager_date timeago"></span>)<br>')
-		    .append('<span>View: <a href="'+pid+'_xy.html">x/y</a></span> ')
-		    .append('<span> <a href="'+pid+'_fs.html">f/s</a></span>')
-		    .append('<span>Download: <a href="'+pid+'.adc">ADC</a></span>')
-		    .append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
-		    .append('<span> <a href="'+pid+'.roi">ROI</a></span>')
-		    .append('<span> <a href="'+pid+'.csv">CSV</a></span>')
-		    .append('<span> <a href="'+pid+'.zip">ZIP</a></span>')
-		    .append('<span> <a href="'+pid+'.xml">XML</a></span>')
-		    .append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
-		    .append('<span> <a href="'+pid+'_blob.zip">blobs ZIP</a></span>')
-		    .append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
-		    .append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a></span>')
-		    .find('span').addClass('bin_label').end()
+		/*
+*/
 		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
@@ -79,24 +66,27 @@
 		    });
 	    });//each in mosaicPager
 	},//mosaicPager
-        resizableMosaicPager: function(timeseries, width, height, roi_scale, pid) {
-	    var PID = 'mosaic_pager_bin_pid';
-	    var WIDTH = 'mosaic_pager_width';
-	    var HEIGHT = 'mosaic_pager_height';
-	    var ROI_SCALE = 'mosaic_pager_roi_scale';
+        resizableBinView: function(timeseries, width, height, roi_scale, pid) {
+	    var PID = 'bin_view_pid';
+	    var WIDTH = 'bin_view_width';
+	    var HEIGHT = 'bin_view_height';
+	    var VIEW_TYPE = 'bin_view_view_type'
+	    var ROI_SCALE = 'bin_view_roi_scale';
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		// store user preferences in data
 		$this.data(PID, pid);
+		$this.data(VIEW_TYPE, undefined ? 'mosaic' : $this.data(VIEW_TYPE));
 		$this.data(WIDTH, width == undefined ? 800 : width);
 		$this.data(HEIGHT, height == undefined ? 600 : height);
 		$this.data(ROI_SCALE, roi_scale == undefined ? 0.33 : roi_scale);
-		// add some controls for changing the size of the mosaic
-		var mosaic_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
+		// add some controls for changing the size of the view
+		var view_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
 		var roi_scales = [15, 25, 33, 40, 66, 100];
-		// make the selected on checked
+		// make the selected one checked
+		var selected_view = 'mosaic';
 		var selected_size = undefined;
-		function stateChanged(pageNumber) {
+		function pageChanged(pageNumber) {
 		    pageNumber == pageNumber ? pageNumber : 1;
 		    $this.trigger('state_change', [{
 			pageNumber: pageNumber,
@@ -104,29 +94,37 @@
 			height: $this.data(HEIGHT),
 			roi_scale: $this.data(ROI_SCALE)}]);
 		}
-		$.each(mosaic_sizes, function(ix, size) {
+		$.each(view_sizes, function(ix, size) {
 		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
 			selected_size = size;
 		    }
 		});
-		$this.append('<div class="mosaic_next_prev"></div>')
-		$this.find('.mosaic_next_prev')
+		$this.append('<div class="bin_view_next_prev"></div>')
+		$this.find('.bin_view_next_prev')
 		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
 		    .append('<span class="controlGray biggerText"> | </span>')
 		    .append('<span class="controlGray biggerText nextBin">Next &#x25B6;</span>');
 		// add size controls
-		$this.append('<div class="mosaic_controls"></div>')
-		    .find('.mosaic_controls')
-		    .append('Mosaic size: <span></span>')
+		$this.append('<div class="bin_view_controls"></div>')
+		    .find('.bin_view_controls')
+		    .append('View: <span></span>')
 		    .find('span:last')
-		    .radio(mosaic_sizes, function(size) {
+		    .radio(['mosaic','plot'], function(viewType) {
+			return viewType;
+		    }, selected_view).bind('select', function(event, value) {
+			console.log('view type =' + value);
+		    });
+		$this.find('.bin_view_controls')
+		    .append('View size: <span></span>')
+		    .find('span:last')
+		    .radio(view_sizes, function(size) {
  			return size[0] + 'x' + size[1];
 		    }, selected_size).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
 			$this.data(WIDTH, width).data(HEIGHT, height)
-			    .find('.mosaic_pager').trigger('drawMosaic');
-			stateChanged(1);
+			    .find('.bin_view').trigger('drawBinDisplay');
+			pageChanged(1);
 		    });
 		// add ROI scale controls
 		// make the selected on checked
@@ -136,31 +134,32 @@
 			selected_scale = scale
 		    }
 		});
-		$this.find('.mosaic_controls').append('Scaling: <span></span>').find('span:last')
+		$this.find('.view_controls').append('Scaling: <span></span>').find('span:last')
 		    .radio(roi_scales, function(scale) {
 			return scale + '%';
 		    }, selected_scale).bind('select', function(event, value) {
 			$this.data(ROI_SCALE, value/100)
-			    .find('.mosaic_pager').trigger('drawMosaic');
-			stateChanged(1);
+			    .find('.bin_view').trigger('drawBinDisplay');
+			pageChanged(1);
 		    });
-		// now add the mosaic pager
-		$this.append('<div class="mosaic_pager"></div>').find('.mosaic_pager')
-		    .css('float','left'); // FIXME remove
-		$this.find('.mosaic_next_prev .nextBin')
+		// now add the bin display
+		$this.append('<div class="bin_display"><div class="bin_links"></div></div>').find('.bin_display')
+		    .css('float','left')
+		// handle next / previous buttons
+		$this.find('.bin_view_next_prev .nextBin')
 		    .click(function() {
 			$.getJSON('/'+timeseries+'/api/feed/after/pid/'+$this.data(PID), function(r) {
 			    $this.trigger('goto_bin', [r[0].pid]);
 			});
 		    });
-		$this.find('.mosaic_next_prev .previousBin')
+		$this.find('.bin_view_next_prev .previousBin')
 		    .click(function() {
 			$.getJSON('/'+timeseries+'/api/feed/before/pid/'+$this.data(PID), function(r) {
 			    $this.trigger('goto_bin', [r[0].pid]);
 			});
 		    });
 		// on redraw
-		$this.bind('drawMosaic', function(event, the_pid, props) { 
+		$this.bind('drawBinDisplay', function(event, the_pid, props) { 
 		    // if the_pid is undefined, use whatever the pid was set to before
 		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
 		    // if there's no pid at this point
@@ -175,21 +174,36 @@
 		    $this.data(PID, pid); // save pid for future redraws
 		    // get the selection and user preferred size/scale from the workspace
 		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
-		    var width = $this.data(WIDTH); // width of displayed mosaic
-		    var height = $this.data(HEIGHT); // height of displayed mosaic
-		    // create the mosaic pager
-		    $this.find('.mosaic_pager')
+		    var width = $this.data(WIDTH); // width of displayed view
+		    var height = $this.data(HEIGHT); // height of displayed view
+		    // create the bin display
+		    $this.find('.bin_display')
 			.mosaicPager(timeseries, pid, width, height, roi_scale);
-		    $this.delegate('.mosaic_pager','page_change', function(event, pageNumber, href, noChangeEvent) {
-			stateChanged(pageNumber);
+		    $this.delegate('.bin_display','page_change', function(event, pageNumber, href, noChangeEvent) {
+			pageChanged(pageNumber);
 		    });
-		    // delegate gotopage events to image pager
+		    // delegate gotopage events to mosaic image pager
 		    $this.bind('gotopage', function(event, page) {
 			$this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
-			stateChanged(page);
+			pageChanged(page);
 		    });
+		    // add bin links
+		    $this.find('.bin_display')
+			.append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
+			.append(' (<span class="imagepager_date timeago"></span>)<br>')
+			.append('<span>Download: <a href="'+pid+'.adc">ADC</a></span>')
+			.append('<span> <a href="'+pid+'.hdr">HDR</a></span>')
+			.append('<span> <a href="'+pid+'.roi">ROI</a></span>')
+			.append('<span> <a href="'+pid+'.csv">CSV</a></span>')
+			.append('<span> <a href="'+pid+'.zip">ZIP</a></span>')
+			.append('<span> <a href="'+pid+'.xml">XML</a></span>')
+			.append('<span> <a href="'+pid+'.rdf">RDF</a></span>')
+			.append('<span> <a href="'+pid+'_blob.zip">blobs ZIP</a></span>')
+			.append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
+			.append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a></span>')
+			.find('span').addClass('bin_label');
 		});
-	    });//each in resizableMosaicPager
+	    });//each in resizableBinView
 	}
     });//$.fn.extend
 })(jQuery);//end of plugin
