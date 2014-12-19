@@ -90,6 +90,12 @@ img.logo {
   margin-bottom: 5px;
   white-space: nowrap;
 }
+#scatter {
+  float: left;
+  margin-left: 0px;
+  margin-top: 15px;
+  font-size: 10px;
+}
 .previousBin {
     padding: 5px;
 }

@@ -1,4 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- this template uses the following context parameters:
+* static - the URL of static content (including its trailing slash)
+* time_series - the time series label
+* all_metrics - list of metrics that can be viewed
+* pid - (optional) bin to initially display
+* page_title - the window title
+* title - the title to display in the title box
+* all_series - a list of tuples (time series label, time series name)
+* base_url - request.url_root from Flask
+-->
 <html>
 <head>
     <title>{% block title %}{% endblock %}</title>
@@ -16,6 +26,10 @@
     <link rel="stylesheet" type="text/css" href="{{static}}timeline/timeline.css"/>
     <!-- D3 plotting -->
     <script type="text/javascript" src="{{static}}lib/d3.v3.min.js"></script>
+    <!-- flot -->
+    <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.js"></script>
+    <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.selection.js"></script>
+
     <!-- OII utilities and CSS -->
     <script type="text/javascript" src="{{static}}js/oii-utils.js"></script>
 
@@ -32,6 +46,7 @@
     <script type="text/javascript" src="{{static}}mosaic_pager.js"></script>
     <script type="text/javascript" src="{{static}}bin.js"></script>
     <script type="text/javascript" src="{{static}}target.js"></script>
+    <script type="text/javascript" src="{{static}}scatter.js"></script>
     <script type="text/javascript" src="{{static}}timeseries.js"></script>
     {% endblock head %}
 </head>

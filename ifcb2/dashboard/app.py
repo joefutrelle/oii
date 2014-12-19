@@ -482,25 +482,19 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
     else:
         return read_target_image(target, path=path, file=file)
 
-def scatter_json(targets,x_axis,y_axis):
-    d = [{
+def scatter_json(targets,bin_pid,x_axis,y_axis):
+    points = [{
         'pid': t[PID],
-        x_axis: t[x_axis],
-        y_axis: t[y_axis]
+        'x': t[x_axis],
+        'y': t[y_axis]
     } for t in targets]
-    return Response(json.dumps(d), mimetype=MIME_JSON)
-
-def scatter_view(pid,view,x_axis,y_axis):
-    tmpl = {
-        'pid': pid,
-        'endpoint': '%s_%s.json' % (pid, view),
-        'x_axis': x_axis,
+    d = {
+        'bin_pid': bin_pid,
         'x_axis_label': x_axis,
-        'y_axis': y_axis,
         'y_axis_label': y_axis,
-        'static': STATIC
+        'points': points
     }
-    return template_response('scatter.html',**tmpl)
+    return Response(json.dumps(d), mimetype=MIME_JSON)
 
 @app.route('/<path:pid>')
 def hello_world(pid):
@@ -585,9 +579,8 @@ def hello_world(pid):
         # handle some target views other than the standard ones
         if product=='xy': # a view, more than a product
             if extension=='json':
-                return scatter_json(targets,'left','bottom')
-            else:
-                return scatter_view(canonical_pid,'xy','left','bottom')
+                return scatter_json(targets,canonical_pid,'left','bottom')
+            abort(404)
         if product=='fs': # another scatter view
             # f/s for schema version v1 is fluorescenceLow / scatteringLow
             if schema_version=='v1':
@@ -595,9 +588,8 @@ def hello_world(pid):
             else:
                 f_axis, s_axis = 'pmtA', 'pmtB'
             if extension=='json':
-                return scatter_json(targets,f_axis,s_axis)
-            else:
-                return scatter_view(canonical_pid,'fs',f_axis,s_axis)
+                return scatter_json(targets,canonical_pidf_axis,s_axis)
+            abort(404)
         # end of views
         # not a special view, handle representations of targets
         if extension=='csv':

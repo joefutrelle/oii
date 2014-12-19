@@ -9,7 +9,7 @@ function historyPushState(state, pid, url) {
 
 var $ws = undefined;
 
-function timeseries_add(e, pid, timeseries) {
+function timeseries_setup(e, pid, timeseries) {
     // internal function. params
     // e - element to add to
     // pid - (optional) initial pid to display
@@ -17,6 +17,7 @@ function timeseries_add(e, pid, timeseries) {
     $ws = $(e).append('<div id="workspace"></div>')
 	.find('#workspace').css('display','none');
     $ws.data('show_roi_metadata',0);
+    $ws.data('scatter_view','xy');
     // timeline thinks all timestamps are in the current locale, so we need
     // to fake that they're UTC
     function asUTC(date) {
@@ -55,6 +56,8 @@ function timeseries_add(e, pid, timeseries) {
 	});
 	// now draw a multi-page mosaic
 	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
+	// add scatterplot (FIXME)
+	$('#scatter').css('display','block').trigger('show_bin',[pid,'xy']); // FIXME hardcoded
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date, pushHistory, callback) {
@@ -169,43 +172,51 @@ function timeseries_add(e, pid, timeseries) {
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
     $('#title_content').collapsing('title',true);
-    // our date label goes below the timeline
-    $(e).append('<div id="date_label" class="major"></div>');
-    // now add a place to display the ROI image
-    $(e).append('<div id="roi_image" class="major target_image"></div>').find('div:last')
-	.closeBox()
-	.css('display','none');
+    // the ROI image is closable and initially hidden
+    $('#roi_image').closeBox().css('display: none');
+    function showRoi(evt, roi_pid) {
+	$.getJSON(roi_pid+'.json', function(r) {
+	    // use grayLoadingImage from image_pager to display the ROI
+	    var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
+	    var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
+	    console.log('collapse state is '+$ws.data('show_roi_metadata'))
+	    $('#roi_image').empty()
+		.closeBox()
+		.css('display','inline-block')
+		.target_image(roi_pid, roi_width, roi_height)
+		.append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
+		.append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
+		.append(' (<a href="'+roi_pid+'.xml">XML</a> ')
+		.append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
+		.append('<div><div class="target_metadata"></div></div>')
+		.find('.target_metadata')
+		.target_metadata(roi_pid)
+		.collapsing('metadata',$ws.data('show_roi_metadata'))
+		.bind('collapse_state', function(event, s) {
+		    console.log('setting collapse state to '+s);
+		    $ws.data('show_roi_metadata', s);
+		}).end()
+		.find('.target_image').css('float','right');
+	});
+    }
     // and the mosaic pager is below that
-    $(e).append('<div id="mosaic_pager" class="major"></div>').find('#mosaic_pager')
+    $('#mosaic_pager')
 	.closeBox()
 	.resizableMosaicPager(timeseries)
 	.bind('roi_click', function(event, roi_pid) {
-	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
-	    $.getJSON(roi_pid+'.json', function(r) {
-		// use grayLoadingImage from image_pager to display the ROI
-		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
-		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
-		console.log('collapse state is '+$ws.data('show_roi_metadata'))
-		$('#roi_image').empty()
-		    .closeBox()
-		    .css('display','inline-block')
-		    .target_image(roi_pid, roi_width, roi_height)
-		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
-		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
-		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
-		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
-		    .append('<div><div class="target_metadata"></div></div>')
-		    .find('.target_metadata')
-		    .target_metadata(roi_pid)
-		    .collapsing('metadata',$ws.data('show_roi_metadata'))
-		    .bind('collapse_state', function(event, s) {
-			console.log('setting collapse state to '+s);
-			$ws.data('show_roi_metadata', s);
-		    }).end()
-		    .find('.target_image').css('float','right');
-	    });
-	}).bind('goto_bin', function(event, pid) {
-	    showMosaic(pid);
+	    showRoi(event, roi_pid)
+	}).bind('goto_bin', function(event, bin_pid) {
+	    showMosaic(bin_pid);
+	});
+    // and the scatterplot is below that
+    $('#scatter')
+	.closeBox()
+        .scatter()
+	.bind('roi_click', function(event, roi_pid) {
+	    showRoi(event, roi_pid);
+	}).bind('goto_bin', function(event, bin_pid) {
+	    // FIXME hardcoded to xy view
+	    $('#scatter').trigger('show_bin', bin_pid, 'xy');
 	});
     // handle popstate
     window.onpopstate = function(event) {
@@ -225,7 +236,7 @@ function timeseries_add(e, pid, timeseries) {
 	timeseries: function(bin_pid, timeseries) {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
-		timeseries_add($this, bin_pid, timeseries);
+		timeseries_setup($this, bin_pid, timeseries);
 	    });//each in bin_page
 	}//bin_page
     });//$.fn.extend
