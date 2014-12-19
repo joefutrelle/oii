@@ -6,6 +6,7 @@
 // resizable version triggers
 // state_change({pageNumber, width, height, roi_scale}) when state changes
 // goto_bin(pid) - when the user clicks on the "next/prev" bin button
+// requires scatter
 (function($) {
     $.fn.extend({
 	mosaicPager: function(timeseries, pid, width, height, roi_scale) {
@@ -66,7 +67,7 @@
 		    });
 	    });//each in mosaicPager
 	},//mosaicPager
-        resizableBinView: function(timeseries, width, height, roi_scale, pid) {
+        resizableBinView: function(timeseries, width, height, roi_scale, viewType, pid) {
 	    var PID = 'bin_view_pid';
 	    var WIDTH = 'bin_view_width';
 	    var HEIGHT = 'bin_view_height';
@@ -76,7 +77,7 @@
 		var $this = $(this); // retain ref to $(this)
 		// store user preferences in data
 		$this.data(PID, pid);
-		$this.data(VIEW_TYPE, undefined ? 'mosaic' : $this.data(VIEW_TYPE));
+		$this.data(VIEW_TYPE, viewType == undefined ? 'mosaic' : viewType);
 		$this.data(WIDTH, width == undefined ? 800 : width);
 		$this.data(HEIGHT, height == undefined ? 600 : height);
 		$this.data(ROI_SCALE, roi_scale == undefined ? 0.33 : roi_scale);
@@ -84,8 +85,7 @@
 		var view_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
 		var roi_scales = [15, 25, 33, 40, 66, 100];
 		// make the selected one checked
-		var selected_view = 'mosaic';
-		var selected_size = undefined;
+		var viewSize = undefined;
 		function pageChanged(pageNumber) {
 		    pageNumber == pageNumber ? pageNumber : 1;
 		    $this.trigger('state_change', [{
@@ -96,7 +96,7 @@
 		}
 		$.each(view_sizes, function(ix, size) {
 		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
-			selected_size = size;
+			viewSize = size;
 		    }
 		});
 		$this.append('<div class="bin_view_next_prev"></div>')
@@ -104,44 +104,49 @@
 		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
 		    .append('<span class="controlGray biggerText"> | </span>')
 		    .append('<span class="controlGray biggerText nextBin">Next &#x25B6;</span>');
-		// add size controls
+		// add view type controls
 		$this.append('<div class="bin_view_controls"></div>')
 		    .find('.bin_view_controls')
 		    .append('View: <span></span>')
 		    .find('span:last')
 		    .radio(['mosaic','plot'], function(viewType) {
 			return viewType;
-		    }, selected_view).bind('select', function(event, value) {
+		    }, viewType).bind('select', function(event, value) {
 			console.log('view type =' + value);
+			$this.data(VIEW_TYPE, value);
+			$this.trigger('drawBinDisplay');
 		    });
+		// add view size controls
 		$this.find('.bin_view_controls')
 		    .append('View size: <span></span>')
 		    .find('span:last')
 		    .radio(view_sizes, function(size) {
  			return size[0] + 'x' + size[1];
-		    }, selected_size).bind('select', function(event, value) {
+		    }, viewSize).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .find('.bin_view').trigger('drawBinDisplay');
 			pageChanged(1);
 		    });
-		// add ROI scale controls
-		// make the selected on checked
-		var selected_scale = undefined;
-		$.each(roi_scales, function(ix, scale) {
-		    if(scale/100 == $this.data(ROI_SCALE)) {
-			selected_scale = scale
-		    }
-		});
-		$this.find('.view_controls').append('Scaling: <span></span>').find('span:last')
-		    .radio(roi_scales, function(scale) {
-			return scale + '%';
-		    }, selected_scale).bind('select', function(event, value) {
-			$this.data(ROI_SCALE, value/100)
-			    .find('.bin_view').trigger('drawBinDisplay');
-			pageChanged(1);
+		// add ROI scale controls if view type is mosaic
+		var roiScale = undefined;
+		if(viewType=="mosaic") {
+		    $.each(roi_scales, function(ix, scale) {
+			if(scale/100 == $this.data(ROI_SCALE)) {
+			    roiScale = scale
+			}
 		    });
+		    $this.find('.bin_view_controls')
+			.append('Scaling: <span></span>').find('span:last')
+			.radio(roi_scales, function(scale) {
+			    return scale + '%';
+			}, roiScale).bind('select', function(event, value) {
+			    $this.data(ROI_SCALE, value/100)
+				.find('.bin_view').trigger('drawBinDisplay');
+			    pageChanged(1);
+			});
+		}
 		// now add the bin display
 		$this.append('<div class="bin_display"><div class="bin_links"></div></div>').find('.bin_display')
 		    .css('float','left')
@@ -169,24 +174,37 @@
 		    if(props != undefined) {
 			$this.data(HEIGHT, props.height == undefined ? $this.data(HEIGHT) : props.height);
 			$this.data(WIDTH, props.width == undefined ? $this.data(WIDTH) : props.width);
+			$this.data(VIEW_TYPE, props.viewType == undefined ? $this.data(VIEW_TYPE) : props.viewType);
 			$this.data(ROI_SCALE, props.roiScale == undefined ? $this.data(ROI_SCALE) : props.roiScale);
 		    }
 		    $this.data(PID, pid); // save pid for future redraws
 		    // get the selection and user preferred size/scale from the workspace
-		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
+		    var viewType = $this.data(VIEW_TYPE); // view type
 		    var width = $this.data(WIDTH); // width of displayed view
 		    var height = $this.data(HEIGHT); // height of displayed view
-		    // create the bin display
-		    $this.find('.bin_display')
-			.mosaicPager(timeseries, pid, width, height, roi_scale);
-		    $this.delegate('.bin_display','page_change', function(event, pageNumber, href, noChangeEvent) {
-			pageChanged(pageNumber);
-		    });
-		    // delegate gotopage events to mosaic image pager
-		    $this.bind('gotopage', function(event, page) {
-			$this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
-			pageChanged(page);
-		    });
+		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
+		    if(viewType=="mosaic") {
+			// create the mosaic display
+			$this.find('.bin_display')
+			    .mosaicPager(timeseries, pid, width, height, roi_scale);
+			$this.delegate('.bin_display','page_change', function(event, pageNumber, href, noChangeEvent) {
+			    pageChanged(pageNumber);
+			});
+			// delegate gotopage events to mosaic image pager
+			$this.bind('gotopage', function(event, page) {
+			    $this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
+			    pageChanged(page);
+			});
+		    } else if(viewType=='plot') {
+			$this.find('.bin_display')
+			    .empty()
+			    .append('<div></div>')
+			    .find('div:last')
+			    .css('height', height)
+			    .css('width', width)
+			    .scatter()
+			    .trigger('show_bin',[pid,'xy']);//FIXME hardcoded xy view
+		    }
 		    // add bin links
 		    $this.find('.bin_display')
 			.append('<span><a href="'+pid+'.html">'+pid+'</a></span>')

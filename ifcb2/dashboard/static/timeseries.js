@@ -17,7 +17,7 @@ function timeseries_setup(e, pid, timeseries) {
     $ws = $(e).append('<div id="workspace"></div>')
 	.find('#workspace').css('display','none');
     $ws.data('show_roi_metadata',0);
-    $ws.data('scatter_view','xy');
+    $ws.data('plot_type','xy');
     // timeline thinks all timestamps are in the current locale, so we need
     // to fake that they're UTC
     function asUTC(date) {
