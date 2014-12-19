@@ -67,12 +67,13 @@
 		    });
 	    });//each in mosaicPager
 	},//mosaicPager
-        resizableBinView: function(timeseries, width, height, roi_scale, viewType, pid) {
+        resizableBinView: function(timeseries, width, height, roiScale, viewType, plotType, pid) {
 	    var PID = 'bin_view_pid';
 	    var WIDTH = 'bin_view_width';
 	    var HEIGHT = 'bin_view_height';
 	    var VIEW_TYPE = 'bin_view_view_type'
 	    var ROI_SCALE = 'bin_view_roi_scale';
+	    var PLOT_TYPE = 'bin_view_plot_type';
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		// store user preferences in data
@@ -80,12 +81,17 @@
 		$this.data(VIEW_TYPE, viewType == undefined ? 'mosaic' : viewType);
 		$this.data(WIDTH, width == undefined ? 800 : width);
 		$this.data(HEIGHT, height == undefined ? 600 : height);
-		$this.data(ROI_SCALE, roi_scale == undefined ? 0.33 : roi_scale);
-		// add some controls for changing the size of the view
+		$this.data(ROI_SCALE, roiScale == undefined ? 0.33 : roiScale);
+		$this.data(PLOT_TYPE, plotType == undefined ? 'xy' : plotType);
+		// add some controls for changing the type size of the view
+		var view_types = ["mosaic","plot"];
 		var view_sizes = [[640, 480], [800, 600], [1280, 720], [1280, 1280]];
 		var roi_scales = [15, 25, 33, 40, 66, 100];
-		// make the selected one checked
+		var plot_types = ["xy","fs"];
+		var viewType = undefined;
 		var viewSize = undefined;
+		var plotType = undefined;
+		var roiScale = undefined;
 		function pageChanged(pageNumber) {
 		    pageNumber == pageNumber ? pageNumber : 1;
 		    $this.trigger('state_change', [{
@@ -94,6 +100,11 @@
 			height: $this.data(HEIGHT),
 			roi_scale: $this.data(ROI_SCALE)}]);
 		}
+		$.each(view_types, function(ix, typ) {
+		    if(typ = $this.data(VIEW_TYPE)) {
+			viewType = typ;
+		    }
+		});
 		$.each(view_sizes, function(ix, size) {
 		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
 			viewSize = size;
@@ -109,10 +120,9 @@
 		    .find('.bin_view_controls')
 		    .append('View: <span></span>')
 		    .find('span:last')
-		    .radio(['mosaic','plot'], function(viewType) {
+		    .radio(view_types, function(viewType) {
 			return viewType;
 		    }, viewType).bind('select', function(event, value) {
-			console.log('view type =' + value);
 			$this.data(VIEW_TYPE, value);
 			$this.trigger('drawBinDisplay');
 		    });
@@ -125,27 +135,26 @@
 		    }, viewSize).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
+			console.log("new width and height");
 			$this.data(WIDTH, width).data(HEIGHT, height)
-			    .find('.bin_view').trigger('drawBinDisplay');
+			    .trigger('drawBinDisplay');
 			pageChanged(1);
-		    });
-		// add ROI scale controls if view type is mosaic
-		var roiScale = undefined;
+		    }).end()
+		    .append('<span class="bin_view_type_specific_controls">uninitialized</span>');
+		// FIXME cases indicate encapsulation issue: refactor
+		// add ROI scale controls if view type is mosaic, plot type if view type is plot
 		if(viewType=="mosaic") {
 		    $.each(roi_scales, function(ix, scale) {
 			if(scale/100 == $this.data(ROI_SCALE)) {
 			    roiScale = scale
 			}
 		    });
-		    $this.find('.bin_view_controls')
-			.append('Scaling: <span></span>').find('span:last')
-			.radio(roi_scales, function(scale) {
-			    return scale + '%';
-			}, roiScale).bind('select', function(event, value) {
-			    $this.data(ROI_SCALE, value/100)
-				.find('.bin_view').trigger('drawBinDisplay');
-			    pageChanged(1);
-			});
+		} else if(viewType=="plot") {
+		    $.each(plot_types, function(ix, typ) {
+			if(typ == $this.data(PLOT_TYPE)) {
+			    plotType = typ;
+			}
+		    });
 		}
 		// now add the bin display
 		$this.append('<div class="bin_display"><div class="bin_links"></div></div>').find('.bin_display')
@@ -175,14 +184,16 @@
 			$this.data(HEIGHT, props.height == undefined ? $this.data(HEIGHT) : props.height);
 			$this.data(WIDTH, props.width == undefined ? $this.data(WIDTH) : props.width);
 			$this.data(VIEW_TYPE, props.viewType == undefined ? $this.data(VIEW_TYPE) : props.viewType);
+			$this.data(PLOT_TYPE, props.plotType == undefined ? $this.data(PLOT_TYPE) : props.plotType);
 			$this.data(ROI_SCALE, props.roiScale == undefined ? $this.data(ROI_SCALE) : props.roiScale);
 		    }
 		    $this.data(PID, pid); // save pid for future redraws
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type
+		    var plotType = $this.data(PLOT_TYPE); // plot type (for plot views)
 		    var width = $this.data(WIDTH); // width of displayed view
 		    var height = $this.data(HEIGHT); // height of displayed view
-		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi
+		    var roi_scale = $this.data(ROI_SCALE); // scaling factor per roi (for mosaic views)
 		    if(viewType=="mosaic") {
 			// create the mosaic display
 			$this.find('.bin_display')
@@ -195,6 +206,17 @@
 			    $this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
 			    pageChanged(page);
 			});
+			console.log("adding scaling controls");
+			$this.find('.bin_view_type_specific_controls')
+			    .empty()
+			    .append('Scaling: <span></span>').find('span:last')
+			    .radio(roi_scales, function(scale) {
+				return scale + '%';
+			    }, roiScale).bind('select', function(event, value) {
+				$this.data(ROI_SCALE, value/100)
+				    .find('.bin_view').trigger('drawBinDisplay');
+				pageChanged(1);
+			    });
 		    } else if(viewType=='plot') {
 			$this.find('.bin_display')
 			    .empty()
@@ -204,6 +226,16 @@
 			    .css('width', width)
 			    .scatter()
 			    .trigger('show_bin',[pid,'xy']);//FIXME hardcoded xy view
+			console.log("adding plot type controls");
+			$this.find('.bin_view_type_specific_controls')
+			    .empty()
+			    .append('Axes: <span></span>').find('span:last')
+			    .radio(plot_types, function(typ) {
+				return typ;
+			    }, plotType).bind('select', function(event, value) {
+				$this.data(PLOT_TYPE, value)
+				    .find('.bin_view').trigger('drawBinDisplay');
+			    });
 		    }
 		    // add bin links
 		    $this.find('.bin_display')

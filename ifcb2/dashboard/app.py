@@ -484,7 +484,7 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
 
 def scatter_json(targets,bin_pid,x_axis,y_axis):
     points = [{
-        'pid': t[PID],
+        'roi_num': re.sub(r'.*_','',t[PID]), # strip prefix
         'x': t[x_axis],
         'y': t[y_axis]
     } for t in targets]

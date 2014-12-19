@@ -22,11 +22,12 @@ function scatter_setup(elt) {
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {
 	    console.log("Got JSON data");
+	    var bin_pid = r.bin_pid;
 	    var roi_pids = [];
 	    var point_data = [];
 	    $.each(r.points, function(ix, point) {
 		point_data.push([point.x, point.y]);
-		roi_pids.push(point.pid);
+		roi_pids.push(bin_pid + '_' + point.roi_num);
 	    });
 	    var plot_data = {
 		label: view,
