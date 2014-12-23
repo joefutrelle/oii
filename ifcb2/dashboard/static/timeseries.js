@@ -56,8 +56,6 @@ function timeseries_setup(e, pid, timeseries) {
 	});
 	// now draw a multi-page mosaic
 	$('#bin_view').css('display','block').trigger('drawBinDisplay',[pid]);
-	// add scatterplot (FIXME)
-	//$('#scatter').css('display','block').trigger('show_bin',[pid,'xy']); // FIXME hardcoded
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date, pushHistory, callback) {

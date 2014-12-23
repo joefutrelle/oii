@@ -125,6 +125,7 @@
 		    }, viewType).bind('select', function(event, value) {
 			$this.data(VIEW_TYPE, value);
 			$this.trigger('drawBinDisplay');
+			pageChanged(1);
 		    });
 		// add view size controls
 		$this.find('.bin_view_controls')
@@ -214,7 +215,7 @@
 				return scale + '%';
 			    }, roiScale).bind('select', function(event, value) {
 				$this.data(ROI_SCALE, value/100)
-				    .find('.bin_view').trigger('drawBinDisplay');
+				    .trigger('drawBinDisplay');
 				pageChanged(1);
 			    });
 		    } else if(viewType=='plot') {
@@ -225,7 +226,7 @@
 			    .css('height', height)
 			    .css('width', width)
 			    .scatter()
-			    .trigger('show_bin',[pid,'xy']);//FIXME hardcoded xy view
+			    .trigger('show_bin',[pid,$this.data(PLOT_TYPE)]);
 			console.log("adding plot type controls");
 			$this.find('.bin_view_type_specific_controls')
 			    .empty()
@@ -233,8 +234,10 @@
 			    .radio(plot_types, function(typ) {
 				return typ;
 			    }, plotType).bind('select', function(event, value) {
+				console.log('setting plot type to '+value);
 				$this.data(PLOT_TYPE, value)
-				    .find('.bin_view').trigger('drawBinDisplay');
+				    .trigger('drawBinDisplay');
+				pageChanged(1);
 			    });
 		    }
 		    // add bin links

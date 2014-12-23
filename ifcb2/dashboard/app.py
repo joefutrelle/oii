@@ -588,7 +588,7 @@ def hello_world(pid):
             else:
                 f_axis, s_axis = 'pmtA', 'pmtB'
             if extension=='json':
-                return scatter_json(targets,canonical_pidf_axis,s_axis)
+                return scatter_json(targets,canonical_pid,f_axis,s_axis)
             abort(404)
         # end of views
         # not a special view, handle representations of targets
