@@ -44,18 +44,26 @@ function scatter_setup(elt) {
 	});
 	$(elt).bind("plotselected", function(evt, ranges) {
 	    console.log(evt);
-	    $(evt.target).addClass("plotselected");
-	    // determine which rois are selected and fire an event?
+	    $(evt.target).addClass("plotselected");//not sure what this does
+	    // receive selection range from event
 	    lo_x = ranges.xaxis.from;
 	    hi_x = ranges.xaxis.to;
 	    lo_y = ranges.yaxis.from;
 	    hi_y = ranges.yaxis.to;
+	    // replace the roi image view with this mosaic view
+	    $('#roi_image').empty()
+		.closeBox()
+		.css('display','inline-block')
+		.css('width','45%');
+	    // for each point on the scatter plot,
 	    $.each($(elt).data('point_data'), function(ix, point) {
 		var x = point[0];
 		var y = point[1];
+		// if it's in the selection rectangle
 		if(x >= lo_x && x <= hi_x && y >= lo_y && y <= hi_y) {
+		    // draw the roi
 		    var pid = $(elt).data('roi_pids')[ix];
-		    console.log('selected '+pid);
+		    $('#roi_image').append('<a href="'+pid+'.html"><img src="'+pid+'.jpg"></img></a>');
 		}
 	    });
 	});
