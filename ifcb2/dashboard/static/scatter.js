@@ -45,7 +45,19 @@ function scatter_setup(elt) {
 	$(elt).bind("plotselected", function(evt, ranges) {
 	    console.log(evt);
 	    $(evt.target).addClass("plotselected");
-	    // FIXME determine which rois are selected and fire an event?
+	    // determine which rois are selected and fire an event?
+	    lo_x = ranges.xaxis.from;
+	    hi_x = ranges.xaxis.to;
+	    lo_y = ranges.yaxis.from;
+	    hi_y = ranges.yaxis.to;
+	    $.each($(elt).data('point_data'), function(ix, point) {
+		var x = point[0];
+		var y = point[1];
+		if(x >= lo_x && x <= hi_x && y >= lo_y && y <= hi_y) {
+		    var pid = $(elt).data('roi_pids')[ix];
+		    console.log('selected '+pid);
+		}
+	    });
 	});
 	$(elt).bind("plotclick", function(evt, pos, item) {
 	    console.log(evt);
