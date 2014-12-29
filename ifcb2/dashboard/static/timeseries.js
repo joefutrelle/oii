@@ -69,7 +69,7 @@ function timeseries_setup(e, pid, timeseries) {
 	});
     }
     // add the timeline control
-    $('#title').append('<div class="h2">Data volume by day</div><br><div id="timeline"></div>').find('#timeline').timeline()
+    $('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
 	    updateDateLabel(timeline);
@@ -96,6 +96,7 @@ function timeseries_setup(e, pid, timeseries) {
 		}
 	    });
 	});
+    $('#timeline').collapsing('timeline',true);
     // now load the data volume series
     console.log('loading data series...');
     // call the data volume API
