@@ -4,13 +4,13 @@
   {{ super() }}
     <script type="text/javascript">
 $(document).ready(function() {
-    $('#mosaic_pager').bin_page('{{bin_pid}}','{{time_series}}');
+    $('#bin_view').bin_page('{{bin_pid}}','{{time_series}}');
 });
     </script>
 {% endblock head %}
 {% block content %}
   <div class="major h1">Sample bin {{bin_pid}}</div>
-  <div id="mosaic_pager" class="major"></div>
+  <div id="bin_view" class="major"></div>
   <div style="clear: both"></div>
   <div class="major inline">
     <div>
@@ -31,7 +31,7 @@ $(document).ready(function() {
 
 <!-- fixity -->
 <div>
-<table class="major">
+<table class="major inline">
 <tr class="tbl">
   <th class="tbl">filename</th>
   <th class="tbl">length</th>
@@ -61,7 +61,7 @@ $(document).ready(function() {
 </table>
 </div>
 
-<p></p><!-- I know, I should use CSS -->
+<div style="clear: both"></div>
 
 <!-- targets -->
 <div><table class="major">

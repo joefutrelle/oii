@@ -71,24 +71,30 @@ img.logo {
   height: 50px;
   padding: 5px;
 }
-#mosaic_pager {
+#bin_view {
   float: left;
   margin-left: 0px;
   margin-top: 15px;
   font-size: 10px;
 }
-.mosaic_controls {
+.bin_view_controls {
   clear: both;
   text-align: center;
   margin-bottom: 5px;
   white-space: nowrap;
 }
-.mosaic_next_prev {
+.bin_view_next_prev {
     /*clear: both;*/
   float: left;
   margin-top: 5px;
   margin-bottom: 5px;
   white-space: nowrap;
+}
+#scatter {
+  float: left;
+  margin-left: 0px;
+  margin-top: 15px;
+  font-size: 10px;
 }
 .previousBin {
     padding: 5px;
@@ -138,6 +144,11 @@ div.h1 {
     margin-top: 5px;
     margin-bottom: 10px;
     padding: 15px;
+    font-size: 2em;
+    font-weight: bold;
+}
+div.title {
+    padding: 3px;
     font-size: 2em;
     font-weight: bold;
 }

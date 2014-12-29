@@ -1,18 +1,3 @@
-(function($) {
-    $.fn.extend({
-	closeBox: function() {
-	    return this.each(function () {
-		var $this = $(this); // retain ref to $(this)
-		$this.prepend('<a class="close"></a>').find('a:first')
-		    .css('cursor','pointer')
-		    .bind('click', function() {
-			$this.css('display','none');
-		    });
-	    });// each in closeBox
-	}//closeBox
-    });//$.fn.extend
-})(jQuery);//end of plugin
-
 // ersatz history support for IE9, see #1857 for discussion
 function historyPushState(state, pid, url) {
     if(!!(window.history && history.pushState)) {
@@ -24,7 +9,7 @@ function historyPushState(state, pid, url) {
 
 var $ws = undefined;
 
-function timeseries_add(e, pid, timeseries) {
+function timeseries_setup(e, pid, timeseries) {
     // internal function. params
     // e - element to add to
     // pid - (optional) initial pid to display
@@ -32,6 +17,7 @@ function timeseries_add(e, pid, timeseries) {
     $ws = $(e).append('<div id="workspace"></div>')
 	.find('#workspace').css('display','none');
     $ws.data('show_roi_metadata',0);
+    $ws.data('plot_type','xy');
     // timeline thinks all timestamps are in the current locale, so we need
     // to fake that they're UTC
     function asUTC(date) {
@@ -48,7 +34,7 @@ function timeseries_add(e, pid, timeseries) {
 	    .append(iso8601utcTime.replace(/....Z/,'Z'))
 	    .css('margin-left',tts+'px');
     }
-    function showMosaic(pid, pushHistory) {
+    function showBin(pid, pushHistory) {
 	// remove any existing ROI image
 	$('#roi_image').empty().css('display','none');
 	// set the address for back button
@@ -69,21 +55,21 @@ function timeseries_add(e, pid, timeseries) {
 	    });
 	});
 	// now draw a multi-page mosaic
-	$('#mosaic_pager').css('display','block').trigger('drawMosaic',[pid]);
+	$('#bin_view').css('display','block').trigger('drawBinDisplay',[pid]);
     }
     // called when the user clicks on a date and wants to see the nearest bin
     function showNearest(date, pushHistory, callback) {
 	var ds = date.toISOString();
 	// FIXME need to specify time series
 	$.getJSON('/'+timeseries+'/api/feed/nearest/'+ds, function(r) { // find the nearest bin
-	    showMosaic(r.pid, pushHistory);
+	    showBin(r.pid, pushHistory);
 	    if(callback != undefined) {
 		callback(r.pid);
 	    }
 	});
     }
     // add the timeline control
-    $(e).append('<div class="major"><div class="h2">Data volume by day</div><br><div id="timeline"></div></div>').find('#timeline').timeline()
+    $('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {
 	    // when the user is dragging the custom time bar, show the date/time
 	    updateDateLabel(timeline);
@@ -110,6 +96,7 @@ function timeseries_add(e, pid, timeseries) {
 		}
 	    });
 	});
+    $('#timeline').collapsing('timeline',true);
     // now load the data volume series
     console.log('loading data series...');
     // call the data volume API
@@ -175,7 +162,7 @@ function timeseries_add(e, pid, timeseries) {
 	// now tell the timeline plugin to draw it
 	// if a pid is selected, show it
 	if(pid != undefined) {
-	    showMosaic(pid, false);
+	    showBin(pid, false);
 	} else {
 	    showNearest(new Date(), false, function(nearest) {
 		historyPushState({pid:nearest, mosaic_state:{}}, nearest, '/'+timeseries);
@@ -183,54 +170,53 @@ function timeseries_add(e, pid, timeseries) {
 	}
 	$('#timeline').trigger('showdata', [data, timeline_options]);
     });
-    $('#title').closeBox();
-    // our date label goes below the timeline
-    $(e).append('<div id="date_label" class="major"></div>');
-    // now add a place to display the ROI image
-    $(e).append('<div id="roi_image" class="major target_image"></div>').find('div:last')
+    $('#title_content').collapsing('title',true);
+    // the ROI image is closable and initially hidden
+    $('#roi_image').closeBox().css('display: none');
+    function showRoi(evt, roi_pid) {
+	$.getJSON(roi_pid+'.json', function(r) {
+	    // use grayLoadingImage from image_pager to display the ROI
+	    var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
+	    var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
+	    console.log('collapse state is '+$ws.data('show_roi_metadata'))
+	    $('#roi_image').empty()
+		.closeBox()
+		.css('display','inline-block')
+		.target_image(roi_pid, roi_width, roi_height)
+		.append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
+		.append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
+		.append(' (<a href="'+roi_pid+'.xml">XML</a> ')
+		.append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
+		.append('<div><div class="target_metadata"></div></div>')
+		.find('.target_metadata')
+		.target_metadata(roi_pid)
+		.collapsing('metadata',$ws.data('show_roi_metadata'))
+		.bind('collapse_state', function(event, s) {
+		    console.log('setting collapse state to '+s);
+		    $ws.data('show_roi_metadata', s);
+		}).end()
+		.find('.target_image').css('float','right');
+	});
+    }
+    // and the resizable bin view is below that
+    // e.g., containing the mosaic or plot
+    $('#bin_view')
 	.closeBox()
-	.css('display','none');
-    // and the mosaic pager is below that
-    $(e).append('<div id="mosaic_pager" class="major"></div>').find('#mosaic_pager')
-	.closeBox()
-	.resizableMosaicPager(timeseries)
+	.resizableBinView(timeseries)
 	.bind('roi_click', function(event, roi_pid) {
-	    // we found it. now determine ROI image dimensions by hitting the ROI endpoint
-	    $.getJSON(roi_pid+'.json', function(r) {
-		// use grayLoadingImage from image_pager to display the ROI
-		var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
-		var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)
-		console.log('collapse state is '+$ws.data('show_roi_metadata'))
-		$('#roi_image').empty()
-		    .closeBox()
-		    .css('display','inline-block')
-		    .target_image(roi_pid, roi_width, roi_height)
-		    .append('<br><div class="roi_info bin_label"></div>').find('.roi_info')
-		    .append('<a href="'+roi_pid+'.html">'+roi_pid+'</a> ')
-		    .append(' (<a href="'+roi_pid+'.xml">XML</a> ')
-		    .append('<a href="'+roi_pid+'.rdf">RDF</a>)').end()
-		    .append('<div><div class="target_metadata"></div></div>')
-		    .find('.target_metadata')
-		    .target_metadata(roi_pid)
-		    .collapsing('metadata',$ws.data('show_roi_metadata'))
-		    .bind('collapse_state', function(event, s) {
-			console.log('setting collapse state to '+s);
-			$ws.data('show_roi_metadata', s);
-		    }).end()
-		    .find('.target_image').css('float','right');
-	    });
-	}).bind('goto_bin', function(event, pid) {
-	    showMosaic(pid);
+	    showRoi(event, roi_pid)
+	}).bind('goto_bin', function(event, bin_pid) {
+	    showBin(bin_pid);
 	});
     // handle popstate
     window.onpopstate = function(event) {
 	console.log(event);
 	if(event.state) {
 	    if(event.state.pid) {
-		showMosaic(event.state.pid, false);
+		showBin(event.state.pid, false);
 	    }
 	    if(event.state.mosaic_state) {
-		$('#mosaic_pager').trigger('restoreState', event.state.mosaic_state);
+		$('#bin_view').trigger('restoreState', event.state.mosaic_state);
 	    }
 	}
     };
@@ -240,7 +226,7 @@ function timeseries_add(e, pid, timeseries) {
 	timeseries: function(bin_pid, timeseries) {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
-		timeseries_add($this, bin_pid, timeseries);
+		timeseries_setup($this, bin_pid, timeseries);
 	    });//each in bin_page
 	}//bin_page
     });//$.fn.extend
