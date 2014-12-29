@@ -199,7 +199,7 @@ function timeseries_setup(e, pid, timeseries) {
 	});
     }
     // and the resizable bin view is below that
-    // e.g., containing the mosaic
+    // e.g., containing the mosaic or plot
     $('#bin_view')
 	.closeBox()
 	.resizableBinView(timeseries)
@@ -207,16 +207,6 @@ function timeseries_setup(e, pid, timeseries) {
 	    showRoi(event, roi_pid)
 	}).bind('goto_bin', function(event, bin_pid) {
 	    showBin(bin_pid);
-	});
-    // and the scatterplot is below that for debugging purposes
-    $('#scatter')
-	.closeBox()
-        .scatter()
-	.bind('roi_click', function(event, roi_pid) {
-	    showRoi(event, roi_pid);
-	}).bind('goto_bin', function(event, bin_pid) {
-	    // FIXME hardcoded to xy view
-	    $('#scatter').trigger('show_bin', bin_pid, 'xy');
 	});
     // handle popstate
     window.onpopstate = function(event) {
