@@ -1,19 +1,9 @@
 This contains utilities, prototypes, and apps for the Ocean Imaging
 Informatics project.
 
-2012-02
+This comprises a number of sub-projects, including
 
-Currently active is the "oii" Python module which contains manual
-annotation prototypes.
-
-To run that prototype on your local machine you will need Flask
-
-$ sudo pip install Flask
-
-Run it from the command line, make sure PYTHONPATH includes .
-
-$ export PYTHONPATH=.
-$ python oii/webapi/annotation.py
-
-You can optionally specify a hostname by hacking the app.run() call
-in that script.
+* Ladder - the Local Data Resolver language
+* The Imaging FlowCytobot data dashboard
+* Utilities for image processing, data management, and workflow
+* A web-based image annotation tool for benthic images
