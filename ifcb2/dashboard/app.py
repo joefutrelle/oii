@@ -30,6 +30,7 @@ from oii.image.mosaic import Tile
 from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
+from oii.ifcb2 import files
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 
 from oii.ifcb2.dashboard.admin_api import timeseries_blueprint, manager_blueprint
@@ -102,14 +103,7 @@ def parse_pid(pid):
 
 @memoize(ttl=30)
 def get_data_roots(ts_label, product_type='raw'):
-    dds = session.query(DataDirectory)\
-                .join(TimeSeries)\
-                .filter(TimeSeries.label==ts_label)\
-                .filter(DataDirectory.product_type==product_type)
-    paths = []
-    for data_dir in dds:
-        paths.append(data_dir.path)
-    return paths
+    return files.get_data_roots(session, ts_label, product_type)
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
