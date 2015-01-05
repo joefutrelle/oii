@@ -46,3 +46,8 @@ def add_pids(targets,bin_pid,bin_key='binID',target_key='pid'):
 
 def canonicalize(base_url, ts_label, lid):
     return '%s%s/%s' % (base_url, ts_label, lid)
+
+def as_product(pid,product):
+    """compute a product pid given a pid and a product name"""
+    return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
+

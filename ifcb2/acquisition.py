@@ -6,11 +6,8 @@ from oii.utils import safe_copy, compare_files
 
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
+from oii.ifcb2.identifiers import as_product
 from oii.ifcb2.files import NotFound, pid2fileset
-from oii.ifcb2.accession import ACCESSION_ROLE
-
-WILD_PRODUCT='wild'
-RAW_PRODUCT='raw'
 
 def list_filesets(instrument):
     """list all filesets currently present in the data directory,
@@ -79,23 +76,3 @@ def do_copy(instrument):
             if lids[lid] == 3: # fileset is complete
                 yield lid
 
-def as_product(pid,product):
-    """compute a product pid given a pid and a product name"""
-    return next(get_resolver().ifcb.as_product(pid=pid,product=product))[PID]
-
-def schedule_accession(client,pid):
-    """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
-    pid must not be a local id--it must be namespace-scoped"""
-    wild_pid = as_product(pid,WILD_PRODUCT)
-    raw_pid = as_product(pid,RAW_PRODUCT)
-    client.depend(raw_pid, wild_pid, ACCESSION_ROLE)
-
-def copy_work(instrument,client,callback=None):
-    """what an acquisition worker does"""
-    ts_label = instrument.time_series.label
-    for lid in do_copy(instrument):
-        pid = '%s/%s' % (ts_label, lid)
-        schedule_accession(client,pid)
-        client.wakeup(ACCESSION_ROLE)
-        if callback is not None:
-            callback(lid)

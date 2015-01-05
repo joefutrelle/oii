@@ -165,7 +165,7 @@ def safe_copy(src_path, dest_path):
         pass
     if not os.path.isdir(dest_dir):
         # well, making the directory didn't work
-        raise IOError
+        raise IOError('unable to create directory %s' % dest_dir)
     tmp_fn = os.path.join(dest_dir,gen_id())
     def safe_remove_tmp():
         try:

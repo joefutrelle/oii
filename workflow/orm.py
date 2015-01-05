@@ -27,6 +27,7 @@ TTL='ttl'
 # event and events
 EVENT='event'
 HEARTBEAT='heartbeat'
+RELEASED='released'
 
 # message
 MESSAGE='message'
