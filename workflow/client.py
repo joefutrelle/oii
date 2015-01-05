@@ -5,7 +5,7 @@ from oii.utils import gen_id
 from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE
 from oii.workflow.orm import WAITING, RUNNING, AVAILABLE
 from oii.workflow.orm import ROLE, ANY
-from oii.workflow.orm import HEARTBEAT
+from oii.workflow.orm import HEARTBEAT, RELEASED
 from oii.workflow.orm import UPSTREAM
 
 from oii.workflow.webapi import DEFAULT_PORT
@@ -109,7 +109,7 @@ class Mutex(object):
         self.client.heartbeat(self.mutex_pid)
     def __exit__(self, exc_type, exc_value, traceback):
         # attempt to release the mutex into the WAITING state
-        r = self.client.update_if(self.mutex_pid, state=RUNNING, new_state=WAITING)
+        r = self.client.update_if(self.mutex_pid, state=RUNNING, new_state=WAITING, event=RELEASED)
         if r.status_code == http.CONFLICT:
             # another client has forced the mutex out of the RUNNING state
             raise InconsistentState("mutex %s in inconsistent state" % self.mutex_pid)

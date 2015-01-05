@@ -7,6 +7,7 @@ from oii.ifcb2.orm import Instrument
 from oii.workflow.client import WorkflowClient, Mutex, Busy
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
+from oii.ifcb2.workflow.acc_worker import ACC_WAKEUP_KEY
 
 """
 Here's the deal.
@@ -23,6 +24,9 @@ Worker:
 Scheduled task:
 - configged with a workflow client and the instrument name
 - hit the "wakeup" endpoint with the acquisition key
+
+Run worker as:
+celery --config=oii.workflow.async_config -A oii.ifcb2.workflow.acq_worker worker -n acq_worker_mock
 """
 
 ### FIXME config this right
@@ -77,7 +81,7 @@ def acq_wakeup(wakeup_key):
                 # schedule an accession job and wake up accession workers
                 pid = '%s/%s' % (ts_label, lid)
                 schedule_accession(client,pid)
-                client.wakeup(ACCESSION_ROLE)
+                client.wakeup(ACC_WAKEUP_KEY) # wake up accession workers
                 logging.warn('%s: scheduled accession for %s' % (ts_label, lid))
             copy_work(instrument, callback=callback)
             logging.warn('%s: acquisition cycle complete' % ts_label)

@@ -10,6 +10,14 @@ from oii.workflow.orm import AVAILABLE, UPSTREAM
 
 import requests
 
+"""
+run worker as
+
+celery --config=oii.workflow.async_config -A oii.workflow.example_async worker -n example_async
+
+run main to create work
+"""
+
 PING_ROLE='acq_ping_role'
 
 WAKEUP_KEY='oii.workflow.example_async.singleton'
@@ -44,7 +52,6 @@ def do_work():
     print 'RUNNING -> AVAILABLE %s' % job
     return True
 
-#@async.task(name=WAKEUP_TASK)
 @wakeup_task
 def do_a_buncha_work(payload):
     if payload != WAKEUP_KEY:

@@ -90,31 +90,38 @@ class Accession(object):
                 continue
             for fs in list_filesets(dd.path):
                 yield fs
-    def accede(self):
+    def add_fileset(self,fileset):
+        """run one bin fileset through accession process. does not commit,
+        returns True if fileset was good and not skipped, False otherwise"""
+        lid = fileset[LID] # get LID from fileset
+        if self.bin_exists(lid): # make sure it doesn't exist
+            logging.info('SKIP %s - exists' % lid)
+            return False
+        b = self.new_bin(lid) # create new bin
+        # now compute fixity
+        logging.info('FIXITY computing fixity for %s' % lid)
+        self.compute_fixity(b,fileset)
+        # now test integrity
+        if not self.test_integrity(b):
+            logging.info('FAIL %s - failed integrity checks' % lid)
+            return False
+        logging.info('PASS %s - integrity checks passed' % lid)
+        # now compute bin metrics
+        logging.info('METRICS computing metrics for %s' % lid)
+        compute_bin_metrics(b,fileset)
+        logging.info('ADDED %s to %s' % (lid, self.ts_label))
+        self.session.add(b)
+        return True
+    def add_all_filesets(self):
         n_total, n_new = 0, 0
         for fileset in self.list_filesets():
-            lid = fileset[LID] # get LID from fileset
             n_total += 1
-            if self.bin_exists(lid): # make sure it doesn't exist
-                logging.info('SKIP %s - exists' % lid)
+            if self.add_fileset(fileset):
+                n_new +=1
+            else:
                 continue
             if n_new % 5 == 0: # periodically commit
                 logging.info('COMMITTING')
                 self.session.commit()
-            b = self.new_bin(lid) # create new bin
-            n_new += 1
-            # now compute fixity
-            logging.info('FIXITY computing fixity for %s' % lid)
-            self.compute_fixity(b,fileset)
-            # now test integrity
-            if not self.test_integrity(b):
-                logging.info('FAIL %s - failed integrity checks' % lid)
-                continue # FIXME warn
-            logging.info('PASS %s - integrity checks passed' % lid)
-            # now compute bin metrics
-            logging.info('METRICS computing metrics for %s' % lid)
-            compute_bin_metrics(b,fileset)
-            logging.info('ADDED %s to %s' % (lid, self.ts_label))
-            self.session.add(b)
         self.session.commit()
         return n_total, n_new
