@@ -37,28 +37,33 @@ def acc_wakeup(wakeup_key):
     """
     # figure out if this wakeup matters to us
     if wakeup_key != ACC_WAKEUP_KEY:
+        logging.warn('awoken for %s, going back to sleep' % wakeup_key)
         return
     # acquire accession jobs, one at a time
     while True:
+        client.expire() # let jobs expire so we can reacquire them
         r = client.start_next([ACCESSION_ROLE])
         if not isok(r): # no more jobs
+            logging.warn('no more accession jobs')
             return
         job = r.json()
         pid = job[PID]
+        client.update(pid,ttl=30) # a generous time allocation
         try:
             parsed = parse_pid(pid)
             lid = parsed[LID]
             ts_label = parsed[TS_LABEL]
-            #acc = Accession(session,ts_label)
             roots = get_data_roots(session, ts_label) # get raw data roots
             fileset = parsed_pid2fileset(parsed, roots)
             fileset[LID] = lid
+            session.expire_all() # don't be stale!
             acc = Accession(session,ts_label)
             logging.warn('accession adding raw fileset for %s' % pid)
             acc.add_fileset(fileset)
             logging.warn('done adding raw fileset for %s' % pid)
             client.update(pid, state='available', event='complete', message='accession completed')
+            session.commit()
         except Exception as e:
             logging.warn('exception adding raw fileset' % pid)
             client.update(pid, state='error', event='exception', message=str(e))
-            raise e
+            # continue to next job

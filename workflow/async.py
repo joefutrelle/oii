@@ -56,11 +56,13 @@ def async_wakeup(payload=None):
 def wakeup_task(func):
     @async.task(name=WAKEUP_TASK)
     def func_wrapper(*a,**kw):
-        try:
+        try: # try calling with key
             func(*a,**kw)
         except TypeError:
-            # usually because func expects one argument
-            func(None,**kw)
+            try:
+                func(None,**kw)
+            except TypeError:
+                func()
     return func_wrapper
 
 if __name__=='__main__':

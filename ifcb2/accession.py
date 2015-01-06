@@ -22,7 +22,7 @@ def compute_fixity(fs, fast=False):
     for path,filetype in zip(paths,filetypes):
         f = File(local_path=path, filetype=filetype)
         f.compute_fixity(fast=fast)
-        logging.info('FIXITY for %s: length=%d, checksum(sha1)=%s' % (path, f.length, f.sha1))
+        logging.warn('FIXITY for %s: length=%d, checksum(sha1)=%s' % (path, f.length, f.sha1))
         yield f
 
 def compute_bin_metrics(b, fs):
@@ -42,7 +42,7 @@ def compute_bin_metrics(b, fs):
         triggers, seconds = re.split(r',',line)[:2]
         b.triggers = int(triggers)
         b.duration = float(seconds)
-    logging.info('METRICS for %s: humidity=%.2f, temp=%.2fC, triggers=%d, duration=%.2fs' %\
+    logging.warn('METRICS for %s: humidity=%.2f, temp=%.2fC, triggers=%d, duration=%.2fs' %\
                  (b.lid, b.humidity, b.temperature, b.triggers, b.duration))
 
 def list_filesets(root):
@@ -95,21 +95,21 @@ class Accession(object):
         returns True if fileset was good and not skipped, False otherwise"""
         lid = fileset[LID] # get LID from fileset
         if self.bin_exists(lid): # make sure it doesn't exist
-            logging.info('SKIP %s - exists' % lid)
+            logging.warn('SKIP %s - exists' % lid)
             return False
         b = self.new_bin(lid) # create new bin
         # now compute fixity
-        logging.info('FIXITY computing fixity for %s' % lid)
+        logging.warn('FIXITY computing fixity for %s' % lid)
         self.compute_fixity(b,fileset)
         # now test integrity
         if not self.test_integrity(b):
-            logging.info('FAIL %s - failed integrity checks' % lid)
+            logging.warn('FAIL %s - failed integrity checks' % lid)
             return False
-        logging.info('PASS %s - integrity checks passed' % lid)
+        logging.warn('PASS %s - integrity checks passed' % lid)
         # now compute bin metrics
-        logging.info('METRICS computing metrics for %s' % lid)
+        logging.warn('METRICS computing metrics for %s' % lid)
         compute_bin_metrics(b,fileset)
-        logging.info('ADDED %s to %s' % (lid, self.ts_label))
+        logging.warn('ADDED %s to %s' % (lid, self.ts_label))
         self.session.add(b)
         return True
     def add_all_filesets(self):
@@ -121,7 +121,7 @@ class Accession(object):
             else:
                 continue
             if n_new % 5 == 0: # periodically commit
-                logging.info('COMMITTING')
+                logging.warn('COMMITTING')
                 self.session.commit()
         self.session.commit()
         return n_total, n_new
