@@ -79,6 +79,9 @@ class Product(Base):
         if ttl is not None:
             self.ttl = int(ttl)
             self.expires = self.ts + timedelta(seconds=self.ttl)
+        else:
+            self.ttl = None
+            self.expires = None
 
     def deps_for_role(self, role):
         return [ud.upstream for ud in self.upstream_dependencies if ud.role==role]
