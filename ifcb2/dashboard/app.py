@@ -628,7 +628,6 @@ def hello_world(pid):
 
 #### mosaics #####
 
-@memoize
 def get_sorted_tiles(adc_path, schema_version, bin_pid):
     # read ADC and convert to Tiles in size-descending order
     def descending_size(t):
@@ -640,7 +639,6 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
     tiles.sort(key=descending_size)
     return tiles
 
-@memoize
 def get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page):
     tiles = get_sorted_tiles(adc_path, schema_version, bin_pid)
     # perform layout operation
@@ -653,6 +651,14 @@ def layout2json(layout, scale):
         (x,y) = t.position
         yield dict(pid=t.image['pid'], width=int(w*scale), height=int(h*scale), x=int(x*scale), y=int(y*scale))
 
+def parse_mosaic_params(params):
+    SIZE, SCALE, PAGE = 'size', 'scale', 'page'
+    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
+    size = tuple(map(int,re.split('x',params[SIZE])))
+    scale = float(params[SCALE])
+    page = int(params[PAGE])
+    return (size, scale, page)
+
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
@@ -662,12 +668,8 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     - page (1) - page. for typical image sizes the entire bin does not fit and so is split into pages.
     - scale - scaling factor for image dimensions """
     # parse params
-    SIZE, SCALE, PAGE = 'size', 'scale', 'page'
-    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
-    (w,h) = tuple(map(int,re.split('x',params[SIZE])))
-    scale = float(params[SCALE])
-    page = int(params[PAGE])
-    # parse pid/lid
+    size, scale, page = parse_mosaic_params(params)
+    (w,h) = size
     parsed = parse_pid(pid)
     schema_version = parsed['schema_version']
     try:

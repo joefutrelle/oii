@@ -141,7 +141,6 @@
 			    .trigger('drawBinDisplay');
 			pageChanged(1);
 		    }).end()
-		    .append('<span class="bin_view_type_specific_controls">uninitialized</span>');
 		// FIXME cases indicate encapsulation issue: refactor
 		// add ROI scale controls if view type is mosaic, plot type if view type is plot
 		if(viewType=="mosaic") {
@@ -157,6 +156,29 @@
 			}
 		    });
 		}
+		// add view-type-specific controls
+		console.log("adding scaling controls");
+		$this.find('.bin_view_controls')
+		    .append('<span id="mosaic_controls">Scaling: <span></span></span>').find('span:last')
+		    .radio(roi_scales, function(scale) {
+			return scale + '%';
+		    }, roiScale).bind('select', function(event, value) {
+			console.log('setting scale to '+value/100);
+			$this.data(ROI_SCALE, value/100)
+			    .trigger('drawBinDisplay');
+			pageChanged(1);
+		    });
+		$this.find('.bin_view_controls')
+		    .append('<span id="scatter_controls">Axes: <span></span></span>').find('span:last')
+		    .radio(plot_types, function(typ) {
+			return typ;
+		    }, plotType).bind('select', function(event, value) {
+			console.log('setting plot type to '+value);
+			$this.data(PLOT_TYPE, value)
+			    .trigger('drawBinDisplay');
+			pageChanged(1);
+		    });
+		// on redraw
 		// now add the bin display
 		$this.append('<div class="bin_display"><div class="bin_links"></div></div>').find('.bin_display')
 		    .css('float','left')
@@ -173,7 +195,6 @@
 			    $this.trigger('goto_bin', [r[0].pid]);
 			});
 		    });
-		// on redraw
 		$this.bind('drawBinDisplay', function(event, the_pid, props) { 
 		    // if the_pid is undefined, use whatever the pid was set to before
 		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
@@ -207,17 +228,6 @@
 			    $this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
 			    pageChanged(page);
 			});
-			console.log("adding scaling controls");
-			$this.find('.bin_view_type_specific_controls')
-			    .empty()
-			    .append('Scaling: <span></span>').find('span:last')
-			    .radio(roi_scales, function(scale) {
-				return scale + '%';
-			    }, roiScale).bind('select', function(event, value) {
-				$this.data(ROI_SCALE, value/100)
-				    .trigger('drawBinDisplay');
-				pageChanged(1);
-			    });
 		    } else if(viewType=='plot') {
 			$this.find('.bin_display')
 			    .empty()
@@ -227,18 +237,6 @@
 			    .css('width', width)
 			    .scatter()
 			    .trigger('show_bin',[pid,$this.data(PLOT_TYPE)]);
-			console.log("adding plot type controls");
-			$this.find('.bin_view_type_specific_controls')
-			    .empty()
-			    .append('Axes: <span></span>').find('span:last')
-			    .radio(plot_types, function(typ) {
-				return typ;
-			    }, plotType).bind('select', function(event, value) {
-				console.log('setting plot type to '+value);
-				$this.data(PLOT_TYPE, value)
-				    .trigger('drawBinDisplay');
-				pageChanged(1);
-			    });
 		    }
 		    // add bin links
 		    $this.find('.bin_display')
