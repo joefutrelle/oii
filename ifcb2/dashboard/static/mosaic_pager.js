@@ -159,7 +159,7 @@
 		// add view-type-specific controls
 		console.log("adding scaling controls");
 		$this.find('.bin_view_controls')
-		    .append('<span id="mosaic_controls">Scaling: <span></span></span>').find('span:last')
+		    .append('<span class="mosaic_controls">Scaling: <span></span></span>').find('span:last')
 		    .radio(roi_scales, function(scale) {
 			return scale + '%';
 		    }, roiScale).bind('select', function(event, value) {
@@ -169,7 +169,7 @@
 			pageChanged(1);
 		    });
 		$this.find('.bin_view_controls')
-		    .append('<span id="scatter_controls">Axes: <span></span></span>').find('span:last')
+		    .append('<span class="scatter_controls">Axes: <span></span></span>').find('span:last')
 		    .radio(plot_types, function(typ) {
 			return typ;
 		    }, plotType).bind('select', function(event, value) {
@@ -228,6 +228,8 @@
 			    $this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
 			    pageChanged(page);
 			});
+			$this.find('.mosaic_controls').css('display','inline');
+			$this.find('.scatter_controls').css('display','none');
 		    } else if(viewType=='plot') {
 			$this.find('.bin_display')
 			    .empty()
@@ -237,6 +239,8 @@
 			    .css('width', width)
 			    .scatter()
 			    .trigger('show_bin',[pid,$this.data(PLOT_TYPE)]);
+			$this.find('.mosaic_controls').css('display','none');
+			$this.find('.scatter_controls').css('display','inline');
 		    }
 		    // add bin links
 		    $this.find('.bin_display')
