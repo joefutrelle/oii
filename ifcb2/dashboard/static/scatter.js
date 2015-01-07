@@ -17,8 +17,8 @@ function scatter_setup(elt) {
 	    color: "red"
 	}
     };
-    $(elt).bind('show_bin',function(event, bin_pid, view) {
-	var endpoint = bin_pid + "_" + view + ".json";
+    $(elt).bind('show_bin',function(event, bin_pid, plotType, axesType) {
+	var endpoint = bin_pid + "_" + axesType + ".json";
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {
 	    console.log("Got JSON data");

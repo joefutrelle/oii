@@ -3,10 +3,7 @@
 // fires the following events
 // page_change(pageNumber, page_url) - when the user changes the page; generally not used
 // roi_click(roi_pid, width, height) - when the user clicks a ROI
-// resizable version triggers
-// state_change({pageNumber, width, height, roi_scale}) when state changes
 // goto_bin(pid) - when the user clicks on the "next/prev" bin button
-// requires scatter
 (function($) {
     $.fn.extend({
 	mosaicPager: function(timeseries, pid, width, height, roi_scale) {
@@ -32,8 +29,6 @@
 		// list of images in hand, create the image pager
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
 		    .append('<div class="imagepager_paging">page <span class="imagepager_page_number"></span>, showing <span class="imagepager_rois_shown">?</span> of <span class="imagepager_rois_total">?</span> target(s)</div>')
-		/*
-*/
 		    .find('div.mosaic_pager_image_pager').imagePager(images, width, height) // use the image pager plugin
 		    .bind('change', function(event, ix, image_href) { // when the user changes which page they're viewing
 			$this.data(BIN_URL, image_href);
