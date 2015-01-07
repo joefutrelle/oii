@@ -55,6 +55,9 @@
 			    .trigger('drawBinDisplay');
 			pageChanged(1);
 		    });
+		// view-type-specific controls
+		$this.find('.bin_view_controls')
+		    .append('<span class="bin_view_specific_controls"></span>')
 		// on redraw
 		// now add the bin display
 		$this.append('<div class="bin_display"></div><div class="bin_links"></div>').find('.bin_display')
@@ -82,7 +85,7 @@
 		    $this.data(PID, pid); // save pid for future redraws
 		    // add bin links
 		    $this.find('.bin_links')
-		        .empty()
+			.empty()
 			.append('<span><a href="'+pid+'.html">'+pid+'</a></span>')
 			.append(' (<span class="imagepager_date timeago"></span>)<br>')
 			.append('<span>Download: <a href="'+pid+'.adc">ADC</a></span>')

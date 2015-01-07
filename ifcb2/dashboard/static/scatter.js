@@ -25,6 +25,10 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    color: "red"
 	}
     });
+    $(elt).siblings('.bin_view_controls')
+	.find('.bin_view_specific_controls')
+	.empty()
+	.append('{plot controls}');
     $(elt).bind('show_bin',function(event, bin_pid) {
 	var endpoint = $(elt).data(ENDPOINT_PFX) + 'x/left/y/bottom' + $(elt).data(ENDPOINT_SFX) + bin_pid;
 	var plot_options = $(elt).data(PLOT_OPTIONS);

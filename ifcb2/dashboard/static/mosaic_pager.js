@@ -15,7 +15,11 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		$this.css('width',width+100)
-		    .css('height',height);
+		    .css('height',height+20);
+		$this.siblings('.bin_view_controls')
+		    .find('.bin_view_specific_controls')
+		    .empty()
+		    .append('{mosaic controls}');
 		// put 30 pages on the pager, just in case it's a huge bin
 		// FIXME somehow figure out how many pages there are re #1701
 		var images = [];
