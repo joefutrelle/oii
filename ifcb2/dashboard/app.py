@@ -621,15 +621,20 @@ def scatter_json(targets,bin_pid,x_axis,y_axis):
     return Response(json.dumps(d), mimetype=MIME_JSON)
 
 @app.route('/<time_series>/api/plot/<path:params>/pid/<path:pid>')
-def scatter(ts_label,params,pid):
+def scatter(time_series,params,pid):
     req = DashboardRequest(pid, request)
-    params = parse_params(params, {
-        'x': 'left',
-        'y': 'bottom'
-    })
+    # wait, so do we ignore the time series? FIXME
+    params = parse_params(params, x='left', y='bottom')
+    try:
+        paths = get_fileset(req.parsed)
+    except NotFound:
+        abort(404)
+    adc_path = paths['adc_path']
+    adc = Adc(adc_path, req.schema_version)
+    targets = get_targets(adc, req.canonical_pid)
     # handle some target views other than the standard ones
     if req.extension=='json':
-        return scatter_json(targets,canonical_pid,params['x'],params['y'])
+        return scatter_json(targets,req.canonical_pid,params['x'],params['y'])
     abort(404)
 
 #### mosaics #####

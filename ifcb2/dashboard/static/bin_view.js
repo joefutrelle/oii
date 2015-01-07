@@ -103,7 +103,8 @@
 		    if(viewType=="mosaic") {
 			// create the mosaic display
 			$this.find('.bin_display')
-			    .mosaicPager(timeseries, pid, width, height, roi_scale);
+			    .empty()
+			    .mosaicPager(timeseries, pid, width, height);
 			$this.delegate('.bin_display','page_change', function(event, pageNumber, href, noChangeEvent) {
 			    pageChanged(pageNumber);
 			});
@@ -112,19 +113,10 @@
 			    $this.find('.mosaic_pager_image_pager').trigger('gotopage', page);
 			    pageChanged(page);
 			});
-			$this.find('.mosaic_controls').css('display','inline');
-			$this.find('.scatter_controls').css('display','none');
 		    } else if(viewType=='plot') {
 			$this.find('.bin_display')
 			    .empty()
-			    .append('<div></div>')
-			    .find('div:last')
-			    .css('height', height)
-			    .css('width', width)
-			    .scatter()
-			    .trigger('show_bin',[pid,$this.data(PLOT_TYPE),$this.data(AXES_TYPE)]);
-			$this.find('.mosaic_controls').css('display','none');
-			$this.find('.scatter_controls').css('display','inline');
+			    .scatter(timeseries, pid, width, height);
 		    }
 		});
 	    });//each in resizableBinView

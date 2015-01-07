@@ -1,6 +1,14 @@
-function scatter_setup(elt) {
-    // first, add features to static HTML
-    var plot_options = {
+function scatter_setup(elt, timeseries, pid, width, height) {
+    var ENDPOINT_PFX = 'data_scat_ep_pfx';
+    var ENDPOINT_SFX = 'data_scat_ep_sfx';
+    var WIDTH = 'data_scat_ep_width';
+    var HEIGHT = 'data_scat_ep_height';
+    var PLOT_OPTIONS = 'data_scat_options';
+    $(elt).data(ENDPOINT_PFX, '/'+timeseries+'/api/plot/');
+    $(elt).data(ENDPOINT_SFX, '/pid/');
+    $(elt).data(WIDTH, width);
+    $(elt).data(HEIGHT, height);
+    $(elt).data(PLOT_OPTIONS, {
 	series: {
 	    points: {
 		show: true,
@@ -16,9 +24,10 @@ function scatter_setup(elt) {
 	    mode: "xy",
 	    color: "red"
 	}
-    };
-    $(elt).bind('show_bin',function(event, bin_pid, plotType, axesType) {
-	var endpoint = bin_pid + "_" + axesType + ".json";
+    });
+    $(elt).bind('show_bin',function(event, bin_pid) {
+	var endpoint = $(elt).data(ENDPOINT_PFX) + 'x/left/y/bottom' + $(elt).data(ENDPOINT_SFX) + bin_pid;
+	var plot_options = $(elt).data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {
 	    console.log("Got JSON data");
@@ -30,7 +39,7 @@ function scatter_setup(elt) {
 		roi_pids.push(bin_pid + '_' + point.roi_num);
 	    });
 	    var plot_data = {
-		label: view,
+		label: 'hello',
 		data: point_data,
 		color: "black",
 		points: {
@@ -38,7 +47,10 @@ function scatter_setup(elt) {
 		},
 		highlightColor: "red"
 	    };
-	    $(elt).empty().plot([plot_data], plot_options);
+	    $(elt).empty()
+		    .css('width',$(elt).data(WIDTH))
+		    .css('height',$(elt).data(HEIGHT))
+		    .plot([plot_data], plot_options);
 	    $(elt).data('roi_pids', roi_pids);
 	    $(elt).data('point_data', point_data);
 	});
@@ -85,9 +97,13 @@ function scatter_setup(elt) {
 //jquery plugin
 (function($) {
     $.fn.extend({
-	scatter: function() {
+	scatter: function(timeseries, pid, width, height) {
 	    return this.each(function() {
-		scatter_setup($(this));
+		var $this = $(this);
+		$this.css('width',width)
+		    .css('height',height);
+		scatter_setup($this, timeseries, pid, width, height);
+		$this.trigger('show_bin',[pid]);
 	    });//each
 	}//scatter
     });//$.fn.extend
