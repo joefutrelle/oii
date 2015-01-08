@@ -5,8 +5,8 @@
 		var $this = $(this); // retain ref to $(this)
 		var PID = 'data_rbv_pid';
 		var VIEW_TYPE = 'data_rbv_view_type';
-		var WIDTH = 'data_rgv_view_width';
-		var HEIGHT = 'data_rgv_view_height';
+		var WIDTH = 'data_rbv_view_width';
+		var HEIGHT = 'data_rbv_view_height';
 		var view_types = ['mosaic','plot'];
 		var view_sizes = [[640,480], [800,600], [1280,720], [1280,1280]];
 		var viewType;

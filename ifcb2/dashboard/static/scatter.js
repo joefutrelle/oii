@@ -1,14 +1,21 @@
 function scatter_setup(elt, timeseries, pid, width, height) {
+    var $this = $(elt);
     var ENDPOINT_PFX = 'data_scat_ep_pfx';
     var ENDPOINT_SFX = 'data_scat_ep_sfx';
     var WIDTH = 'data_scat_ep_width';
     var HEIGHT = 'data_scat_ep_height';
     var PLOT_OPTIONS = 'data_scat_options';
-    $(elt).data(ENDPOINT_PFX, '/'+timeseries+'/api/plot/');
-    $(elt).data(ENDPOINT_SFX, '/pid/');
-    $(elt).data(WIDTH, width);
-    $(elt).data(HEIGHT, height);
-    $(elt).data(PLOT_OPTIONS, {
+    var PLOT_TYPE = 'data_scat_plot_type';
+    $this.data(ENDPOINT_PFX, '/'+timeseries+'/api/plot/');
+    $this.data(ENDPOINT_SFX, '/pid/');
+    $this.data(WIDTH, width);
+    $this.data(HEIGHT, height);
+    var plotTypes = ['linear','log'];
+    var plotType = $this.data(PLOT_TYPE);
+    if(plotType==undefined) {
+	plotType='linear'; // FIXME attempt to get from URL?
+    }
+    $this.data(PLOT_OPTIONS, {
 	series: {
 	    points: {
 		show: true,
@@ -25,13 +32,20 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    color: "red"
 	}
     });
-    $(elt).siblings('.bin_view_controls')
+    $this.siblings('.bin_view_controls')
 	.find('.bin_view_specific_controls')
 	.empty()
-	.append('{plot controls}');
-    $(elt).unbind('show_bin').bind('show_bin',function(event, bin_pid) {
-	var endpoint = $(elt).data(ENDPOINT_PFX) + 'x/left/y/bottom' + $(elt).data(ENDPOINT_SFX) + bin_pid;
-	var plot_options = $(elt).data(PLOT_OPTIONS);
+	.append('Type: <span></span>')
+	.find('span:last')
+	.radio(plotTypes, function(plotType) {
+	    return plotType;
+	}, plotType).bind('select', function(event, value) {
+	    $this.data(PLOT_TYPE, value);
+	    $this.trigger('drawBinDisplay');
+	});
+    $this.unbind('show_bin').bind('show_bin',function(event, bin_pid) {
+	var endpoint = $this.data(ENDPOINT_PFX) + 'x/left/y/bottom' + $this.data(ENDPOINT_SFX) + bin_pid;
+	var plot_options = $this.data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {
 	    console.log("Got JSON data");
@@ -51,14 +65,14 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		},
 		highlightColor: "red"
 	    };
-	    $(elt).empty()
-		    .css('width',$(elt).data(WIDTH))
-		    .css('height',$(elt).data(HEIGHT))
+	    $this.empty()
+		    .css('width',$this.data(WIDTH))
+		    .css('height',$this.data(HEIGHT))
 		    .plot([plot_data], plot_options);
-	    $(elt).data('roi_pids', roi_pids);
-	    $(elt).data('point_data', point_data);
+	    $this.data('roi_pids', roi_pids);
+	    $this.data('point_data', point_data);
 	});
-	$(elt).bind("plotselected", function(evt, ranges) {
+	$this.bind("plotselected", function(evt, ranges) {
 	    console.log(evt);
 	    $(evt.target).addClass("plotselected");//not sure what this does
 	    // receive selection range from event
@@ -72,28 +86,28 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		.css('display','inline-block')
 		.css('width','45%');
 	    // for each point on the scatter plot,
-	    $.each($(elt).data('point_data'), function(ix, point) {
+	    $.each($this.data('point_data'), function(ix, point) {
 		var x = point[0];
 		var y = point[1];
 		// if it's in the selection rectangle
 		if(x >= lo_x && x <= hi_x && y >= lo_y && y <= hi_y) {
 		    // draw the roi
-		    var pid = $(elt).data('roi_pids')[ix];
+		    var pid = $this.data('roi_pids')[ix];
 		    $('#roi_image').append('<a href="'+pid+'.html"><img src="'+pid+'.jpg"></img></a>');
 		}
 	    });
 	});
-	$(elt).bind("plotclick", function(evt, pos, item) {
+	$this.bind("plotclick", function(evt, pos, item) {
 	    console.log(evt);
 	    if($(evt.target).hasClass("plotselected")) {
 		$(evt.target).removeClass("plotselected");
 		return;
 	    } else if(item) {
-		var roi_pids = $(elt).data('roi_pids');
+		var roi_pids = $this.data('roi_pids');
 		if(!roi_pids) { return };
 		roi_pid = roi_pids[item.dataIndex];
 		// fire a roi clicked event
-		$(elt).trigger('roi_click',roi_pid);
+		$this.trigger('roi_click',roi_pid);
 	    }
 	})
     });
