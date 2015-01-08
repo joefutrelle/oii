@@ -6,14 +6,25 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     var HEIGHT = 'data_scat_ep_height';
     var PLOT_OPTIONS = 'data_scat_options';
     var PLOT_TYPE = 'data_scat_plot_type';
-    $this.data(ENDPOINT_PFX, '/'+timeseries+'/api/plot/');
-    $this.data(ENDPOINT_SFX, '/pid/');
-    $this.data(WIDTH, width);
+    var PLOT_X = 'data_scat_x_axis';
+    var PLOT_Y = 'data_scat_y_axis';
+    var endpointPfx = '/'+timeseries+'/api/plot';
+    var endpointSfx = '/pid/';
     $this.data(HEIGHT, height);
     var plotTypes = ['linear','log'];
     var plotType = $this.data(PLOT_TYPE);
     if(plotType==undefined) {
-	plotType='linear'; // FIXME attempt to get from URL?
+	plotType=plotTypes[0];
+    }
+    var plotXs = ['left','foo'];
+    var plotX = $this.data(PLOT_X);
+    if(plotX==undefined) {
+	plotX = plotXs[0];
+    }
+    var plotYs = ['bottom','bar'];
+    var plotY = $this.data(PLOT_Y);
+    if(plotY==undefined) {
+	plotY = plotYs[0];
     }
     $this.data(PLOT_OPTIONS, {
 	series: {
@@ -35,7 +46,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     $this.siblings('.bin_view_controls')
 	.find('.bin_view_specific_controls')
 	.empty()
-	.append('Type: <span></span>')
+	.append('Type: <span></span>') // plot type: linear / log
 	.find('span:last')
 	.radio(plotTypes, function(plotType) {
 	    return plotType;
@@ -43,11 +54,31 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    $this.data(PLOT_TYPE, value);
 	    $this.trigger('drawBinDisplay');
 	});
+    $this.siblings('.bin_view_controls')
+	.find('.bin_view_specific_controls')
+	.append('<br>X axis: <span></span>') // x axis
+	.find('span:last')
+	.radio(plotXs, function(plotX) {
+	    return plotX;
+	}, plotX).bind('select', function(event, value) {
+	    $this.data(PLOT_X, value);
+	    $this.trigger('drawBinDisplay');
+	})
+    $this.siblings('.bin_view_controls')
+	.find('.bin_view_specific_controls')
+	.append('Y axis: <span></span>') // y axis
+	.find('span:last')
+	.radio(plotYs, function(plotY) {
+	    return plotY;
+	}, plotY).bind('select', function(event, value) {
+	    $this.data(PLOT_Y, value);
+	    $this.trigger('drawBinDisplay');
+	});
     $this.unbind('show_bin').bind('show_bin',function(event, bin_pid) {
 	var plotParams = '';
-	plotParams += '/x/' + 'left'; // FIXME parameterize
-	plotParams += '/y/' + 'bottom'; // FIXME parameters
-	var endpoint = $this.data(ENDPOINT_PFX) + plotParams + $this.data(ENDPOINT_SFX) + bin_pid;
+	plotParams += '/x/' + plotX; 
+	plotParams += '/y/' + plotY;
+	var endpoint = endpointPfx + plotParams + endpointSfx + bin_pid;
 	var plot_options = $this.data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {

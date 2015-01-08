@@ -565,13 +565,13 @@ def serve_pid(pid):
             targets = get_targets(adc, req.canonical_pid)
         # end of views
         # not a special view, handle representations of targets
-        if extension=='csv':
+        if req.extension=='csv':
             adc_cols = req.parsed[ADC_COLS].split(' ')
             lines = targets2csv(targets,adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
-        if extension in ['html', 'htm']:
+        if req.extension in ['html', 'htm']:
             targets = list(targets)
             context, props = split_hdr(hdr)
             template = {
@@ -587,17 +587,17 @@ def serve_pid(pid):
             }
             print get_files(req.parsed)
             return template_response('bin.html', **template)
-        if extension=='json':
+        if req.extension=='json':
             if req.product=='short':
                 return Response(bin2json_short(req.canonical_pid,hdr,req.timestamp),mimetype=MIME_JSON)
             if req.product=='medium':
                 return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
             return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
-        if extension=='xml':
+        if req.extension=='xml':
             return Response(bin2xml(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
-        if extension=='rdf':
+        if req.extension=='rdf':
             return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
-        if extension=='zip':
+        if req.extension=='zip':
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
@@ -623,7 +623,6 @@ def scatter_json(targets,bin_pid,x_axis,y_axis):
 @app.route('/<time_series>/api/plot/<path:params>/pid/<path:pid>')
 def scatter(time_series,params,pid):
     req = DashboardRequest(pid, request)
-    # wait, so do we ignore the time series? FIXME
     params = parse_params(params, x='left', y='bottom')
     try:
         paths = get_fileset(req.parsed)
