@@ -8,24 +8,34 @@
     $.fn.extend({
 	mosaicPager: function(timeseries, pid, width, height) {
 	    var BIN_URL='mosaic_bin_url';
+	    var ROI_SCALE='mosaic_roi_scale';
 	    // pid - bin pid (or lid)
 	    // width -  the width  \__of the mosaic
 	    // height - the height / 
-	    var roi_scale = 0.33;
+	    var roiScales = [0.25, 0.33, 0.66, 1.0];
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
+		var roiScale = $this.data(ROI_SCALE);
 		$this.css('width',width+100)
 		    .css('height',height+20);
 		$this.siblings('.bin_view_controls')
 		    .find('.bin_view_specific_controls')
 		    .empty()
-		    .append('{mosaic controls}');
+		    .append('Scale: <span></span>')
+		    .find('span:last')
+		    .radio(roiScales, function(roiScale) {
+			return (roiScale * 100) + '%';
+		    }, roiScale).bind('select', function(event, value) {
+			console.log('selected roi scale '+value);
+			$this.data(ROI_SCALE, value);
+			$this.trigger('drawBinDisplay');
+		    });
 		// put 30 pages on the pager, just in case it's a huge bin
 		// FIXME somehow figure out how many pages there are re #1701
 		var images = [];
 		for(var page=1; page <= 30; page++) {
 		    // each page is a mosaic API call URL with a successive page number
-		    var url = '/'+timeseries+'/api/mosaic/size/'+width+'x'+height+'/scale/'+roi_scale+'/page/'+page+'/pid/'+pid+'.jpg';
+		    var url = '/'+timeseries+'/api/mosaic/size/'+width+'x'+height+'/scale/'+roiScale+'/page/'+page+'/pid/'+pid+'.jpg';
 		    images.push(url);
 		}
 		$.getJSON(pid+'_medium.json', function(r) {
