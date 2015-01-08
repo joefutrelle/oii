@@ -35,7 +35,14 @@
 		var images = [];
 		for(var page=1; page <= 30; page++) {
 		    // each page is a mosaic API call URL with a successive page number
-		    var url = '/'+timeseries+'/api/mosaic/size/'+width+'x'+height+'/scale/'+roiScale+'/page/'+page+'/pid/'+pid+'.jpg';
+		    var params = params2url({
+			'api': 'mosaic',
+			'size': width + 'x' + height,
+			'scale': roiScale,
+			'page': page,
+			'pid': pid + '.jpg'
+		    });
+		    var url = '/'+timeseries+params;
 		    images.push(url);
 		}
 		$.getJSON(pid+'_medium.json', function(r) {

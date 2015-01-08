@@ -46,7 +46,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     $this.siblings('.bin_view_controls')
 	.find('.bin_view_specific_controls')
 	.empty()
-	.append('Type: <span></span>') // plot type: linear / log
+	.append('<br>Type: <span></span>') // plot type: linear / log
 	.find('span:last')
 	.radio(plotTypes, function(plotType) {
 	    return plotType;
@@ -56,7 +56,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	});
     $this.siblings('.bin_view_controls')
 	.find('.bin_view_specific_controls')
-	.append('<br>X axis: <span></span>') // x axis
+	.append('X axis: <span></span>') // x axis
 	.find('span:last')
 	.radio(plotXs, function(plotX) {
 	    return plotX;
@@ -75,9 +75,10 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    $this.trigger('drawBinDisplay');
 	});
     $this.unbind('show_bin').bind('show_bin',function(event, bin_pid) {
-	var plotParams = '';
-	plotParams += '/x/' + plotX; 
-	plotParams += '/y/' + plotY;
+	var plotParams = params2url({
+	    'x': plotX,
+	    'y': plotY
+	});
 	var endpoint = endpointPfx + plotParams + endpointSfx + bin_pid;
 	var plot_options = $this.data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");

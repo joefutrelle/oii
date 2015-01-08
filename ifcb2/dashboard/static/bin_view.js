@@ -1,6 +1,6 @@
 (function($) {
     $.fn.extend({
-        resizableBinView: function(timeseries) {
+        resizableBinView: function(timeseries, viewParams) {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		var PID = 'data_rbv_pid';
