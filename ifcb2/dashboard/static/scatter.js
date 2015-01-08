@@ -44,7 +44,10 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    $this.trigger('drawBinDisplay');
 	});
     $this.unbind('show_bin').bind('show_bin',function(event, bin_pid) {
-	var endpoint = $this.data(ENDPOINT_PFX) + 'x/left/y/bottom' + $this.data(ENDPOINT_SFX) + bin_pid;
+	var plotParams = '';
+	plotParams += '/x/' + 'left'; // FIXME parameterize
+	plotParams += '/y/' + 'bottom'; // FIXME parameters
+	var endpoint = $this.data(ENDPOINT_PFX) + plotParams + $this.data(ENDPOINT_SFX) + bin_pid;
 	var plot_options = $this.data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");
 	$.getJSON(endpoint, function(r) {
@@ -57,7 +60,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		roi_pids.push(bin_pid + '_' + point.roi_num);
 	    });
 	    var plot_data = {
-		label: 'hello',
+		label: 'hello', // FIXME derive from axes
 		data: point_data,
 		color: "black",
 		points: {
