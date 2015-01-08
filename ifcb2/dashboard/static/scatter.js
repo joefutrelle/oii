@@ -29,7 +29,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	.find('.bin_view_specific_controls')
 	.empty()
 	.append('{plot controls}');
-    $(elt).bind('show_bin',function(event, bin_pid) {
+    $(elt).unbind('show_bin').bind('show_bin',function(event, bin_pid) {
 	var endpoint = $(elt).data(ENDPOINT_PFX) + 'x/left/y/bottom' + $(elt).data(ENDPOINT_SFX) + bin_pid;
 	var plot_options = $(elt).data(PLOT_OPTIONS);
 	console.log("Loading "+endpoint+"...");
@@ -107,6 +107,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		$this.css('width',width)
 		    .css('height',height);
 		scatter_setup($this, timeseries, pid, width, height);
+		console.log('triggering show_bin for scatter');
 		$this.trigger('show_bin',[pid]);
 	    });//each
 	}//scatter
