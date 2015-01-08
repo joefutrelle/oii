@@ -16,17 +16,17 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     if(plotType==undefined) {
 	plotType=plotTypes[0];
     }
-    var plotXs = ['left','foo'];
+    var plotXs = ['bottom','fluorescenceLow'];
     var plotX = $this.data(PLOT_X);
     if(plotX==undefined) {
 	plotX = plotXs[0];
     }
-    var plotYs = ['bottom','bar'];
+    var plotYs = ['left','scatteringLow'];
     var plotY = $this.data(PLOT_Y);
     if(plotY==undefined) {
 	plotY = plotYs[0];
     }
-    $this.data(PLOT_OPTIONS, {
+    var plotOptions = {
 	series: {
 	    points: {
 		show: true,
@@ -42,7 +42,20 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 	    mode: "xy",
 	    color: "red"
 	}
-    });
+    };
+    if(plotType=='log') {
+	var xf = {
+	    transform: function(v) {
+		return v == 0 ? v : Math.log(v);
+	    },
+	    inverseTransform: function(v) {
+		return Math.exp(v);
+	    }
+	};
+	plotOptions.xaxis = xf;
+	plotOptions.yaxis = xf;
+    }
+    $this.data(PLOT_OPTIONS, plotOptions);
     $this.siblings('.bin_view_controls')
 	.find('.bin_view_specific_controls')
 	.empty()
