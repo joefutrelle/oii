@@ -48,10 +48,6 @@
 		    var url = '/'+timeseries+params;
 		    images.push(url);
 		}
-		$.getJSON(pid+'_medium.json', function(r) {
-		    $this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
-		    $this.find('.imagepager_date').attr('title',r.date).timeago();
-		});
 		// list of images in hand, create the image pager
 		$this.empty().append('<div class="mosaic_pager_image_pager"></div>')
 		    .append('<div class="imagepager_paging">page <span class="imagepager_page_number"></span>, showing <span class="imagepager_rois_shown">?</span> of <span class="imagepager_rois_total">?</span> target(s)</div>')

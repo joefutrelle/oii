@@ -93,6 +93,11 @@
 			.append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
 			.append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a></span>')
 			.find('span').addClass('bin_label');
+		    // handle the total rois and timeago
+		    $.getJSON(pid+'_medium.json', function(r) {
+			$this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
+			$this.find('.imagepager_date').attr('title',r.date).timeago();
+		    });
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type
 		    var width = $this.data(WIDTH); // width of displayed view
