@@ -27,7 +27,8 @@
 		$.each(choices, function(ix, choice) {
 		    var label = choice[0];
 		    var value = choice[1];
-		    var checked = value == selected ? ' checked="checked"' : '';
+		    var isSelected = JSON.stringify(value) == JSON.stringify(selected);
+		    var checked = isSelected ? ' checked="checked"' : '';
 		    var id='jquery_radio_'+(seq++);
 		    $this.append('<input type="radio" name="'+name+'" id="'+id+'"'+checked+'><label for="'+id+'">'+label+'</label>')
 			.find('input:last')
