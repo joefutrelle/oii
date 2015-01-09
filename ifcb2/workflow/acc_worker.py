@@ -6,10 +6,11 @@ from oii.ifcb2.files import parsed_pid2fileset, get_data_roots
 from oii.ifcb2.acquisition import do_copy
 from oii.ifcb2.orm import Instrument
 
-from oii.workflow.client import WorkflowClient, isok
+from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
 from oii.ifcb2.accession import Accession
+from oii.ifcb2.workflow.zip_worker import BIN_ZIP_WAKEUP_KEY
 
 """
 Here's the deal.
@@ -41,13 +42,7 @@ def acc_wakeup(wakeup_key):
         return
     logging.warn('waking up for %s' % wakeup_key)
     # acquire accession jobs, one at a time
-    while True:
-        client.expire() # let jobs expire so we can reacquire them
-        r = client.start_next([ACCESSION_ROLE])
-        if not isok(r): # no more jobs
-            logging.warn('going back to sleep')
-            return
-        job = r.json()
+    for job in client.start_all([ACCESSION_ROLE]):
         pid = job[PID]
         client.update(pid,ttl=30) # a generous time allocation
         try:
@@ -65,8 +60,10 @@ def acc_wakeup(wakeup_key):
                 logging.warn('SUCCESS %s' % pid)
             else:
                 logging.warn('FAIL/SKIP %s' % pid)
-            client.update(pid, state='available', event='complete', message='accession completed',ttl=None)
             session.commit()
+            client.update(pid, state='available', event='complete', message='accession completed',ttl=None)
+            # now wake up zip worker
+            client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for' % pid)
             client.update(pid, state='error', event='exception', message=str(e))

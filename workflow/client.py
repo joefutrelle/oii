@@ -41,6 +41,15 @@ class WorkflowClient(object):
         if isinstance(roles,basestring):
             roles = [roles]
         return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
+    def start_all(self,roles,expire=True):
+        while True:
+            if expire:
+                self.expire()
+            r = self.start_next(roles)
+            if not isok(r):
+                return
+            job = r.json()
+            yield job
     def create(self,pid,**d):
         return requests.put(self.api('/create/%s' % pid), data=d)
     def update_if(self,pid, **d):
