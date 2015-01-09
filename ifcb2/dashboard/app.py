@@ -350,7 +350,7 @@ def view_metric(ts_label,metric):
             'metric': metric,
             'y_label': metric
         }
-        return template_response('step_graph.html',**tmpl)
+        return template_response('instrument.html',**tmpl)
 
 @app.route('/<ts_label>/trigger_rate.html')
 def view_trigger_rate(ts_label):
