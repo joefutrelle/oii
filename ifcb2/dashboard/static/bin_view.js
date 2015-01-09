@@ -35,7 +35,7 @@
 			$this.data(VIEW_TYPE, value);
 			$this.trigger('drawBinDisplay');
 			pageChanged(1);
-		    }).trigger('select',[viewType]);
+		    }).trigger('select',[viewType]); // allow view type to build itself
 		// add view size controls
 		$this.find('.bin_view_controls')
 		    .append('View size: <span></span>')
@@ -45,11 +45,10 @@
 		    }, viewSize).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
-			console.log("new width and height="+[width,height]);
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .trigger('drawBinDisplay');
 			pageChanged(1);
-		    }).trigger('select',[viewSize]);
+		    });
 		// add view-type-specific controls
 		$this.find('.bin_view_controls')
 		    .append('<span class="bin_view_specific_controls"></span>')
