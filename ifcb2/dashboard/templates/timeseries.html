@@ -24,7 +24,7 @@ $(document).ready(function() {
   <div id="title_content">
     <div class="title">{{title|safe}}</div>
     <div class="dashboard_links">
-      <span>View metrics:
+      <span>View <a href="{{base_url}}{{time_series}}/metrics.html">metrics</a>:
       {% for m in all_metrics %}
         <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
       {% endfor %}
