@@ -39,7 +39,6 @@ from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
 from oii.rbac.security import roles_required
 
-
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
 
@@ -52,6 +51,7 @@ from oii.ifcb2.formats.hdr import parse_hdr_file
 from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP, TIMESTAMP_FORMAT, PRODUCT
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
+from oii.ifcb2 import v1_stitching
 
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
@@ -474,7 +474,8 @@ def get_target_metadata(target):
         pass # it's OK, this target isn't stitched
     return target
 
-def get_target_image(target, path=None, file=None, raw_stitch=True):
+def get_target_image(target, path=None, file=None, raw_stitch=False):
+    # FIXME read from stored bin zip file
     if PAIR in target:
         (a,b) = target[PAIR]
         a_image = read_target_image(a, path=path, file=file)
@@ -482,7 +483,8 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
         if raw_stitch:
             return stitch_raw((a,b),(a_image,b_image))
         else:
-            return stitch_raw((a,b),(a_image,b_image)) # FIXME full stitch
+            im,_ = v1_stitching.stitch((a,b),(a_image,b_image))
+            return im
     else:
         return read_target_image(target, path=path, file=file)
 
