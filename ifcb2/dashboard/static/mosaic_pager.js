@@ -16,6 +16,9 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		var roiScale = $this.data(ROI_SCALE);
+		if(roiScale==undefined) {
+		    roiScale=0.33;
+		}
 		$this.css('width',width+100)
 		    .css('height',height+20);
 		$this.siblings('.bin_view_controls')

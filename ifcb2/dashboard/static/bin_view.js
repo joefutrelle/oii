@@ -7,23 +7,18 @@
 		var VIEW_TYPE = 'data_rbv_view_type';
 		var WIDTH = 'data_rbv_view_width';
 		var HEIGHT = 'data_rbv_view_height';
+		// initialization
 		var view_types = ['mosaic','plot'];
 		var view_sizes = [[640,480], [800,600], [1280,720], [1280,1280]];
-		var viewType;
-		var viewSize;
+		// FIXME initialize from view params
+		var viewType = 'mosaic';
+		var viewSize = [800,600];
+		$this.data(WIDTH,viewSize[0]);
+		$this.data(HEIGHT,viewSize[1]);
 		function pageChanged(pageNumber) {
 		    pageNumber == pageNumber ? pageNumber : 1;
 		}
-		$.each(view_types, function(ix, typ) {
-		    if(typ = $this.data(VIEW_TYPE)) {
-			viewType = typ;
-		    }
-		});
-		$.each(view_sizes, function(ix, size) {
-		    if(size[0] == $this.data(WIDTH) && size[1] == $this.data(HEIGHT)) {
-			viewSize = size;
-		    }
-		});
+		// add next / previous controls
 		$this.append('<div class="bin_view_next_prev"></div>')
 		$this.find('.bin_view_next_prev')
 		    .append('<span class="controlGray biggerText previousBin">&#x25C0; Previous</span>')
@@ -40,7 +35,7 @@
 			$this.data(VIEW_TYPE, value);
 			$this.trigger('drawBinDisplay');
 			pageChanged(1);
-		    });
+		    }).trigger('select',[viewType]);
 		// add view size controls
 		$this.find('.bin_view_controls')
 		    .append('View size: <span></span>')
@@ -50,15 +45,14 @@
 		    }, viewSize).bind('select', function(event, value) {
 			var width = value[0];
 			var height = value[1];
-			console.log("new width and height");
+			console.log("new width and height="+[width,height]);
 			$this.data(WIDTH, width).data(HEIGHT, height)
 			    .trigger('drawBinDisplay');
 			pageChanged(1);
-		    });
-		// view-type-specific controls
+		    }).trigger('select',[viewSize]);
+		// add view-type-specific controls
 		$this.find('.bin_view_controls')
 		    .append('<span class="bin_view_specific_controls"></span>')
-		// on redraw
 		// now add the bin display
 		$this.append('<div class="bin_display"></div><div class="bin_links"></div>').find('.bin_display')
 		    .css('float','left');
@@ -75,6 +69,7 @@
 			    $this.trigger('goto_bin', [r[0].pid]);
 			});
 		    });
+		// draw bin event handler
 		$this.bind('drawBinDisplay', function(event, the_pid) { 
 		    // if the_pid is undefined, use whatever the pid was set to before
 		    var pid = the_pid == undefined ? $this.data(PID) : the_pid;
