@@ -5,7 +5,7 @@ including workers for
 
 WILD_PRODUCT='wild'
 RAW_PRODUCT='raw'
-BIN_ZIP_PRODUCT='bin_zip'
+BIN_ZIP_PRODUCT='binzip'
 ACCESSION_ROLE='accession'
 
-BIN_ZIP_ROLE='bin_zip'
+BIN_ZIP_ROLE='binzip'

@@ -72,12 +72,15 @@ def acq_wakeup(wakeup_key):
     # attempt to acquire mutex. if fails, that's fine,
     # that means acquisition is aready underway
     try:
-        with Mutex(acq_key) as mutex:
+        with Mutex(acq_key,ttl=45) as mutex:
             # get the instrument info
             session.expire_all() # don't be stale!
             instrument = session.query(Instrument).\
                          filter(Instrument.name==instrument_name).\
                          first()
+            if instrument is None:
+                logging.warn('ERROR cannot find instrument named "%s"' % instrument_name)
+                return
             ts_label = instrument.time_series.label
             logging.warn('%s: starting acquisition cycle' % instrument_name)
             def callback(lid):

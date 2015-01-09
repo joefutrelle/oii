@@ -6,6 +6,7 @@ from oii.ifcb2.files import parsed_pid2fileset, get_data_roots
 from oii.ifcb2.acquisition import do_copy
 from oii.ifcb2.orm import Instrument
 
+from oii.workflow import FOREVER
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
@@ -60,11 +61,18 @@ def acc_wakeup(wakeup_key):
                 logging.warn('SUCCESS %s' % pid)
             else:
                 logging.warn('FAIL/SKIP %s' % pid)
+                raise Exception('FAIL/SKIP %s' % pid)
             session.commit()
-            client.update(pid, state='available', event='complete', message='accession completed',ttl=None)
+            client.update(
+                pid,
+                state='available',
+                event='complete',
+                message='accession completed',
+                ttl=FOREVER)
             # now wake up zip worker
             client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for' % pid)
             client.update(pid, state='error', event='exception', message=str(e))
             # continue to next job
+    logging.warn('no more accession jobs found, sleeping')
