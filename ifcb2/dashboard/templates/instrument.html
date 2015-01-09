@@ -1,9 +1,12 @@
 {% extends "master.html" %}
 <!--
-this Jinja template takes the following params:
-- {{endpoint}} - a JSON endpoint that returns "date" ISO8601 against some other metric
-- {{metric}} - the JSON dict key of the metric
-- {{y_label}} - what to label the y axis
+this Jinja template takes the following params;
+- {{static}} - location of static content
+- {{timeseries}} - name of time series (for display only)
+- {{metrics}} - a list of metrics each of which has the following properties:
+-   {{endpoint}} - a JSON endpoint that returns "date" ISO8601 against some other metric
+-   {{metric}} - the JSON dict key of the metric
+-   {{y_label}} - what to label the y axis
 -->
 {% block title %}{{y_label}}{% endblock %}
 {% block head %}
@@ -11,14 +14,15 @@ this Jinja template takes the following params:
  <script type="text/javascript" src="{{static}}metrics.js"></script>
 <script type="text/javascript">
 $(document).ready(function() {
-  $.getJSON('{{endpoint}}', function(r) {
-    $('#metric').metric(r,'{{metric}}','{{y_label}}');
-  });
+  {% for m in metrics %}$.getJSON('{{ m['endpoint'] }}', function(r) {
+      $('#in_content').append('<div id="metric_view" class="major inline" style="width:512px"><h2>{{ timeseries }} {{ m['y_label'] }}</h2><div class="metric" style="width:512px; height:480px"></div></div>').find('.metric:last').metric(r,'{{ m['metric'] }}','{{ m['y_label'] }}');
+    });
+  {% endfor %}
 });
 </script>
 {% endblock %}
 {% block content %}
- <div id="metric_view" class="major">
-   <div id="metric" style="width:640px; height:480px"></div>
+ <div id="in_content">
  </div>
 {% endblock %}
+

@@ -14,6 +14,7 @@
 		    series.push([d, dm[key]]);
 		});
 		$.plot($this,[series],{
+		    colors: [ '#ff0000' ],
 		    xaxis: {
 			mode: 'time',
 			timeformat: '%y-%m-%d %H:%M',

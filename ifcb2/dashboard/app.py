@@ -338,7 +338,7 @@ def humidity(ts_label,start=None,end=None,s=None):
 ## metric views ##
 
 # FIXME configurable time range
-def view_metric(ts_label,metric):
+def view_metrics(ts_label,metrics):
     with Feed(session, ts_label) as feed:
         # FIXME configurable time range
         for b in feed.latest():
@@ -346,23 +346,33 @@ def view_metric(ts_label,metric):
         then = iso8601(b.sample_time.timetuple())
         tmpl = {
             'static': STATIC,
-            'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
-            'metric': metric,
-            'y_label': metric
+            'timeseries': ts_label,
+            'metrics': [{
+                'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
+                'metric': metric,
+                'y_label': metric
+            } for metric in metrics]
         }
         return template_response('instrument.html',**tmpl)
 
 @app.route('/<ts_label>/trigger_rate.html')
 def view_trigger_rate(ts_label):
-    return view_metric(ts_label,'trigger_rate')
+    return view_metrics(ts_label,['trigger_rate'])
 
 @app.route('/<ts_label>/temperature.html')
 def view_temperature(ts_label):
-    return view_metric(ts_label,'temperature')
+    return view_metrics(ts_label,['temperature'])
 
 @app.route('/<ts_label>/humidity.html')
 def view_humidity(ts_label):
-    return view_metric(ts_label,'humidity')
+    return view_metrics(ts_label,['humidity'])
+
+@app.route('/<ts_label>/metrics.html')
+def view_all_metrics(ts_label):
+    return view_metrics(ts_label,[
+        'trigger_rate',
+        'temperature',
+        'humidity'])
 
 ### feed ####
 
