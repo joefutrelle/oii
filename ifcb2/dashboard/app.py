@@ -476,7 +476,137 @@ def get_target_image(target, path=None, file=None, raw_stitch=True):
     else:
         return read_target_image(target, path=path, file=file)
 
+class DashboardRequest(object):
+    def __init__(self, pid, request=None):
+        try:
+            self.parsed = parse_pid(pid)
+        except StopIteration:
+            abort(404)
+        self.time_series = self.parsed['ts_label']
+        self.bin_lid = self.parsed['bin_lid']
+        self.lid = self.parsed[LID]
+        self.schema_version = self.parsed[SCHEMA_VERSION]
+        if request is not None:
+            self.url_root = request.url_root
+        self.canonical_pid = canonicalize(self.url_root, self.time_series, self.lid)
+        self.extension = 'json' # default
+        if 'extension' in self.parsed:
+            self.extension = self.parsed['extension']
+        self.timestamp = get_timestamp(self.parsed)
+        self.product = self.parsed[PRODUCT]
+
+@app.route('/<path:pid>')
+def serve_pid(pid):
+    req = DashboardRequest(pid, request)
+    try:
+        paths = get_fileset(req.parsed)
+    except NotFound:
+        abort(404)
+    hdr_path = paths['hdr_path']
+    adc_path = paths['adc_path']
+    roi_path = paths['roi_path']
+    adc = Adc(adc_path, req.schema_version)
+    heft = 'full' # heft is either short, medium, or full
+    if 'extension' in req.parsed:
+        extension = req.parsed['extension']
+    if 'target' in req.parsed:
+        canonical_bin_pid = canonicalize(req.url_root, req.time_series, req.bin_lid)
+        target_no = int(req.parsed['target'])
+        # pull three targets, then find any stitched pair
+        targets = adc.get_some_targets(target_no-1, 3)
+        targets = list_stitched_targets(targets)
+        for t in targets:
+            if t[TARGET_NUMBER] == target_no:
+                target = t
+        add_pid(target, canonical_bin_pid)
+        if extension == 'json':
+            return Response(json.dumps(target),mimetype=MIME_JSON)
+        # not JSON, check for image
+        mimetype = mimetypes.types_map['.' + extension]
+        if mimetype.startswith('image/'):
+            if req.product=='raw':
+                img = get_target_image(target, roi_path)
+                return Response(as_bytes(img,mimetype),mimetype=mimetype)
+            if req.product=='blob':
+                return serve_blob_image(req.parsed, mimetype)
+            if req.product=='blob_outline':
+                img = get_target_image(target, roi_path)
+                return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
+        # not an image, so remove stitching information from metadata
+        target = get_target_metadata(target)
+        # more metadata representations. we'll need the header
+        hdr = parse_hdr_file(hdr_path)
+        if extension == 'xml':
+            return Response(target2xml(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+        if extension == 'rdf':
+            return Response(target2rdf(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+        if extension in ['html', 'htm']:
+            template = {
+                'static': STATIC,
+                'target_pid': req.canonical_pid,
+                'bin_pid': canonical_bin_pid,
+                'properties': target,
+                'target': target.items(), # FIXME use order_keys
+                'date': req.timestamp
+            }
+            return template_response('target.html',**template)
+    else: # bin
+        if req.extension in ['hdr', 'adc', 'roi']:
+            path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[req.extension]
+            mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[req.extension]
+            return Response(file(path), direct_passthrough=True, mimetype=mimetype)
+        if req.product=='blob':
+            return serve_blob_bin(req.parsed)
+        if req.product=='features':
+            return serve_features_bin(req.parsed)
+        # gonna need targets unless heft is medium or below
+        targets = []
+        if req.product != 'short':
+            targets = get_targets(adc, req.canonical_pid)
+        # end of views
+        # not a special view, handle representations of targets
+        if req.extension=='csv':
+            adc_cols = req.parsed[ADC_COLS].split(' ')
+            lines = targets2csv(targets,adc_cols)
+            return Response('\n'.join(lines)+'\n',mimetype='text/csv')
+        # we'll need the header for the other representations
+        hdr = parse_hdr_file(hdr_path)
+        if req.extension in ['html', 'htm']:
+            targets = list(targets)
+            context, props = split_hdr(hdr)
+            template = {
+                'static': STATIC,
+                'bin_pid': req.canonical_pid,
+                'time_series': req.time_series,
+                'context': context,
+                'properties': props,
+                'targets': targets,
+                'target_pids': [t['pid'] for t in targets],
+                'date': req.timestamp,
+                'files': get_files(req.parsed,check=True) # note: ORM call!
+            }
+            print get_files(req.parsed)
+            return template_response('bin.html', **template)
+        if req.extension=='json':
+            if req.product=='short':
+                return Response(bin2json_short(req.canonical_pid,hdr,req.timestamp),mimetype=MIME_JSON)
+            if req.product=='medium':
+                return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
+            return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
+        if req.extension=='xml':
+            return Response(bin2xml(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
+        if req.extension=='rdf':
+            return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
+        if req.extension=='zip':
+            buffer = BytesIO()
+            bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
+            return Response(buffer.getvalue(), mimetype='application/zip')
+    return 'unimplemented'
+
+#### scatterplots ####
+
 def scatter_json(targets,bin_pid,x_axis,y_axis):
+    # FIXME need a way to map between generic cols and schema-dependent cols
     points = [{
         'roi_num': re.sub(r'.*_','',t[PID]), # strip prefix
         'x': t[x_axis],
@@ -490,145 +620,24 @@ def scatter_json(targets,bin_pid,x_axis,y_axis):
     }
     return Response(json.dumps(d), mimetype=MIME_JSON)
 
-@app.route('/<path:pid>')
-def hello_world(pid):
+@app.route('/<time_series>/api/plot/<path:params>/pid/<path:pid>')
+def scatter(time_series,params,pid):
+    req = DashboardRequest(pid, request)
+    params = parse_params(params, x='left', y='bottom')
     try:
-        parsed = parse_pid(pid)
-    except StopIteration:
-        abort(404)
-    time_series = parsed['ts_label']
-    bin_lid = parsed['bin_lid']
-    lid = parsed[LID]
-    url_root = request.url_root
-    canonical_pid = canonicalize(url_root, time_series, lid)
-    schema_version = parsed[SCHEMA_VERSION]
-    try:
-        paths = get_fileset(parsed)
+        paths = get_fileset(req.parsed)
     except NotFound:
         abort(404)
-    hdr_path = paths['hdr_path']
     adc_path = paths['adc_path']
-    roi_path = paths['roi_path']
-    adc = Adc(adc_path, schema_version)
-    extension = 'json' # default
-    product = parsed[PRODUCT]
-    heft = 'full' # heft is either short, medium, or full
-    if 'extension' in parsed:
-        extension = parsed['extension']
-    timestamp = get_timestamp(parsed)
-    if 'target' in parsed:
-        canonical_bin_pid = canonicalize(url_root, time_series, bin_lid)
-        target_no = int(parsed['target'])
-        # pull three targets, then find any stitched pair
-        targets = adc.get_some_targets(target_no-1, 3)
-        targets = list_stitched_targets(targets)
-        for t in targets:
-            if t[TARGET_NUMBER] == target_no:
-                target = t
-        add_pid(target, canonical_bin_pid)
-        if extension == 'json':
-            return Response(json.dumps(target),mimetype=MIME_JSON)
-        # not JSON, check for image
-        mimetype = mimetypes.types_map['.' + extension]
-        if mimetype.startswith('image/'):
-            if product=='raw':
-                img = get_target_image(target, roi_path)
-                return Response(as_bytes(img,mimetype),mimetype=mimetype)
-            if product=='blob':
-                return serve_blob_image(parsed, mimetype)
-            if product=='blob_outline':
-                img = get_target_image(target, roi_path)
-                return serve_blob_image(parsed, mimetype, outline=True, target_img=img)
-        # not an image, so remove stitching information from metadata
-        target = get_target_metadata(target)
-        # more metadata representations. we'll need the header
-        hdr = parse_hdr_file(hdr_path)
-        if extension == 'xml':
-            return Response(target2xml(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
-        if extension == 'rdf':
-            return Response(target2rdf(canonical_pid, target, timestamp, canonical_bin_pid), mimetype='text/xml')
-        if extension in ['html', 'htm']:
-            template = {
-                'static': STATIC,
-                'target_pid': canonical_pid,
-                'bin_pid': canonical_bin_pid,
-                'properties': target,
-                'target': target.items(), # FIXME use order_keys
-                'date': timestamp
-            }
-            return template_response('target.html',**template)
-    else: # bin
-        if extension in ['hdr', 'adc', 'roi']:
-            path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[extension]
-            mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[extension]
-            return Response(file(path), direct_passthrough=True, mimetype=mimetype)
-        if product=='blob':
-            return serve_blob_bin(parsed)
-        if product=='features':
-            return serve_features_bin(parsed)
-        # gonna need targets unless heft is medium or below
-        targets = []
-        if product != 'short':
-            targets = get_targets(adc, canonical_pid)
-        # handle some target views other than the standard ones
-        if product=='xy': # a view, more than a product
-            if extension=='json':
-                return scatter_json(targets,canonical_pid,'left','bottom')
-            abort(404)
-        if product=='fs': # another scatter view
-            # f/s for schema version v1 is fluorescenceLow / scatteringLow
-            if schema_version=='v1':
-                f_axis, s_axis = 'fluorescenceLow', 'scatteringLow'
-            else:
-                f_axis, s_axis = 'pmtA', 'pmtB'
-            if extension=='json':
-                return scatter_json(targets,canonical_pid,f_axis,s_axis)
-            abort(404)
-        # end of views
-        # not a special view, handle representations of targets
-        if extension=='csv':
-            adc_cols = parsed[ADC_COLS].split(' ')
-            lines = targets2csv(targets,adc_cols)
-            return Response('\n'.join(lines)+'\n',mimetype='text/csv')
-        # we'll need the header for the other representations
-        hdr = parse_hdr_file(hdr_path)
-        # and the timestamp
-        timestamp = iso8601(strptime(parsed['timestamp'], parsed['timestamp_format']))
-        if extension in ['html', 'htm']:
-            targets = list(targets)
-            context, props = split_hdr(hdr)
-            template = {
-                'static': STATIC,
-                'bin_pid': canonical_pid,
-                'time_series': time_series,
-                'context': context,
-                'properties': props,
-                'targets': targets,
-                'target_pids': [t['pid'] for t in targets],
-                'date': timestamp,
-                'files': get_files(parsed,check=True) # note: ORM call!
-            }
-            print get_files(parsed)
-            return template_response('bin.html', **template)
-        if extension=='json':
-            if product=='short':
-                return Response(bin2json_short(canonical_pid,hdr,timestamp),mimetype=MIME_JSON)
-            if product=='medium':
-                return Response(bin2json_medium(canonical_pid,hdr,targets,timestamp),mimetype=MIME_JSON)
-            return Response(bin2json(canonical_pid,hdr,targets,timestamp),mimetype=MIME_JSON)
-        if extension=='xml':
-            return Response(bin2xml(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
-        if extension=='rdf':
-            return Response(bin2rdf(canonical_pid,hdr,targets,timestamp),mimetype='text/xml')
-        if extension=='zip':
-            buffer = BytesIO()
-            bin2zip(parsed,canonical_pid,targets,hdr,timestamp,roi_path,buffer)
-            return Response(buffer.getvalue(), mimetype='application/zip')
-    return 'unimplemented'
+    adc = Adc(adc_path, req.schema_version)
+    targets = get_targets(adc, req.canonical_pid)
+    # handle some target views other than the standard ones
+    if req.extension=='json':
+        return scatter_json(targets,req.canonical_pid,params['x'],params['y'])
+    abort(404)
 
 #### mosaics #####
 
-@memoize
 def get_sorted_tiles(adc_path, schema_version, bin_pid):
     # read ADC and convert to Tiles in size-descending order
     def descending_size(t):
@@ -640,7 +649,6 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
     tiles.sort(key=descending_size)
     return tiles
 
-@memoize
 def get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page):
     tiles = get_sorted_tiles(adc_path, schema_version, bin_pid)
     # perform layout operation
@@ -653,6 +661,14 @@ def layout2json(layout, scale):
         (x,y) = t.position
         yield dict(pid=t.image['pid'], width=int(w*scale), height=int(h*scale), x=int(x*scale), y=int(y*scale))
 
+def parse_mosaic_params(params):
+    SIZE, SCALE, PAGE = 'size', 'scale', 'page'
+    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
+    size = tuple(map(int,re.split('x',params[SIZE])))
+    scale = float(params[SCALE])
+    page = int(params[PAGE])
+    return (size, scale, page)
+
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
@@ -662,12 +678,8 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     - page (1) - page. for typical image sizes the entire bin does not fit and so is split into pages.
     - scale - scaling factor for image dimensions """
     # parse params
-    SIZE, SCALE, PAGE = 'size', 'scale', 'page'
-    params = parse_params(params, size='1024x1024',page=1,scale=1.0)
-    (w,h) = tuple(map(int,re.split('x',params[SIZE])))
-    scale = float(params[SCALE])
-    page = int(params[PAGE])
-    # parse pid/lid
+    size, scale, page = parse_mosaic_params(params)
+    (w,h) = size
     parsed = parse_pid(pid)
     schema_version = parsed['schema_version']
     try:
