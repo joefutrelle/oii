@@ -12,6 +12,9 @@ from oii.ifcb2.identifiers import PID
 from oii.ifcb2.formats.adc import TARGET_NUMBER
 from oii.ifcb2.image import read_target_image
 
+from oii.ifcb2.stitching import STITCHED, PAIR
+from oii.ifcb2.v1_stitching import stitch
+
 def targets2csv(targets,schema_cols,headers=True):
     """Given targets, produce a CSV representation in the specified schema;
     targets should have had binID and pid added to them (see oii.ifcb2.identifiers)"""
@@ -115,7 +118,11 @@ def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
         z.writestr(bin_lid + '.xml', xml_out)
         with open(roi_path,'rb') as roi_file:
             for target in targets:
-                im = read_target_image(target, file=roi_file)
+                if STITCHED in target and target[STITCHED] != 0:
+                    subRois = [read_target_image(t,file=roi_file) for t in target[PAIR]]
+                    im,_ = stitch(target[PAIR], subRois)
+                else:
+                    im = read_target_image(target, file=roi_file)
                 target_lid = os.path.basename(target['pid'])
                 z.writestr(target_lid + '.png', as_bytes(im, mimetype='image/png'))
         z.close()
