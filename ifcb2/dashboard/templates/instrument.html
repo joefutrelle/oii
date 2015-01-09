@@ -1,0 +1,24 @@
+{% extends "master.html" %}
+<!--
+this Jinja template takes the following params:
+- {{endpoint}} - a JSON endpoint that returns "date" ISO8601 against some other metric
+- {{metric}} - the JSON dict key of the metric
+- {{y_label}} - what to label the y axis
+-->
+{% block title %}{{y_label}}{% endblock %}
+{% block head %}
+ {{ super() }}
+ <script type="text/javascript" src="{{static}}metrics.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+  $.getJSON('{{endpoint}}', function(r) {
+    $('#metric').metric(r,'{{metric}}','{{y_label}}');
+  });
+});
+</script>
+{% endblock %}
+{% block content %}
+ <div id="metric_view" class="major">
+   <div id="metric" style="width:640px; height:480px"></div>
+ </div>
+{% endblock %}
