@@ -242,5 +242,4 @@ class Products(object):
             p.changed('expired', new_state)
             n += 1
         self.session.commit()
-        print '%d products expired' % n # FIXME debug
         return n

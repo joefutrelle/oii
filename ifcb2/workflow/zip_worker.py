@@ -1,7 +1,7 @@
 import logging
 
 from oii.ifcb2 import PID, LID, TS_LABEL
-from oii.ifcb2.workflow import BIN_ZIP_ROLE
+from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_WAKEUP_KEY
 
 from oii.workflow import FOREVER
 from oii.workflow.client import WorkflowClient
@@ -12,9 +12,7 @@ from oii.workflow.async import async, wakeup_task
 
 client = WorkflowClient()
 
-BIN_ZIP_WAKEUP_KEY='ifcb:binzip'
-
-#@wakeup_task
+@wakeup_task
 def bin_zip_wakeup(wakeup_key):
     if wakeup_key != BIN_ZIP_WAKEUP_KEY:
         logging.warn('BINZIP ignoring %s, sleeping' % wakeup_key)

@@ -10,8 +10,8 @@ from oii.workflow import FOREVER
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
+from oii.ifcb2.workflow import ACC_WAKEUP_KEY, BIN_ZIP_WAKEUP_KEY
 from oii.ifcb2.accession import Accession
-from oii.ifcb2.workflow.zip_worker import BIN_ZIP_WAKEUP_KEY
 
 """
 Here's the deal.
@@ -29,8 +29,6 @@ Scheduled task:
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-
-ACC_WAKEUP_KEY='ifcb:accession'
 
 @wakeup_task
 def acc_wakeup(wakeup_key):

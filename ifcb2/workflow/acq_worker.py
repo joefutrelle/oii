@@ -7,9 +7,8 @@ from oii.ifcb2.orm import Instrument
 from oii.workflow.client import WorkflowClient, Mutex, Busy
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
-from oii.ifcb2.workflow.acc_worker import ACC_WAKEUP_KEY
 from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_PRODUCT
-from oii.ifcb2.workflow.zip_worker import BIN_ZIP_WAKEUP_KEY
+from oii.ifcb2.workflow import ACC_WAKEUP_KEY, BIN_ZIP_WAKEUP_KEY
 
 """
 Here's the deal.
