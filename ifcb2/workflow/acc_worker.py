@@ -39,13 +39,12 @@ def acc_wakeup(wakeup_key):
     """
     # figure out if this wakeup matters to us
     if wakeup_key != ACC_WAKEUP_KEY:
-        logging.warn('ignoring %s, sleeping' % wakeup_key)
+        logging.warn('ACCESSION ignoring %s, sleeping' % wakeup_key)
         return
-    logging.warn('waking up for %s' % wakeup_key)
+    logging.warn('ACCESSION waking up for %s' % wakeup_key)
     # acquire accession jobs, one at a time
     for job in client.start_all([ACCESSION_ROLE]):
         pid = job[PID]
-        client.update(pid,ttl=30) # a generous time allocation
         try:
             parsed = parse_pid(pid)
             lid = parsed[LID]
@@ -56,13 +55,15 @@ def acc_wakeup(wakeup_key):
             session.expire_all() # don't be stale!
             acc = Accession(session,ts_label)
             logging.warn('ACCESSION %s' % pid)
+            #client.update(pid,ttl=30) # allow 30s for accession
             ret = acc.add_fileset(fileset)
             if ret:
                 logging.warn('SUCCESS %s' % pid)
             else:
-                logging.warn('FAIL/SKIP %s' % pid)
-                raise Exception('FAIL/SKIP %s' % pid)
+                logging.warn('FAIL %s' % pid)
+                raise Exception('accession failed')
             session.commit()
+            # set product state in workflow
             client.update(
                 pid,
                 state='available',
@@ -72,7 +73,12 @@ def acc_wakeup(wakeup_key):
             # now wake up zip worker
             client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
-            logging.warn('ERROR during accession for' % pid)
-            client.update(pid, state='error', event='exception', message=str(e))
+            logging.warn('ERROR during accession for %s' % pid)
+            client.update(
+                pid,
+                state='error',
+                event='exception',
+                message=str(e),
+                ttl=FOREVER)
             # continue to next job
     logging.warn('no more accession jobs found, sleeping')

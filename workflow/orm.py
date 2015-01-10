@@ -235,10 +235,12 @@ class Products(object):
         now = utcdtnow()
         n = 0
         for p in self.session.query(Product).\
+            filter(and_(Product.ttl.isnot(None),Product.ttl!=FOREVER)).\
             filter(Product.expires.isnot(None)).\
             filter(now > Product.expires).\
             with_lockmode('update'):
             p.changed('expired', new_state)
             n += 1
         self.session.commit()
+        print '%d products expired' % n # FIXME debug
         return n
