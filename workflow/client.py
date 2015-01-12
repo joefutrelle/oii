@@ -61,8 +61,12 @@ class WorkflowClient(object):
     def delete_tree(self,pid):
         return requests.delete(self.api('/delete_tree/%s' % pid))
     def update(self,pid, **d):
-        """d can contain STATE, EVENT, MESSAGE"""
+        """d can contain STATE, EVENT, MESSAGE, TTL"""
         return requests.patch(self.api('/update/%s' % pid), data=d)
+    def complete(self,pid,**d):
+        """like update but sets TTL to FOREVER.
+        d can contain STATE, EVENT, MESSAGE"""
+        self.update(pid,**dict(d.items(),TTL=FOREVER))
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)

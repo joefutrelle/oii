@@ -62,21 +62,19 @@ def acc_wakeup(wakeup_key):
                 raise Exception('accession failed')
             session.commit()
             # set product state in workflow
-            client.update(
+            client.complete(
                 pid,
                 state='available',
                 event='complete',
-                message='accession completed',
-                ttl=FOREVER)
+                message='accession completed')
             # now wake up zip worker
             client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for %s' % pid)
-            client.update(
+            client.complete(
                 pid,
                 state='error',
                 event='exception',
-                message=str(e),
-                ttl=FOREVER)
+                message=str(e))
             # continue to next job
     logging.warn('no more accession jobs found, sleeping')

@@ -107,6 +107,13 @@ def bin2json(pid,hdr,targets,timestamp):
     return json.dumps(bin2dict(pid,hdr,targets,timestamp))
 
 def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
+    """parsed_pid - result of parsing pid
+    canonical_pid - canonicalized with URL prefix
+    targets - list of (stitched) targets
+    hdr - result of parsing header file
+    timestamp - timestamp (FIXME in what format?)
+    roi_path - path to ROI file
+    outfile - where to write resulting zip file"""
     bin_lid = parsed_pid['bin_lid']
     adc_cols = parsed_pid['adc_cols'].split(' ')
     targets = list(targets)
