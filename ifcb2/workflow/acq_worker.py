@@ -35,6 +35,9 @@ from oii.ifcb2.session import session
 
 client = WorkflowClient()
 instrument_name='mock'
+URL_PREFIX='http://128.128.14.19:8080/'
+
+### end FIXME
 
 def get_acq_key(instrument_name):
     """given an instrument name, return the acquisition key"""
@@ -86,7 +89,7 @@ def acq_wakeup(wakeup_key):
                 logging.warn('%s: copied %s from %s' % (ts_label, lid, instrument_name))
                 mutex.heartbeat() # still alive
                 # schedule an accession job and wake up accession workers
-                pid = '%s/%s' % (ts_label, lid)
+                pid = '%s%s/%s' % (URL_PREFIX, ts_label, lid)
                 schedule_accession(client,pid)
                 client.wakeup(ACC_WAKEUP_KEY) # wake up accession workers
                 logging.warn('%s: scheduled accession for %s' % (ts_label, lid))

@@ -53,7 +53,7 @@ def acc_wakeup(wakeup_key):
             session.expire_all() # don't be stale!
             acc = Accession(session,ts_label)
             logging.warn('ACCESSION %s' % pid)
-            #client.update(pid,ttl=30) # allow 30s for accession
+            client.update(pid,ttl=30) # allow 30s for accession
             ret = acc.add_fileset(fileset)
             if ret:
                 logging.warn('SUCCESS %s' % pid)
@@ -67,7 +67,6 @@ def acc_wakeup(wakeup_key):
                 state='available',
                 event='complete',
                 message='accession completed')
-            # now wake up zip worker
             client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for %s' % pid)

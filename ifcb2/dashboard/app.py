@@ -5,6 +5,8 @@ from time import strptime
 from io import BytesIO
 import re
 import PIL
+import shutil
+from oii.utils import gen_id
 from array import array
 from zipfile import ZipFile
 from lxml import html
@@ -507,7 +509,7 @@ class DashboardRequest(object):
         self.timestamp = get_timestamp(self.parsed)
         self.product = self.parsed[PRODUCT]
 
-@app.route('/<path:pid>')
+@app.route('/<path:pid>',methods=['GET'])
 def serve_pid(pid):
     req = DashboardRequest(pid, request)
     try:
@@ -614,6 +616,31 @@ def serve_pid(pid):
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
     return 'unimplemented'
+
+####### deposit ########
+
+@app.route('/<path:pid>',methods=['PUT'])
+def deposit(pid):
+    req = DashboardRequest(pid, request)
+    destpath = files.get_product_destination(session, pid)
+    product_data = request.data
+    destpath_part = '%s_%s.part' % (destpath, gen_id())
+    try:
+        os.makedirs(os.path.dirname(destpath))
+    except:
+        pass
+    with open(destpath_part,'w') as out:
+        shutil.copyfileobj(StringIO(product_data), out)
+    os.rename(destpath_part, destpath)
+    utcnow = iso8601()
+    message = '%s wrote %d bytes to %s' % (utcnow, len(product_data), destpath)
+    return Response(json.dumps(dict(
+        status='OK',
+        time=utcnow,
+        message=message,
+        pid=pid,
+        path=destpath
+    )), mimetype=MIME_JSON)
 
 #### scatterplots ####
 
