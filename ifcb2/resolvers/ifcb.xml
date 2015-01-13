@@ -140,6 +140,9 @@
 	<test var="product" eq="features">
 	  <var name="filename">${bin_lid}_fea_v2.csv</var>
 	</test>
+	<test var="product" eq="binzip">
+	  <var name="filename">${bin_lid}_binzip_v1.zip</var>
+	</test>
       </first>
       <any>
 	<!-- use the >=2014 standard directory patterns -->

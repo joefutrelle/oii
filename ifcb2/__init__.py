@@ -18,6 +18,8 @@ HDR_PATH='hdr_path'
 ADC_PATH='adc_path'
 ROI_PATH='roi_path'
 
+FILE_PATH='file_path'
+
 IFCB_RESOLVER_BASE_PATH='oii/ifcb2/resolvers'
 
 class ResolverError(Exception):

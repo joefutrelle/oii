@@ -92,11 +92,11 @@ class Accession(object):
                 yield fs
     def add_fileset(self,fileset):
         """run one bin fileset through accession process. does not commit,
-        returns True if fileset was good and not skipped, False otherwise"""
+        returns True if fileset was good or already existed, False otherwise"""
         lid = fileset[LID] # get LID from fileset
         if self.bin_exists(lid): # make sure it doesn't exist
             logging.warn('SKIP %s - exists' % lid)
-            return False
+            return True
         b = self.new_bin(lid) # create new bin
         # now compute fixity
         logging.warn('FIXITY computing fixity for %s' % lid)

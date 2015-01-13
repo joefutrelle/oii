@@ -8,36 +8,12 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from oii.times import utcdtnow
 from oii.orm_utils import fix_utc
 
-# keys for use in the database and webapi
-
-PID='pid'
-
-# state and states
-STATE='state'
-NEW_STATE='new_state'
-WAITING='waiting'
-RUNNING='running'
-AVAILABLE='available'
-
-# expiration and timestamp
-TS='ts'
-EXPIRES='expires'
-TTL='ttl'
-
-# event and events
-EVENT='event'
-HEARTBEAT='heartbeat'
-RELEASED='released'
-
-# message
-MESSAGE='message'
-
-# role and roles
-ROLE='role'
-ANY='any'
-
-# dependencies
-UPSTREAM='upstream'
+from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow import WAITING, RUNNING, AVAILABLE
+from oii.workflow import TS, EXPIRES, TTL, FOREVER
+from oii.workflow import ROLE, ANY
+from oii.workflow import HEARTBEAT, RELEASED
+from oii.workflow import UPSTREAM
 
 # declarative SQLAlchemy ORM
 Base = declarative_base()
@@ -76,11 +52,19 @@ class Product(Base):
         if ts is None:
             ts = utcdtnow()
         self.ts = ts
-        if ttl is not None:
+        # expiration semantics:
+        # if ttl is never set, never expire
+        # if ttl is set to FOREVER, no longer expire
+        # if ttl is set to an integer, expire in that many seconds
+        # if ttl is None, make no change to expiration time or ttl
+        if ttl==FOREVER:
+            self.ttl = None
+            self.expires = None
+        elif ttl is not None:
             self.ttl = int(ttl)
+        if self.ttl is not None:
             self.expires = self.ts + timedelta(seconds=self.ttl)
         else:
-            self.ttl = None
             self.expires = None
 
     def deps_for_role(self, role):
@@ -195,6 +179,7 @@ class Products(object):
     def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
         dep_state and satisfy all the specified roles, and lock it for update"""
+        self.session.expire_all() # don't be stale!
         return self.session.query(Product).\
             join(Product.upstream_dependencies).\
             filter(Product.state==state).\
@@ -250,6 +235,7 @@ class Products(object):
         now = utcdtnow()
         n = 0
         for p in self.session.query(Product).\
+            filter(and_(Product.ttl.isnot(None),Product.ttl!=FOREVER)).\
             filter(Product.expires.isnot(None)).\
             filter(now > Product.expires).\
             with_lockmode('update'):

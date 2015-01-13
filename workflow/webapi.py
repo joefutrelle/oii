@@ -192,6 +192,7 @@ def update(pid):
     p = Products(session).get_product(pid, create=new_p)
     do_update(p, params)
     do_commit()
+    print 'PRODUCT %s -> %s' % (pid, params[STATE]) # FIXME debug
     return product_response(p)
 
 # assert a dependency between a downstream product and an upstream product,

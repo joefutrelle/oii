@@ -2,11 +2,11 @@ import requests
 
 from oii.utils import gen_id
 
-from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE
-from oii.workflow.orm import WAITING, RUNNING, AVAILABLE
-from oii.workflow.orm import ROLE, ANY
-from oii.workflow.orm import HEARTBEAT, RELEASED
-from oii.workflow.orm import UPSTREAM
+from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER
+from oii.workflow import ROLE, ANY
+from oii.workflow import HEARTBEAT, RELEASED
+from oii.workflow import UPSTREAM
 
 from oii.workflow.webapi import DEFAULT_PORT
 
@@ -41,6 +41,15 @@ class WorkflowClient(object):
         if isinstance(roles,basestring):
             roles = [roles]
         return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
+    def start_all(self,roles,expire=True):
+        while True:
+            if expire:
+                self.expire()
+            r = self.start_next(roles)
+            if not isok(r):
+                return
+            job = r.json()
+            yield job
     def create(self,pid,**d):
         return requests.put(self.api('/create/%s' % pid), data=d)
     def update_if(self,pid, **d):
@@ -52,8 +61,12 @@ class WorkflowClient(object):
     def delete_tree(self,pid):
         return requests.delete(self.api('/delete_tree/%s' % pid))
     def update(self,pid, **d):
-        """d can contain STATE, EVENT, MESSAGE"""
+        """d can contain STATE, EVENT, MESSAGE, TTL"""
         return requests.patch(self.api('/update/%s' % pid), data=d)
+    def complete(self,pid,**d):
+        """like update but sets TTL to FOREVER.
+        d can contain STATE, EVENT, MESSAGE"""
+        self.update(pid,**dict(d.items(),TTL=FOREVER))
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)
@@ -109,7 +122,12 @@ class Mutex(object):
         self.client.heartbeat(self.mutex_pid)
     def __exit__(self, exc_type, exc_value, traceback):
         # attempt to release the mutex into the WAITING state
-        r = self.client.update_if(self.mutex_pid, state=RUNNING, new_state=WAITING, event=RELEASED)
+        r = self.client.update_if(
+            self.mutex_pid,
+            state=RUNNING,
+            new_state=WAITING,
+            event=RELEASED,
+            ttl=FOREVER)
         if r.status_code == http.CONFLICT:
             # another client has forced the mutex out of the RUNNING state
             raise InconsistentState("mutex %s in inconsistent state" % self.mutex_pid)

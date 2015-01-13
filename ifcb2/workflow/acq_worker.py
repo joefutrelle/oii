@@ -7,7 +7,8 @@ from oii.ifcb2.orm import Instrument
 from oii.workflow.client import WorkflowClient, Mutex, Busy
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
-from oii.ifcb2.workflow.acc_worker import ACC_WAKEUP_KEY
+from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_PRODUCT
+from oii.ifcb2.workflow import ACC_WAKEUP_KEY, BIN_ZIP_WAKEUP_KEY
 
 """
 Here's the deal.
@@ -41,10 +42,13 @@ def get_acq_key(instrument_name):
     
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
+    also schedule a downstream zip job.
     pid must not be a local id--it must be namespace-scoped"""
     wild_pid = as_product(pid,WILD_PRODUCT)
     raw_pid = as_product(pid,RAW_PRODUCT)
     client.depend(raw_pid, wild_pid, ACCESSION_ROLE)
+    zip_pid = as_product(pid,BIN_ZIP_PRODUCT)
+    client.depend(zip_pid, raw_pid, BIN_ZIP_ROLE)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""
@@ -67,12 +71,15 @@ def acq_wakeup(wakeup_key):
     # attempt to acquire mutex. if fails, that's fine,
     # that means acquisition is aready underway
     try:
-        with Mutex(acq_key) as mutex:
+        with Mutex(acq_key,ttl=45) as mutex:
             # get the instrument info
             session.expire_all() # don't be stale!
             instrument = session.query(Instrument).\
                          filter(Instrument.name==instrument_name).\
                          first()
+            if instrument is None:
+                logging.warn('ERROR cannot find instrument named "%s"' % instrument_name)
+                return
             ts_label = instrument.time_series.label
             logging.warn('%s: starting acquisition cycle' % instrument_name)
             def callback(lid):
