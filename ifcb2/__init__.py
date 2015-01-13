@@ -20,6 +20,7 @@ ROI='roi'
 HDR_PATH='hdr_path'
 ADC_PATH='adc_path'
 ROI_PATH='roi_path'
+RAW='raw'
 
 FILE_PATH='file_path'
 

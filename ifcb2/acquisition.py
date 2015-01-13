@@ -4,6 +4,7 @@ from collections import Counter
 
 from oii.utils import safe_copy, compare_files
 
+from oii.ifcb2 import RAW
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
 from oii.ifcb2 import get_resolver, ResolverError, HDR, ADC, ROI, PID
 from oii.ifcb2.identifiers import as_product
@@ -50,6 +51,8 @@ def get_copy_from(instrument):
             pass # fall through
         # compute the destination path for each file in the time series destination dirs
         for dest_dir in instrument.time_series.destination_dirs:
+            if dest_dir.product_type != RAW:
+                continue
             dest_dir_path = dest_dir.path
             # for each raw data file type
             for ext in [HDR, ADC, ROI]:
