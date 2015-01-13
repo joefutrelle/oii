@@ -612,6 +612,15 @@ def serve_pid(pid):
         if req.extension=='rdf':
             return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='zip':
+            # look to see if the zipfile is resolvable
+            try:
+                zip_path = get_product_file(req.parsed, 'binzip')
+                if os.path.exists(zip_path):
+                    return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+            except NotFound:
+                pass
+            except:
+                raise
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
