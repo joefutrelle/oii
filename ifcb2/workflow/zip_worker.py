@@ -24,15 +24,6 @@ def bin_zip_wakeup(wakeup_key):
         pid = job[PID]
         try:
             zip_path = get_product_destination(session, pid, 'binzip')
-            logging.warn('zip path = %s' % zip_path)
-            # now we need
-            """*parsed_pid - result of parsing pid
-            **problem** canonical_pid - canonicalized with URL prefix
-            targets - list of (stitched) targets
-            hdr - result of parsing header file
-            timestamp - timestamp (FIXME in what format?)
-            roi_path - path to ROI file
-            outfile - where to write resulting zip file"""
             client.complete(
                 pid,
                 state='available',
