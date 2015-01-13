@@ -9,6 +9,9 @@ PID='pid'
 LID='lid'
 TS_LABEL='ts_label'
 
+NAMESPACE='namespace'
+BIN_LID='bin_lid'
+
 SCHEMA_VERSION='schema_version'
 
 HDR='hdr'

@@ -12,7 +12,7 @@ from oii.csvio import csv_str, csv_quote
 from oii.iopipes import UrlSource, LocalFileSink, drain
 from oii.times import iso8601
 
-from oii.ifcb2 import SCHEMA_VERSION
+from oii.ifcb2 import SCHEMA_VERSION, NAMESPACE, BIN_LID
 from oii.ifcb2.identifiers import parse_pid, as_product, get_timestamp, add_pids, PID
 from oii.ifcb2.identifiers import TIMESTAMP, TIMESTAMP_FORMAT
 from oii.ifcb2.formats.adc import Adc, TARGET_NUMBER
@@ -143,33 +143,34 @@ def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
         temp.seek(0)
         shutil.copyfileobj(temp, outfile)
 
-def binpid2zip(bin_pid, outfile):
+def binpid2zip(pid, outfile):
     """Generate a zip file given a canonical pid"""
-    parsed = parse_pid(bin_pid)
+    parsed = parse_pid(pid)
+    bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
     timestamp = iso8601(strptime(parsed[TIMESTAMP], parsed[TIMESTAMP_FORMAT]))
     with tempfile.NamedTemporaryFile() as hdr_tmp:
         hdr_path = hdr_tmp.name
         drain(UrlSource(bin_pid+'.hdr'), LocalFileSink(hdr_path))
         hdr = parse_hdr_file(hdr_path)
-        with tempfile.NamedTemporaryFile() as adc_tmp:
-            adc_path = adc_tmp.name
-            drain(UrlSource(bin_pid+'.adc'), LocalFileSink(adc_path))
-            adc = Adc(adc_path, parsed[SCHEMA_VERSION])
-            unstitched_targets = add_pids(adc.get_targets(), bin_pid)
-            stitched_targets = list_stitched_targets(unstitched_targets)
-            with tempfile.NamedTemporaryFile() as roi_tmp:
-                roi_path = roi_tmp.name
-                drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
-                canonical_pid = bin_pid
-                """*parsed_pid - result of parsing pid
-                *canonical_pid - canonicalized with URL prefix
-                *targets - list of (stitched) targets
-                *hdr - result of parsing header file
-                *timestamp - timestamp (FIXME in what format?)
-                *roi_path - path to ROI file
-                outfile - where to write resulting zip file"""
-                with open(outfile,'wb') as fout:
-                    return bin2zip(parsed,bin_pid,stitched_targets,hdr,timestamp,roi_path,fout)
+    with tempfile.NamedTemporaryFile() as adc_tmp:
+        adc_path = adc_tmp.name
+        drain(UrlSource(bin_pid+'.adc'), LocalFileSink(adc_path))
+        adc = Adc(adc_path, parsed[SCHEMA_VERSION])
+        unstitched_targets = add_pids(adc.get_targets(), bin_pid)
+        stitched_targets = list_stitched_targets(unstitched_targets)
+    with tempfile.NamedTemporaryFile() as roi_tmp:
+        roi_path = roi_tmp.name
+        drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
+        canonical_pid = bin_pid
+        """*parsed_pid - result of parsing pid
+        *canonical_pid - canonicalized with URL prefix
+        *targets - list of (stitched) targets
+        *hdr - result of parsing header file
+        *timestamp - timestamp (FIXME in what format?)
+        *roi_path - path to ROI file
+        outfile - where to write resulting zip file"""
+        with open(outfile,'wb') as fout:
+            return bin2zip(parsed,bin_pid,stitched_targets,hdr,timestamp,roi_path,fout)
 
 # individual target representations
 

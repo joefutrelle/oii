@@ -67,7 +67,7 @@ def acc_wakeup(wakeup_key):
                 state='available',
                 event='complete',
                 message='accession completed')
-            client.wakeup(ZIP_WAKEUP_KEY)
+            client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for %s' % pid)
             client.complete(

@@ -619,7 +619,7 @@ def serve_pid(pid):
 
 ####### deposit ########
 
-@app.route('/<path:pid>',methods=['PUT','PATCH','POST'])
+@app.route('/<path:pid>',methods=['PUT'])
 def deposit(pid):
     req = DashboardRequest(pid, request)
     destpath = files.get_product_destination(session, pid)
@@ -640,7 +640,7 @@ def deposit(pid):
         message=message,
         pid=pid,
         path=destpath
-    )), MIME_JSON)
+    )), mimetype=MIME_JSON)
 
 #### scatterplots ####
 
