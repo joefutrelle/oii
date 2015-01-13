@@ -2,7 +2,6 @@ import logging
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import PID, LID, TS_LABEL
-from oii.ifcb2.files import get_data_roots, get_product_destination
 from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_WAKEUP_KEY
 from oii.ifcb2.identifiers import as_product, parse_pid
 
@@ -23,12 +22,7 @@ def bin_zip_wakeup(wakeup_key):
     for job in client.start_all([BIN_ZIP_ROLE]):
         pid = job[PID]
         try:
-            zip_path = get_product_destination(session, pid, 'binzip')
-            client.complete(
-                pid,
-                state='available',
-                event='complete',
-                message='pretended to create %s' % zip_path)
+            parsed = parse_pid(pid)
         except Exception as e:
             logging.warn('ERROR during zip for %s' % pid)
             client.complete(

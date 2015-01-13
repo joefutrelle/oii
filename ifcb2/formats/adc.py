@@ -80,3 +80,4 @@ class Adc(object):
     def get_some_targets(self, offset=1, limit=1):
         for target in self.get_targets(target=offset, limit=limit):
             yield self._cast_target(target)
+
