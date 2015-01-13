@@ -45,7 +45,7 @@ from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
-from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize
+from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize, BIN_KEY
 from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.hdr import parse_hdr_file
@@ -152,13 +152,17 @@ def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
     return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
 
+def get_zip_entry_bytes(zipfile_path, entry_name):
+    zipfile = ZipFile(zipfile_path)
+    entry_bytes = zipfile.read(entry_name)
+    zipfile.close()
+    return entry_bytes
+
 def serve_blob_image(parsed, mimetype, outline=False, target_img=None):
     # first, read the blob from the zipfile
     blob_zip = get_product_file(parsed, 'blobs')
-    zipfile = ZipFile(blob_zip)
     png_name = parsed['lid'] + '.png' # name is target LID + png extension
-    png_data = zipfile.read(png_name)
-    zipfile.close()
+    png_data = get_zip_entry_bytes(blob_zip, png_name)
     # if we want a blob png, then pass it through without conversion
     if not outline and mimetype == 'image/png':
         return Response(png_data, mimetype='image/png')
@@ -476,8 +480,17 @@ def get_target_metadata(target):
         pass # it's OK, this target isn't stitched
     return target
 
-def get_target_image(target, path=None, file=None, raw_stitch=False):
-    # FIXME read from stored bin zip file
+def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
+    try:
+        bin_zip = get_product_file(parsed, 'binzip')
+        if os.path.exists(bin_zip):
+            # name is target LID + png extension
+            png_name = os.path.basename(target[PID]) + '.png'
+            png_data = get_zip_entry_bytes(bin_zip, png_name)
+            pil_img = PIL.Image.open(StringIO(png_data))
+            return np.array(pil_img.convert('L')) # convert to 8-bit grayscale
+    except NotFound:
+        pass
     if PAIR in target:
         (a,b) = target[PAIR]
         a_image = read_target_image(a, path=path, file=file)
@@ -539,12 +552,12 @@ def serve_pid(pid):
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
             if req.product=='raw':
-                img = get_target_image(target, roi_path)
+                img = get_target_image(req.parsed, target, roi_path)
                 return Response(as_bytes(img,mimetype),mimetype=mimetype)
             if req.product=='blob':
                 return serve_blob_image(req.parsed, mimetype)
             if req.product=='blob_outline':
-                img = get_target_image(target, roi_path)
+                img = get_target_image(req.parsed, target, roi_path)
                 return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
         # not an image, so remove stitching information from metadata
         target = get_target_metadata(target)
@@ -751,7 +764,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         for tile in layout:
             target = tile.image # in mosaic API, the record is called 'image'
             # FIXME 1. replace PIL
-            image = get_target_image(target, file=roi_file, raw_stitch=True)
+            image = get_target_image(parsed, target, file=roi_file, raw_stitch=True)
             image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
