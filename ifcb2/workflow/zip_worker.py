@@ -5,7 +5,7 @@ import requests
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE, BIN_LID
-from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_WAKEUP_KEY
+from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_WAKEUP_KEY, WEBCACHE_WAKEUP_KEY
 from oii.ifcb2.identifiers import as_product, parse_pid
 from oii.ifcb2.represent import binpid2zip
 
@@ -13,8 +13,6 @@ from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 
 ### FIXME config this right
-from oii.ifcb2.session import session
-
 client = WorkflowClient()
 
 @wakeup_task
@@ -42,6 +40,7 @@ def bin_zip_wakeup(wakeup_key):
                     event='completed',
                     message='pretended to deposit %s' % binzip_url)
                 logging.warn('BINZIP finished %s' % pid)
+                client.wakeup(WEBCACHE_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during zip for %s' % pid)
             client.complete(

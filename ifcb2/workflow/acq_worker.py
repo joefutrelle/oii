@@ -9,6 +9,7 @@ from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
 from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_PRODUCT
 from oii.ifcb2.workflow import ACC_WAKEUP_KEY, BIN_ZIP_WAKEUP_KEY
+from oii.ifcb2.workflow import WEBCACHE_ROLE
 
 """
 Here's the deal.
@@ -52,6 +53,8 @@ def schedule_accession(client,pid):
     client.depend(raw_pid, wild_pid, ACCESSION_ROLE)
     zip_pid = as_product(pid,BIN_ZIP_PRODUCT)
     client.depend(zip_pid, raw_pid, BIN_ZIP_ROLE)
+    webcache_pid = as_product(pid,'webcache') # product label not important here
+    client.depend(webcache_pid, zip_pid, WEBCACHE_ROLE)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""
