@@ -99,4 +99,4 @@ def acq_wakeup(wakeup_key):
             copy_work(instrument, callback=callback)
             logging.warn('%s: acquisition cycle complete' % ts_label)
     except Busy:
-        logging.warn('acquisition already underway for %s' % wakeup_key)
+        pass

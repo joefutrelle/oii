@@ -15,12 +15,11 @@ from oii.workflow.async import async, wakeup_task
 ### FIXME config this right
 client = WorkflowClient()
 
+#### FIXME for random fail test
+import random
+
 @wakeup_task
 def bin_zip_wakeup(wakeup_key):
-    if wakeup_key != BIN_ZIP_WAKEUP_KEY:
-        logging.warn('BINZIP ignoring %s, sleeping' % wakeup_key)
-        return
-    logging.warn('BINZIP waking up for %s' % wakeup_key)
     for job in client.start_all([BIN_ZIP_ROLE]):
         pid = job[PID]
         parsed = parse_pid(pid)
@@ -28,6 +27,10 @@ def bin_zip_wakeup(wakeup_key):
             logging.warn('BINZIP creating zipfile for %s' % pid)
             with tempfile.NamedTemporaryFile() as zip_tmp:
                 zip_path = zip_tmp.name
+                ## FIXME random fail test
+                if random.random() < 0.1:
+                    raise Exception('random failure')
+                ## end fixme
                 binpid2zip(pid, zip_path)
                 # construct binzip URL
                 binzip_url = '%s%s_binzip.zip' % (parsed[NAMESPACE], parsed[BIN_LID])

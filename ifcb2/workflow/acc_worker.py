@@ -35,11 +35,6 @@ def acc_wakeup(wakeup_key):
     """- wake up and expire the session
     - ignore wakeup keys other than ACC_WAKEUP_KEY
     """
-    # figure out if this wakeup matters to us
-    if wakeup_key != ACC_WAKEUP_KEY:
-        logging.warn('ACCESSION ignoring %s, sleeping' % wakeup_key)
-        return
-    logging.warn('ACCESSION waking up for %s' % wakeup_key)
     # acquire accession jobs, one at a time
     for job in client.start_all([ACCESSION_ROLE]):
         pid = job[PID]
@@ -76,4 +71,3 @@ def acc_wakeup(wakeup_key):
                 event='exception',
                 message=str(e))
             # continue to next job
-    logging.warn('no more accession jobs found, sleeping')

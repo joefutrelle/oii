@@ -183,9 +183,9 @@ class Products(object):
             return product
         else:
             return None
-    def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
-        """find any product that is in state state and whose upstream dependencies are all in
-        dep_state and satisfy all the specified roles, and lock it for update"""
+    def get_all(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
+        """find all products that are in state state and whose upstream deps are all in
+        dep_state and satisfy all the specified roles"""
         self.session.expire_all() # don't be stale!
         return self.session.query(Product).\
             join(Product.upstream_dependencies).\
@@ -194,7 +194,11 @@ class Products(object):
             filter(Dependency.role.in_(roles)).\
             group_by(Product).\
             having(func.count(Dependency.role)==len(roles)).\
-            having(func.count(distinct(Dependency.role))==len(set(roles))).\
+            having(func.count(distinct(Dependency.role))==len(set(roles)))
+    def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
+        """find any product that is in state state and whose upstream dependencies are all in
+        dep_state and satisfy all the specified roles, and lock it for update"""
+        return self.get_all(roles, state, dep_state).\
             with_lockmode('update').\
             first()
     def start_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):

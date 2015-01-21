@@ -19,10 +19,6 @@ client = WorkflowClient()
 
 @wakeup_task
 def webcache_wakeup(wakeup_key):
-    if wakeup_key != WEBCACHE_WAKEUP_KEY:
-        logging.warn('WEBCACHE ignoring %s, sleeping' % wakeup_key)
-        return
-    logging.warn('WEBCACHE waking up for %s' % wakeup_key)
     for job in client.start_all([WEBCACHE_ROLE]):
         pid = job[PID]
         parsed = parse_pid(pid)
