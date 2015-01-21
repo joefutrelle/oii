@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_, desc
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -163,6 +163,13 @@ class Products(object):
         now = utcdtnow()
         return self.session.query(Product).\
             filter(Product.ts < now - ago)
+    def most_recent(self,n=None):
+        """return the products with the most recent events.
+        n = maximum number of products to return"""
+        q = self.session.query(Product).order_by(desc(Product.ts))
+        if n is not None:
+            q = q.limit(n)
+        return q
     def roots(self):
         """return all roots; that is, products with no dependencies"""
         return self.session.query(Product).filter(~Product.depends_on.any())

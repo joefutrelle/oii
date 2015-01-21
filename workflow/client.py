@@ -66,7 +66,7 @@ class WorkflowClient(object):
     def complete(self,pid,**d):
         """like update but sets TTL to FOREVER.
         d can contain STATE, EVENT, MESSAGE"""
-        self.update(pid,**dict(d.items(),TTL=FOREVER))
+        self.update(pid,**dict(d.items(),ttl=FOREVER))
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)
@@ -77,6 +77,9 @@ class WorkflowClient(object):
         })
     def expire(self):
         return requests.delete(self.api('/expire'))
+    def most_recent(self,n=25):
+        r = requests.get(self.api('/most_recent/%d' % n))
+        return r.json()
 
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation

@@ -41,9 +41,9 @@ def webcache_wakeup(wakeup_key):
                 pid,
                 state='available',
                 event='completed',
-                message='hit cache URLS for %s' % pid)
+                message='hit cache URLs')
         except Exception as e:
-            logging.warn('ERROR webcache for %s' % pid)
+            logging.warn('webcache ERROR webcache for %s' % pid)
             client.complete(
                 pid,
                 state='error',

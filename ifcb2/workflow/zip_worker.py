@@ -38,7 +38,7 @@ def bin_zip_wakeup(wakeup_key):
                     pid,
                     state='available',
                     event='completed',
-                    message='pretended to deposit %s' % binzip_url)
+                    message='deposited')
                 logging.warn('BINZIP finished %s' % pid)
                 client.wakeup(WEBCACHE_WAKEUP_KEY)
         except Exception as e:

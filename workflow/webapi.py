@@ -258,6 +258,14 @@ def expire():
         abort(404)
     return Response(dict(expired=n),mimetype=MIME_JSON)
 
+@app.route('/most_recent')
+@app.route('/most_recent/<int:n>')
+def most_recent(n=25):
+    r = []
+    for p in Products(session).most_recent(n):
+        r.append(product2dict(p))
+    return Response(json.dumps(r),mimetype=MIME_JSON)
+
 # wake up workers optionally with a pid payload
 @app.route('/wakeup')
 @app.route('/wakeup/<path:pid>')
