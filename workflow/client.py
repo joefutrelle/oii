@@ -2,7 +2,7 @@ import requests
 
 from oii.utils import gen_id
 
-from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
 from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER
 from oii.workflow import ROLE, ANY
 from oii.workflow import HEARTBEAT, RELEASED
@@ -79,6 +79,16 @@ class WorkflowClient(object):
         return requests.delete(self.api('/expire'))
     def most_recent(self,n=25):
         r = requests.get(self.api('/most_recent/%d' % n))
+        return r.json()
+    def get_all(self,roles=[],state=None,upstream_state=None):
+        if roles:
+            role_frag = '/%s' % '/'.join(roles)
+        else:
+            role_frag = ''
+        r = requests.post(self.api('/get_all%s' % role_frag), data={
+            STATE: state,
+            UPSTREAM_STATE: upstream_state
+        })
         return r.json()
 
 class Mutex(object):

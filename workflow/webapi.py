@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from oii.times import iso8601
 
 from oii.workflow.orm import Base, Product, Dependency, Products
-from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL
+from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL, UPSTREAM_STATE
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
 
@@ -101,7 +101,8 @@ def product2dict(product):
         EVENT: product.event,
         MESSAGE: product.message,
         TTL: product.ttl,
-        'ts': iso8601(product.ts.timetuple())
+        'ts': iso8601(product.ts.timetuple()),
+        'expires': iso8601(product.expires.timetuple()) if product.expires is not None else None
     }
 
 def product2json(product):
@@ -111,7 +112,7 @@ def product2json(product):
 
 def product_params(form,defaults):
     params = {}
-    for k in [STATE, EVENT, MESSAGE, NEW_STATE, TTL]:
+    for k in [STATE, EVENT, MESSAGE, NEW_STATE, TTL, UPSTREAM_STATE]:
         params[k] = form.get(k,default=defaults.get(k,None))
     return params
 
@@ -143,6 +144,11 @@ def product_response(p,error_code=http.NOT_FOUND,success_code=http.OK):
         abort(error_code)
     else:
         return Response(product2json(p), mimetype=MIME_JSON, status=success_code)
+
+def products_response(ps,error_code=http.NOT_FOUND,success_code=http.OK):
+    if not ps or ps is None:
+        abort(error_code)
+    return Response(json.dumps([product2dict(p) for p in ps]), mimetype=MIME_JSON, status=success_code)
 
 ############# ENDPOINTS ##################
 
@@ -223,14 +229,34 @@ def depend(down_pid):
     do_commit()
     return product_response(dp)
 
-# find a product whose upstream dependencies are all in the given state
+# find all products whose upstream dependencies are all in the given state
+# (default "available") for the given roles
+@app.route('/get_all',methods=['GET','POST'])
+@app.route('/get_all/<path:role_list>',methods=['GET','POST'])
+def get_all(role_list=None):
+    kw = product_params(request.form, defaults={
+        STATE: None,
+        UPSTREAM_STATE: None
+    })
+    if role_list:
+        roles = role_list.split('/')
+    else:
+        roles = []
+    p = Products(session).get_all(roles, kw[STATE], kw[UPSTREAM_STATE])
+    return products_response(p)
+
+# find a product whose upstream dependencies for the given roles
+# are all in the given state
 # (default "available") and atomically change its state to a new one
 # (default "running")
-# FIXME allow POST to specify state
 @app.route('/start_next/<path:role_list>',methods=['GET','POST'])
 def start_next(role_list):
+    kw = product_params(request.form, defaults={
+        STATE: WAITING,
+        UPSTREAM_STATE: AVAILABLE
+    })
     roles = role_list.split('/')
-    p = Products(session).start_next(roles)
+    p = Products(session).start_next(roles, kw[STATE], kw[UPSTREAM_STATE])
     # note that start_next commits and handles errors
     return product_response(p)
 
@@ -261,10 +287,7 @@ def expire():
 @app.route('/most_recent')
 @app.route('/most_recent/<int:n>')
 def most_recent(n=25):
-    r = []
-    for p in Products(session).most_recent(n):
-        r.append(product2dict(p))
-    return Response(json.dumps(r),mimetype=MIME_JSON)
+    return products_response(Products(session).most_recent(n))
 
 # wake up workers optionally with a pid payload
 @app.route('/wakeup')

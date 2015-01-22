@@ -7,9 +7,11 @@ PID='pid'
 # state and states
 STATE='state'
 NEW_STATE='new_state'
+UPSTREAM_STATE='upstream_state'
 WAITING='waiting'
 RUNNING='running'
 AVAILABLE='available'
+ERROR='error'
 
 # expiration and timestamp
 TS='ts'
