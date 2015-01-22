@@ -76,7 +76,10 @@ class WorkflowClient(object):
             ROLE: role
         })
     def expire(self):
-        return requests.delete(self.api('/expire'))
+        r = requests.delete(self.api('/expire'))
+        if not isok(r):
+            return 0
+        return r.json()['expired']
     def most_recent(self,n=25):
         r = requests.get(self.api('/most_recent/%d' % n))
         return r.json()
@@ -92,6 +95,9 @@ class WorkflowClient(object):
         return r.json()
     def get_dependencies(self,pid):
         r = requests.get(self.api('/get_dependencies/%s' % pid))
+        return r.json()
+    def get_product(self,pid):
+        r = requests.get(self.api('/get_product/%s' % pid))
         return r.json()
 
 class Mutex(object):

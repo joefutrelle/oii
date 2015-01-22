@@ -307,7 +307,7 @@ def get_dependencies(pid):
     r = []
     for p in ps:
         for ud in p.upstream_dependencies:
-            r.append(dict(downstream=p.pid, upstream=ud.upstream.pid, role=ud.role))
+            r.append(dict(downstream=p.pid, state=p.state, upstream=ud.upstream.pid, role=ud.role))
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
 # asynchronous notification support

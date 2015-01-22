@@ -12,6 +12,7 @@ WAITING='waiting'
 RUNNING='running'
 AVAILABLE='available'
 ERROR='error'
+BLACKLISTED='blacklisted'
 
 # expiration and timestamp
 TS='ts'
