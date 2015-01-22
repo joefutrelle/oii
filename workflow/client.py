@@ -90,6 +90,9 @@ class WorkflowClient(object):
             UPSTREAM_STATE: upstream_state
         })
         return r.json()
+    def get_dependencies(self,pid):
+        r = requests.get(self.api('/get_dependencies/%s' % pid))
+        return r.json()
 
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation

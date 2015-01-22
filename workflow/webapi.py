@@ -94,7 +94,7 @@ def template_response(template, mimetype=None, ttl=None, **kw):
 
 ###### representation ######
 def product2dict(product):
-    return {
+    d = {
         'id': product.id,
         'pid': product.pid,
         STATE: product.state,
@@ -104,6 +104,7 @@ def product2dict(product):
         'ts': iso8601(product.ts.timetuple()),
         'expires': iso8601(product.expires.timetuple()) if product.expires is not None else None
     }
+    return d
 
 def product2json(product):
     return json.dumps(product2dict(product))
@@ -288,6 +289,28 @@ def expire():
 @app.route('/most_recent/<int:n>')
 def most_recent(n=25):
     return products_response(Products(session).most_recent(n))
+
+# products and dependencies
+
+@app.route('/get_product/<path:pid>')
+def get_product(pid):
+    return product_response(Products(session).get_product(pid))
+
+@app.route('/get_dependencies/<path:pid>')
+def get_dependencies(pid):
+    p = Products(session).get_product(pid)
+    ps = [p]
+    for a in p.ancestors:
+        ps.append(a)
+    for d in p.descendants:
+        ps.append(d)
+    r = []
+    for p in ps:
+        for ud in p.upstream_dependencies:
+            r.append(dict(downstream=p.pid, upstream=ud.upstream.pid, role=ud.role))
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+# asynchronous notification support
 
 # wake up workers optionally with a pid payload
 @app.route('/wakeup')
