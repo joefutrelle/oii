@@ -502,13 +502,13 @@ def asciitable(dicts,disp_cols=None,none_msg=None,border=True):
                 width = 0
             if width > widths[col]:
                 widths[col] = width
-    def bord(line,border_char='|'):
+    def bord(line,border_char='|',pad_char=' '):
         if border:
-            return border_char + line + border_char
+            return border_char + pad_char + line + pad_char + border_char
         else:
             return line
     # now print rows
-    spacer = bord('-+-'.join(['-' * widths[col] for col in cols]),'+')
+    spacer = bord('-+-'.join(['-' * widths[col] for col in cols]),'+','-')
     if border:
         yield spacer
     yield bord(' | '.join([rpad(col,widths[col]) for col in cols]),'|')
