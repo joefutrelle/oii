@@ -5,16 +5,24 @@ from oii.utils import asciitable
 
 # command-line client for workflow
 from oii.workflow import PID, STATE, EVENT, MESSAGE, TS
-from oii.workflow import DOWNSTREAM, STATE, UPSTREAM, ROLE
+from oii.workflow import DOWNSTREAM, STATE, UPSTREAM, ROLE, WAITING
 from oii.workflow.client import WorkflowClient
-
-def pprint(d):
-    t = [{'property':k,'value':v} for k,v in d.items()]
-    for line in asciitable(t,disp_cols=['property','value']):
-        print line
 
 PRODUCT_COLS=[PID, STATE, EVENT, TS, MESSAGE]
 DEP_COLS=[DOWNSTREAM, STATE, UPSTREAM, ROLE]
+
+def print_product(d):
+    t = [{'Property':k,'Value':v} for k,v in d.items()]
+    for line in asciitable(t,disp_cols=['Property','Value']):
+        print line
+
+def print_products(r):
+    for line in asciitable(r,disp_cols=PRODUCT_COLS):
+        print line
+
+def print_deps(r):
+    for line in asciitable(r,disp_cols=DEP_COLS):
+        print line
 
 class WorkflowShell(cmd.Cmd):
     def __init__(self, client):
@@ -23,18 +31,16 @@ class WorkflowShell(cmd.Cmd):
     def do_find(self,args):
         frag = args
         r = self.client.search(frag)
-        for line in asciitable(r,disp_cols=PRODUCT_COLS):
-            print line
+        print_products(r)
     def do_graph(self,args):
         pid = args
         r = self.client.get_dependencies(pid)
-        for line in asciitable(r,disp_cols=DEP_COLS):
-            print line
+        print_deps(r)
     def _error(self,r):
         print 'Server responded with %d' % r.status_code
     def _show(self,pid):
         d = self.client.get_product(pid)
-        pprint(d)
+        print_product(d)
     def do_show(self,pid):
         self._show(pid)
     def do_set(self,args):
@@ -51,6 +57,10 @@ class WorkflowShell(cmd.Cmd):
             print 'unrecognized property %s' % v
             return
         self._show(pid)
+    def do_retry(self,pid):
+        self.client.update(pid,state=WAITING)
+        self.client.wakeup()
+        self._show(pid)
     def do_wakeup(self,args):
         if args:
             self.client.wakeup(args)
@@ -58,6 +68,13 @@ class WorkflowShell(cmd.Cmd):
         else:
             self.client.wakeup()
             print 'woke up all'
+    def do_recent(self,args):
+        try:
+            n = int(args)
+        except:
+            n = 10
+        r = self.client.most_recent(n)
+        print_products(r)
     def do_expire(self,args):
         n = self.client.expire()
         print '%d product(s) expired' % n

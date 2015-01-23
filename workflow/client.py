@@ -80,7 +80,9 @@ class WorkflowClient(object):
         if not isok(r):
             return 0
         return r.json()['expired']
-    def most_recent(self,n=25):
+    def most_recent(self,n=None):
+        if n is None:
+            n = 25
         r = requests.get(self.api('/most_recent/%d' % n))
         return r.json()
     def get_all(self,roles=[],state=None,upstream_state=None):
