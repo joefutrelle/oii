@@ -6,7 +6,7 @@ from oii.ifcb2.files import parsed_pid2fileset, get_data_roots
 from oii.ifcb2.acquisition import do_copy
 from oii.ifcb2.orm import Instrument
 
-from oii.workflow import FOREVER
+from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
@@ -59,15 +59,15 @@ def acc_wakeup(wakeup_key):
             # set product state in workflow
             client.complete(
                 pid,
-                state='available',
-                event='complete',
+                state=AVAILABLE,
+                event=COMPLETED,
                 message='accession completed')
             client.wakeup(BIN_ZIP_WAKEUP_KEY)
         except Exception as e:
             logging.warn('ERROR during accession for %s' % pid)
             client.complete(
                 pid,
-                state='error',
+                state=ERROR,
                 event='exception',
                 message=str(e))
             # continue to next job

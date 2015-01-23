@@ -4,38 +4,40 @@ import cmd
 from oii.utils import asciitable
 
 # command-line client for workflow
-from oii.workflow.client import WorkflowClient, isok
+from oii.workflow import PID, STATE, EVENT, MESSAGE, TS
+from oii.workflow import DOWNSTREAM, STATE, UPSTREAM, ROLE
+from oii.workflow.client import WorkflowClient
 
 def pprint(d):
-    width = max(len(k) for k in d)
-    print '{'
-    for k in sorted(d):
-        print '%s%s: "%s"' % (' ' * (width-len(k)),k,d[k])
-    print '}'
+    t = [{'property':k,'value':v} for k,v in d.items()]
+    for line in asciitable(t,disp_cols=['property','value']):
+        print line
+
+PRODUCT_COLS=[PID, STATE, EVENT, TS, MESSAGE]
+DEP_COLS=[DOWNSTREAM, STATE, UPSTREAM, ROLE]
 
 class WorkflowShell(cmd.Cmd):
     def __init__(self, client):
         cmd.Cmd.__init__(self) # oldstyle class
         self.client = client
+    def do_find(self,args):
+        frag = args
+        r = self.client.search(frag)
+        for line in asciitable(r,disp_cols=PRODUCT_COLS):
+            print line
     def do_graph(self,args):
         pid = args
         r = self.client.get_dependencies(pid)
-        if not isok(r):
-            self._error(r)
-            return
-        for line in asciitable(r,disp_cols=['downstream','state','upstream','role']):
+        for line in asciitable(r,disp_cols=DEP_COLS):
             print line
     def _error(self,r):
         print 'Server responded with %d' % r.status_code
     def _show(self,pid):
-        r = self.client.get_product(pid)
-        if not isok(r):
-            self._error(r)
-            return
-        pprint(r.json())
+        d = self.client.get_product(pid)
+        pprint(d)
     def do_show(self,pid):
         self._show(pid)
-    def do_change(self,args):
+    def do_set(self,args):
         (v,o,pid) = args.split(' ')
         if v=='state':
             self.client.update(pid,state=o)
@@ -43,6 +45,8 @@ class WorkflowShell(cmd.Cmd):
             self.client.update(pid,event=o)
         elif v=='message':
             self.client.update(pid,message=o)
+        elif v=='ttl':
+            self.client.update(pid,ttl=o)
         else:
             print 'unrecognized property %s' % v
             return

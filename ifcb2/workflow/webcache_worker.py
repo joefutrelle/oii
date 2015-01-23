@@ -11,6 +11,7 @@ from oii.ifcb2.workflow import WEBCACHE_ROLE, WEBCACHE_WAKEUP_KEY
 from oii.ifcb2.identifiers import as_product, parse_pid
 from oii.ifcb2.represent import binpid2zip
 
+from oii.workflow import COMPLETED, AVAILABLE, ERROR
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 
@@ -35,13 +36,13 @@ def webcache_wakeup(wakeup_key):
             img_data = StringIO(r2.content) # read it, and throw it away
             client.complete(
                 pid,
-                state='available',
-                event='completed',
+                state=AVAILABLE,
+                event=COMPLETED,
                 message='hit cache URLs')
         except Exception as e:
             logging.warn('webcache ERROR webcache for %s' % pid)
             client.complete(
                 pid,
-                state='error',
+                state=ERROR,
                 event='exception',
                 message=str(e))

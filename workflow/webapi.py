@@ -193,13 +193,13 @@ def update(pid):
     params = product_params(request.form, defaults={
         EVENT: HEARTBEAT,
         STATE: RUNNING,
-        MESSAGE: None
+        MESSAGE: None,
+        TTL: None
     })
     new_p = params2product(pid, params)
     p = Products(session).get_product(pid, create=new_p)
     do_update(p, params)
     do_commit()
-    print 'PRODUCT %s -> %s' % (pid, params[STATE]) # FIXME debug
     return product_response(p)
 
 # assert a dependency between a downstream product and an upstream product,
@@ -223,8 +223,7 @@ def depend(down_pid):
     up = ps.session.query(Product).filter(Product.pid==up_pid).first()
     up = ps.get_product(up_pid, create=params2product(up_pid, {
         STATE: AVAILABLE,
-        EVENT: 'implicit_create',
-        MESSAGE: 'dependency of %s' % down_pid
+        EVENT: 'implicit_create'
     }))
     ps.add_dep(dp, up, role)
     do_commit()
@@ -291,6 +290,10 @@ def most_recent(n=25):
     return products_response(Products(session).most_recent(n))
 
 # products and dependencies
+
+@app.route('/search/<path:frag>')
+def search(frag):
+    return products_response(Products(session).search(frag))
 
 @app.route('/get_product/<path:pid>')
 def get_product(pid):

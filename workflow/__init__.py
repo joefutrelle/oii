@@ -24,6 +24,7 @@ FOREVER=-1
 EVENT='event'
 HEARTBEAT='heartbeat'
 RELEASED='released'
+COMPLETED='completed'
 
 # message
 MESSAGE='message'
@@ -34,4 +35,4 @@ ANY='any'
 
 # dependencies
 UPSTREAM='upstream'
-
+DOWNSTREAM='downstream'

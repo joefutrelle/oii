@@ -96,6 +96,9 @@ class WorkflowClient(object):
     def get_dependencies(self,pid):
         r = requests.get(self.api('/get_dependencies/%s' % pid))
         return r.json()
+    def search(self,frag):
+        r = requests.get(self.api('/search/%s' % frag))
+        return r.json()
     def get_product(self,pid):
         r = requests.get(self.api('/get_product/%s' % pid))
         return r.json()

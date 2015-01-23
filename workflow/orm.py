@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_, desc
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_, or_, desc
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -183,6 +183,13 @@ class Products(object):
             return product
         else:
             return None
+    def search(self, frag):
+        like_clause = '%%%s%%' % frag
+        return self.session.query(Product).\
+            filter(or_(Product.pid.ilike(like_clause),\
+                       Product.state.ilike(like_clause),\
+                       Product.event.ilike(like_clause),\
+                       Product.message.ilike(like_clause)))
     def get_all(self, roles=None, state=None, upstream_state=None):
         """find all products that are in state state and whose upstream deps are all in
         upstream_state and satisfy all the specified roles. any of roles, state, or upstream_state

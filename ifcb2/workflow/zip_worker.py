@@ -9,6 +9,7 @@ from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_WAKEUP_KEY, WEBCACHE_WAKEUP
 from oii.ifcb2.identifiers import as_product, parse_pid
 from oii.ifcb2.represent import binpid2zip
 
+from oii.workflow import COMPLETED, AVAILABLE, ERROR
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 
@@ -39,8 +40,8 @@ def bin_zip_wakeup(wakeup_key):
                     requests.put(binzip_url, data=zin)
                 client.complete(
                     pid,
-                    state='available',
-                    event='completed',
+                    state=AVAILABLE,
+                    event=COMPLETED,
                     message='deposited')
                 logging.warn('BINZIP finished %s' % pid)
                 client.wakeup(WEBCACHE_WAKEUP_KEY)
@@ -48,6 +49,6 @@ def bin_zip_wakeup(wakeup_key):
             logging.warn('ERROR during zip for %s' % pid)
             client.complete(
                 pid,
-                state='error',
+                state=ERROR,
                 event='exception',
                 message=str(e))
