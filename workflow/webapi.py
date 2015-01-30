@@ -172,7 +172,7 @@ def create(pid):
 # delete a product regardless of its state or dependencies
 @app.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
 def delete(pid):
-    p = Products(session).get_product(pid)
+    p = Products(session).get(pid)
     if p is None:
         abort(http.NOT_FOUND)
     else:
@@ -201,7 +201,7 @@ def update(pid):
         TTL: None
     })
     new_p = params2product(pid, params)
-    p = Products(session).get_product(pid, create=new_p)
+    p = Products(session).get(pid, create=new_p)
     do_update(p, params)
     do_commit()
     return product_response(p)
@@ -223,9 +223,9 @@ def depend(down_pid):
         STATE: WAITING
     })
     ps = Products(session)
-    dp = ps.get_product(down_pid, create=params2product(down_pid, params))
+    dp = ps.get(down_pid, create=params2product(down_pid, params))
     up = ps.session.query(Product).filter(Product.pid==up_pid).first()
-    up = ps.get_product(up_pid, create=params2product(up_pid, {
+    up = ps.get(up_pid, create=params2product(up_pid, {
         STATE: AVAILABLE,
         EVENT: 'implicit_create'
     }))
@@ -235,9 +235,9 @@ def depend(down_pid):
 
 # find all products whose upstream dependencies are all in the given state
 # (default "available") for the given roles
-@app.route('/get_all',methods=['GET','POST'])
-@app.route('/get_all/<path:role_list>',methods=['GET','POST'])
-def get_all(role_list=None):
+@app.route('/downstream',methods=['GET','POST'])
+@app.route('/downstream/<path:role_list>',methods=['GET','POST'])
+def downstream(role_list=None):
     kw = product_params(request.form, defaults={
         STATE: None,
         UPSTREAM_STATE: None
@@ -246,7 +246,7 @@ def get_all(role_list=None):
         roles = role_list.split('/')
     else:
         roles = []
-    p = Products(session).get_all(roles, kw[STATE], kw[UPSTREAM_STATE])
+    p = Products(session).downstream(roles, kw[STATE], kw[UPSTREAM_STATE])
     return products_response(p)
 
 # find a product whose upstream dependencies for the given roles
@@ -299,13 +299,14 @@ def most_recent(n=25):
 def search(frag):
     return products_response(Products(session).search(frag))
 
-@app.route('/get_product/<path:pid>')
-def get_product(pid):
-    return product_response(Products(session).get_product(pid))
+@app.route('/get/<path:pid>')
+def get(pid):
+    return product_response(Products(session).get(pid))
 
-@app.route('/get_dependencies/<path:pid>')
-def get_dependencies(pid):
-    p = Products(session).get_product(pid)
+@app.route('/get_graph/<path:pid>')
+def get_graph(pid):
+    # FIXME move impl to ORM?
+    p = Products(session).get(pid)
     ps = [p]
     for a in p.ancestors:
         ps.append(a)

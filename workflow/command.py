@@ -34,12 +34,12 @@ class WorkflowShell(cmd.Cmd):
         print_products(r)
     def do_graph(self,args):
         pid = args
-        r = self.client.get_dependencies(pid)
+        r = self.client.get_graph(pid)
         print_deps(r)
     def _error(self,r):
         print 'Server responded with %d' % r.status_code
     def _show(self,pid):
-        d = self.client.get_product(pid)
+        d = self.client.get(pid)
         print_product(d)
     def do_show(self,pid):
         self._show(pid)

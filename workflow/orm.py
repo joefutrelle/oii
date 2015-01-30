@@ -138,7 +138,7 @@ class Products(object):
         except IntegrityError:
             self.session.rollback()
             raise
-    def get_product(self,pid,create=None):
+    def get(self,pid,create=None):
         p = self.session.query(Product).filter(Product.pid==pid).first()
         if not p and create is not None:
             self.session.add(create)
@@ -190,7 +190,7 @@ class Products(object):
                        Product.state.ilike(like_clause),\
                        Product.event.ilike(like_clause),\
                        Product.message.ilike(like_clause)))
-    def get_all(self, roles=None, state=None, upstream_state=None):
+    def downstream(self, roles=None, state=None, upstream_state=None):
         """find all products that are in state state and whose upstream deps are all in
         upstream_state and satisfy all the specified roles. any of roles, state, or upstream_state
         can be omitted, and will be unconstrained"""
@@ -212,7 +212,7 @@ class Products(object):
     def get_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
         upstream_state and satisfy all the specified roles, and lock it for update"""
-        return self.get_all(roles, state, upstream_state).\
+        return self.downstream(roles, state, upstream_state).\
             with_lockmode('update').\
             first()
     def start_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):

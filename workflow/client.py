@@ -85,24 +85,24 @@ class WorkflowClient(object):
             n = 25
         r = requests.get(self.api('/most_recent/%d' % n))
         return r.json()
-    def get_all(self,roles=[],state=None,upstream_state=None):
+    def downstream(self,roles=[],state=None,upstream_state=None):
         if roles:
             role_frag = '/%s' % '/'.join(roles)
         else:
             role_frag = ''
-        r = requests.post(self.api('/get_all%s' % role_frag), data={
+        r = requests.post(self.api('/downstream%s' % role_frag), data={
             STATE: state,
             UPSTREAM_STATE: upstream_state
         })
         return r.json()
-    def get_dependencies(self,pid):
-        r = requests.get(self.api('/get_dependencies/%s' % pid))
+    def get_graph(self,pid):
+        r = requests.get(self.api('/get_graph/%s' % pid))
         return r.json()
     def search(self,frag):
         r = requests.get(self.api('/search/%s' % frag))
         return r.json()
-    def get_product(self,pid):
-        r = requests.get(self.api('/get_product/%s' % pid))
+    def get(self,pid):
+        r = requests.get(self.api('/get/%s' % pid))
         return r.json()
 
 class Mutex(object):
