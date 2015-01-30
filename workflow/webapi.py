@@ -121,7 +121,8 @@ def params2product(pid,params):
     return Product(pid=pid,
                    state=params.get(STATE,None),
                    event=params.get(EVENT,None),
-                   message=params.get(MESSAGE,None))
+                   message=params.get(MESSAGE,None),
+                   ttl=params.get(TTL,None))
 
 def do_create(pid,params):
     p = params2product(pid, params)
@@ -129,7 +130,10 @@ def do_create(pid,params):
     return p
 
 def do_update(p,params):
-    p.changed(state=params[STATE], event=params[EVENT], message=params[MESSAGE], ttl=params[TTL])
+    p.changed(state=params[STATE],
+              event=params[EVENT],
+              message=params[MESSAGE],
+              ttl=params[TTL])
 
 # commit a change, and if it results in an integrity error,
 # return the given HTTP error status code
