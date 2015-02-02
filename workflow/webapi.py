@@ -29,30 +29,29 @@ MIME_JSON='application/json'
 # eventually the session cofiguration should
 # go in its own class.
 #DB_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-DB_URL='sqlite:///product_service_test.db'
+#DB_URL='sqlite:///product_service_test.db'
 #DB_URL='sqlite://'
-#DB_URL='postgresql://ifcb:ifcb@localhost/workflow'
-
-from sqlalchemy.pool import StaticPool
-dbengine = create_engine(
-    DB_URL,
-    connect_args={'check_same_thread': False},
-    poolclass=StaticPool,
-    echo=False
-)
-ScopedSession = scoped_session(sessionmaker(bind=dbengine))
-session = ScopedSession()
+#from sqlalchemy.pool import StaticPool
+#dbengine = create_engine(
+#    DB_URL,
+#    connect_args={'check_same_thread': False},
+#    poolclass=StaticPool,
+#    echo=False
+#)
+DB_URL='postgresql://ifcb:ifcb@localhost/workflow'
+dbengine = create_engine(DB_URL)
+session = scoped_session(sessionmaker(bind=dbengine))()
 
 # fix broken concurrency model in SQLite
 # see http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html?highlight=sqlite#serializable-isolation-savepoints-transactional-ddl
 
-@event.listens_for(dbengine, "connect")
+#@event.listens_for(dbengine, "connect")
 def do_connect(dbapi_connection, connection_record):
     # disable pysqlite's emitting of the BEGIN statement entirely.
     # also stops it from emitting COMMIT before any DDL.
     dbapi_connection.isolation_level = None
 
-@event.listens_for(dbengine, "begin")
+#@event.listens_for(dbengine, "begin")
 def do_begin(conn):
     # emit our own BEGIN with our desired locking behavior
     # BEGIN IMMEDIATE will serialize all database access
@@ -329,4 +328,4 @@ def wakeup(pid=None):
 
 if __name__ == '__main__':
     Base.metadata.create_all(dbengine)
-    app.run(host='0.0.0.0',port=DEFAULT_PORT,debug=True,processes=6)
+    app.run(host='0.0.0.0',port=DEFAULT_PORT,debug=True)
