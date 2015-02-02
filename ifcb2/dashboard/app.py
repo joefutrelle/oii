@@ -271,7 +271,7 @@ def volume(ts_label,start=None,end=None):
             dv.append({
                 'gb': float(row[0]),
                 'bin_count': row[1],
-                'day': row[2]
+                'day': str(row[2])
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
 
@@ -646,7 +646,10 @@ def serve_pid(pid):
 @app.route('/<path:pid>',methods=['PUT'])
 def deposit(pid):
     req = DashboardRequest(pid, request)
-    destpath = files.get_product_destination(session, pid)
+    try:
+        destpath = files.get_product_destination(session, pid)
+    except NotFound:
+        abort(404)
     product_data = request.data
     destpath_part = '%s_%s.part' % (destpath, gen_id())
     try:
