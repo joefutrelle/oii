@@ -212,8 +212,8 @@ class Products(object):
     def get_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
         upstream_state and satisfy all the specified roles, and lock it for update"""
+#            with_lockmode('update').
         return self.downstream(roles, state, upstream_state).\
-            with_lockmode('update').\
             first()
     def start_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):
         """find any product that is in state state and whose upstream dependencies are all in
