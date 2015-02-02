@@ -88,5 +88,7 @@ if __name__=='__main__':
         client = WorkflowClient(sys.argv[1])
     except:
         client = WorkflowClient()
+    client.most_recent(1)
+    client.most_recent(1)
     load_message = 'Workflow Service @ %s' % client.base_url
     cli = WorkflowShell(client).cmdloop(load_message)

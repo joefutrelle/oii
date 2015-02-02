@@ -277,7 +277,7 @@ def update_if(pid):
     # FIXME could the above expression be simplified with **?
     return product_response(p, error_code=http.CONFLICT)
 
-@app.route('/expire',methods=['POST','DELETE'])
+@app.route('/expire',methods=['GET','POST','DELETE'])
 def expire():
     kw = product_params(request.form, defaults={
         STATE: RUNNING,

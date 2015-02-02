@@ -41,7 +41,7 @@ class WorkflowClient(object):
         if isinstance(roles,basestring):
             roles = [roles]
         return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
-    def start_all(self,roles,expire=True):
+    def start_all(self,roles,expire=False):
         while True:
             if expire:
                 self.expire()

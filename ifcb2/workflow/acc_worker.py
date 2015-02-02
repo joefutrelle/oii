@@ -47,7 +47,7 @@ def acc_wakeup():
             session.expire_all() # don't be stale!
             acc = Accession(session,ts_label)
             logging.warn('ACCESSION %s' % pid)
-            client.update(pid,ttl=30) # allow 30s for accession
+            client.update(pid,ttl=60) # allow 60s for accession
             ret = acc.add_fileset(fileset)
             if ret:
                 logging.warn('SUCCESS %s' % pid)
