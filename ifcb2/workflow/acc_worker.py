@@ -31,9 +31,8 @@ from oii.ifcb2.session import session
 client = WorkflowClient()
 
 @wakeup_task
-def acc_wakeup(wakeup_key):
+def acc_wakeup():
     """- wake up and expire the session
-    - ignore wakeup keys other than ACC_WAKEUP_KEY
     """
     # acquire accession jobs, one at a time
     for job in client.start_all([ACCESSION_ROLE]):
@@ -62,7 +61,7 @@ def acc_wakeup(wakeup_key):
                 state=AVAILABLE,
                 event=COMPLETED,
                 message='accession completed')
-            client.wakeup(BIN_ZIP_WAKEUP_KEY)
+            client.wakeup()
         except Exception as e:
             logging.warn('ERROR during accession for %s' % pid)
             client.complete(
