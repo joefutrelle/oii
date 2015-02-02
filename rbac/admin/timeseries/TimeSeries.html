@@ -58,7 +58,7 @@
                 <div class="input-group input-group-sm col-md-5">
                     <span class="input-group-addon">Path</span>
                     <input type="text" class="form-control" ng-model="path.path">
-		    <select class="form-control btn btn-default dropdown-toggle" ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features']"></select>
+		    <select class="form-control btn btn-default dropdown-toggle" ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features','binzip']"></select>
                     <span class="input-group-btn">
                         <button class="btn btn-default" type="button" ng-click="removePath(ts,path)">-</button>
                     </span>
