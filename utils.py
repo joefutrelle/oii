@@ -15,7 +15,9 @@ import sys
 from datetime import timedelta
 from multiprocessing import Pool
 from types import GeneratorType
-from shutil import copyfileobj
+from shutil import copyfileobj, rmtree
+from tempfile import mkdtemp
+from contextlib import contextmanager
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -154,6 +156,14 @@ def gen_id(namespace=''):
             prev = sha1(prev + entropy).hexdigest()
         genid_prev_id = prev
     return namespace + prev
+
+@contextmanager
+def safe_tempdir(suffix='', prefix='tmp', dir=None):
+    try:
+        tempdir = mkdtemp(suffix,prefix,dir)
+        yield tempdir
+    finally:
+        shutil.rmtree(tempdir)
 
 def safe_copy(src_path, dest_path):
     """copy a file to another location as atomically as possible"""
