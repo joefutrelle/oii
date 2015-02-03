@@ -163,7 +163,7 @@ def safe_tempdir(suffix='', prefix='tmp', dir=None):
         tempdir = mkdtemp(suffix,prefix,dir)
         yield tempdir
     finally:
-        shutil.rmtree(tempdir)
+        rmtree(tempdir)
 
 def safe_copy(src_path, dest_path):
     """copy a file to another location as atomically as possible"""
