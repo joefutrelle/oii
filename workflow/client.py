@@ -8,10 +8,9 @@ from oii.workflow import ROLE, ANY
 from oii.workflow import HEARTBEAT, RELEASED, ERROR
 from oii.workflow import UPSTREAM
 
-from oii.workflow.webapi import DEFAULT_PORT
-
 import httplib as http
 
+DEFAULT_PORT=9270
 DEFAULT_BASE_URL='http://localhost:%d' % DEFAULT_PORT
 
 class Busy(Exception):

@@ -19,8 +19,7 @@ from oii.workflow.orm import Base, Product, Dependency, Products
 from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL, UPSTREAM_STATE
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
-
-DEFAULT_PORT=9270
+from oii.workflow.client import DEFAULT_PORT
 
 # constants
 
