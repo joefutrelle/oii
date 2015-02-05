@@ -2,10 +2,10 @@ import requests
 
 from oii.utils import gen_id
 
-from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
-from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER
+from oii.workflow import PID, STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
+from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED
 from oii.workflow import ROLE, ANY
-from oii.workflow import HEARTBEAT, RELEASED
+from oii.workflow import HEARTBEAT, RELEASED, ERROR
 from oii.workflow import UPSTREAM
 
 from oii.workflow.webapi import DEFAULT_PORT
@@ -104,7 +104,23 @@ class WorkflowClient(object):
     def get(self,pid):
         r = requests.get(self.api('/get/%s' % pid))
         return r.json()
-
+    def do_all_work(self,roles=[ANY],callback=None,message=None):
+        # FIXME this would be a better decorator
+        for job in self.start_all(roles):
+            pid = job[PID]
+            try:
+                if callback is not None:
+                    callback(pid,job)
+                self.complete(pid,
+                              state=AVAILABLE,
+                              event=COMPLETED,
+                              message=message)
+            except Exception as e:
+                self.update(pid,
+                            state=ERROR,
+                            event='exception',
+                            message=str(e))
+                
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation
     between clients. Use with the "with" statement, like this:

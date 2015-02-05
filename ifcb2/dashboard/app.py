@@ -28,7 +28,7 @@ from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
 from oii.image.mosaic import Tile
 
-from oii.ifcb2.workflow import BIN_ZIP_PRODUCT
+from oii.ifcb2.workflow import BINZIP_PRODUCT
 
 # FIXME this is used for old PIL-based mosaic compositing API
 from oii.image.pil.utils import filename2format, thumbnail
@@ -490,7 +490,7 @@ def get_target_metadata(target,targets):
 
 def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
     try:
-        bin_zip = get_product_file(parsed, BIN_ZIP_PRODUCT)
+        bin_zip = get_product_file(parsed, BINZIP_PRODUCT)
         if os.path.exists(bin_zip):
             # name is target LID + png extension
             png_name = os.path.basename(target[PID]) + '.png'

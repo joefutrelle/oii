@@ -7,7 +7,7 @@ import requests
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE, BIN_LID
-from oii.ifcb2.workflow import WEBCACHE_ROLE, WEBCACHE_WAKEUP_KEY
+from oii.ifcb2.workflow import WEBCACHE_PRODUCT, BINZIP2WEBCACHE
 from oii.ifcb2.identifiers import as_product, parse_pid
 from oii.ifcb2.represent import binpid2zip
 
@@ -18,31 +18,20 @@ from oii.workflow.async import async, wakeup_task
 ### FIXME config this right
 client = WorkflowClient()
 
+def do_webcache(pid,job):
+    parsed = parse_pid(pid)
+    bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
+    mosaic_base_url = '%sapi/mosaic/size/800x600/scale/0.33/page/1' % parsed[NAMESPACE]
+    mosaic_json = '%s/%s.json' % (mosaic_base_url, bin_pid)
+    mosaic_jpg = '%s/%s.jpg' % (mosaic_base_url, bin_pid)
+    logging.warn('WEBCACHE hitting %s' % mosaic_json)
+    r1 = requests.get(mosaic_json)
+    json = r1.json() # read it, and throw it away
+    logging.warn('WEBCACHE hitting %s' % mosaic_jpg)
+    r2 = requests.get(mosaic_jpg)
+    img_data = StringIO(r2.content) # read it, and throw it away
+    logging.warn('WEBCACHE done for %s' % pid)
+
 @wakeup_task
 def webcache_wakeup(wakeup_key):
-    for job in client.start_all([WEBCACHE_ROLE]):
-        pid = job[PID]
-        parsed = parse_pid(pid)
-        try:
-            bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
-            mosaic_base_url = '%sapi/mosaic/size/800x600/scale/0.33/page/1' % parsed[NAMESPACE]
-            mosaic_json = '%s/%s.json' % (mosaic_base_url, bin_pid)
-            mosaic_jpg = '%s/%s.jpg' % (mosaic_base_url, bin_pid)
-            logging.warn('WEBCACHE hitting %s' % mosaic_json)
-            r1 = requests.get(mosaic_json)
-            json = r1.json() # read it, and throw it away
-            logging.warn('WEBCACHE hitting %s' % mosaic_jpg)
-            r2 = requests.get(mosaic_jpg)
-            img_data = StringIO(r2.content) # read it, and throw it away
-            client.complete(
-                pid,
-                state=AVAILABLE,
-                event=COMPLETED,
-                message='hit cache URLs')
-        except Exception as e:
-            logging.warn('webcache ERROR webcache for %s' % pid)
-            client.complete(
-                pid,
-                state=ERROR,
-                event='exception',
-                message=str(e))
+    client.do_all_work([BINZIP2WEBCACHE],do_webcache,'hit webcache URLs')
