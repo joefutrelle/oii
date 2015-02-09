@@ -16,11 +16,11 @@ from oii.ifcb2.workflow import BINZIP2BLOBS
 from oii.ifcb2.identifiers import parse_pid, PID, LID 
 
 ### FIXME config this right
-client = WorkflowClient()
+client = WorkflowClient('http://128.128.14.19:9270')
 
 # configure MATLAB
-MATLAB_EXEC_PATH='/usr/local/MATLAB/R2012b/bin/matlab'
-MATLAB_BASE='/home/ubuntu/ifcb/trunk'
+MATLAB_EXEC_PATH='/usr/local/MATLAB/R2014b/bin/matlab'
+MATLAB_BASE='/home/ubuntu/dev/trunk'
 MATLAB_DIRS=[
 'feature_extraction',
 'feature_extraction/blob_extraction',
@@ -53,11 +53,11 @@ def extract_blobs(pid,job):
             # configure matlab
             def log_callback(msg):
                 logging.warn('BLOBS %s' % msg)
-                client.heartbeat(pid)
+                client.heartbeat(pid,message=msg)
             matlab = Matlab(MATLAB_EXEC_PATH, MATLAB_PATH, output_callback=log_callback)
             # run command
             blobs_file = os.path.join(job_dir, blob_zip_name(bin_pid))
-            cmd = 'bin_blobs(\'%s\',\'%s\',\'%s\')' % (bin_pid, bin_zip_path, job_dir)
+            cmd = 'bin_blobs(\'%s\',\'%s\',\'%s\')' % (bin_pid, binzip_path, job_dir)
             logging.warn('BLOBS running %s' % cmd)
             matlab.run(cmd)
             logging.warn('BLOBS checking for %s' % blobs_file)
