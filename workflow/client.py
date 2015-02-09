@@ -1,3 +1,5 @@
+import traceback
+
 import requests
 
 from oii.utils import gen_id
@@ -121,7 +123,7 @@ class WorkflowClient(object):
                 self.update(pid,
                             state=ERROR,
                             event='exception',
-                            message=str(e))
+                            message=traceback.format_exc())
                 
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation
