@@ -215,13 +215,13 @@ class Products(object):
 #            with_lockmode('update').
         return self.downstream(roles, state, upstream_state).\
             first()
-    def start_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):
+    def start_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE, ttl=None, new_state=RUNNING, event='start_next', message=None):
         """find any product that is in state state and whose upstream dependencies are all in
         upstream_state and satisfy all the specified roles, atomically set it to the new state with
         the given event and message values. If no product is in the state queried, will return
         None instead"""
         p = self.get_next(roles, state, upstream_state)
-        return self._update_commit(p, event, new_state, message)
+        return self._update_commit(p, event, new_state, message, ttl=ttl)
     def update_if(self, pid, state=WAITING, new_state=RUNNING, event='update_if', message=None, ttl=None):
         """atomically change the state of the given product, but only if it's
         in the specified current state"""

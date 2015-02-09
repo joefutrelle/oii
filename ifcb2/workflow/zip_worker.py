@@ -1,5 +1,4 @@
 import logging
-
 import tempfile
 import requests
 
@@ -32,4 +31,8 @@ def do_binzip(pid, job):
 
 @wakeup_task
 def binzip_wakeup(wakeup_key):
-    client.do_all_work([RAW2BINZIP],do_binzip,'deposited bin zip')
+    client.do_all_work(
+        roles=[RAW2BINZIP],
+        callback=do_binzip,
+        ttl=217,
+        message='deposited bin zip')

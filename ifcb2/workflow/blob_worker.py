@@ -74,4 +74,8 @@ def extract_blobs(pid,job):
 
 @wakeup_task
 def blob_wakeup(wakeup_key):
-    client.do_all_work([BINZIP2BLOBS],extract_blobs,'blob zip deposited')
+    client.do_all_work(
+        roles=[BINZIP2BLOBS],
+        callback=extract_blobs,
+        ttl=310,
+        message='blob zip deposited')

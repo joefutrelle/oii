@@ -3,7 +3,7 @@ import requests
 from oii.utils import gen_id
 
 from oii.workflow import PID, STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
-from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED
+from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED, TTL
 from oii.workflow import ROLE, ANY
 from oii.workflow import HEARTBEAT, RELEASED, ERROR
 from oii.workflow import UPSTREAM
@@ -36,15 +36,18 @@ class WorkflowClient(object):
             return requests.get(self.api('/wakeup'))
         else:
             return requests.get(self.api('/wakeup/%s' % pid))
-    def start_next(self,roles):
+    def start_next(self,roles,ttl=None):
         if isinstance(roles,basestring):
             roles = [roles]
-        return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
-    def start_all(self,roles,expire=False):
+        url = self.api('/start_next/%s' % '/'.join(roles))
+        return requests.post(url, data={
+            TTL: ttl
+        })
+    def start_all(self,roles,expire=False,ttl=None):
         while True:
             if expire:
                 self.expire()
-            r = self.start_next(roles)
+            r = self.start_next(roles,ttl=ttl)
             if not isok(r):
                 return
             job = r.json()
@@ -103,9 +106,9 @@ class WorkflowClient(object):
     def get(self,pid):
         r = requests.get(self.api('/get/%s' % pid))
         return r.json()
-    def do_all_work(self,roles=[ANY],callback=None,message=None):
+    def do_all_work(self,roles=[ANY],callback=None,message=None,ttl=None):
         # FIXME this would be a better decorator
-        for job in self.start_all(roles):
+        for job in self.start_all(roles,ttl=ttl):
             pid = job[PID]
             try:
                 if callback is not None:

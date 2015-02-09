@@ -53,4 +53,8 @@ def do_acc(pid, job):
 def acc_wakeup(ignore):
     """- wake up and expire the session
     """
-    client.do_all_work([WILD2RAW],do_acc,'accession complete')
+    client.do_all_work(
+        roles=[WILD2RAW],
+        callback=do_acc,
+        ttl=40,
+        message='accession complete')

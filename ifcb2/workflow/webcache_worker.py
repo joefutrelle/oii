@@ -34,4 +34,8 @@ def do_webcache(pid,job):
 
 @wakeup_task
 def webcache_wakeup(wakeup_key):
-    client.do_all_work([BINZIP2WEBCACHE],do_webcache,'hit webcache URLs')
+    client.do_all_work(
+        roles=[BINZIP2WEBCACHE],
+        callback=do_webcache,
+        ttl=37,
+        message='hit webcache URLs')

@@ -257,10 +257,11 @@ def downstream(role_list=None):
 def start_next(role_list):
     kw = product_params(request.form, defaults={
         STATE: WAITING,
-        UPSTREAM_STATE: AVAILABLE
+        UPSTREAM_STATE: AVAILABLE,
+        TTL: None
     })
     roles = role_list.split('/')
-    p = Products(session).start_next(roles, kw[STATE], kw[UPSTREAM_STATE])
+    p = Products(session).start_next(roles, kw[STATE], kw[UPSTREAM_STATE], kw[TTL])
     # note that start_next commits and handles errors
     return product_response(p)
 
