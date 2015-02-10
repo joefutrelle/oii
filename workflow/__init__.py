@@ -7,9 +7,12 @@ PID='pid'
 # state and states
 STATE='state'
 NEW_STATE='new_state'
+UPSTREAM_STATE='upstream_state'
 WAITING='waiting'
 RUNNING='running'
 AVAILABLE='available'
+ERROR='error'
+BLACKLISTED='blacklisted'
 
 # expiration and timestamp
 TS='ts'
@@ -21,6 +24,7 @@ FOREVER=-1
 EVENT='event'
 HEARTBEAT='heartbeat'
 RELEASED='released'
+COMPLETED='completed'
 
 # message
 MESSAGE='message'
@@ -31,4 +35,4 @@ ANY='any'
 
 # dependencies
 UPSTREAM='upstream'
-
+DOWNSTREAM='downstream'

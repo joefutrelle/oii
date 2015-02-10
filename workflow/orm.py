@@ -1,14 +1,14 @@
 from datetime import timedelta
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_
+from sqlalchemy import Table, MetaData, Column, ForeignKey, Integer, String, BigInteger, DateTime, func, distinct, UniqueConstraint, and_, or_, desc
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from oii.times import utcdtnow
 from oii.orm_utils import fix_utc
 
-from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE
+from oii.workflow import STATE, NEW_STATE, UPSTREAM_STATE, EVENT, MESSAGE
 from oii.workflow import WAITING, RUNNING, AVAILABLE
 from oii.workflow import TS, EXPIRES, TTL, FOREVER
 from oii.workflow import ROLE, ANY
@@ -138,7 +138,7 @@ class Products(object):
         except IntegrityError:
             self.session.rollback()
             raise
-    def get_product(self,pid,create=None):
+    def get(self,pid,create=None):
         p = self.session.query(Product).filter(Product.pid==pid).first()
         if not p and create is not None:
             self.session.add(create)
@@ -163,6 +163,13 @@ class Products(object):
         now = utcdtnow()
         return self.session.query(Product).\
             filter(Product.ts < now - ago)
+    def most_recent(self,n=None):
+        """return the products with the most recent events.
+        n = maximum number of products to return"""
+        q = self.session.query(Product).order_by(desc(Product.ts))
+        if n is not None:
+            q = q.limit(n)
+        return q
     def roots(self):
         """return all roots; that is, products with no dependencies"""
         return self.session.query(Product).filter(~Product.depends_on.any())
@@ -176,27 +183,45 @@ class Products(object):
             return product
         else:
             return None
-    def get_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE):
-        """find any product that is in state state and whose upstream dependencies are all in
-        dep_state and satisfy all the specified roles, and lock it for update"""
-        self.session.expire_all() # don't be stale!
+    def search(self, frag):
+        like_clause = '%%%s%%' % frag
         return self.session.query(Product).\
-            join(Product.upstream_dependencies).\
-            filter(Product.state==state).\
-            filter(Dependency.state==dep_state).\
-            filter(Dependency.role.in_(roles)).\
-            group_by(Product).\
-            having(func.count(Dependency.role)==len(roles)).\
-            having(func.count(distinct(Dependency.role))==len(set(roles))).\
-            with_lockmode('update').\
-            first()
-    def start_next(self, roles=[ANY], state=WAITING, dep_state=AVAILABLE, new_state=RUNNING, event='start_next', message=None):
+            filter(or_(Product.pid.ilike(like_clause),\
+                       Product.state.ilike(like_clause),\
+                       Product.event.ilike(like_clause),\
+                       Product.message.ilike(like_clause)))
+    def downstream(self, roles=None, state=None, upstream_state=None):
+        """find all products that are in state state and whose upstream deps are all in
+        upstream_state and satisfy all the specified roles. any of roles, state, or upstream_state
+        can be omitted, and will be unconstrained"""
+        self.session.expire_all() # don't be stale!
+        q = self.session.query(Product).\
+            join(Product.upstream_dependencies)
+        if state is not None:
+            q = q.filter(Product.state==state)
+        if upstream_state is not None:
+            q = q.filter(Dependency.state==upstream_state)
+        if roles is not None and roles:
+            q = q.filter(Dependency.role.in_(roles)).\
+                group_by(Product).\
+                having(func.count(Dependency.role)==len(roles)).\
+                having(func.count(distinct(Dependency.role))==len(set(roles)))
+        else:
+            q = q.group_by(Product)
+        return q
+    def get_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in
-        dep_state and satisfy all the specified roles, atomically set it to the new state with
+        upstream_state and satisfy all the specified roles, and lock it for update"""
+#            with_lockmode('update').
+        return self.downstream(roles, state, upstream_state).\
+            first()
+    def start_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE, ttl=None, new_state=RUNNING, event='start_next', message=None):
+        """find any product that is in state state and whose upstream dependencies are all in
+        upstream_state and satisfy all the specified roles, atomically set it to the new state with
         the given event and message values. If no product is in the state queried, will return
         None instead"""
-        p = self.get_next(roles, state, dep_state)
-        return self._update_commit(p, event, new_state, message)
+        p = self.get_next(roles, state, upstream_state)
+        return self._update_commit(p, event, new_state, message, ttl=ttl)
     def update_if(self, pid, state=WAITING, new_state=RUNNING, event='update_if', message=None, ttl=None):
         """atomically change the state of the given product, but only if it's
         in the specified current state"""
@@ -213,17 +238,17 @@ class Products(object):
         for d in td:
             self.session.delete(d)
         return self
-    def delete_intermediate(self, state=AVAILABLE, dep_state=AVAILABLE):
+    def delete_intermediate(self, state=AVAILABLE, upstream_state=AVAILABLE):
         """delete all products that
         - are in 'state'
         - have any dependencies (in other words, not "root" products")
-        - have any dependents, all of which are in 'dep_state'
+        - have any dependents, all of which are in 'upstream_state'
         default is to find available products that no unavailable products depend on"""
         for product in self.session.query(Product).\
             filter(Product.state==state).\
             filter(Product.depends_on.any()).\
             filter(Product.dependents.any()).\
-            filter(~Product.dependents.any(Product.state!=dep_state)).\
+            filter(~Product.dependents.any(Product.state!=upstream_state)).\
             with_lockmode('update'):
             self.session.delete(product)
         self.session.commit()

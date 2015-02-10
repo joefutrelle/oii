@@ -5,12 +5,14 @@ including workers for
 
 WILD_PRODUCT='wild'
 RAW_PRODUCT='raw'
-BIN_ZIP_PRODUCT='binzip'
+BINZIP_PRODUCT='binzip'
+WEBCACHE_PRODUCT='webcache'
+BLOBS_PRODUCT='blobs'
+FEATURES_PRODUCT='features'
 
-ACCESSION_ROLE='accession'
-BIN_ZIP_ROLE='binzip'
-WEBCACHE_ROLE='webcache'
+WILD2RAW='wild2raw'
+RAW2BINZIP ='raw2binzip'
+BINZIP2BLOBS ='binzip2blobs'
+BINZIP2WEBCACHE = 'binzip2webcache'
+BLOBS2FEATURES ='blobs2features'
 
-ACC_WAKEUP_KEY='ifcb:accession'
-BIN_ZIP_WAKEUP_KEY='ifcb:binzip'
-WEBCACHE_WAKEUP_KEY='ifcb:webcache'

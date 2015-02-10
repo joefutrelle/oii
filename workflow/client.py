@@ -1,17 +1,18 @@
+import traceback
+
 import requests
 
 from oii.utils import gen_id
 
-from oii.workflow import STATE, NEW_STATE, EVENT, MESSAGE
-from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER
+from oii.workflow import PID, STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
+from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED, TTL
 from oii.workflow import ROLE, ANY
-from oii.workflow import HEARTBEAT, RELEASED
+from oii.workflow import HEARTBEAT, RELEASED, ERROR
 from oii.workflow import UPSTREAM
-
-from oii.workflow.webapi import DEFAULT_PORT
 
 import httplib as http
 
+DEFAULT_PORT=9270
 DEFAULT_BASE_URL='http://localhost:%d' % DEFAULT_PORT
 
 class Busy(Exception):
@@ -37,15 +38,18 @@ class WorkflowClient(object):
             return requests.get(self.api('/wakeup'))
         else:
             return requests.get(self.api('/wakeup/%s' % pid))
-    def start_next(self,roles):
+    def start_next(self,roles,ttl=None):
         if isinstance(roles,basestring):
             roles = [roles]
-        return requests.get(self.api('/start_next/%s' % '/'.join(roles)))
-    def start_all(self,roles,expire=True):
+        url = self.api('/start_next/%s' % '/'.join(roles))
+        return requests.post(url, data={
+            TTL: ttl
+        })
+    def start_all(self,roles,expire=False,ttl=None):
         while True:
             if expire:
                 self.expire()
-            r = self.start_next(roles)
+            r = self.start_next(roles,ttl=ttl)
             if not isok(r):
                 return
             job = r.json()
@@ -66,7 +70,7 @@ class WorkflowClient(object):
     def complete(self,pid,**d):
         """like update but sets TTL to FOREVER.
         d can contain STATE, EVENT, MESSAGE"""
-        self.update(pid,**dict(d.items(),TTL=FOREVER))
+        self.update(pid,**dict(d.items(),ttl=FOREVER))
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)
@@ -76,8 +80,51 @@ class WorkflowClient(object):
             ROLE: role
         })
     def expire(self):
-        return requests.delete(self.api('/expire'))
-
+        r = requests.delete(self.api('/expire'))
+        if not isok(r):
+            return 0
+        return r.json()['expired']
+    def most_recent(self,n=None):
+        if n is None:
+            n = 25
+        r = requests.get(self.api('/most_recent/%d' % n))
+        return r.json()
+    def downstream(self,roles=[],state=None,upstream_state=None):
+        if roles:
+            role_frag = '/%s' % '/'.join(roles)
+        else:
+            role_frag = ''
+        r = requests.post(self.api('/downstream%s' % role_frag), data={
+            STATE: state,
+            UPSTREAM_STATE: upstream_state
+        })
+        return r.json()
+    def get_graph(self,pid):
+        r = requests.get(self.api('/get_graph/%s' % pid))
+        return r.json()
+    def search(self,frag):
+        r = requests.get(self.api('/search/%s' % frag))
+        return r.json()
+    def get(self,pid):
+        r = requests.get(self.api('/get/%s' % pid))
+        return r.json()
+    def do_all_work(self,roles=[ANY],callback=None,message=None,ttl=None):
+        # FIXME this would be a better decorator
+        for job in self.start_all(roles,ttl=ttl):
+            pid = job[PID]
+            try:
+                if callback is not None:
+                    callback(pid,job)
+                self.complete(pid,
+                              state=AVAILABLE,
+                              event=COMPLETED,
+                              message=message)
+            except Exception as e:
+                self.update(pid,
+                            state=ERROR,
+                            event='exception',
+                            message=traceback.format_exc())
+                
 class Mutex(object):
     """Use a specific workflow product as a mutex. Requires cooperation
     between clients. Use with the "with" statement, like this:

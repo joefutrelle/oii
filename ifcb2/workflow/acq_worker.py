@@ -6,10 +6,9 @@ from oii.ifcb2.orm import Instrument
 
 from oii.workflow.client import WorkflowClient, Mutex, Busy
 from oii.workflow.async import async, wakeup_task
-from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, ACCESSION_ROLE
-from oii.ifcb2.workflow import BIN_ZIP_ROLE, BIN_ZIP_PRODUCT
-from oii.ifcb2.workflow import ACC_WAKEUP_KEY, BIN_ZIP_WAKEUP_KEY
-from oii.ifcb2.workflow import WEBCACHE_ROLE
+from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, BINZIP_PRODUCT
+from oii.ifcb2.workflow import BLOBS_PRODUCT, FEATURES_PRODUCT, WEBCACHE_PRODUCT
+from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURES, BINZIP2WEBCACHE
 
 """
 Here's the deal.
@@ -48,13 +47,19 @@ def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
     also schedule a downstream zip job.
     pid must not be a local id--it must be namespace-scoped"""
-    wild_pid = as_product(pid,WILD_PRODUCT)
-    raw_pid = as_product(pid,RAW_PRODUCT)
-    client.depend(raw_pid, wild_pid, ACCESSION_ROLE)
-    zip_pid = as_product(pid,BIN_ZIP_PRODUCT)
-    client.depend(zip_pid, raw_pid, BIN_ZIP_ROLE)
-    webcache_pid = as_product(pid,'webcache') # product label not important here
-    client.depend(webcache_pid, zip_pid, WEBCACHE_ROLE)
+    """dependencies:
+    features <- blobs <- binzip <- raw <- wild"""
+    wild_pid = as_product(pid, WILD_PRODUCT)
+    raw_pid = as_product(pid, RAW_PRODUCT)
+    client.depend(raw_pid, wild_pid, WILD2RAW)
+    binzip_pid = as_product(pid, BINZIP_PRODUCT)
+    client.depend(binzip_pid, raw_pid, RAW2BINZIP)
+    webcache_pid = as_product(pid, WEBCACHE_PRODUCT)
+    client.depend(webcache_pid, binzip_pid, BINZIP2WEBCACHE)
+    blobs_pid = as_product(pid, BLOBS_PRODUCT)
+    client.depend(blobs_pid, binzip_pid, BINZIP2BLOBS)
+    features_pid = as_product(pid, FEATURES_PRODUCT)
+    client.depend(features_pid, blobs_pid, BLOBS2FEATURES)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""
@@ -94,9 +99,9 @@ def acq_wakeup(wakeup_key):
                 # schedule an accession job and wake up accession workers
                 pid = '%s%s/%s' % (URL_PREFIX, ts_label, lid)
                 schedule_accession(client,pid)
-                client.wakeup(ACC_WAKEUP_KEY) # wake up accession workers
+                client.wakeup()
                 logging.warn('%s: scheduled accession for %s' % (ts_label, lid))
             copy_work(instrument, callback=callback)
             logging.warn('%s: acquisition cycle complete' % ts_label)
     except Busy:
-        logging.warn('acquisition already underway for %s' % wakeup_key)
+        pass

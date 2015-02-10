@@ -28,7 +28,7 @@ from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
 from oii.image.mosaic import Tile
 
-from oii.ifcb2.workflow import BIN_ZIP_PRODUCT
+from oii.ifcb2.workflow import BINZIP_PRODUCT
 
 # FIXME this is used for old PIL-based mosaic compositing API
 from oii.image.pil.utils import filename2format, thumbnail
@@ -271,7 +271,7 @@ def volume(ts_label,start=None,end=None):
             dv.append({
                 'gb': float(row[0]),
                 'bin_count': row[1],
-                'day': row[2]
+                'day': str(row[2])
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
 
@@ -474,17 +474,23 @@ def check_files(ts_label, pid):
 
 ### bins, targets, and products ###
 
-def get_target_metadata(target):
-    """given target metadata, clean it up"""
+def get_target_metadata(target,targets):
+    """given target metadata, adjust its metadata"""
     try:
         del target[PAIR]
     except KeyError:
         pass # it's OK, this target isn't stitched
+    ts = list(targets)
+    for p,t,n in zip([None]+ts, ts, ts[1:]+[None]):
+        if t[PID]==target[PID]:
+            if p is not None: target['previous'] = p[PID]
+            if n is not None: target['next'] = n[PID]
+            break
     return target
 
 def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
     try:
-        bin_zip = get_product_file(parsed, BIN_ZIP_PRODUCT)
+        bin_zip = get_product_file(parsed, BINZIP_PRODUCT)
         if os.path.exists(bin_zip):
             # name is target LID + png extension
             png_name = os.path.basename(target[PID]) + '.png'
@@ -548,9 +554,7 @@ def serve_pid(pid):
             if t[TARGET_NUMBER] == target_no:
                 target = t
         add_pid(target, canonical_bin_pid)
-        if extension == 'json':
-            return Response(json.dumps(target),mimetype=MIME_JSON)
-        # not JSON, check for image
+        # check for image
         mimetype = mimetypes.types_map['.' + extension]
         if mimetype.startswith('image/'):
             if req.product=='raw':
@@ -561,8 +565,12 @@ def serve_pid(pid):
             if req.product=='blob_outline':
                 img = get_target_image(req.parsed, target, roi_path)
                 return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
-        # not an image, so remove stitching information from metadata
-        target = get_target_metadata(target)
+        # not an image, so get more metadata
+        targets = get_targets(adc, canonical_bin_pid)
+        # not an image, check for JSON
+        if extension == 'json':
+            return Response(json.dumps(target),mimetype=MIME_JSON)
+        target = get_target_metadata(target,targets)
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
@@ -646,7 +654,10 @@ def serve_pid(pid):
 @app.route('/<path:pid>',methods=['PUT'])
 def deposit(pid):
     req = DashboardRequest(pid, request)
-    destpath = files.get_product_destination(session, pid)
+    try:
+        destpath = files.get_product_destination(session, pid)
+    except NotFound:
+        abort(404)
     product_data = request.data
     destpath_part = '%s_%s.part' % (destpath, gen_id())
     try:

@@ -37,6 +37,9 @@ def get_product_destination(session, pid, product_type=None):
     if product_type is None:
         product_type = parsed[PRODUCT]
     ts_label = parsed[TS_LABEL]
-    root = get_data_roots(session, ts_label, product_type=product_type)[0]
+    roots = get_data_roots(session, ts_label, product_type=product_type)
+    if not roots:
+        raise NotFound('no product destination found')
+    root = roots[0]
     S = next(get_resolver().ifcb.files.product_path(root=root,**parsed))
     return S[FILE_PATH]
