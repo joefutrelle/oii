@@ -1,3 +1,2 @@
-This is not a Python module but rather contains XML resolver
-configurations that apply generally to IFCB data and perform tasks
-such as identifier and CSV file parsing.
+Contains resolver configurations, search for them
+on the Python path
