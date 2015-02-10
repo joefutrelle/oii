@@ -45,21 +45,12 @@ def get_acq_key(instrument_name):
     
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
-    also schedule a downstream zip job.
     pid must not be a local id--it must be namespace-scoped"""
     """dependencies:
-    features <- blobs <- binzip <- raw <- wild"""
+    raw <- wild"""
     wild_pid = as_product(pid, WILD_PRODUCT)
     raw_pid = as_product(pid, RAW_PRODUCT)
     client.depend(raw_pid, wild_pid, WILD2RAW)
-    binzip_pid = as_product(pid, BINZIP_PRODUCT)
-    client.depend(binzip_pid, raw_pid, RAW2BINZIP)
-    webcache_pid = as_product(pid, WEBCACHE_PRODUCT)
-    client.depend(webcache_pid, binzip_pid, BINZIP2WEBCACHE)
-    blobs_pid = as_product(pid, BLOBS_PRODUCT)
-    client.depend(blobs_pid, binzip_pid, BINZIP2BLOBS)
-    features_pid = as_product(pid, FEATURES_PRODUCT)
-    client.depend(features_pid, blobs_pid, BLOBS2FEATURES)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""
