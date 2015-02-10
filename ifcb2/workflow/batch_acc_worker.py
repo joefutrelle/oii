@@ -63,7 +63,9 @@ def acc_wakeup(wakeup_key):
             logging.warn('%s: scheduling batch accession' % INSTRUMENT_NAME)
             for fs in accession.list_filesets():
                 pid = canonicalize(URL_PREFIX, ts_label, fs[LID])
-                logging.warn('found fileset for %s' % pid)
-            logging.warn('%s: batch accession schedule' % ts_label)
+                logging.warn('scheduling accession for %s' % pid)
+                schedule_accession(client,pid)
+            logging.warn('%s: batch accession scheduled' % ts_label)
+            client.wakeup()
     except Busy:
         pass
