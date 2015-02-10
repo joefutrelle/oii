@@ -34,7 +34,7 @@ client = WorkflowClient()
 
 def schedule_products(pid, client):
     """dependencies:
-    features <- blobs <- binzip <- raw <- wild"""
+    features <- blobs <- binzip <- raw"""
     raw_pid = as_product(pid, RAW_PRODUCT)
     binzip_pid = as_product(pid, BINZIP_PRODUCT)
     client.depend(binzip_pid, raw_pid, RAW2BINZIP)
