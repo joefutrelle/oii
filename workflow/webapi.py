@@ -287,7 +287,7 @@ def expire():
     n = Products(session).expire(**kw)
     if n == 0:
         abort(404)
-    return Response(dict(expired=n),mimetype=MIME_JSON)
+    return Response(json.dumps(dict(expired=n)),mimetype=MIME_JSON)
 
 @app.route('/most_recent')
 @app.route('/most_recent/<int:n>')

@@ -34,7 +34,7 @@ celery --config=oii.workflow.async_config -A oii.ifcb2.workflow.acq_worker worke
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-instrument_name='mock'
+INSTRUMENT_NAME='mock'
 URL_PREFIX='http://128.128.14.19:8080/'
 
 ### end FIXME
@@ -45,21 +45,12 @@ def get_acq_key(instrument_name):
     
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
-    also schedule a downstream zip job.
     pid must not be a local id--it must be namespace-scoped"""
     """dependencies:
-    features <- blobs <- binzip <- raw <- wild"""
+    raw <- wild"""
     wild_pid = as_product(pid, WILD_PRODUCT)
     raw_pid = as_product(pid, RAW_PRODUCT)
     client.depend(raw_pid, wild_pid, WILD2RAW)
-    binzip_pid = as_product(pid, BINZIP_PRODUCT)
-    client.depend(binzip_pid, raw_pid, RAW2BINZIP)
-    webcache_pid = as_product(pid, WEBCACHE_PRODUCT)
-    client.depend(webcache_pid, binzip_pid, BINZIP2WEBCACHE)
-    blobs_pid = as_product(pid, BLOBS_PRODUCT)
-    client.depend(blobs_pid, binzip_pid, BINZIP2BLOBS)
-    features_pid = as_product(pid, FEATURES_PRODUCT)
-    client.depend(features_pid, blobs_pid, BLOBS2FEATURES)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""
@@ -76,7 +67,7 @@ def acq_wakeup(wakeup_key):
     - schedule the accession job
     - wakeup accession workers"""
     # figure out if this wakeup matters to us
-    acq_key = get_acq_key(instrument_name)
+    acq_key = get_acq_key(INSTRUMENT_NAME)
     if wakeup_key != acq_key:
         return
     # attempt to acquire mutex. if fails, that's fine,
@@ -86,15 +77,15 @@ def acq_wakeup(wakeup_key):
             # get the instrument info
             session.expire_all() # don't be stale!
             instrument = session.query(Instrument).\
-                         filter(Instrument.name==instrument_name).\
+                         filter(Instrument.name==INSTRUMENT_NAME).\
                          first()
             if instrument is None:
-                logging.warn('ERROR cannot find instrument named "%s"' % instrument_name)
+                logging.warn('ERROR cannot find instrument named "%s"' % INSTRUMENT_NAME)
                 return
             ts_label = instrument.time_series.label
-            logging.warn('%s: starting acquisition cycle' % instrument_name)
+            logging.warn('%s: starting acquisition cycle' % INSTRUMENT_NAME)
             def callback(lid):
-                logging.warn('%s: copied %s from %s' % (ts_label, lid, instrument_name))
+                logging.warn('%s: copied %s from %s' % (ts_label, lid, INSTRUMENT_NAME))
                 mutex.heartbeat() # still alive
                 # schedule an accession job and wake up accession workers
                 pid = '%s%s/%s' % (URL_PREFIX, ts_label, lid)
