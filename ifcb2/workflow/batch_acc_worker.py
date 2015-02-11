@@ -16,14 +16,14 @@ from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURE
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-INSTRUMENT_NAME='mock'
+TIME_SERIES='mock'
 URL_PREFIX='http://128.128.14.19:8080/'
 
 ### end FIXME
 
-def get_acc_key(instrument_name):
+def get_acc_key(time_series):
     """given an instrument name, return the acquisition key"""
-    return 'ifcb:acc:%s' % instrument_name
+    return 'ifcb:acc:%s' % time_series
     
 def schedule_accession(client,pid):
     """use a oii.workflow.WorkflowClient to schedule an accession job for a fileset.
@@ -43,29 +43,22 @@ def acc_wakeup(wakeup_key):
     - schedule the accession job
     - wakeup accession workers"""
     # figure out if this wakeup matters to us
-    acc_key = get_acc_key(INSTRUMENT_NAME)
+    acc_key = get_acc_key(TIME_SERIES)
     if wakeup_key != acc_key:
         return
     # attempt to acquire mutex. if fails, that's fine,
-    # that means acquisition is aready underway
+    # that means batch accession is already underway
     try:
         with Mutex(acc_key,ttl=45) as mutex:
-            # get the instrument info
             session.expire_all() # don't be stale!
-            instrument = session.query(Instrument).\
-                         filter(Instrument.name==INSTRUMENT_NAME).\
-                         first()
-            if instrument is None:
-                logging.warn('ERROR cannot find instrument named "%s"' % INSTRUMENT_NAME)
-                return
-            ts_label = instrument.time_series.label
-            accession = Accession(session, ts_label)
-            logging.warn('%s: scheduling batch accession' % INSTRUMENT_NAME)
+            accession = Accession(session, TIME_SERIES)
+            logging.warn('%s: scheduling batch accession' % TIME_SERIES)
             for fs in accession.list_filesets():
-                pid = canonicalize(URL_PREFIX, ts_label, fs[LID])
+                pid = canonicalize(URL_PREFIX, TIME_SERIES, fs[LID])
                 logging.warn('scheduling accession for %s' % pid)
                 schedule_accession(client,pid)
-            logging.warn('%s: batch accession scheduled' % ts_label)
+                mutex.heartbeat()
+            logging.warn('%s: batch accession scheduled' % TIME_SERIES)
             client.wakeup()
     except Busy:
         pass
