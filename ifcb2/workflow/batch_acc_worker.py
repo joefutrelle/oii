@@ -16,10 +16,15 @@ from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURE
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-TIME_SERIES='mock'
 URL_PREFIX='http://128.128.14.19:8080/'
 
 ### end FIXME
+
+def is_acc_key(key):
+    return key is not None and key.startswith('ifcb:acc:')
+
+def get_time_series(acc_key):
+    return acc_key.split(':')[2]
 
 def get_acc_key(time_series):
     """given an instrument name, return the acquisition key"""
@@ -43,22 +48,22 @@ def acc_wakeup(wakeup_key):
     - schedule the accession job
     - wakeup accession workers"""
     # figure out if this wakeup matters to us
-    acc_key = get_acc_key(TIME_SERIES)
-    if wakeup_key != acc_key:
+    if not is_acc_key(wakeup_key):
         return
+    time_series = get_time_series(wakeup_key)
     # attempt to acquire mutex. if fails, that's fine,
     # that means batch accession is already underway
     try:
-        with Mutex(acc_key,ttl=45) as mutex:
+        with Mutex(wakeup_key,ttl=45) as mutex:
             session.expire_all() # don't be stale!
-            accession = Accession(session, TIME_SERIES)
-            logging.warn('%s: scheduling batch accession' % TIME_SERIES)
+            accession = Accession(session, time_series)
+            logging.warn('%s: scheduling batch accession' % time_series)
             for fs in accession.list_filesets():
-                pid = canonicalize(URL_PREFIX, TIME_SERIES, fs[LID])
+                pid = canonicalize(URL_PREFIX, time_series, fs[LID])
                 logging.warn('scheduling accession for %s' % pid)
                 schedule_accession(client,pid)
                 mutex.heartbeat()
-            logging.warn('%s: batch accession scheduled' % TIME_SERIES)
+            logging.warn('%s: batch accession scheduled' % time_series)
             client.wakeup()
     except Busy:
         pass
