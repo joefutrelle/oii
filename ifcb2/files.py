@@ -37,6 +37,8 @@ def get_product_destination(session, pid, product_type=None):
     if product_type is None:
         product_type = parsed[PRODUCT]
     ts_label = parsed[TS_LABEL]
+    if product_type=='multiblob': # sidecar files for features
+        product_type='features'
     roots = get_data_roots(session, ts_label, product_type=product_type)
     if not roots:
         raise NotFound('no product destination found')
