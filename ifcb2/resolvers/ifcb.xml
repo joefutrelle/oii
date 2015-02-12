@@ -140,6 +140,10 @@
 	<test var="product" eq="features">
 	  <var name="filename">${bin_lid}_fea_v2.csv</var>
 	</test>
+	<test var="product" eq="multiblob">
+	  <!-- feature sidecar files -->
+	  <var name="filename">multiblob/${bin_lid}_multiblob_v2.csv</var>
+	</test>
 	<test var="product" eq="binzip">
 	  <var name="filename">${bin_lid}_binzip_v1.zip</var>
 	</test>
