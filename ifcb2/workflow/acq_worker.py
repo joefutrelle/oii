@@ -1,4 +1,5 @@
 import logging
+import re
 
 from oii.ifcb2.identifiers import as_product
 from oii.ifcb2.acquisition import do_copy
@@ -34,10 +35,15 @@ celery --config=oii.workflow.async_config -A oii.ifcb2.workflow.acq_worker worke
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-INSTRUMENT_NAME='mock'
 URL_PREFIX='http://128.128.14.19:8080/'
 
 ### end FIXME
+
+def is_acq_key(key):
+    return key is not None and key.startswith('ifcb:acq:')
+
+def get_instrument_name(acq_key):
+    return acq_key.split(':')[2]
 
 def get_acq_key(instrument_name):
     """given an instrument name, return the acquisition key"""
@@ -67,25 +73,25 @@ def acq_wakeup(wakeup_key):
     - schedule the accession job
     - wakeup accession workers"""
     # figure out if this wakeup matters to us
-    acq_key = get_acq_key(INSTRUMENT_NAME)
-    if wakeup_key != acq_key:
+    if not is_acq_key(wakeup_key):
         return
+    instrument_name = get_instrument_name(wakeup_key)
     # attempt to acquire mutex. if fails, that's fine,
     # that means acquisition is aready underway
     try:
-        with Mutex(acq_key,ttl=45) as mutex:
+        with Mutex(wakeup_key,ttl=45) as mutex:
             # get the instrument info
             session.expire_all() # don't be stale!
             instrument = session.query(Instrument).\
-                         filter(Instrument.name==INSTRUMENT_NAME).\
+                         filter(Instrument.name==instrument_name).\
                          first()
             if instrument is None:
-                logging.warn('ERROR cannot find instrument named "%s"' % INSTRUMENT_NAME)
+                logging.warn('ERROR cannot find instrument named "%s"' % instrument_name)
                 return
             ts_label = instrument.time_series.label
-            logging.warn('%s: starting acquisition cycle' % INSTRUMENT_NAME)
+            logging.warn('%s: starting acquisition cycle' % instrument_name)
             def callback(lid):
-                logging.warn('%s: copied %s from %s' % (ts_label, lid, INSTRUMENT_NAME))
+                logging.warn('%s: copied %s from %s' % (ts_label, lid, instrument_name))
                 mutex.heartbeat() # still alive
                 # schedule an accession job and wake up accession workers
                 pid = '%s%s/%s' % (URL_PREFIX, ts_label, lid)
