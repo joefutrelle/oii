@@ -5,6 +5,7 @@ import logging
 import requests
  
 from oii.utils import safe_tempdir
+from oii.ioutils import download, upload
 from oii.matlab import Matlab
 
 from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
@@ -46,11 +47,7 @@ def extract_blobs(pid,job):
         # first, copy the zipfile to a temp dir
         binzip_path = os.path.join(binzip_dir, '%s.zip' % bin_lid)
         log_callback('downloading %s to %s' % (binzip_url, binzip_path))
-        r = requests.get(binzip_url)
-        with open(binzip_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                f.write(chunk)
-                f.flush()
+        download(binzip_url, binzip_path)
         # now run bin_blobs
         with safe_tempdir() as job_dir:
             # configure matlab
@@ -65,9 +62,7 @@ def extract_blobs(pid,job):
                 raise Exception('missing output file')
             deposit_url = '%s_blobs.zip' % bin_pid 
             log_callback('depositing %s' % blobs_file)
-            with open(blobs_file,'rb') as bi:
-                bytez = bi.read() # read and pass bytes as data for 12.04 version of requests
-                requests.put(deposit_url, data=bytez)
+            upload(blobs_file, deposit_url)
             log_callback('deposited %s' % blobs_file)
     log_callback('completed %s' % bin_pid)
     client.wakeup()
