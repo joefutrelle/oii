@@ -13,8 +13,9 @@ from oii.workflow import UPSTREAM
 
 import httplib as http
 
+API_PREFIX='/workflow/api/v1'
 DEFAULT_PORT=9270
-DEFAULT_BASE_URL='http://localhost:%d' % DEFAULT_PORT
+DEFAULT_BASE_URL='http://localhost:%d%s' % (DEFAULT_PORT, API_PREFIX)
 
 class Busy(Exception):
     """A mutex is busy"""
