@@ -3,6 +3,7 @@ import traceback
 import requests
 
 from oii.utils import gen_id
+from oii.ioutils import isok
 
 from oii.workflow import PID, STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
 from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED, TTL
@@ -22,9 +23,6 @@ class Busy(Exception):
 class InconsistentState(Exception):
     """The workflow products are in a logically inconsistent state"""
     pass
-
-def isok(r):
-    return r.status_code < 400
 
 class WorkflowClient(object):
     def __init__(self, base_url=None):

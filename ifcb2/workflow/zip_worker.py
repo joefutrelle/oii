@@ -2,6 +2,8 @@ import logging
 import tempfile
 import requests
 
+from oii.ioutils import upload
+
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE, BIN_LID
 from oii.ifcb2.workflow import RAW2BINZIP
@@ -24,8 +26,7 @@ def do_binzip(pid, job):
         # construct binzip URL
         binzip_url = '%s%s_binzip.zip' % (parsed[NAMESPACE], parsed[BIN_LID])
         logging.warn('BINZIP depositing %s' % binzip_url)
-        with open(zip_path,'rb') as zin:
-            requests.put(binzip_url, data=zin)
+        upload(zip_path, binzip_url)
     logging.warn('BINZIP deposited %s' % binzip_url)
     client.wakeup()
 

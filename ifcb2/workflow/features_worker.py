@@ -5,6 +5,7 @@ import logging
 import requests
 
 from oii.utils import safe_tempdir
+from oii.ioutils import download, upload
 from oii.matlab import Matlab
 
 from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
@@ -38,18 +39,6 @@ def multiblobname(url):
 
 def binzipname(url):
     return re.sub(r'.*/([^.]+).*',r'\1.zip',url)
-
-def download(url,path):
-    r = requests.get(url)
-    with open(path,'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024): 
-            f.write(chunk)
-            f.flush()
-
-def upload(path,url):
-    with open(path,'rb') as bi:
-        bytez = bi.read() # read and pass bytes as data for 12.04 version of requests
-        requests.put(url, data=bytez) 
 
 def extract_features(pid,job):
     def log_callback(msg):
