@@ -5,7 +5,7 @@ import logging
 import requests
 
 from oii.utils import safe_tempdir
-from oii.ioutils import download, upload
+from oii.ioutils import download, upload, exists
 from oii.matlab import Matlab
 
 from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
@@ -44,7 +44,6 @@ def extract_features(pid,job):
     def log_callback(msg):
         logging.warn('FEATURES %s' % msg)
         client.heartbeat(pid,message=msg)
-    log_callback('computing features for %s' % pid)
     parsed_pid = parse_pid(pid)
     bin_lid = parsed_pid[LID]
     bin_pid = ''.join([parsed_pid[NAMESPACE], parsed_pid[LID]]) 
@@ -52,6 +51,10 @@ def extract_features(pid,job):
     blob_url = ''.join([bin_pid,'_blob.zip'])
     features_url = ''.join([bin_pid,'_features.csv'])
     multiblob_url = ''.join([bin_pid,'_multiblob.csv'])
+    if exists(features_url):
+        log_callback('skipping %s - features exist' % pid)
+        return
+    log_callback('computing features for %s' % pid)
     with safe_tempdir() as binzip_dir:
         # download bin zip
         binzip_path = os.path.join(binzip_dir, '%s.zip' % bin_lid)

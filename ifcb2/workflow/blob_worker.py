@@ -5,7 +5,7 @@ import logging
 import requests
  
 from oii.utils import safe_tempdir
-from oii.ioutils import download, upload
+from oii.ioutils import download, upload, exists
 from oii.matlab import Matlab
 
 from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
@@ -37,12 +37,16 @@ def extract_blobs(pid,job):
     def log_callback(msg):
         logging.warn('BLOBS %s' % msg)
         client.heartbeat(pid,message=msg)
-    log_callback('computing blobs for %s' % pid)
     parsed_pid = parse_pid(pid)
     bin_lid = parsed_pid[LID]
     bin_pid = ''.join([parsed_pid[NAMESPACE], parsed_pid[LID]]) 
     binzip_url = ''.join([bin_pid,'_binzip.zip'])
     binzip_file = os.path.basename(binzip_url)
+    deposit_url = '%s_blobs.zip' % bin_pid
+    if exists(deposit_url):
+        log_callback('skipping %s - blobs exist' % pid)
+        return
+    log_callback('computing blobs for %s' % pid)
     with safe_tempdir() as binzip_dir:
         # first, copy the zipfile to a temp dir
         binzip_path = os.path.join(binzip_dir, '%s.zip' % bin_lid)
@@ -60,7 +64,6 @@ def extract_blobs(pid,job):
             log_callback('MATLAB done, checking for %s' % blobs_file)
             if not os.path.exists(blobs_file):
                 raise Exception('missing output file')
-            deposit_url = '%s_blobs.zip' % bin_pid 
             log_callback('depositing %s' % blobs_file)
             upload(blobs_file, deposit_url)
             log_callback('deposited %s' % blobs_file)

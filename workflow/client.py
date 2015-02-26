@@ -13,6 +13,7 @@ from oii.workflow import UPSTREAM
 
 import httplib as http
 
+API_PREFIX='/workflow/api/v1'
 DEFAULT_PORT=9270
 DEFAULT_BASE_URL='http://localhost:%d' % DEFAULT_PORT
 
@@ -30,7 +31,7 @@ class WorkflowClient(object):
             base_url = DEFAULT_BASE_URL
         self.base_url = base_url
     def api(self, url):
-        return self.base_url + url
+        return self.base_url + API_PREFIX + url
     def wakeup(self, pid=None):
         if pid is None:
             return requests.get(self.api('/wakeup'))
