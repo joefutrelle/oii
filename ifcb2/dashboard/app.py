@@ -592,7 +592,7 @@ def serve_pid(pid):
             path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[req.extension]
             mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[req.extension]
             return Response(file(path), direct_passthrough=True, mimetype=mimetype)
-        if req.product=='blob':
+        if req.product in ['blobs','blob']: # accept old url pattern
             return serve_blob_bin(req.parsed)
         if req.product=='features':
             return serve_features_bin(req.parsed)

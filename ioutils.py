@@ -19,4 +19,8 @@ def upload(path,url):
         if not isok(r):
             raise IOError('PUT returned %d' % r.status_code)
 
+def exists(url):
+    r = requests.head(url)
+    return isok(r)
+
 
