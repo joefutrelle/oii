@@ -105,7 +105,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		roi_pids.push(bin_pid + '_' + point.roi_num);
 	    });
 	    var plot_data = {
-		label: 'hello', // FIXME derive from axes
+		label: plotX + ' / ' + plotY,
 		data: point_data,
 		color: "black",
 		points: {
@@ -141,7 +141,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
 		if(x >= lo_x && x <= hi_x && y >= lo_y && y <= hi_y) {
 		    // draw the roi
 		    var pid = $this.data('roi_pids')[ix];
-		    $('#roi_image').append('<a href="'+pid+'.html"><img src="'+pid+'.jpg"></img></a>');
+		    $('#roi_image').append('<a href="'+pid+'.html" target="_blank"><img src="'+pid+'.jpg"></img></a>');
 		}
 	    });
 	});
