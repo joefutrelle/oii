@@ -26,8 +26,8 @@ from oii.workflow.client import DEFAULT_PORT, API_PREFIX
 MIME_JSON='application/json'
 
 # configuration parameters
-ASYNC_CONFIG_MODULE='async_config_module'
-DATABASE_URL='database_url'
+ASYNC_CONFIG_MODULE='ASYNC_CONFIG_MODULE'
+DATABASE_URL='DATABASE_URL'
 
 # this is a Flask blueprint
 workflow_blueprint = Blueprint('workflow_blueprint',__name__)
