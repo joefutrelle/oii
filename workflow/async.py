@@ -40,9 +40,13 @@ params include -c n for n threads
 
 async = Celery(ASYNC)
 
-def async_config(config_module='oii.workflow.async_config'):
+DEFAULT_ASYNC_CONFIG_MODULE='oii.workflow.async_config'
+
+def async_config(config_module=DEFAULT_ASYNC_CONFIG_MODULE):
     """use to configure client applications from a module,
     see configuration notes above"""
+    if config_module is None:
+        config_module = DEFAULT_ASYNC_CONFIG_MODULE
     async.config_from_object(config_module)
 
 def async_wakeup(payload=None):

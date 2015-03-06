@@ -46,7 +46,7 @@ def schedule_products(pid, client):
     client.depend(features_pid, blobs_pid, BLOBS2FEATURES)
 
 def do_acc(pid, job):
-    logging.warn('ACCESSION %s' % pid)
+    logging.warn('ACCESSION start %s' % pid)
     parsed = parse_pid(pid)
     lid = parsed[LID]
     ts_label = parsed[TS_LABEL]
@@ -54,13 +54,14 @@ def do_acc(pid, job):
     fileset = parsed_pid2fileset(parsed, roots)
     fileset[LID] = lid
     session.expire_all() # don't be stale!
-    acc = Accession(session,ts_label)
+    acc = Accession(session,ts_label,fast=True)
+    # FIXME fast=True disables checksumming
     client.update(pid,ttl=60) # allow 60s for accession
     ret = acc.add_fileset(fileset)
     if ret:
-        logging.warn('SUCCESS %s' % pid)
+        logging.warn('ACCESSION ADDED %s' % pid)
     else:
-        logging.warn('FAIL %s' % pid)
+        logging.warn('ACCESSION FAIL %s' % pid)
         raise Exception('accession failed')
     session.commit()
     schedule_products(pid, client)

@@ -588,7 +588,7 @@ def evaluate_block(exprs,bindings={},global_namespace={}):
                 yield s
         else:
             def S():
-                for glob_hit in iglob(match_expr):
+                for glob_hit in sorted(list(iglob(match_expr))):
                     yield {parse_var_arg(expr): glob_hit}
             for s in inner_block(expr,solution_generator=S()):
                 yield s

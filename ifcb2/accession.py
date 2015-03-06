@@ -28,20 +28,26 @@ def compute_fixity(fs, fast=False):
 def compute_bin_metrics(b, fs):
     """fs - fileset, b - bin"""
     # hdr - temp / humidity
-    hdr_path = fs[HDR_PATH]
-    parsed_hdr = parse_hdr_file(hdr_path)
-    b.humidity = parsed_hdr.get(HUMIDITY)
-    b.temperature = parsed_hdr.get(TEMPERATURE)
+    try:
+        hdr_path = fs[HDR_PATH]
+        parsed_hdr = parse_hdr_file(hdr_path)
+        b.humidity = parsed_hdr.get(HUMIDITY)
+        b.temperature = parsed_hdr.get(TEMPERATURE)
+    except:
+        logging.warn('METRICS FAILED to parse temperature / humidity')
     # adc - triggers, duration
-    adc_path = fs[ADC_PATH]
-    line = None
-    with open(adc_path) as adc:
-        for line in adc:
-            pass
-    if line is not None:
-        triggers, seconds = re.split(r',',line)[:2]
-        b.triggers = int(triggers)
-        b.duration = float(seconds)
+    try:
+        adc_path = fs[ADC_PATH]
+        line = None
+        with open(adc_path) as adc:
+            for line in adc:
+                pass
+        if line is not None:
+            triggers, seconds = re.split(r',',line)[:2]
+            b.triggers = int(triggers)
+            b.duration = float(seconds)
+    except:
+        logging.warn('METRICS FAILED to compute trigger rate')
     logging.warn('METRICS for %s: humidity=%.2f, temp=%.2fC, triggers=%d, duration=%.2fs' %\
                  (b.lid, b.humidity, b.temperature, b.triggers, b.duration))
 
@@ -108,7 +114,10 @@ class Accession(object):
         logging.warn('PASS %s - integrity checks passed' % lid)
         # now compute bin metrics
         logging.warn('METRICS computing metrics for %s' % lid)
-        compute_bin_metrics(b,fileset)
+        try:
+            compute_bin_metrics(b,fileset)
+        except:
+            logging.warn('METRICS FAIL computing metrics')
         logging.warn('ADDED %s to %s' % (lid, self.ts_label))
         self.session.add(b)
         return True

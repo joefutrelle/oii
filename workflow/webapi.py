@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import httplib as http
 
-from flask import Flask, Blueprint, Response, abort, request, render_template, render_template_string, redirect
+from flask import Flask, Blueprint, Response, abort, request, render_template, render_template_string, redirect, current_app
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
@@ -24,7 +24,26 @@ from oii.workflow.client import DEFAULT_PORT, API_PREFIX
 
 # constants
 
+# configuration flag
+ASYNC_CONFIG_MODULE='async_config_module'
+
 MIME_JSON='application/json'
+
+# this is a Flask blueprint
+workflow_blueprint = Blueprint('workflow_blueprint',__name__)
+
+@workflow_blueprint.record
+def record_config(setup_state):
+    # handle initial configuration
+    app = setup_state.app
+    # get async config module from Flask config (i.e., WSGI config)
+    async_config_module = app.config.get(ASYNC_CONFIG_MODULE)
+    async_config(async_config_module)
+
+@workflow_blueprint.route('/debug')
+def debug_endpoint_deleteme():
+    value = current_app.config.get(ASYNC_CONFIG_MODULE)
+    return Response(json.dumps(dict(ASYNC_CONFIG_MODULE=value)),mimetype=MIME_JSON)
 
 # eventually the session cofiguration should
 # go in its own class.
@@ -58,12 +77,6 @@ def do_begin(conn):
     # BEGIN IMMEDIATE will serialize all database access
     if DB_URL.startswith('sqlite'):
         conn.execute("BEGIN EXCLUSIVE")
-
-# configure async notification
-async_config()
-
-# configure Flask
-workflow_blueprint = Blueprint('workflow_blueprint',__name__)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

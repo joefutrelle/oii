@@ -1,4 +1,5 @@
 import logging
+import time
 
 from oii.ifcb2.identifiers import as_product, canonicalize
 from oii.ifcb2.acquisition import do_copy
@@ -54,15 +55,20 @@ def acc_wakeup(wakeup_key):
     # attempt to acquire mutex. if fails, that's fine,
     # that means batch accession is already underway
     try:
+        then = time.time()
         with Mutex(wakeup_key,ttl=45) as mutex:
             session.expire_all() # don't be stale!
             accession = Accession(session, time_series)
             logging.warn('%s: scheduling batch accession' % time_series)
-            for fs in accession.list_filesets():
+            for fs in accession.list_filesets(): # FIXME debug, do all
                 pid = canonicalize(URL_PREFIX, time_series, fs[LID])
                 logging.warn('scheduling accession for %s' % pid)
                 schedule_accession(client,pid)
-                mutex.heartbeat()
+                elapsed = time.time() - then
+                if elapsed > 25: # don't send heartbeats too often
+                    mutex.heartbeat() # retain mutex
+                    then = time.time()
+                client.wakeup() # wakeup workers
             logging.warn('%s: batch accession scheduled' % time_series)
             client.wakeup()
     except Busy:

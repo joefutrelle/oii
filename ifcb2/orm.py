@@ -67,8 +67,8 @@ class Bin(Base):
 
     id = Column(Integer, primary_key=True)
     ts_label = Column(String)
-    lid = Column(String, unique=True)
-    sample_time = Column(DateTime(timezone=True))
+    lid = Column(String, index=True, unique=True)
+    sample_time = Column(DateTime(timezone=True), index=True)
     skip = Column(Boolean, default=False)
 
     triggers = Column(Integer,default=0)
