@@ -23,60 +23,33 @@ from oii.workflow.async import async_config, async_wakeup
 from oii.workflow.client import DEFAULT_PORT, API_PREFIX
 
 # constants
-
-# configuration flag
-ASYNC_CONFIG_MODULE='async_config_module'
-
 MIME_JSON='application/json'
+
+# configuration parameters
+ASYNC_CONFIG_MODULE='async_config_module'
+DATABASE_URL='database_url'
 
 # this is a Flask blueprint
 workflow_blueprint = Blueprint('workflow_blueprint',__name__)
 
-@workflow_blueprint.record
-def record_config(setup_state):
-    # handle initial configuration
-    app = setup_state.app
+# global ORM session object
+session = None
+
+@workflow_blueprint.before_app_first_request
+def config():
     # get async config module from Flask config (i.e., WSGI config)
-    async_config_module = app.config.get(ASYNC_CONFIG_MODULE)
+    async_config_module = current_app.config.get(ASYNC_CONFIG_MODULE)
     async_config(async_config_module)
+    # get database configuration from Flask config
+    db_url = current_app.config.get(DATABASE_URL)
+    dbengine = create_engine(db_url)
+    global session
+    session = scoped_session(sessionmaker(bind=dbengine))()
 
 @workflow_blueprint.route('/debug')
 def debug_endpoint_deleteme():
-    value = current_app.config.get(ASYNC_CONFIG_MODULE)
-    return Response(json.dumps(dict(ASYNC_CONFIG_MODULE=value)),mimetype=MIME_JSON)
-
-# eventually the session cofiguration should
-# go in its own class.
-#DB_URL='sqlite:///home/ubuntu/dev/ifcb_admin.db'
-#DB_URL='sqlite:///product_service_test.db'
-#DB_URL='sqlite://'
-#from sqlalchemy.pool import StaticPool
-#dbengine = create_engine(
-#    DB_URL,
-#    connect_args={'check_same_thread': False},
-#    poolclass=StaticPool,
-#    echo=False
-#)
-DB_URL='postgresql://ifcb:ifcb@localhost/workflow'
-dbengine = create_engine(DB_URL)
-session = scoped_session(sessionmaker(bind=dbengine))()
-
-# fix broken concurrency model in SQLite
-# see http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html?highlight=sqlite#serializable-isolation-savepoints-transactional-ddl
-
-@event.listens_for(dbengine, "connect")
-def do_connect(dbapi_connection, connection_record):
-    # disable pysqlite's emitting of the BEGIN statement entirely.
-    # also stops it from emitting COMMIT before any DDL.
-    if DB_URL.startswith('sqlite'):
-        dbapi_connection.isolation_level = None
-
-@event.listens_for(dbengine, "begin")
-def do_begin(conn):
-    # emit our own BEGIN with our desired locking behavior
-    # BEGIN IMMEDIATE will serialize all database access
-    if DB_URL.startswith('sqlite'):
-        conn.execute("BEGIN EXCLUSIVE")
+    value = current_app.config.get(DATABASE_URL)
+    return Response(json.dumps({DATABASE_URL:value}),mimetype=MIME_JSON)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
