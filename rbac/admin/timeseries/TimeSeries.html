@@ -12,6 +12,7 @@
         <div ng-if="!ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-default btn-sm" ng-click="editTimeSeries(ts)">Edit</button>
+		<button type="button" class="btn btn-default btn-sm" ng-click="accedeTimeSeries(ts)">Accede</button>
                 <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
 	<!-- FIXME the link below assumes the whole webapp is running at the top of the web server -->
@@ -28,7 +29,6 @@
         <div ng-if="ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-primary btn-sm" ng-click="saveTimeSeries(ts)">Save</button>
-		<button type="button" class="btn btn-default btn-sm" ng-click="accedeTimeSeries(ts)">Accede</button>
                 <button type="button" class="btn btn-default btn-sm" ng-click="cancelTimeSeries(ts)">Cancel</button>
             </div>
             <div class="row ifcbformrow"><div class="col-md-4">

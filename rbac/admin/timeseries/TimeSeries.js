@@ -48,7 +48,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
 
     // save timeseries group to server
     $scope.saveTimeSeries = function(ts) {
-    console.log("saving time series "+ts.label);
+	console.log("saving time series "+ts.label);
         // remove blank paths before save
         for (var i = 0; i < ts.data_dirs.length; i++) {
             if (ts.data_dirs[i].path.trim() == "") {
@@ -81,7 +81,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
     $scope.accedeTimeSeries = function(ts) {
 	console.log("initiating accession on time series "+ts.label)
 	accession_url = "/" + ts.label + "/api/accede";
-	$scope.alert = "Initiating accession...";
+	$scope.alert = "Initiating accession for "+ts.label+"...";
 	$.getJSON(accession_url, function(r) { });
     };
 
