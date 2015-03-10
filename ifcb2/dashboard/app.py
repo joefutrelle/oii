@@ -489,7 +489,9 @@ def check_files(ts_label, pid):
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):
     # initiate batch accession
-    workflow_client.wakeup('ifcb:acc:%s' % ts_label)
+    key='ifcb:acc:%s' % ts_label
+    workflow_client.wakeup(key)
+    return Response(json.dumps(dict(wakeup_key=key)), mimetype=MIME_JSON)
 
 ### bins, targets, and products ###
 

@@ -55,14 +55,6 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
                 $scope.removePath(ts, ts.data_dirs[i]);
             }
         }
-    // perform accession on the time series (FIXME this may be slow!)
-    // FIXME this uses jQuery
-    accession_url = "/" + ts.label + "/api/accession";
-    $scope.alert = "Saving time series...";
-    $.getJSON(accession_url, function(r) {
-        var total = r.total
-        $scope.alert = total + " bin(s) found";
-    });
         if(ts.id) {
         // timeseries group already exists on server. update.
         ts.patch().then(function(serverResponse) {
@@ -85,6 +77,13 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
         });
         }
     }
+
+    $scope.accedeTimeSeries = function(ts) {
+	console.log("initiating accession on time series "+ts.label)
+	accession_url = "/" + ts.label + "/api/accede";
+	$scope.alert = "Initiating accession...";
+	$.getJSON(accession_url, function(r) { });
+    };
 
     // remove timeseries group
     $scope.removeTimeSeries = function(ts) {
