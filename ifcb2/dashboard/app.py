@@ -13,7 +13,7 @@ from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
 
-from flask import Response, abort, request, render_template
+from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
 from sqlalchemy import and_
@@ -29,6 +29,7 @@ from oii.image import mosaic
 from oii.image.mosaic import Tile
 
 from oii.ifcb2.workflow import BINZIP_PRODUCT
+from oii.workflow.client import WorkflowClient
 
 # FIXME this is used for old PIL-based mosaic compositing API
 from oii.image.pil.utils import filename2format, thumbnail
@@ -65,6 +66,19 @@ MIME_JSON='application/json'
 STATIC='/static/'
 ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()))),'../../rbac/admin')
+
+# config params
+DATABASE_URL='DATABASE_URL'
+WORKFLOW_URL='WORKFLOW_URL'
+
+# configuration
+workflow_client = None
+
+@app.before_first_request
+def dashboard_config():
+    global workflow_client
+    workflow_url = current_app.config.get(WORKFLOW_URL)
+    workflow_client = WorkflowClient(workflow_url)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -471,6 +485,11 @@ def check_files(ts_label, pid):
         abort(404)
     result = get_files(parsed,check=True,fast=True) # FIXME set fast to false
     return Response(json.dumps(result), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/accede')
+def accede(ts_label):
+    # initiate batch accession
+    workflow_client.wakeup('ifcb:acc:%s' % ts_label)
 
 ### bins, targets, and products ###
 
