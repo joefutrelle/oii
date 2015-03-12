@@ -1,8 +1,7 @@
 import random, string, json
 from functools import wraps
-from flask import Blueprint, request, Response
+from flask import Blueprint, request, Response, current_app
 from flask_user import login_required, roles_required, current_user
-from oii.ifcb2.dashboard.flasksetup import session
 from oii.ifcb2.orm import APIKey
 
 def maketoken():
@@ -19,6 +18,7 @@ def api_roles_required(*required_roles):
             token = request.headers.get('Authorization')
             if token and len(token) > 7 and token[0:7] == "Bearer ":
                 token = token[7:].strip()
+                session = current_app.config.get('SESSION')
                 apikey = session.query(APIKey).filter_by(token=token).first()
                 if apikey:
                     if apikey.user.has_roles(*required_roles):
@@ -31,7 +31,6 @@ def api_roles_required(*required_roles):
                 return Response(
                     json.dumps({"message": "Not Authorized"}),
                     status=401, mimetype='application/json')
-
             return func(*args, **kwargs)
         return decorated_view
     return wrapper

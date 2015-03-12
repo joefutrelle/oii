@@ -11,7 +11,6 @@ from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
-from oii.ifcb2.session import ScopedSession
 from flask.ext.user import UserMixin
 
 from oii.times import text2utcdatetime
@@ -164,7 +163,8 @@ class User(Base, UserMixin):
                 backref=backref('users', lazy='dynamic'))
     # the scoped_session property is bound here in order to provide
     # compatibility between our Users orm class and the Flask-Users module
-    query = ScopedSession.query_property()
+    #query = ScopedSession.query_property()
+    # FIXED, deferred until app configuration time
 
     def is_active(self):
       return self.is_enabled
@@ -176,7 +176,7 @@ class Role(Base):
     __tablename__ = 'roles'
     id = Column(Integer(), primary_key=True)
     name = Column(String(50), unique=True)
-    query = ScopedSession.query_property()
+    #query = ScopedSession.query_property()
 
 class UserRoles(Base):
     __tablename__ = 'user_roles'
@@ -185,7 +185,7 @@ class UserRoles(Base):
     role_id = Column(Integer(), ForeignKey('roles.id', ondelete='CASCADE'))
     users = relationship('User')
     roles = relationship('Role')
-    query = ScopedSession.query_property()
+    #query = ScopedSession.query_property()
 
 class APIKey(Base):
     __tablename__ = 'api_keys'

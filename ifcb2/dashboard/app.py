@@ -36,7 +36,7 @@ from oii.image.pil.utils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import files
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role, UserRoles
 
 from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint
@@ -59,6 +59,7 @@ from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_ra
 from oii.ifcb2 import v1_stitching
 
 from oii.ifcb2.dashboard.flasksetup import app
+from oii.ifcb2.session import ScopedSession
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
 # constants
@@ -70,15 +71,37 @@ ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
 # config params
 DATABASE_URL='DATABASE_URL'
 WORKFLOW_URL='WORKFLOW_URL'
+# configured object keys
+DBENGINE='DBENGINE'
+SCOPED_SESSION='SCOPED_SESSION'
+SESSION='SESSION'
 
 # configuration
 workflow_client = None
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+
 @app.before_first_request
 def dashboard_config():
+    # configure workflow client
     global workflow_client
     workflow_url = current_app.config.get(WORKFLOW_URL)
     workflow_client = WorkflowClient(workflow_url)
+    # configure database session
+    db_url = current_app.config.get(DATABASE_URL)
+    dbengine = create_engine(db_url)
+    ScopedSession = scoped_session(sessionmaker(bind=dbengine))
+    session = ScopedSession()
+    current_app.config.update(
+        DBENGINE=dbengine,
+        SCOPED_SESSION=ScopedSession,
+        SESSION=session
+    )
+    # instrument RBAC
+    User.query = ScopedSession.query_property()
+    Role.query = ScopedSession.query_property()
+    UserRoles.query = ScopedSession.query_property()
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

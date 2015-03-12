@@ -46,11 +46,6 @@ def config():
     global session
     session = scoped_session(sessionmaker(bind=dbengine))()
 
-@workflow_blueprint.route('/debug')
-def debug_endpoint_deleteme():
-    value = current_app.config.get(DATABASE_URL)
-    return Response(json.dumps({DATABASE_URL:value}),mimetype=MIME_JSON)
-
 ### generic flask utils ###
 def parse_params(path, **defaults):
     """Parse a path fragment and convert to dict.

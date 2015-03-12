@@ -1,14 +1,14 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 from sys import stdout
 import json
 import flask.ext.restless
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role
 from oii.ifcb2.orm import Instrument, APIKey
 from security import roles_required, current_user, maketoken
-from oii.ifcb2.dashboard.flasksetup import app, manager, session, user_manager
+from oii.ifcb2.dashboard.flasksetup import manager, session, user_manager
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
-    if app.config['DEBUG']:
+    if current_app.config['DEBUG']:
         # running in debug mode. show data
         stdout.write("request data: %s\n" % str(data))
         stdout.flush()
