@@ -143,11 +143,15 @@ def bin2zip(parsed_pid,canonical_pid,targets,hdr,timestamp,roi_path,outfile):
         temp.seek(0)
         shutil.copyfileobj(temp, outfile)
 
-def binpid2zip(pid, outfile):
+def binpid2zip(pid, outfile, log_callback=None):
+    def log(msg):
+        if log_callback is not None:
+            log_callback(msg)
     """Generate a zip file given a canonical pid"""
     parsed = parse_pid(pid)
     bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
     timestamp = iso8601(strptime(parsed[TIMESTAMP], parsed[TIMESTAMP_FORMAT]))
+    log('copying raw data for %s to temp files ...' % bin_pid)
     with tempfile.NamedTemporaryFile() as hdr_tmp:
         hdr_path = hdr_tmp.name
         drain(UrlSource(bin_pid+'.hdr'), LocalFileSink(hdr_path))
@@ -162,6 +166,7 @@ def binpid2zip(pid, outfile):
         roi_path = roi_tmp.name
         drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
         canonical_pid = bin_pid
+        log('copied raw data for %s' % canonical_pid)
         """*parsed_pid - result of parsing pid
         *canonical_pid - canonicalized with URL prefix
         *targets - list of (stitched) targets
@@ -169,6 +174,7 @@ def binpid2zip(pid, outfile):
         *timestamp - timestamp (FIXME in what format?)
         *roi_path - path to ROI file
         outfile - where to write resulting zip file"""
+        log('creating zip file for %s' % bin_pid)
         with open(outfile,'wb') as fout:
             return bin2zip(parsed,bin_pid,stitched_targets,hdr,timestamp,roi_path,fout)
 

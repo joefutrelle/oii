@@ -140,7 +140,7 @@ def products_response(ps,error_code=http.NOT_FOUND,success_code=http.OK):
 # create an product in a given initial state
 # (default "available")
 # returns a JSON representation of the product
-@workflow_blueprint.route('/create/<path:pid>',methods=['GET','POST','PUT'])
+@workflow_blueprint.route('/create/<url:pid>',methods=['GET','POST','PUT'])
 def create(pid):
     params = product_params(request.form, defaults={
         STATE: AVAILABLE
@@ -150,7 +150,7 @@ def create(pid):
     return product_response(p, success_code=http.CREATED)
 
 # delete a product regardless of its state or dependencies
-@workflow_blueprint.route('/delete/<path:pid>',methods=['GET','POST','DELETE'])
+@workflow_blueprint.route('/delete/<url:pid>',methods=['GET','POST','DELETE'])
 def delete(pid):
     p = Products(session).get(pid)
     if p is None:
@@ -161,7 +161,7 @@ def delete(pid):
         return Response(dict(deleted=p), mimetype=MIME_JSON)
 
 # delete a product and all its ancestors
-@workflow_blueprint.route('/delete_tree/<path:pid>',methods=['GET','POST','DELETE'])
+@workflow_blueprint.route('/delete_tree/<url:pid>',methods=['GET','POST','DELETE'])
 def delete_tree(pid):
     Products(session).delete_tree(pid).commit()
     return Response(dict(tree_deleted=pid), mimetype=MIME_JSON)
@@ -172,7 +172,7 @@ def delete_tree(pid):
 # if no event is specified, the default is "heartbeat".
 # if no state is specified, the default is "running"
 # if no message is specified, the default is None
-@workflow_blueprint.route('/update/<path:pid>',methods=['POST','PATCH'])
+@workflow_blueprint.route('/update/<url:pid>',methods=['POST','PATCH'])
 def update(pid):
     params = product_params(request.form, defaults={
         EVENT: HEARTBEAT,
@@ -192,7 +192,7 @@ def update(pid):
 # products are implicitly created and so form arguments are accepted for
 # state, event, and message for the downstream product. any implicitly created
 # upstream product is placed in the 'available' state
-@workflow_blueprint.route('/depend/<path:down_pid>',methods=['POST','PUT'])
+@workflow_blueprint.route('/depend/<url:down_pid>',methods=['POST','PUT'])
 def depend(down_pid):
     try:
         up_pid = request.form[UPSTREAM]
@@ -245,7 +245,7 @@ def start_next(role_list):
     # note that start_next commits and handles errors
     return product_response(p)
 
-@workflow_blueprint.route('/update_if/<path:pid>',methods=['POST','PATCH'])
+@workflow_blueprint.route('/update_if/<url:pid>',methods=['POST','PATCH'])
 def update_if(pid):
     kw = product_params(request.form, defaults={
         STATE: WAITING,
@@ -280,11 +280,11 @@ def most_recent(n=25):
 def search(frag):
     return products_response(Products(session).search(frag))
 
-@workflow_blueprint.route('/get/<path:pid>')
+@workflow_blueprint.route('/get/<url:pid>')
 def get(pid):
     return product_response(Products(session).get(pid))
 
-@workflow_blueprint.route('/get_graph/<path:pid>')
+@workflow_blueprint.route('/get_graph/<url:pid>')
 def get_graph(pid):
     # FIXME move impl to ORM?
     p = Products(session).get(pid)
@@ -303,7 +303,7 @@ def get_graph(pid):
 
 # wake up workers optionally with a pid payload
 @workflow_blueprint.route('/wakeup')
-@workflow_blueprint.route('/wakeup/<path:pid>')
+@workflow_blueprint.route('/wakeup/<url:pid>')
 def wakeup(pid=None):
     async_wakeup(pid)
     return Response(json.dumps(dict(status='success')),mimetype=MIME_JSON)

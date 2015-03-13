@@ -4,7 +4,12 @@ from oii.workflow.orm import Base
 from oii.workflow.client import API_PREFIX, DEFAULT_PORT
 from oii.workflow.webapi import workflow_blueprint
 
+from oii.webapi.utils import UrlConverter
+
 app = Flask(__name__)
+# url parameter type
+app.url_map.converters['url'] = UrlConverter
+
 app.register_blueprint(workflow_blueprint, url_prefix=API_PREFIX)
 app.debug=True # FIXME
 

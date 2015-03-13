@@ -23,14 +23,14 @@ def do_binzip(pid, job):
         client.heartbeat(pid,message=msg)
     parsed = parse_pid(pid)
     binzip_url = '%s%s_binzip.zip' % (parsed[NAMESPACE], parsed[BIN_LID])
-    log_callback('BINZIP creating zipfile for %s' % pid)
+    log_callback('creating zipfile for %s' % pid)
     with tempfile.NamedTemporaryFile() as zip_tmp:
         zip_path = zip_tmp.name
-        binpid2zip(pid, zip_path)
+        binpid2zip(pid, zip_path, log_callback)
         # construct binzip URL
-        log_callback('BINZIP depositing %s' % binzip_url)
+        log_callback('depositing %s' % binzip_url)
         upload(zip_path, binzip_url)
-    log_callback('BINZIP deposited %s' % binzip_url)
+    log_callback('deposited %s' % binzip_url)
     client.wakeup()
 
 @wakeup_task
