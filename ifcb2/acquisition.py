@@ -69,8 +69,11 @@ def do_copy(instrument):
     returns set of LIDs copied"""
     lids = Counter()
     for lid,src,dest in get_copy_from(instrument):
+        if os.path.exists(dest): # no need to copy
+            continue
         # if necessary, safe-copy the file
-        if not os.path.exists(dest):
+        src_stat = os.stat(src)
+        if src_stat.st_size > 0: # but not if it's zero-length
             try:
                 safe_copy(src,dest)
                 if not compare_files(src,dest,size=True):
