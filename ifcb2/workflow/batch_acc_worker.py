@@ -56,13 +56,16 @@ def acc_wakeup(wakeup_key):
     # that means batch accession is already underway
     try:
         then = time.time()
+        count = 0
         with Mutex(wakeup_key,ttl=45) as mutex:
             session.expire_all() # don't be stale!
             accession = Accession(session, time_series)
             logging.warn('%s: scheduling batch accession' % time_series)
             for fs in accession.list_filesets(): # FIXME debug, do all
                 pid = canonicalize(URL_PREFIX, time_series, fs[LID])
-                logging.warn('scheduling accession for %s' % pid)
+                count += 1
+                if count % 100 == 0:
+                    logging.warn('%s: scheduled %d bins for accession' % (time_series, count))
                 schedule_accession(client,pid)
                 elapsed = time.time() - then
                 if elapsed > 25: # don't send heartbeats too often

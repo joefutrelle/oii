@@ -10,7 +10,7 @@ from oii.workflow import FOREVER, AVAILABLE, COMPLETED, ERROR
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
 
-from oii.ifcb2.accession import Accession
+from oii.ifcb2.accession import Accession, EXISTS, ADDED, FAILED
 from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, WILD2RAW, BINZIP_PRODUCT
 from oii.ifcb2.workflow import BLOBS_PRODUCT, FEATURES_PRODUCT, WEBCACHE_PRODUCT
 from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURES, BINZIP2WEBCACHE
@@ -54,18 +54,18 @@ def do_acc(pid, job):
     fileset = parsed_pid2fileset(parsed, roots)
     fileset[LID] = lid
     session.expire_all() # don't be stale!
-    acc = Accession(session,ts_label,fast=True)
+    acc = Accession(session,ts_label)#,fast=True)
     # FIXME fast=True disables checksumming
     client.update(pid,ttl=60) # allow 60s for accession
     ret = acc.add_fileset(fileset)
-    if ret:
+    if ret=='ADDED':
         logging.warn('ACCESSION ADDED %s' % pid)
-    else:
+        schedule_products(pid, client)
+        session.commit()
+        client.wakeup()
+    elif ret=='FAILED':
         logging.warn('ACCESSION FAIL %s' % pid)
         raise Exception('accession failed')
-    session.commit()
-    schedule_products(pid, client)
-    client.wakeup()
 
 @wakeup_task
 def acc_wakeup(ignore):

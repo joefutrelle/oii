@@ -282,7 +282,7 @@ def serve_timeseries(ts_label=None, pid=None):
         template['pid'] = pid
     # fetch time series information
     all_series = []
-    for ts in session.query(TimeSeries).filter(TimeSeries.enabled):
+    for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
         if ts_label is None: # no time series specified
             return redirect(os.path.join(request.url_root, ts.label), code=302)
         if ts.label == ts_label:

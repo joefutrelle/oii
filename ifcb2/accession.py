@@ -15,6 +15,10 @@ from oii.ifcb2.orm import Bin, File, TimeSeries
 
 from oii.ifcb2.formats.hdr import parse_hdr_file, TEMPERATURE, HUMIDITY
 
+EXISTS='EXISTS'
+ADDED='ADDED'
+FAILED='FAILED'
+
 def compute_fixity(fs, fast=False):
     """fs - fileset"""
     paths = [fs[HDR_PATH], fs[ADC_PATH], fs[ROI_PATH]]
@@ -98,11 +102,14 @@ class Accession(object):
                 yield fs
     def add_fileset(self,fileset):
         """run one bin fileset through accession process. does not commit,
-        returns True if fileset was good or already existed, False otherwise"""
+        returns 
+        ADDED - if fileset was added
+        EXISTS - if fileset exists
+        FAILED - if accession failed"""
         lid = fileset[LID] # get LID from fileset
         if self.bin_exists(lid): # make sure it doesn't exist
             logging.warn('SKIP %s - exists' % lid)
-            return True
+            return EXISTS
         b = self.new_bin(lid) # create new bin
         # now compute fixity
         logging.warn('FIXITY computing fixity for %s' % lid)
@@ -110,7 +117,7 @@ class Accession(object):
         # now test integrity
         if not self.test_integrity(b):
             logging.warn('FAIL %s - failed integrity checks' % lid)
-            return False
+            return FAILED
         logging.warn('PASS %s - integrity checks passed' % lid)
         # now compute bin metrics
         logging.warn('METRICS computing metrics for %s' % lid)
@@ -120,7 +127,7 @@ class Accession(object):
             logging.warn('METRICS FAIL computing metrics')
         logging.warn('ADDED %s to %s' % (lid, self.ts_label))
         self.session.add(b)
-        return True
+        return ADDED
     def add_all_filesets(self):
         n_total, n_new = 0, 0
         for fileset in self.list_filesets():

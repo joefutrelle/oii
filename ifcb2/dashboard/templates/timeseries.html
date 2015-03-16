@@ -9,13 +9,14 @@ $(document).ready(function() {
     {% else %}
         $('#timeseries').timeseries(undefined, '{{time_series}}');
     {% endif %}
+    $('#ts_menu').append('<option value="">Select time series</option>');
 {% for ts,n in all_series %}
-    $('#ts_menu').append('<option value="{{ts}}">{{n}}</option>')
-         .find('option:last')
-         .click(function() {
-             window.location = '{{base_url}}{{ts}}';
-         });
+    $('#ts_menu').append('<option value="{{ts}}">{{n}}</option>');
 {% endfor %}
+    $('#ts_menu').change(function() {
+        var v = $('#ts_menu option:selected').val();
+        window.location = '{{base_url}}' + v;
+    });
 });
 </script>
 {% endblock head %}
@@ -29,7 +30,7 @@ $(document).ready(function() {
         <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
       {% endfor %}
       </span>
-      <span>Switch to time series:
+      <span>
         <select id="ts_menu"></select>
       </span>
     </div>

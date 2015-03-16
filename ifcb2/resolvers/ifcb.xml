@@ -199,8 +199,8 @@
     </rule>
     <rule name="find_data_dirs" uses="root" distinct="directory product">
       <!-- identify all data directories including their product type -->
-      <any>
-	<all include="directory product" nth="1">
+      <first>
+	<all include="directory product">
 	  <!-- use the validate_data_dir on each product type -->
 	  <split group="product" value="raw blobs features"/>
 	  <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
@@ -210,7 +210,7 @@
 	  <path var="root" match="${root}/*/"/>
 	  <invoke rule="ifcb.files.find_data_dirs" include="directory product"/>
 	</all>
-      </any>
+      </first>
     </rule>
   </namespace>
   <!-- ADC parsing -->
