@@ -46,7 +46,6 @@ def schedule_products(pid, client):
     client.depend(features_pid, blobs_pid, BLOBS2FEATURES)
 
 def do_acc(pid, job):
-    logging.warn('ACCESSION start %s' % pid)
     parsed = parse_pid(pid)
     lid = parsed[LID]
     ts_label = parsed[TS_LABEL]
@@ -59,12 +58,10 @@ def do_acc(pid, job):
     client.update(pid,ttl=60) # allow 60s for accession
     ret = acc.add_fileset(fileset)
     if ret=='ADDED':
-        logging.warn('ACCESSION ADDED %s' % pid)
         schedule_products(pid, client)
         session.commit()
         client.wakeup()
     elif ret=='FAILED':
-        logging.warn('ACCESSION FAIL %s' % pid)
         raise Exception('accession failed')
 
 @wakeup_task

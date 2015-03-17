@@ -41,21 +41,24 @@ timeseries_blueprint = manager.create_api_blueprint(
     #url_prefix=API_URL_PREFIX,
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors=preprocessors
+    preprocessors=preprocessors,
+    results_per_page=None
     )
 manager_blueprint = manager.create_api_blueprint(
     DataDirectory,
     #url_prefix=API_URL_PREFIX,
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors=preprocessors
+    preprocessors=preprocessors,
+    results_per_page=None
     )
 instrument_blueprint = manager.create_api_blueprint(
     Instrument,
     #url_prefix=API_URL_PREFIX,
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
-    preprocessors=preprocessors
+    preprocessors=preprocessors,
+    results_per_page=None
     )
 user_blueprint = manager.create_api_blueprint(
     User,
@@ -63,7 +66,8 @@ user_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
     preprocessors=preprocessors,
-    exclude_columns=['password','api_keys']
+    exclude_columns=['password','api_keys'],
+    results_per_page=None
     )
 role_blueprint = manager.create_api_blueprint(
     Role,
@@ -71,6 +75,7 @@ role_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
     preprocessors=preprocessors,
+    results_per_page=None
     )
 keychain_blueprint = manager.create_api_blueprint(
     APIKey,
@@ -78,6 +83,7 @@ keychain_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET','DELETE'],
     preprocessors=preprocessors,
+    results_per_page=None
     )
 
 password_blueprint = Blueprint('password', __name__)
