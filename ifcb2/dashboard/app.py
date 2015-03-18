@@ -69,6 +69,7 @@ ADMIN_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()))),'../../rbac/admin')
 
 # config params
+DASHBOARD_BASE_URL='DASHBOARD_BASE_URL'
 DATABASE_URL='DATABASE_URL'
 WORKFLOW_URL='WORKFLOW_URL'
 # configured object keys
@@ -102,6 +103,9 @@ def dashboard_config():
     User.query = ScopedSession.query_property()
     Role.query = ScopedSession.query_property()
     UserRoles.query = ScopedSession.query_property()
+
+def get_url_root():
+    return current_app.config.get(DASHBOARD_BASE_URL, request.url_root)
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
@@ -282,15 +286,16 @@ def serve_timeseries(ts_label=None, pid=None):
         template['pid'] = pid
     # fetch time series information
     all_series = []
+    url_root = get_url_root()
     for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
         if ts_label is None: # no time series specified
-            return redirect(os.path.join(request.url_root, ts.label), code=302)
+            return redirect(os.path.join(url_root, ts.label), code=302)
         if ts.label == ts_label:
             template['page_title'] = html.fromstring(ts.description).text_content()
             template['title'] = ts.description
         all_series.append((ts.label, ts.description))
     template['all_series'] = all_series
-    template['base_url'] = request.url_root
+    template['base_url'] = url_root
     return template_response('timeseries.html', **template)
 
 ### feed / metrics API ###
@@ -314,7 +319,7 @@ def volume(ts_label,start=None,end=None):
 
 def canonicalize_bin(ts_label, b):
     return {
-        'pid': canonicalize(request.url_root, ts_label, b.lid),
+        'pid': canonicalize(get_url_root(), ts_label, b.lid),
         'date': iso8601(b.sample_time.timetuple())
     }
 
@@ -450,7 +455,7 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     resp = []
     for bin in bins:
         sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(request.url_root, ts_label, bin.lid)
+        pid = canonicalize(get_url_root(), ts_label, bin.lid)
         resp.append(dict(pid=pid, date=sample_time_str))
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
@@ -566,7 +571,7 @@ class DashboardRequest(object):
         self.lid = self.parsed[LID]
         self.schema_version = self.parsed[SCHEMA_VERSION]
         if request is not None:
-            self.url_root = request.url_root
+            self.url_root = get_url_root()
         self.canonical_pid = canonicalize(self.url_root, self.time_series, self.lid)
         self.extension = 'json' # default
         if 'extension' in self.parsed:
@@ -806,7 +811,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         abort(404)
     adc_path = paths['adc_path']
     roi_path = paths['roi_path']
-    bin_pid = canonicalize(request.url_root, time_series, parsed['bin_lid'])
+    bin_pid = canonicalize(get_url_root(), time_series, parsed['bin_lid'])
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))

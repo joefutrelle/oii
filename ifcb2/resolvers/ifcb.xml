@@ -149,9 +149,7 @@
 	</test>
       </first>
       <any>
-	<!-- use the >=2014 standard directory patterns -->
-	<invoke rule="ifcb.files.file_path"/>
-	<!-- if they don't work, try obsolete directory structures -->
+	<!-- try product-specific directory structures -->
 	<first>
 	  <test var="product" eq="blobs">
 	    <var name="file_path">${root}/${year}/${yearday}/${filename}</var>
@@ -160,6 +158,8 @@
 	    <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
 	  </test>
 	</first>
+	<!-- if they don't work, use the >=2014 standard directory patterns -->
+	<invoke rule="ifcb.files.file_path"/>
       </any>
     </rule>
     <rule name="find_product" nth="1">
