@@ -17,7 +17,8 @@ from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURE
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-URL_PREFIX='http://128.128.14.19:8080/'
+#URL_PREFIX='http://128.128.14.19:8080/'
+URL_PREFIX='http://demi.whoi.edu/'
 
 ### end FIXME
 

@@ -7,7 +7,7 @@ import time
 import pytz
 
 from sqlalchemy import Column, ForeignKey, and_, or_, desc
-from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric
+from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric, UniqueConstraint
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
@@ -66,7 +66,7 @@ class Bin(Base):
 
     id = Column(Integer, primary_key=True)
     ts_label = Column(String)
-    lid = Column(String, index=True, unique=True)
+    lid = Column(String, index=True)
     sample_time = Column(DateTime(timezone=True), index=True)
     skip = Column(Boolean, default=False)
 
@@ -74,6 +74,10 @@ class Bin(Base):
     duration = Column(Numeric,default=0)
     temperature = Column(Numeric,default=0)
     humidity = Column(Numeric,default=0)
+
+    __table_args__ = (
+        UniqueConstraint('ts_label', 'lid'),
+    )
 
     def __repr__(self):
         return '<Bin %s:%s @ %s>' % (self.ts_label, self.lid, self.sample_time)

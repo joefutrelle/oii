@@ -35,7 +35,8 @@ celery --config=oii.workflow.async_config -A oii.ifcb2.workflow.acq_worker worke
 from oii.ifcb2.session import session
 
 client = WorkflowClient()
-URL_PREFIX='http://128.128.14.19:8080/'
+#URL_PREFIX='http://128.128.14.19:8080/'
+URL_PREFIX='http://demi.whoi.edu/'
 
 ### end FIXME
 

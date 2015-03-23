@@ -275,7 +275,7 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/')
 @app.route('/<ts_label>/dashboard')
 @app.route('/<ts_label>/dashboard/')
-@app.route('/<ts_label>/dashboard/<path:pid>')
+@app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
     template = {
         'static': STATIC,
@@ -437,8 +437,8 @@ def nearest(ts_label, timestamp):
     resp = canonicalize_bin(ts_label, bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/feed/<after_before>/pid/<path:pid>')
-@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<path:pid>')
+@app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
     if not after_before in ['before','after']:
         abort(400)
@@ -492,7 +492,7 @@ def get_files(parsed,check=False,fast=True):
         result.append(d)
     return result
 
-@app.route('/<ts_label>/api/files/<path:pid>')
+@app.route('/<ts_label>/api/files/<url:pid>')
 def serve_files(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
@@ -502,7 +502,7 @@ def serve_files(ts_label, pid):
     result = get_files(parsed)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/files/check/<path:pid>')
+@app.route('/<ts_label>/api/files/check/<url:pid>')
 def check_files(ts_label, pid):
     # FIXME handle ts_label + lid
     # FIXME fast
@@ -538,16 +538,6 @@ def get_target_metadata(target,targets):
     return target
 
 def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
-    try:
-        bin_zip = get_product_file(parsed, BINZIP_PRODUCT)
-        if os.path.exists(bin_zip):
-            # name is target LID + png extension
-            png_name = os.path.basename(target[PID]) + '.png'
-            png_data = get_zip_entry_bytes(bin_zip, png_name)
-            pil_img = PIL.Image.open(StringIO(png_data))
-            return np.array(pil_img.convert('L')) # convert to 8-bit grayscale
-    except NotFound:
-        pass
     if PAIR in target:
         (a,b) = target[PAIR]
         a_image = read_target_image(a, path=path, file=file)
@@ -555,6 +545,16 @@ def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
         if raw_stitch:
             return stitch_raw((a,b),(a_image,b_image))
         else:
+            try:
+                bin_zip = get_product_file(parsed, BINZIP_PRODUCT)
+                if os.path.exists(bin_zip):
+                    # name is target LID + png extension
+                    png_name = os.path.basename(target[PID]) + '.png'
+                    png_data = get_zip_entry_bytes(bin_zip, png_name)
+                    pil_img = PIL.Image.open(StringIO(png_data))
+                    return np.array(pil_img.convert('L')) # convert to 8-bit grayscale
+            except NotFound:
+                pass
             im,_ = v1_stitching.stitch((a,b),(a_image,b_image))
             return im
     else:
@@ -579,7 +579,7 @@ class DashboardRequest(object):
         self.timestamp = get_timestamp(self.parsed)
         self.product = self.parsed[PRODUCT]
 
-@app.route('/<path:pid>',methods=['GET'])
+@app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
     req = DashboardRequest(pid, request)
     try:
@@ -700,7 +700,7 @@ def serve_pid(pid):
 
 ####### deposit ########
 
-@app.route('/<path:pid>',methods=['PUT'])
+@app.route('/<url:pid>',methods=['PUT'])
 def deposit(pid):
     req = DashboardRequest(pid, request)
     try:
@@ -743,7 +743,7 @@ def scatter_json(targets,bin_pid,x_axis,y_axis):
     }
     return Response(json.dumps(d), mimetype=MIME_JSON)
 
-@app.route('/<time_series>/api/plot/<path:params>/pid/<path:pid>')
+@app.route('/<time_series>/api/plot/<path:params>/pid/<url:pid>')
 def scatter(time_series,params,pid):
     req = DashboardRequest(pid, request)
     params = parse_params(params, x='left', y='bottom')
@@ -792,7 +792,7 @@ def parse_mosaic_params(params):
     page = int(params[PAGE])
     return (size, scale, page)
 
-@app.route('/<time_series>/api/mosaic/<path:params>/pid/<path:pid>')
+@app.route('/<time_series>/api/mosaic/<path:params>/pid/<url:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
     params include the following, with default values
