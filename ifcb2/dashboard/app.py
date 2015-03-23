@@ -543,7 +543,7 @@ def get_target_image(parsed, target, path=None, file=None, raw_stitch=False):
         a_image = read_target_image(a, path=path, file=file)
         b_image = read_target_image(b, path=path, file=file)
         if raw_stitch:
-            return stitch_raw((a,b),(a_image,b_image))
+            return stitch_raw((a,b),(a_image,b_image),background=180)
         else:
             try:
                 bin_zip = get_product_file(parsed, BINZIP_PRODUCT)
