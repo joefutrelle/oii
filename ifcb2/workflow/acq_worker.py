@@ -56,7 +56,7 @@ def schedule_accession(client,pid):
     raw <- wild"""
     wild_pid = as_product(pid, WILD_PRODUCT)
     raw_pid = as_product(pid, RAW_PRODUCT)
-    client.depend(raw_pid, wild_pid, WILD2RAW)
+    client.depend(raw_pid, wild_pid, WILD2RAW, priority=1)
 
 def copy_work(instrument,callback=None):
     """what an acquisition worker does"""

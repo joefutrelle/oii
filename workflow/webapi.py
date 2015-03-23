@@ -19,6 +19,7 @@ from oii.workflow.orm import Product, Dependency, Products
 from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL, UPSTREAM_STATE
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
+from oii.workflow import PRIORITY
 
 from oii.workflow.client import DEFAULT_PORT, API_PREFIX
 
@@ -93,7 +94,7 @@ def product2json(product):
 
 def product_params(form,defaults):
     params = {}
-    for k in [STATE, EVENT, MESSAGE, NEW_STATE, TTL, UPSTREAM_STATE]:
+    for k in [STATE, EVENT, MESSAGE, NEW_STATE, TTL, UPSTREAM_STATE, PRIORITY]:
         params[k] = form.get(k,default=defaults.get(k,None))
     return params
 
@@ -102,6 +103,7 @@ def params2product(pid,params):
                    state=params.get(STATE,None),
                    event=params.get(EVENT,None),
                    message=params.get(MESSAGE,None),
+                   priority=params.get(PRIORITY,None),
                    ttl=params.get(TTL,None))
 
 def do_create(pid,params):
@@ -178,6 +180,7 @@ def update(pid):
         EVENT: HEARTBEAT,
         STATE: RUNNING,
         MESSAGE: None,
+        PRIORITY: None,
         TTL: None
     })
     new_p = params2product(pid, params)
@@ -199,16 +202,19 @@ def depend(down_pid):
     except KeyError:
         abort(http.BAD_REQUEST)
     role = request.form.get(ROLE,default=ANY)
+    priority = request.form.get(PRIORITY,default=None)
     params = product_params(request.form, defaults={
         STATE: WAITING
     })
     ps = Products(session)
-    dp = ps.get(down_pid, create=params2product(down_pid, params))
     up = ps.session.query(Product).filter(Product.pid==up_pid).first()
     up = ps.get(up_pid, create=params2product(up_pid, {
         STATE: AVAILABLE,
-        EVENT: 'implicit_create'
+        EVENT: 'implicit_create',
+        PRIORITY: priority
     }))
+    dp = ps.get(down_pid, create=params2product(down_pid, params))
+    dp.priority = up.priority
     ps.add_dep(dp, up, role)
     do_commit()
     return product_response(dp)

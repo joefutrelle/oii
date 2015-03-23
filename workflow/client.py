@@ -9,7 +9,7 @@ from oii.workflow import PID, STATE, NEW_STATE, EVENT, MESSAGE, UPSTREAM_STATE
 from oii.workflow import WAITING, RUNNING, AVAILABLE, FOREVER, COMPLETED, TTL
 from oii.workflow import ROLE, ANY
 from oii.workflow import HEARTBEAT, RELEASED, ERROR
-from oii.workflow import UPSTREAM
+from oii.workflow import UPSTREAM, PRIORITY
 
 import httplib as http
 
@@ -37,18 +37,19 @@ class WorkflowClient(object):
             return requests.get(self.api('/wakeup'))
         else:
             return requests.get(self.api('/wakeup/%s' % pid))
-    def start_next(self,roles,ttl=None):
+    def start_next(self,roles,state=WAITING,ttl=None):
         if isinstance(roles,basestring):
             roles = [roles]
         url = self.api('/start_next/%s' % '/'.join(roles))
         return requests.post(url, data={
+            STATE: state,
             TTL: ttl
         })
-    def start_all(self,roles,expire=False,ttl=None):
+    def start_all(self,roles,expire=False,state=WAITING,ttl=None):
         while True:
             if expire:
                 self.expire()
-            r = self.start_next(roles,ttl=ttl)
+            r = self.start_next(roles,state=state,ttl=ttl)
             if not isok(r):
                 return
             job = r.json()
@@ -73,10 +74,11 @@ class WorkflowClient(object):
     def heartbeat(self,pid,**d):
         d[EVENT] = HEARTBEAT
         return requests.patch(self.api('/update/%s' % pid), data=d)
-    def depend(self,pid, upstream, role):
+    def depend(self,pid, upstream, role, priority=None):
         return requests.put(self.api('/depend/%s' % pid), data={
             UPSTREAM: upstream,
-            ROLE: role
+            ROLE: role,
+            PRIORITY: priority
         })
     def expire(self):
         r = requests.delete(self.api('/expire'))

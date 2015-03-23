@@ -37,7 +37,8 @@ class Product(Base):
     message = Column('message', String) # event log message
     ts = Column('ts', DateTime(timezone=True), default=utcdtnow) # time of event
     ttl = Column('ttl', Integer, default=None) # time-to-live in seconds, or none for never expire
-    expires = Column('expires', DateTime(timezone=True), default=None)
+    expires = Column('expires', DateTime(timezone=True), default=None) # expiration time derived from ttl
+    priority = Column('priority', Integer, default=100) # priority
 
     depends_on = association_proxy('upstream_dependencies', 'upstream')
     dependents = association_proxy('downstream_dependencies', 'downstream')
@@ -209,6 +210,7 @@ class Products(object):
                 having(func.count(distinct(Dependency.role))==len(set(roles)))
         else:
             q = q.group_by(Product)
+        q = q.order_by(Product.priority)
         return q
     def get_next(self, roles=[ANY], state=WAITING, upstream_state=AVAILABLE):
         """find any product that is in state state and whose upstream dependencies are all in

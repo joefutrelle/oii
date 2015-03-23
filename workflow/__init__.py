@@ -36,3 +36,6 @@ ANY='any'
 # dependencies
 UPSTREAM='upstream'
 DOWNSTREAM='downstream'
+
+# priority
+PRIORITY='priority'
