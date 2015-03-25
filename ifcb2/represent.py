@@ -54,7 +54,11 @@ def _get_bin_template_bindings(pid,hdr,targets,timestamp):
     timestamp should be a text timestamp in iso8601 format
     hdr should be the result of calling parse_hdr on a header file
     targets should be a list of target dicts with target pids"""
-    context, properties = split_hdr(hdr)
+    context, raw_properties = split_hdr(hdr)
+    properties = []
+    for k,v in raw_properties:
+        cooked_k = re.sub(r'[^a-zA-Z0-9_]','_',k)
+        properties.append((cooked_k,v))
     target_pids = [target[PID] for target in targets]
     return dict(pid=pid,timestamp=timestamp,context=context,properties=properties,target_pids=target_pids)
 
