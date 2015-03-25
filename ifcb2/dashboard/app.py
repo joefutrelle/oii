@@ -49,7 +49,7 @@ from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize, BIN_KEY
-from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium
+from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium, class_scoresmat2csv
 from oii.ifcb2.image import read_target_image
 from oii.ifcb2.formats.hdr import parse_hdr_file
 # keys
@@ -194,6 +194,11 @@ def serve_blob_bin(parsed):
 def serve_features_bin(parsed):
     feature_csv = get_product_file(parsed, 'features')
     return Response(file(feature_csv), direct_passthrough=True, mimetype='text/csv')
+
+def serve_class_scores_bin(parsed):
+    class_mat = get_product_file(parsed, 'class_scores')
+    csv_out = '\n'.join(class_scoresmat2csv(class_mat, parsed['bin_lid']))
+    return Response(csv_out + '\n', mimetype='text/csv')
 
 def get_zip_entry_bytes(zipfile_path, entry_name):
     zipfile = ZipFile(zipfile_path)
@@ -641,10 +646,15 @@ def serve_pid(pid):
             path = dict(hdr=hdr_path, adc=adc_path, roi=roi_path)[req.extension]
             mimetype = dict(hdr='text/plain', adc='text/csv', roi='application/octet-stream')[req.extension]
             return Response(file(path), direct_passthrough=True, mimetype=mimetype)
-        if req.product in ['blobs','blob']: # accept old url pattern
-            return serve_blob_bin(req.parsed)
-        if req.product=='features':
-            return serve_features_bin(req.parsed)
+        try:
+            if req.product in ['blobs','blob']: # accept old url pattern
+                return serve_blob_bin(req.parsed)
+            if req.product=='features':
+                return serve_features_bin(req.parsed)
+            if req.product=='class_scores':
+                return serve_class_scores_bin(req.parsed)
+        except NotFound:
+            abort(404)
         # gonna need targets unless heft is medium or below
         targets = []
         if req.product != 'short':

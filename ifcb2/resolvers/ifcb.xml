@@ -144,6 +144,9 @@
 	  <!-- feature sidecar files -->
 	  <var name="filename">multiblob/${bin_lid}_multiblob_v2.csv</var>
 	</test>
+	<test var="product" eq="class_scores">
+	  <var name="filename">{bin_lid}_class_v1.mat</var>
+	</test>
 	<test var="product" eq="binzip">
 	  <var name="filename">${bin_lid}_binzip_v1.zip</var>
 	</test>
@@ -156,6 +159,9 @@
 	  </test>
 	  <test var="product" eq="features">
 	    <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
+	  </test>
+	  <test var="product" eq="class_scores">
+	    <var name="file_path">${root}/class${year}_v1/${bin_lid}_class_v1.mat</var>
 	  </test>
 	</first>
 	<!-- if they don't work, use the >=2014 standard directory patterns -->

@@ -1,9 +1,12 @@
 import os
+import re
 import json
 from zipfile import ZipFile, ZIP_DEFLATED
 import shutil
 import tempfile
 from time import strptime
+
+from scipy.io import loadmat
 
 from jinja2 import Environment
 
@@ -215,3 +218,19 @@ def target2xml(pid, target, timestamp, bin_pid):
 def target2rdf(pid, target, timestamp, bin_pid):
     return _target2metadata(pid, target, timestamp, bin_pid, TARGET_RDF_TEMPLATE)
 
+def class_scoresmat2csv(matfile, bin_lid):
+    """Convert a class score .mat file into a CSV representation"""
+    mat = loadmat(matfile)
+
+    scores = mat['TBscores'] # score matrix (roi x scores)
+    labels = mat['class2useTB'] # class labels
+    roinum = mat['roinum'] # roi num for each row
+
+    def matlabels2strs(labels):
+        return [l.astype(str)[0] for l in labels[:,0]]
+
+    yield ','.join(['pid'] + matlabels2strs(labels))
+
+    for roi, row in zip(roinum[:,0], scores[:]):
+        fmt = ['"%s_%05d"' % (bin_lid, roi)] + [re.sub(r'000$','','%.4f' % c) for c in row.tolist()]
+        yield ','.join(fmt)
