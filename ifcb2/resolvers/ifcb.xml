@@ -135,7 +135,10 @@
       <!-- generate appropriate product filename -->
       <first>
 	<test var="product" eq="blobs">
-	  <var name="filename">${bin_lid}_blobs_v2.zip</var>
+	  <var name="filename">
+	    <val>${bin_lid}_blobs_v2.zip</val>
+	    <val>${bin_lid}.zip</val>
+	  </var>
 	</test>
 	<test var="product" eq="features">
 	  <var name="filename">${bin_lid}_fea_v2.csv</var>
