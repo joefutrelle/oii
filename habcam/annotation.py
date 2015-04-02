@@ -52,11 +52,9 @@ class HabcamAnnotationStore(AnnotationStore):
         with xa(self.config.psql_connect) as (connection,cursor):
             if(len(where_clauses) > 0):
                cursor.execute(SELECT_CLAUSE +  'where ' + 'and '.join(where_clauses), tuple(where_values))
-
             else:
                 cursor.execute(SELECT_CLAUSE)
-            for ann in self.__consume(cursor):
-                yield ann
+            return [ann for ann in self.__consume(cursor)]
     def fetch_annotation(self,pid):
         "Fetch an annotation by its PID"
         pd = dict(pid=pid)
