@@ -123,6 +123,9 @@
 	    <path var="data_dir" match="${year_dir}/IFCB*"/>
 	  </any>
 	</path>
+	<path var="year_dir" match="${root}/D[0-9]*">
+	  <path var="data_dir" match="${year_dir}/D*"/>
+	</path>
       </any>
       <path var="hdr_path" match="${data_dir}/*.hdr"/>
       <match var="hdr_path" pattern="(.*/(.*))\.hdr$" groups="basename lid"/>
