@@ -18,6 +18,8 @@ from types import GeneratorType
 from shutil import copyfileobj, rmtree
 from tempfile import mkdtemp
 from contextlib import contextmanager
+import shutil
+import random
 
 genid_prev_id_tl = Lock()
 genid_prev_id = None
@@ -220,7 +222,30 @@ def compare_files(src,dest,name=True,size=False,checksum=False):
         if src_checksum != dest_checksum:
             return False
     return True
-        
+
+def safe_copy_fileset(srcdests):
+    """Copy a whole set of files, safely.
+    A list of src/dest pairs should be provided."""
+    @retry(IOError)
+    def reliable_copy(src,dest):
+        """shutil.copy with retry on error and nomatching file size"""
+        shutil.copy(src, dest)
+        if not compare_files(src, dest, name=False, size=True):
+            raise IOError('copying %s to %s failed' % (src,dest))
+    with safe_tempdir() as tempdir:
+        src_dest_tmp = [(src, dest, os.path.join(tempdir, gen_id())) for src, dest in srcdests]
+        for src, _, tmp in src_dest_tmp:
+            reliable_copy(src,tmp)
+        for _, dest, tmp in src_dest_tmp:
+            dest_dir = os.path.dirname(dest)
+            try:
+                os.makedirs(dest_dir)
+            except:
+                pass
+            if not os.path.isdir(dest_dir):
+                raise IOError('unable to create directory %s' % dest_dir)
+            shutil.move(tmp,dest)
+
 def scatter(fn,argses,callback=None,processes=None):
     """Extremely simple multiprocessing.
     Parameters:
