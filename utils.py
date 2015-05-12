@@ -234,17 +234,22 @@ def safe_copy_fileset(srcdests):
             raise IOError('copying %s to %s failed' % (src,dest))
     with safe_tempdir() as tempdir:
         src_dest_tmp = [(src, dest, os.path.join(tempdir, gen_id())) for src, dest in srcdests]
-        for src, _, tmp in src_dest_tmp:
-            reliable_copy(src,tmp)
-        for _, dest, tmp in src_dest_tmp:
-            dest_dir = os.path.dirname(dest)
-            try:
-                os.makedirs(dest_dir)
-            except:
-                pass
-            if not os.path.isdir(dest_dir):
-                raise IOError('unable to create directory %s' % dest_dir)
-            shutil.move(tmp,dest)
+        for src, dest, tmp in src_dest_tmp:
+            if not compare_files(src,dest,size=True):
+                reliable_copy(src,tmp)
+        for src, dest, tmp in src_dest_tmp:
+            if not compare_files(src,dest,size=True):
+                dest_dir = os.path.dirname(dest)
+                try:
+                    os.makedirs(dest_dir)
+                except:
+                    pass
+                if not os.path.isdir(dest_dir):
+                    raise IOError('unable to create directory %s' % dest_dir)
+                shutil.move(tmp,dest)
+                if not compare_files(src,dest,size=True):
+                    os.remove(dest)
+                    raise IOError('file move failed')
 
 def scatter(fn,argses,callback=None,processes=None):
     """Extremely simple multiprocessing.
