@@ -26,7 +26,7 @@ def do_binzip(pid, job):
     log_callback('creating zipfile for %s' % pid)
     with tempfile.NamedTemporaryFile() as zip_tmp:
         zip_path = zip_tmp.name
-        binpid2zip(pid, zip_path, log_callback)
+        binpid2zip(pid, zip_path)
         # construct binzip URL
         log_callback('depositing %s' % binzip_url)
         upload(zip_path, binzip_url)
