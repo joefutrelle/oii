@@ -229,7 +229,9 @@ def safe_copy_fileset(srcdests):
     @retry(IOError)
     def reliable_copy(src,dest):
         """shutil.copy with retry on error and nomatching file size"""
-        shutil.copy(src, dest)
+        with open(src,'rb') as src_fo:
+            with open(dest,'wb') as dest_fo:
+                copyfileobj(src_fo,dest_fo)
         if not compare_files(src, dest, name=False, size=True):
             raise IOError('copying %s to %s failed' % (src,dest))
     with safe_tempdir() as tempdir:
@@ -246,7 +248,7 @@ def safe_copy_fileset(srcdests):
                     pass
                 if not os.path.isdir(dest_dir):
                     raise IOError('unable to create directory %s' % dest_dir)
-                shutil.move(tmp,dest)
+                reliable_copy(tmp,dest)
                 if not compare_files(src,dest,size=True):
                     os.remove(dest)
                     raise IOError('file move failed')

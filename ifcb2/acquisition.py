@@ -2,7 +2,7 @@ import os
 
 from collections import Counter
 
-from oii.utils import safe_copy, compare_files
+from oii.utils import safe_copy, compare_files, safe_copy_fileset
 
 from oii.ifcb2 import RAW
 from oii.ifcb2.orm import Base, Instrument, TimeSeries, DataDirectory
@@ -67,21 +67,17 @@ def do_copy(instrument):
     """Perform all necessary copy operations from the instrument to
     its destination directory.
     returns set of LIDs copied"""
-    lids = Counter()
+    fs = {}
     for lid,src,dest in get_copy_from(instrument):
-        if os.path.exists(dest): # no need to copy
-            continue
-        # if necessary, safe-copy the file
-        src_stat = os.stat(src)
-        if src_stat.st_size > 0: # but not if it's zero-length
-            try:
-                safe_copy(src,dest)
-                if not compare_files(src,dest,size=True):
-                    # file copy failed, this is bad
-                    raise IOError('failed to copy %s to %s' % (src,dest))
-                lids[lid] += 1
-                if lids[lid] == 3: # fileset is complete
-                    yield lid
-            except IOError:
-                # FIXME should not silently fail
-                pass
+        if not lid in fs:
+            fs[lid] = []
+        fs[lid] += [(src, dest)]
+    for lid,sds in fs.items():
+        try:
+            safe_copy_fileset(sds)
+            print 'safe copying succeeded for %s' % sds # FIXME debug
+            yield lid
+        except IOError:
+            # FIXME should not silently fail
+            print 'safe copying failed for %s' % sds # FIXME debug
+            pass
