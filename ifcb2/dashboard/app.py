@@ -328,6 +328,14 @@ def canonicalize_bin(ts_label, b):
         'date': iso8601(b.sample_time.timetuple())
     }
 
+@app.route('/<ts_label>/feed.json')
+def serve_feed_json(ts_label):
+    bins = []
+    with Feed(session, ts_label) as feed:
+        for b in feed.latest():
+            bins.append(canonicalize_bin(ts_label, b))
+    return Response(json.dumps(bins), mimetype=MIME_JSON)
+
 # elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
 @app.route('/<ts_label>/api/feed/elapsed/<datetime:timestamp>')
