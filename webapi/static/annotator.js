@@ -109,7 +109,7 @@ function drawImage(cell) {
 }
 function getExistingAnnotations(cell, callback) {
     emptyExistingTable();
-    $.get('/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
+    $.get('/app/list_annotations/image/' + $(cell).data('imagePid'), function(r) {
         clearImageLayer(cell,'existing');
         var counter = 0;
         clog("about to draw existing annotations...");
@@ -165,7 +165,7 @@ function gotoPage(pp,size) {
     }
     var assignment_pid = assignment.pid;
     // FIXME include status flag after offset, incorporate upcoming fixes to GUI and #1445
-    $.getJSON('/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
+    $.getJSON('/app/list_images/limit/'+limit+'/offset/'+offset+'/assignment/'+assignment_pid, function(r) {
 	$('#offset').val(offset);
         $.each(r, function(i,entry) {
             // append image with approprite URL
@@ -188,10 +188,16 @@ function gotoPage(pp,size) {
 	    $("#quickImagename").html(imagePid);	         
 
 	   // if (imagePid.match(/illum_L/)){			
-			var imagePid3d = imagePid.replace('.jpg','_redcyan.jpg');
-			var imagePid3d = imagePid.replace('.png','_redcyan.png');
-	        $('#view3D').attr("href",imagePid3d).attr("target","_blank");
+			var imagePid3d = imagePid;
+			var imagePid3d = imagePid3d.replace('\.jpg','_3d.jpg');
+			var imagePid3d = imagePid3d.replace('\.png','_3d.jpg');
+	        $('#view3D').attr("href",imagePid3d);
+		$('#view3D').attr("target","_blank");
 	        $('#view3D').show(100);
+		$('#viewMap').attr("href",'http://habcam-data.whoi.edu/cgi-bin/imageinfo.pl?imagename='+imagePid);
+		$('#viewMap').attr("target","_blank");
+
+
 		//}
 	    //changeImageStatus('in+progress'); //this is now done in /find_image
 
@@ -287,7 +293,7 @@ function generateIds(annotations, callback) {
     });
     var i = n-1;
     /* FIXME hardcoded namespace */
-    $.getJSON('/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
+    $.getJSON('/app/generate_ids/'+n+'/http://foobar.ns/ann_', function(r) {
         $.each(annotations, function(imagePid, ps) {
 	    $.each(ps, function(ix, p) {
 		annotations[imagePid][ix].pid = r[i--];
@@ -379,7 +385,7 @@ function commitSubstrate(continuation) {
 	// generate IDs for all these annotations
 	generateIds(gi, function() {
 	    $.ajax({
-		url: '/create_annotations',
+		url: '/app/create_annotations',
 		type: 'POST',
 		contentType: 'json',
 		dataType: 'json',
@@ -422,7 +428,7 @@ function commit() {
 	});
     });
     $.ajax({
-        url: '/create_annotations',
+        url: '/app/create_annotations',
         type: 'POST',
         contentType: 'json',
         dataType: 'json',
@@ -457,7 +463,7 @@ function findNewImage(callback) {
 
 clog('user is on assignment '+ass_pid + ' find status: ' + find_status);
 
-    $.getJSON('/find_image/offset/'+page+'/status/'+find_status+'/post_status/in+progress/assignment/'+ass_pid, function(r) {
+    $.getJSON('/app/find_image/offset/'+page+'/status/'+find_status+'/post_status/in+progress/assignment/'+ass_pid, function(r) {
 	var newPage = r.offset;
 	callback(newPage);
     });
@@ -472,7 +478,7 @@ function deselectAll() {
 }
 function listAssignments() {
     $('#assignment').append('<option value="">Select an Assignment</option>')
-    $.getJSON('/list_assignments', function(r) {
+    $.getJSON('/app/list_assignments', function(r) {
         $.each(r.assignments, function(i,a) {
             $('#assignment').append('<option value="'+a.pid+'">'+elide(a.label,40)+'</option>')
         });
@@ -485,11 +491,11 @@ function changeAssignment(ass_pid) {
     clog('user selected assignment '+ass_pid);
     if( ass_pid.length > 0 ){
         clog("clearing exisitng annotation store...");
-        $.getJSON('/fetch_assignment/'+ass_pid, function(r) {
+        $.getJSON('/app/fetch_assignment/'+ass_pid, function(r) {
             clog('fetched assignment '+ass_pid);
             $('#workspace').data('assignment',r);
             $('#workspace').data('image_list',r.images);
-            $.getJSON('/list_categories/'+r.mode, function(c) {
+            $.getJSON('/app/list_categories/'+r.mode, function(c) {
                 clog('fetched categories for mode '+r.mode);
                 $('#workspace').data('categories',c);
                 gotoPage(1,1); // FIXME keep track of page size globally
@@ -616,7 +622,7 @@ function changeImageStatus(status){
 		var imagePid = $(cell).data('imagePid');
 		var assignment = getWorkspace('assignment');
 		var assignment_pid = assignment.pid;
-		$.getJSON('/set_status/image/'+imagePid
+		$.getJSON('/app/set_status/image/'+imagePid
 			+'/status/' + status + '/assignment/'+assignment_pid,function(r) {
 		   clog('status changed to ' + status + ' for '+imagePid);
 		});
@@ -744,7 +750,7 @@ $(document).ready(function() {
                 return;
             }
 	    // autocomplete from this endpoint
-            $.getJSON('/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
+            $.getJSON('/app/category_autocomplete/'+ass.mode+'?term='+req.term, function(r) {
                 resp($.map(r,function(item) {
                     return {
                         'label': item.label,
@@ -776,17 +782,18 @@ $(document).ready(function() {
 	$('#next').addClass('hidden');
 	$('#prev').addClass('hidden');
     }, function(username) { // on logout,
-	clog('logged out as '+username);
-	changeImageStatus('new');
-	// erase the username from the workspace
-	$('#workspace').removeData('login'); // FIXME user accessor
-	// and unhide all paging controls
-	$('#next').removeClass('hidden');
-	$('#prev').removeClass('hidden');
+
+		clog('logged out as '+username);
+		changeImageStatus('new');
+		gotoPage(0,1);
+		// erase the username from the workspace
+		$('#workspace').removeData('login'); // FIXME user accessor
+		// and unhide all paging controls
+		$('#next').removeClass('hidden');
+		$('#prev').removeClass('hidden');
+	
     });
        
-
-
     //START div creation for controls (category pickers, etc)
     // substrate
     // FIXME should pick the substrate scope for the assignments' mode
@@ -834,7 +841,7 @@ $(document).ready(function() {
 
 		
     // button hide existing annotations on image
-    $('#controls').append('<a href="#" id="toggleExisting" class="button">Hide Existing</a>')
+    $('#controls').append('<a href="javascript:;" id="toggleExisting" class="button">Hide Existing</a>')
 	.find('#toggleExisting')
 	.button()
 	.click(toggleExisting);
@@ -864,7 +871,7 @@ $(document).ready(function() {
 	    var deferreds = [];
 	 	$("tr.ui-selected ").each(function() {		
 		    var pid = $(this).attr('id');
-		    deferreds.push($.ajax('/deprecate/annotation/'+pid));
+		    deferreds.push($.ajax('/app/deprecate/annotation/'+pid));
 		});
 	    console.log(JSON.stringify(deferreds));
 	    var defer = $.when.apply($, deferreds).then(function(args) {
@@ -876,9 +883,14 @@ $(document).ready(function() {
 	    // redrawing
 	});
 
- $('#quickinfo').append('<a href="#" id="view3D" class="button">View image in 3D</a>')
+ $('#quickinfo').append('<a href="javascript:;" id="view3D" class="button">View image in 3D</a>')
 	.find('#view3D')
 	.button();	
+ $('#quickinfo').append('<a href="javascript:;" id="viewMap" class="button">View Trackline</a>')
+	.find('#viewMap')
+	.button();
+$('#viewMap').attr("href",'http://habcam-data.whoi.edu/cgi-bin/imageinfo.pl?imagename=');
+
 
 $( ".selectable" ).selectable({
 			stop: function() {

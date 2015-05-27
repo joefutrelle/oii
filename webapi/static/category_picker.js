@@ -61,7 +61,7 @@
 			$this.find('.resetButton').button().click(reset);
 			}
 		function reset() {
-		    $.getJSON('/list_categories/'+mode+'/'+scope, function(c) {
+		    $.getJSON('/app/list_categories/'+mode+'/'+scope, function(c) {
 			$this.data('all_categories',c);
 			$this.empty();
 			$this.append('<div class="selected_category"></div>');

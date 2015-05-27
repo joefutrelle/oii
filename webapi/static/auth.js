@@ -10,7 +10,7 @@
 		    .find('.auth_login')
 		    .click(function() {
 			$.ajax({
-			    url: '/login',
+			    url: '/app/login',
 			    type: 'POST',
 			    dataType: 'json',
 			    data: {
@@ -24,9 +24,12 @@
 				    .find('.button').button()
 				    .end()
 				    .find('.auth_logout').click(function () {
-					logout_callback(data.username);
-					$.getJSON('/logout');
-					$this.authentication(login_callback, logout_callback);
+					var r = confirm("Logout? Really?");
+					if (r == true){
+						logout_callback(data.username);
+						$.getJSON('/app/logout');
+						$this.authentication(login_callback, logout_callback);
+					}
 				    });
 			    },
 			    error: function() {
