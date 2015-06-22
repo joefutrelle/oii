@@ -792,7 +792,7 @@ $(document).ready(function() {
 		$('#next').removeClass('hidden');
 		$('#prev').removeClass('hidden');
 	
-    });
+    }); 
        
     //START div creation for controls (category pickers, etc)
     // substrate
