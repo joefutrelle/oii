@@ -13,7 +13,7 @@ div.thumbnail {
   display: inline-block;
   padding: 10px;
   vertical-align: top;
-  cursor: crosshair;
+  cursor: default;
 }
 img.thumbnail {
   margin-left: auto;

@@ -7,10 +7,10 @@ from skimage.feature import match_template
 def get_L(img):
     try:
         (_,w) = img.shape
-        return img[:,:w/2]
+        return img[:,:(w/2)]
     except ValueError:
         (_,w,_) = img.shape
-        return img[:,:w/2,:]
+        return img[:,:(w/2),:]
 
 def get_R(img):
     try:
