@@ -32,7 +32,7 @@ from oii.ifcb2.workflow import BINZIP_PRODUCT
 from oii.workflow.client import WorkflowClient
 
 # FIXME this is used for old PIL-based mosaic compositing API
-from oii.image.pil.utils import filename2format, thumbnail
+from oii.image.pilutils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import files

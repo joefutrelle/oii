@@ -9,7 +9,7 @@ from skimage import io
 
 from oii.iopipes import UrlSource, StagedInputFile
 
-from oii.image.pil.utils import mimetype2format
+from oii.image.pilutils import mimetype2format
 
 """Image conversion utilities"""
 

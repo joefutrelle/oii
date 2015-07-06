@@ -14,12 +14,12 @@ from StringIO import StringIO
 from oii.config import get_config
 from oii.times import iso8601
 from oii.webapi.utils import jsonr
-from oii.image.pil.utils import filename2format, thumbnail
+from oii.image.pilutils import filename2format, thumbnail
 import urllib
 from oii.utils import order_keys, change_extension, remove_extension
 from oii.resolver import parse_stream
 from oii.iopipes import UrlSource, LocalFileSource
-from oii.image.pil.utils import filename2format, thumbnail
+from oii.image.pilutils import filename2format, thumbnail
 from oii.habcam.metadata import Metadata
 from oii.image.demosaic import demosaic
 from oii.habcam.lightfield import quick

@@ -27,7 +27,7 @@ from oii.ifcb import represent
 from oii.ifcb.stitching import find_pairs, stitch, stitched_box, stitch_raw, list_stitched_targets
 from oii.ifcb.joestitch import stitch as joe_stitch
 from oii.iopipes import UrlSource, LocalFileSource
-from oii.image.pil.utils import filename2format, thumbnail
+from oii.image.pilutils import filename2format, thumbnail
 from oii.image import mosaic
 from oii.image.mosaic import Tile
 from oii.config import get_config
