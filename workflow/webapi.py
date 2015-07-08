@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 from oii.times import iso8601
 
-from oii.workflow.orm import Product, Dependency, Products
+from oii.workflow.orm import Base, Product, Dependency, Products
 from oii.workflow.orm import STATE, NEW_STATE, EVENT, MESSAGE, TTL, UPSTREAM_STATE
 from oii.workflow.orm import WAITING, AVAILABLE, ROLE, ANY, HEARTBEAT, UPSTREAM, RUNNING
 from oii.workflow.async import async_config, async_wakeup
@@ -44,6 +44,7 @@ def config():
     # get database configuration from Flask config
     db_url = current_app.config.get(DATABASE_URL)
     dbengine = create_engine(db_url)
+    Base.metadata.create_all(dbengine)
     global session
     session = scoped_session(sessionmaker(bind=dbengine))()
 
