@@ -59,7 +59,6 @@ from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_ra
 from oii.ifcb2 import v1_stitching
 
 from oii.ifcb2.dashboard.flasksetup import app
-from oii.ifcb2.session import ScopedSession
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
 # constants
@@ -79,9 +78,39 @@ SESSION='SESSION'
 
 # configuration
 workflow_client = None
+session = None
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+
+def init_database(dbengine, session):
+    """initialize database"""
+    Base.metadata.create_all(dbengine)
+    # init roles and test users
+    # this should go somewhere else later
+    for role in ['Admin','Instrument','Time Series', 'API']:
+        if not session.query(Role).filter_by(name=role).count():
+            r = Role(name=role)
+            session.add(r)
+            session.commit()
+    if not session.query(User).filter_by(email='admin@whoi.edu').count():
+        u = User(
+            first_name='Test', last_name='Admin',
+            email='admin@whoi.edu', username='admin@whoi.edu',
+            password=user_manager.hash_password('12345678'),
+            is_enabled=True)
+        r = session.query(Role).filter_by(name='Admin').first()
+        u.roles.append(r)
+        session.add(u)
+        session.commit()
+    if not session.query(User).filter_by(email='user@whoi.edu').count():
+        u = User(
+            first_name='Test', last_name='User',
+            email='user@whoi.edu', username='user@whoi.edu',
+            password=user_manager.hash_password('12345678'),
+            is_enabled=True)
+        session.add(u)
+        session.commit()
 
 @app.before_first_request
 def dashboard_config():
@@ -90,10 +119,12 @@ def dashboard_config():
     workflow_url = current_app.config.get(WORKFLOW_URL)
     workflow_client = WorkflowClient(workflow_url)
     # configure database session
+    global session
     db_url = current_app.config.get(DATABASE_URL)
     dbengine = create_engine(db_url)
     ScopedSession = scoped_session(sessionmaker(bind=dbengine))
     session = ScopedSession()
+    init_database(dbengine,session)
     current_app.config.update(
         DBENGINE=dbengine,
         SCOPED_SESSION=ScopedSession,
@@ -853,32 +884,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
 
 if __name__ == '__main__':
     from oii.ifcb2.session import dbengine
-    # init database
-    Base.metadata.create_all(dbengine)
-    # init roles and test users
-    # this should go somewhere else later
-    for role in ['Admin','Instrument','Time Series', 'API']:
-        if not session.query(Role).filter_by(name=role).count():
-            r = Role(name=role)
-            session.add(r)
-            session.commit()
-    if not session.query(User).filter_by(email='admin@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='Admin',
-            email='admin@whoi.edu', username='admin@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        r = session.query(Role).filter_by(name='Admin').first()
-        u.roles.append(r)
-        session.add(u)
-        session.commit()
-    if not session.query(User).filter_by(email='user@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='User',
-            email='user@whoi.edu', username='user@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        session.add(u)
-        session.commit()
+    init_database(dbengine,session)
     # finally, start the application
     app.run(host='0.0.0.0',port=8080)
