@@ -86,6 +86,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 def init_database(dbengine, session):
     """initialize database"""
     Base.metadata.create_all(dbengine)
+    session.expire_all()
     # init roles and test users
     # this should go somewhere else later
     for role in ['Admin','Instrument','Time Series', 'API']:
