@@ -132,7 +132,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         .append(' Y axis: <span></span>') // y axis
         .find('span:last')
         .append('<select id="y_axis_choice" style="width:150px"><option value="left">left</option>' +
-        '<option value="fluorescenceLow">scatteringLow</option></select>');
+        '<option value="scatteringLow">scatteringLow</option></select>');
         /*.radio(plotYs, function (plotY) {
             return plotY;
         }, plotY).bind('select', function (event, value) {
