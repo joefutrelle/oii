@@ -144,7 +144,7 @@ Licensed under the MIT License ~ http://threedubmedia.googlecode.com/files/MIT-L
             panTimeout = null;
 
         function onDragStart(e) {
-            if (e.which != 1 || e.ctrlKey) // only accept left-click without control key
+            if (e.which != 1 || e.shiftKey) // only accept left-click without control key
                 return false;
             var c = plot.getPlaceholder().css('cursor');
             if (c)
@@ -155,7 +155,7 @@ Licensed under the MIT License ~ http://threedubmedia.googlecode.com/files/MIT-L
         }
         
         function onDrag(e) {
-            if (e.ctrlKey)
+            if (e.shiftKey)
                 return false;
             var frameRate = plot.getOptions().pan.frameRate;
             if (panTimeout || !frameRate)
@@ -172,7 +172,7 @@ Licensed under the MIT License ~ http://threedubmedia.googlecode.com/files/MIT-L
         }
 
         function onDragEnd(e) {
-            if (e.ctrlKey)
+            if (e.shiftKey)
                 return false;
             if (panTimeout) {
                 clearTimeout(panTimeout);
