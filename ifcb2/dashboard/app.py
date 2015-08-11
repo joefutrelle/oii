@@ -61,6 +61,9 @@ from oii.ifcb2 import v1_stitching
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
+from oii.csvio import read_csv, NO_LIMIT
+from oii.iopipes import LocalFileSource
+
 # constants
 MIME_JSON='application/json'
 STATIC='/static/'
@@ -778,13 +781,29 @@ def deposit(pid):
 
 #### scatterplots ####
 
-def scatter_json(targets,bin_pid,x_axis,y_axis):
+def scatter_json(targets,bin_pid,x_axis,y_axis,features={}):
     # FIXME need a way to map between generic cols and schema-dependent cols
-    points = [{
-        'roi_num': re.sub(r'.*_','',t[PID]), # strip prefix
-        'x': t[x_axis],
-        'y': t[y_axis]
-    } for t in targets]
+    points = []
+    for t in targets:
+        roi_num = re.sub(r'.*_','',t[PID])# strip prefix
+        # This isn't very elegant, if they enter an invalid
+        # column it will error, but it was like that before too
+        if x_axis in t:
+            x = t[x_axis]
+        else:
+            x = features[int(roi_num)][x_axis]
+        if y_axis in t:
+            y = t[y_axis]
+        else:
+            y = features[int(roi_num)][y_axis]
+
+        point = {
+            'roi_num': roi_num,
+            'x': x,
+            'y': y
+        }
+        points.append(point)
+        
     d = {
         'bin_pid': bin_pid,
         'x_axis_label': x_axis,
@@ -796,7 +815,7 @@ def scatter_json(targets,bin_pid,x_axis,y_axis):
 @app.route('/<time_series>/api/plot/<path:params>/pid/<url:pid>')
 def scatter(time_series,params,pid):
     req = DashboardRequest(pid, request)
-    params = parse_params(params, x='left', y='bottom')
+    params = parse_params(params, x='bottom', y='left')
     try:
         paths = get_fileset(req.parsed)
     except NotFound:
@@ -804,10 +823,38 @@ def scatter(time_series,params,pid):
     adc_path = paths['adc_path']
     adc = Adc(adc_path, req.schema_version)
     targets = get_targets(adc, req.canonical_pid)
+    
+    # check if we need to use features file
+    x_from_feature = params['x'] != 'bottom' and params['x'] != 'fluorescenceLow'
+    y_from_feature = params['y'] != 'left' and params['y'] != 'scatteringLow'
+    features_targets = {}
+    if x_from_feature or y_from_feature:
+        features_path = get_product_file(req.parsed, 'features')
+        columns = get_features_columns(features_path)
+        for target in read_features(features_path):
+            new_target = {}
+            for i,v in columns.items():
+                new_target[v] = target[i]
+            # dict indexed by roi_number
+            features_targets[int(new_target['roi_number'])] = new_target
+        
     # handle some target views other than the standard ones
     if req.extension=='json':
-        return scatter_json(targets,req.canonical_pid,params['x'],params['y'])
+        return scatter_json(targets,req.canonical_pid,params['x'],params['y'],features_targets)
     abort(404)
+    
+def read_features(features_path):
+    features_source = LocalFileSource(features_path)
+    for row in read_csv(features_source, None, 1, NO_LIMIT):
+        yield row
+
+#Probably a more elegant way to simply get the first row, but
+#I'm not too handy with this language..
+def get_features_columns(features_path):
+    features_source = LocalFileSource(features_path)
+    for row in read_csv(features_source, None, 0, 1):
+        return row
+        
 
 #### mosaics #####
 
