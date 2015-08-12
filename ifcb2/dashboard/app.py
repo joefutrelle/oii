@@ -618,6 +618,7 @@ class DashboardRequest(object):
         self.bin_lid = self.parsed['bin_lid']
         self.lid = self.parsed[LID]
         self.schema_version = self.parsed[SCHEMA_VERSION]
+        self.adc_cols = re.split(' ', self.parsed['adc_cols'])
         if request is not None:
             self.url_root = get_url_root()
         self.canonical_pid = canonicalize(self.url_root, self.time_series, self.lid)
@@ -812,6 +813,33 @@ def scatter_json(targets,bin_pid,x_axis,y_axis,features={}):
     }
     return Response(json.dumps(d), mimetype=MIME_JSON)
 
+@memoize(key=lambda args: args[0].time_series)
+def get_features_schema(req, features_path=None):
+    if features_path is None:
+        # will raise NotFound if not features file is found,
+        # caller must catch to provide default value in this case
+        features_path = get_product_file(req.parsed,'features')
+    features_source = LocalFileSource(features_path)
+    for row in read_csv(features_source, None, 0, 1):
+        return row
+
+@app.route('/<time_series>/api/plot/schema/pid/<url:pid>')
+def plot_schema(time_series, pid):
+    req = DashboardRequest(pid, request)
+    adc_cols = req.adc_cols
+    try:
+        feature_schema = get_features_schema(req)
+    except NotFound:
+        feature_schema = {}
+    feature_cols = [feature_schema[k] for k in sorted(feature_schema)]
+    return Response(json.dumps(adc_cols + feature_cols), mimetype=MIME_JSON)
+
+def read_features(features_path):
+    features_source = LocalFileSource(features_path)
+    for row in read_csv(features_source, None, 1, NO_LIMIT):
+        yield row
+
+@app.route('/<time_series>/api/plot/<path:params>/pid/<url:pid>')
 @app.route('/<time_series>/api/plot/<path:params>/pid/<url:pid>')
 def scatter(time_series,params,pid):
     req = DashboardRequest(pid, request)
@@ -829,8 +857,8 @@ def scatter(time_series,params,pid):
     y_from_feature = params['y'] != 'left' and params['y'] != 'scatteringLow'
     features_targets = {}
     if x_from_feature or y_from_feature:
-        features_path = get_product_file(req.parsed, 'features')
-        columns = get_features_columns(features_path)
+        features_path = get_product_file(req.parsed,'features')
+        columns = get_features_schema(req, features_path)
         for target in read_features(features_path):
             new_target = {}
             for i,v in columns.items():
@@ -843,19 +871,6 @@ def scatter(time_series,params,pid):
         return scatter_json(targets,req.canonical_pid,params['x'],params['y'],features_targets)
     abort(404)
     
-def read_features(features_path):
-    features_source = LocalFileSource(features_path)
-    for row in read_csv(features_source, None, 1, NO_LIMIT):
-        yield row
-
-#Probably a more elegant way to simply get the first row, but
-#I'm not too handy with this language..
-def get_features_columns(features_path):
-    features_source = LocalFileSource(features_path)
-    for row in read_csv(features_source, None, 0, 1):
-        return row
-        
-
 #### mosaics #####
 
 def get_sorted_tiles(adc_path, schema_version, bin_pid):
