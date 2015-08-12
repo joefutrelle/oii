@@ -106,6 +106,8 @@ The plugin allso adds the following methods to the plot object:
         function onMouseDown(e) {
             if (e.which != 1)  // only accept left-click
                 return;
+            if (e.shiftKey == false)
+                return;
             
             // cancel out any text selections
             document.body.focus();
@@ -132,6 +134,10 @@ The plugin allso adds the following methods to the plot object:
         }
 
         function onMouseUp(e) {
+            if (e.shiftKey == false) {
+                clearSelection(true);
+                return;
+            }
             mouseUpHandler = null;
             
             // revert drag stuff for old-school browsers
