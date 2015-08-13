@@ -106,7 +106,7 @@ The plugin allso adds the following methods to the plot object:
         function onMouseDown(e) {
             if (e.which != 1)  // only accept left-click
                 return;
-            if (e.shiftKey == false)
+            if (e.shiftKey)
                 return;
             
             // cancel out any text selections
@@ -134,7 +134,7 @@ The plugin allso adds the following methods to the plot object:
         }
 
         function onMouseUp(e) {
-            if (e.shiftKey == false) {
+            if (e.shiftKey) {
                 clearSelection(true);
                 return;
             }

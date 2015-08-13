@@ -5,21 +5,23 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     var WIDTH = 'data_scat_ep_width';
     var HEIGHT = 'data_scat_ep_height';
     var PLOT_OPTIONS = 'data_scat_options';
-    var PLOT_TYPE = 'data_scat_plot_type';
+    var PLOT_X_TYPE = 'data_scat_x_plot_type';
+    var PLOT_Y_TYPE = 'data_scat_y_plot_type';
     var PLOT_X = 'data_scat_x_axis';
     var PLOT_Y = 'data_scat_y_axis';
     var PLOT_X_OFFSET = 'data_scat_x_offset';
     var PLOT_Y_OFFSET = 'data_scat_y_offset';
+    var PLOT_X_AXIS_MIN = 'data_scat_x_axis_min';
+    var PLOT_Y_AXIS_MIN = 'data_scat_y_axis_min';
+    var PLOT_X_AXIS_MAX = 'data_scat_x_axis_max';
+    var PLOT_Y_AXIS_MAX = 'data_scat_y_axis_max';
+    var PLOT_DATA = 'data_scat_plot_data';
     var endpointPfx = '/' + timeseries + '/api/plot';
     var endpointSfx = '/pid/';
     $this.data(HEIGHT, height);
-    var plotTypes = ['linear', 'log'];
-    var plotType = $this.data(PLOT_TYPE);
-    if (plotType == undefined) {
-        plotType = plotTypes[0];
-    }
+
     // Hard coded simply because I don't know / want to find out how to pull this from Python where the csv is read. This is easier
-    var plotChoices = ['roi_number', 'Area', 'Biovolume', 'BoundingBox_xwidth', 'BoundingBox_ywidth', 'ConvexArea', 'ConvexPerimeter', 'Eccentricity', 'EquivDiameter',
+    var plotChoices = ['roi_number', 'fluorescenceLow', 'scatteringLow', 'Area', 'Biovolume', 'BoundingBox_xwidth', 'BoundingBox_ywidth', 'ConvexArea', 'ConvexPerimeter', 'Eccentricity', 'EquivDiameter',
         'Extent', 'FeretDiameter', 'H180', 'H90', 'Hflip', 'MajorAxisLength', 'MinorAxisLength', 'Orientation', 'Perimeter', 'RWcenter2total_powerratio', 'RWhalfpowerintegral',
         'Solidity', 'moment_invariant1', 'moment_invariant2', 'moment_invariant3', 'moment_invariant4', 'moment_invariant5', 'moment_invariant6', 'moment_invariant7',
         'numBlobs', 'shapehist_kurtosis_normEqD', 'shapehist_mean_normEqD', 'shapehist_median_normEqD', 'shapehist_mode_normEqD', 'shapehist_skewness_normEqD',
@@ -40,20 +42,42 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         'HOG61', 'HOG62', 'HOG63', 'HOG64', 'HOG65', 'HOG66', 'HOG67', 'HOG68', 'HOG69', 'HOG70', 'HOG71', 'HOG72', 'HOG73', 'HOG74', 'HOG75', 'HOG76', 'HOG77', 'HOG78', 'HOG79',
         'HOG80', 'HOG81'];
 
-    // var plotXs = ['bottom', 'fluorescenceLow'];
-    var plotX = $this.data(PLOT_X);
-    if (plotX == undefined) {
-        plotX = 'bottom'
+    // Set some defaults
+    var plotTypes = ['linear', 'log'];
+    if ($this.data(PLOT_X_TYPE) == undefined) {
+        $this.data(PLOT_X_TYPE, plotTypes[0]);
     }
-    // var plotYs = ['left', 'scatteringLow'];
-    var plotY = $this.data(PLOT_Y);
-    if (plotY == undefined) {
-        plotY = 'left'
+    if ($this.data(PLOT_Y_TYPE) == undefined) {
+        $this.data(PLOT_Y_TYPE, plotTypes[0]);
     }
-    var plotXOffset = $this.data(PLOT_X_OFFSET) || 0;
-    var plotYOffset = $this.data(PLOT_Y_OFFSET) || 0;
+    if ($this.data(PLOT_X) == undefined) {
+        $this.data(PLOT_X, 'bottom');
+    }
+    if ($this.data(PLOT_Y) == undefined) {
+        $this.data(PLOT_Y, 'left');
+    }
+    if ($this.data(PLOT_X_OFFSET) == undefined) {
+        $this.data(PLOT_X_OFFSET, 0);
+    }
+    if ($this.data(PLOT_Y_OFFSET) == undefined) {
+        $this.data(PLOT_Y_OFFSET, 0);
+    }
+    if ($this.data(PLOT_X_AXIS_MIN) == undefined) {
+        $this.data(PLOT_X_AXIS_MIN, '');
+    }
+    if ($this.data(PLOT_X_AXIS_MAX) == undefined) {
+        $this.data(PLOT_X_AXIS_MAX, '');
+    }
+    if ($this.data(PLOT_Y_AXIS_MIN) == undefined) {
+        $this.data(PLOT_Y_AXIS_MIN, '');
+    }
+    if ($this.data(PLOT_Y_AXIS_MAX) == undefined) {
+        $this.data(PLOT_Y_AXIS_MAX, '');
+    }
 
-    var plotOptions = {
+    var plot;
+
+    $this.data(PLOT_OPTIONS, {
         series: {
             points: {
                 show: true,
@@ -75,70 +99,92 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         selection: {
             mode: "xy",
             color: "red"
+        },
+        xaxis: {
+
+        },
+        yaxis: {
+
+        }
+    });
+    var xf = {
+        transform: function (v) {
+            return v == 0 ? v : Math.log(v);
+        },
+        inverseTransform: function (v) {
+            return Math.exp(v);
         }
     };
-    if (plotType == 'log') {
-        var xf = {
-            transform: function (v) {
-                return v == 0 ? v : Math.log(v);
-            },
-            inverseTransform: function (v) {
-                return Math.exp(v);
-            }
-        };
-        plotOptions.xaxis = xf;
-        plotOptions.yaxis = xf;
+    if ($this.data(PLOT_X_TYPE) == 'log') {$this.data(PLOT_OPTIONS).xaxis = xf;}
+    if ($this.data(PLOT_Y_TYPE) == 'log') {$this.data(PLOT_OPTIONS).yaxis = xf;}
+    // Set ranges to camera size if using bottom or left
+    if ($this.data(PLOT_X) == 'bottom') {
+        // Don't override transform and inverseTransform possibly set above
+        $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
+        $this.data(PLOT_OPTIONS).xaxis.min = 0;
+        $this.data(PLOT_OPTIONS).xaxis.max = 1381;
     }
-    else if (plotType == 'linear') {
-        if (plotX == 'bottom') {
-            plotOptions.xaxis = {
-                min: 0,
-                max: 1381
-            }
-        }
-        if (plotY == 'left') {
-            plotOptions.yaxis = {
-                min: 0,
-                max: 1035
-            }
-        }
+    if ($this.data(PLOT_Y) == 'left') {
+        $this.data(PLOT_OPTIONS).yaxis = $this.data(PLOT_OPTIONS).yaxis || {};
+        $this.data(PLOT_OPTIONS).yaxis.min = 0;
+        $this.data(PLOT_OPTIONS).yaxis.max = 1035;
     }
-    $this.data(PLOT_OPTIONS, plotOptions);
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
         .empty()
-        .append('<br><br>Type: <span></span>') // plot type: linear / log
+        .append('<br><br>X Type: <span></span>') // plot type: linear / log
         .find('span:last')
         .radio(plotTypes, function (plotType) {
             return plotType;
-        }, plotType).bind('select', function (event, value) {
-            $this.data(PLOT_TYPE, value);
-            $this.trigger('drawBinDisplay');
+        }, $this.data(PLOT_X_TYPE))
+        .bind('select', function (event, value) {
+            $this.data(PLOT_X_TYPE, value);
+             // Careful not to override other xaxis data
+             $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
+             if(value == 'log') {
+             $this.data(PLOT_OPTIONS).xaxis.transform = xf.transform;
+             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = xf.inverseTransform;
+             }
+             else {
+             // Setting to null defaults it to linear
+             $this.data(PLOT_OPTIONS).xaxis.transform = undefined;
+             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = undefined;
+             }
+             // Keep plot reference updated
+             plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
+        });
+    $this.siblings('.bin_view_controls')
+        .find('.bin_view_specific_controls')
+        .append(' &nbsp;Y Type: <span></span>') // plot type: linear / log
+        .find('span:last')
+        .radio(plotTypes, function (plotType) {
+            return plotType;
+        }, $this.data(PLOT_Y_TYPE))
+        .bind('select', function (event, value) {
+            $this.data(PLOT_Y_TYPE, value);
+            $this.data(PLOT_OPTIONS).yaxis = $this.data(PLOT_OPTIONS).yaxis || {};
+            if(value == 'log') {
+                $this.data(PLOT_OPTIONS).yaxis.transform = xf.transform;
+                $this.data(PLOT_OPTIONS).yaxis.inverseTransform = xf.inverseTransform;
+            }
+            else {
+                // Setting to null defaults it to linear
+                $this.data(PLOT_OPTIONS).yaxis.transform = undefined;
+                $this.data(PLOT_OPTIONS).yaxis.inverseTransform = undefined;
+            }
+            // Keep plot reference updated
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
         });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
         .append('X axis: <span></span>') // x axis
         .find('span:last')
-        .append('<select id="x_axis_choice" style="width:150px"><option value="bottom">bottom</option>' +
-        '<option value="fluorescenceLow">fluorescenceLow</option></select>');
-        /*.radio(plotXs, function (plotX) {
-            return plotX;
-        }, plotX).bind('select', function (event, value) {
-            $this.data(PLOT_X, value);
-            $this.trigger('drawBinDisplay');
-        })*/
+        .append('<select id="x_axis_choice" style="width:150px"><option value="bottom">bottom</option></select>');
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
         .append(' Y axis: <span></span>') // y axis
         .find('span:last')
-        .append('<select id="y_axis_choice" style="width:150px"><option value="left">left</option>' +
-        '<option value="scatteringLow">scatteringLow</option></select>');
-        /*.radio(plotYs, function (plotY) {
-            return plotY;
-        }, plotY).bind('select', function (event, value) {
-            $this.data(PLOT_Y, value);
-            $this.trigger('drawBinDisplay');
-        });*/
+        .append('<select id="y_axis_choice" style="width:150px"><option value="left">left</option></select>');
     for (var i=0; i<plotChoices.length; i++) {
         // Each select needs its own option elements
         var choice = document.createElement("option");
@@ -152,56 +198,170 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     }
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
-        .append('<br><br>X Axis Offset: ')
+        .append('<br><br>X Data Offset: ')
         .append('<input type="text" style="width:40px" id="x_axis_offset"/>')
-        .append(' Y Axis Offset: ')
-        .append('<input type="text" style="width:40px" id="y_axis_offset"/>');
+        .append(' Y Data Offset: ')
+        .append('<input type="text" style="width:40px" id="y_axis_offset"/>')
+        .append(' X Axis Min: ')
+        .append('<input type="text" style="width:40px" id="x_axis_min"/>')
+        .append(' X Axis Max: ')
+        .append('<input type="text" style="width:40px" id="x_axis_max"/>')
+        .append(' Y Axis Min: ')
+        .append('<input type="text" style="width:40px" id="y_axis_min"/>')
+        .append(' Y Axis Max: ')
+        .append('<input type="text" style="width:40px" id="y_axis_max"/>')
+        .append(' &nbsp;&nbsp;&nbsp;<button type="button" id="reset_axes">Reset Axes</button>');
 
     // Make selections persist through the redrawing of bin display
-    document.getElementById('x_axis_offset').value = plotXOffset;
-    document.getElementById('y_axis_offset').value = plotYOffset;
-    document.getElementById('x_axis_choice').value = plotX;
-    document.getElementById('y_axis_choice').value = plotY;
+    document.getElementById('x_axis_offset').value = $this.data(PLOT_X_OFFSET);
+    document.getElementById('y_axis_offset').value = $this.data(PLOT_Y_OFFSET);
+    document.getElementById('x_axis_choice').value = $this.data(PLOT_X);
+    document.getElementById('y_axis_choice').value = $this.data(PLOT_Y);
+    document.getElementById('x_axis_min').value = $this.data(PLOT_X_AXIS_MIN);
+    document.getElementById('y_axis_min').value = $this.data(PLOT_Y_AXIS_MIN);
+    document.getElementById('x_axis_max').value = $this.data(PLOT_X_AXIS_MAX);
+    document.getElementById('y_axis_max').value = $this.data(PLOT_Y_AXIS_MAX);
 
     // Make all these choices update the plot
     $('#x_axis_choice').bind('change', function(e) {
         var val = document.getElementById('x_axis_choice').value;
-        plotX = val;
         $this.data(PLOT_X, val);
         $this.trigger('drawBinDisplay');
     });
     $('#y_axis_choice').bind('change', function(e) {
         var val = document.getElementById('y_axis_choice').value;
-        plotY = val;
         $this.data(PLOT_Y, val);
         $this.trigger('drawBinDisplay');
     });
 
     $('#x_axis_offset').bind('change', function(e) {
-       var val = document.getElementById('x_axis_offset').value;
-        if(!isNaN(val)) {
-            val = parseFloat(val);
-            plotXOffset = val;
+        var val = document.getElementById('x_axis_offset').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            if(val === '') {
+                // If they make it blank, reset to 0
+                val = 0;
+                document.getElementById('x_axis_offset').value = 0;
+            }
             $this.data(PLOT_X_OFFSET, val);
-            $this.trigger('drawBinDisplay');
+            // We have to clone here so the real data stays as is, otherwise
+            // future offsets would affect this already offset data instead of the real data
+            var points = $this.data(PLOT_DATA).data.slice(0); // Clone array of points
+            for (var j=0; j<points.length; j++) { // Loop and offset
+                var new_x = +points[j][0] + +val;
+                points[j] = [new_x, points[j][1]];
+            }
+            var data = jQuery.extend({}, $this.data(PLOT_DATA)); // Clone general data
+            data.data = points;
+            plot = $.plot($this, [data], $this.data(PLOT_OPTIONS)); // Redraw the plot
         }
     });
     $('#y_axis_offset').bind('change', function(e) {
-       var val = document.getElementById('y_axis_offset').value;
-        if(!isNaN(val)) {
-            val = parseFloat(val);
-            plotYOffset = val;
+        var val = document.getElementById('y_axis_offset').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            if(val === '') {
+                val = 0;
+                document.getElementById('y_axis_offset').value = 0;
+            }
             $this.data(PLOT_Y_OFFSET, val);
-            $this.trigger('drawBinDisplay');
+            // See above for relevant comments
+            var points = $this.data(PLOT_DATA).data.slice(0);
+            for (var j=0; j<points.length; j++) {
+                var new_y = +points[j][1] + +val;
+                points[j] = [points[j][0], new_y];
+            }
+            var data = jQuery.extend({}, $this.data(PLOT_DATA));
+            data.data = points;
+            plot = $.plot($this, [data], $this.data(PLOT_OPTIONS)); // Set plot reference to new one
         }
     });
+    $('#x_axis_min').bind('change', function(e) {
+        var val = document.getElementById('x_axis_min').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            $this.data(PLOT_X_AXIS_MIN, val);
+            // If users reset the boxes to blank, flot should calculate our value
+            if(val === '') { val = null; }
+            plot.getAxes().xaxis.options.min = val;
+            plot.setupGrid(); // Necessary because we changed an axis
+            plot.draw();
+        }
+    });
+    $('#x_axis_max').bind('change', function(e) {
+        var val = document.getElementById('x_axis_max').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            $this.data(PLOT_X_AXIS_MAX, val);
+            if(val === '') { val = null; }
+            plot.getAxes().xaxis.options.max = val;
+            plot.setupGrid();
+            plot.draw();
+        }
+    });
+    $('#y_axis_min').bind('change', function(e) {
+        var val = document.getElementById('y_axis_min').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            $this.data(PLOT_Y_AXIS_MIN, val);
+            if(val === '') { val = null; }
+            plot.getAxes().yaxis.options.min = val;
+            plot.setupGrid();
+            plot.draw();
+        }
+    });
+    $('#y_axis_max').bind('change', function(e) {
+        var val = document.getElementById('y_axis_max').value;
+        if(!isNaN(parseFloat(val)) || val === '') {
+            $this.data(PLOT_Y_AXIS_MAX, val);
+            if(val === '') { val = null; }
+            plot.getAxes().yaxis.options.max = val;
+            plot.setupGrid();
+            plot.draw();
+        }
+    });
+    $('#reset_axes').bind('click', function(e) {
+        document.getElementById("x_axis_min").value = '';
+        document.getElementById("x_axis_max").value = '';
+        document.getElementById("y_axis_min").value = '';
+        document.getElementById("y_axis_max").value = '';
+        $this.data(PLOT_X_AXIS_MIN, '');
+        $this.data(PLOT_X_AXIS_MAX, '');
+        $this.data(PLOT_Y_AXIS_MIN, '');
+        $this.data(PLOT_Y_AXIS_MAX, '');
+        var axes = plot.getAxes();
+        // Setting these to null makes flot re-calculate the defaults for the data
+        axes.xaxis.options.min = null;
+        axes.xaxis.options.max = null;
+        axes.yaxis.options.min = null;
+        axes.yaxis.options.max = null;
+        // But let's keep our camera size as default for bottom/left
+        if($this.data(PLOT_X) == 'bottom') {
+            axes.xaxis.options.min = 0;
+            axes.xaxis.options.max = 1381;
+        }
+        if($this.data(PLOT_Y) == 'left') {
+            axes.yaxis.options.min = 0;
+            axes.yaxis.options.max = 1035;
+        }
+        plot.setupGrid();
+        plot.draw();
+    })
+
     $this.unbind('show_bin').bind('show_bin', function (event, bin_pid) {
+        // Change plot axes based on min/max values if available
+        if ($this.data(PLOT_X_AXIS_MIN) != undefined && $this.data(PLOT_X_AXIS_MIN) !== '') {
+            $this.data(PLOT_OPTIONS).xaxis.min = $this.data(PLOT_X_AXIS_MIN);
+        }
+        if ($this.data(PLOT_X_AXIS_MAX) != undefined && $this.data(PLOT_X_AXIS_MAX) !== '') {
+            $this.data(PLOT_OPTIONS).xaxis.max = $this.data(PLOT_X_AXIS_MAX);
+        }
+        if ($this.data(PLOT_Y_AXIS_MIN) != undefined && $this.data(PLOT_Y_AXIS_MIN) !== '') {
+            $this.data(PLOT_OPTIONS).yaxis.min = $this.data(PLOT_Y_AXIS_MIN);
+        }
+        if ($this.data(PLOT_Y_AXIS_MAX) != undefined && $this.data(PLOT_Y_AXIS_MAX) !== '') {
+            $this.data(PLOT_OPTIONS).yaxis.max = $this.data(PLOT_Y_AXIS_MAX);
+        }
         var plotParams = params2url({
-            'x': plotX,
-            'y': plotY
+            'x': $this.data(PLOT_X),
+            'y': $this.data(PLOT_Y)
         });
         var endpoint = endpointPfx + plotParams + endpointSfx + bin_pid;
-        var plot_options = $this.data(PLOT_OPTIONS);
         console.log("Loading " + endpoint + "...");
         $.getJSON(endpoint, function (r) {
             console.log("Got JSON data");
@@ -217,7 +377,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                     inverse_x = true;
                 }
                 if (r.y_axis_label == "fluorescenceLow" || r.y_axis_label == "scatteringLow") {
-                   inverse_y = true;
+                    inverse_y = true;
                 }
             }
             $.each(r.points, function (ix, point) {
@@ -228,24 +388,24 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                 // Offset points by user value
                 // These need a "+" prefix or else JS interprets them as strings
                 // Despite the math right above??
-                point.x = +point.x + parseFloat(plotXOffset);
-                point.y = +point.y + parseFloat(plotYOffset);
+                point.x = +point.x + parseFloat($this.data(PLOT_X_OFFSET));
+                point.y = +point.y + parseFloat($this.data(PLOT_Y_OFFSET));
                 point_data.push([point.x, point.y]);
                 roi_pids.push(bin_pid + '_' + point.roi_num);
             });
-            var plot_data = {
-                label: plotX + ' / ' + plotY,
+            $this.data(PLOT_DATA, {
+                label: $this.data(PLOT_X) + ' / ' + $this.data(PLOT_Y),
                 data: point_data,
                 color: "black",
                 points: {
                     fillColor: "black"
                 },
                 highlightColor: "red"
-            };
+            });
             $this.empty()
                 .css('width', $this.data(WIDTH))
-                .css('height', $this.data(HEIGHT))
-                .plot([plot_data], plot_options);
+                .css('height', $this.data(HEIGHT));
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
             $this.data('roi_pids', roi_pids);
             $this.data('point_data', point_data);
         });
