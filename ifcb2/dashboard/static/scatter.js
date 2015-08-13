@@ -139,19 +139,19 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         }, $this.data(PLOT_X_TYPE))
         .bind('select', function (event, value) {
             $this.data(PLOT_X_TYPE, value);
-             // Careful not to override other xaxis data
-             $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
-             if(value == 'log') {
-             $this.data(PLOT_OPTIONS).xaxis.transform = xf.transform;
-             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = xf.inverseTransform;
-             }
-             else {
-             // Setting to null defaults it to linear
-             $this.data(PLOT_OPTIONS).xaxis.transform = undefined;
-             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = undefined;
-             }
-             // Keep plot reference updated
-             plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
+            // Careful not to override other xaxis data
+            $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
+            if(value == 'log') {
+                $this.data(PLOT_OPTIONS).xaxis.transform = xf.transform;
+                $this.data(PLOT_OPTIONS).xaxis.inverseTransform = xf.inverseTransform;
+            }
+            else {
+                // Setting to null defaults it to linear
+                $this.data(PLOT_OPTIONS).xaxis.transform = undefined;
+                $this.data(PLOT_OPTIONS).xaxis.inverseTransform = undefined;
+            }
+            // Keep plot reference updated
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
         });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
@@ -186,17 +186,32 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         .find('span:last')
         .append('<select id="y_axis_choice" style="width:150px"></select>');
     // set up the choices for x and y axes by calling the plot schema endpoint
+    var skip_columns = ['binID', 'pid', 'trigger', 'byteOffset'];
+    var delayed_columns = [];
     var schema_endpoint = endpointPfx + '/schema' + endpointSfx + pid;
     $.getJSON(schema_endpoint, function(r) {
-	$.each(r, function(ix, choice) {
-	    var html = '<option value="'+choice+'">'+choice+'</option>';
-	    $('#x_axis_choice').append(html);
-	    $('#y_axis_choice').append(html);
-	});
-	// now allow previously-set x and y axes to persist
-	// by explicitly changing the value
-	$('#x_axis_choice').val($this.data(PLOT_X));
-	$('#y_axis_choice').val($this.data(PLOT_Y));
+        $.each(r, function(ix, choice) {
+            if ($.inArray(choice, skip_columns) != -1) { // skip over some irrelevant columns
+                return true;
+            }
+            // Push some less relevant columns to the bottom
+            if (choice.indexOf('Wedge') != -1 || choice.indexOf('Ring') != -1 || choice.indexOf('HOG') != -1) {
+                delayed_columns.push(choice);
+                return true;
+            }
+            var html = '<option value="'+choice+'">'+choice+'</option>';
+            $('#x_axis_choice').append(html);
+            $('#y_axis_choice').append(html);
+        });
+        $.each(delayed_columns, function(ix, choice) {
+            var html = '<option value="'+choice+'">'+choice+'</option>';
+            $('#x_axis_choice').append(html);
+            $('#y_axis_choice').append(html);
+        });
+        // now allow previously-set x and y axes to persist
+        // by explicitly changing the value
+        $('#x_axis_choice').val($this.data(PLOT_X));
+        $('#y_axis_choice').val($this.data(PLOT_Y));
     });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
