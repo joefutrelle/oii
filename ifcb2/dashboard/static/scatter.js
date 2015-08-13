@@ -179,23 +179,25 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         .find('.bin_view_specific_controls')
         .append('X axis: <span></span>') // x axis
         .find('span:last')
-        .append('<select id="x_axis_choice" style="width:150px"><option value="bottom">bottom</option></select>');
+        .append('<select id="x_axis_choice" style="width:150px"></select>');
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
         .append(' Y axis: <span></span>') // y axis
         .find('span:last')
-        .append('<select id="y_axis_choice" style="width:150px"><option value="left">left</option></select>');
-    for (var i=0; i<plotChoices.length; i++) {
-        // Each select needs its own option elements
-        var choice = document.createElement("option");
-        var choice_y = document.createElement("option");
-        choice.value = plotChoices[i];
-        choice_y.value = plotChoices[i];
-        choice.text = plotChoices[i];
-        choice_y.text = plotChoices[i];
-        document.getElementById('x_axis_choice').add(choice);
-        document.getElementById('y_axis_choice').add(choice_y)
-    }
+        .append('<select id="y_axis_choice" style="width:150px"></select>');
+    // set up the choices for x and y axes by calling the plot schema endpoint
+    var schema_endpoint = endpointPfx + '/schema' + endpointSfx + pid;
+    $.getJSON(schema_endpoint, function(r) {
+	$.each(r, function(ix, choice) {
+	    var html = '<option value="'+choice+'">'+choice+'</option>';
+	    $('#x_axis_choice').append(html);
+	    $('#y_axis_choice').append(html);
+	});
+	// now allow previously-set x and y axes to persist
+	// by explicitly changing the value
+	$('#x_axis_choice').val($this.data(PLOT_X));
+	$('#y_axis_choice').val($this.data(PLOT_Y));
+    });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
         .append('<br><br>X Data Offset: ')
@@ -215,8 +217,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     // Make selections persist through the redrawing of bin display
     document.getElementById('x_axis_offset').value = $this.data(PLOT_X_OFFSET);
     document.getElementById('y_axis_offset').value = $this.data(PLOT_Y_OFFSET);
-    document.getElementById('x_axis_choice').value = $this.data(PLOT_X);
-    document.getElementById('y_axis_choice').value = $this.data(PLOT_Y);
+    // note that x and y axis choice setting is deferred until the schema endpoint returns
     document.getElementById('x_axis_min').value = $this.data(PLOT_X_AXIS_MIN);
     document.getElementById('y_axis_min').value = $this.data(PLOT_Y_AXIS_MIN);
     document.getElementById('x_axis_max').value = $this.data(PLOT_X_AXIS_MAX);
