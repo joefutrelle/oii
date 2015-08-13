@@ -242,17 +242,18 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                 val = 0;
                 document.getElementById('x_axis_offset').value = 0;
             }
-            $this.data(PLOT_X_OFFSET, val);
-            // We have to clone here so the real data stays as is, otherwise
-            // future offsets would affect this already offset data instead of the real data
-            var points = $this.data(PLOT_DATA).data.slice(0); // Clone array of points
-            for (var j=0; j<points.length; j++) { // Loop and offset
-                var new_x = +points[j][0] + +val;
-                points[j] = [new_x, points[j][1]];
+            var existing_points = $this.data(PLOT_DATA).data;
+            var new_points = [];
+            for (var j=0; j<existing_points.length; j++) { // Loop and offset
+                // First remove the existing offset
+                var new_x = +existing_points[j][0] - $this.data(PLOT_X_OFFSET);
+                // Then add the new one
+                new_x = new_x + +val;
+                new_points[j] = [new_x, existing_points[j][1]];
             }
-            var data = jQuery.extend({}, $this.data(PLOT_DATA)); // Clone general data
-            data.data = points;
-            plot = $.plot($this, [data], $this.data(PLOT_OPTIONS)); // Redraw the plot
+            $this.data(PLOT_DATA).data = new_points;
+            $this.data(PLOT_X_OFFSET, val);
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS)); // Redraw the plot
         }
     });
     $('#y_axis_offset').bind('change', function(e) {
@@ -262,16 +263,18 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                 val = 0;
                 document.getElementById('y_axis_offset').value = 0;
             }
-            $this.data(PLOT_Y_OFFSET, val);
-            // See above for relevant comments
-            var points = $this.data(PLOT_DATA).data.slice(0);
-            for (var j=0; j<points.length; j++) {
-                var new_y = +points[j][1] + +val;
-                points[j] = [points[j][0], new_y];
+            var existing_points = $this.data(PLOT_DATA).data;
+            var new_points = [];
+            for (var j=0; j<existing_points.length; j++) { // Loop and offset
+                // First remove the existing offset
+                var new_y = +existing_points[j][1] - $this.data(PLOT_Y_OFFSET);
+                // Then add the new one
+                new_y = new_y + +val;
+                new_points[j] = [existing_points[j][0], new_y];
             }
-            var data = jQuery.extend({}, $this.data(PLOT_DATA));
-            data.data = points;
-            plot = $.plot($this, [data], $this.data(PLOT_OPTIONS)); // Set plot reference to new one
+            $this.data(PLOT_DATA).data = new_points;
+            $this.data(PLOT_Y_OFFSET, val);
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS)); // Redraw the plot
         }
     });
     $('#x_axis_min').bind('change', function(e) {
