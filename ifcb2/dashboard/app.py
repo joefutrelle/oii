@@ -858,11 +858,12 @@ def scatter(time_series,params,pid):
     targets = get_targets(adc, req.canonical_pid)
     
     # check if we need to use features file
-    x_from_feature = params['x'] != 'bottom' and params['x'] != 'fluorescenceLow'
-    y_from_feature = params['y'] != 'left' and params['y'] != 'scatteringLow'
     features_targets = {}
-    if x_from_feature or y_from_feature:
-        features_path = get_product_file(req.parsed,'features')
+    if params['x'] not in req.adc_cols or params['y'] not in req.adc_cols:
+        try:
+            features_path = get_product_file(req.parsed,'features')
+        except NotFound:
+            abort(404)
         columns = get_features_schema(req, features_path)
         for target in read_features(features_path):
             new_target = {}
