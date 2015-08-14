@@ -826,13 +826,18 @@ def get_features_schema(req, features_path=None):
 @app.route('/<time_series>/api/plot/schema/pid/<url:pid>')
 def plot_schema(time_series, pid):
     req = DashboardRequest(pid, request)
-    adc_cols = req.adc_cols
+    skip_adc_cols = ['binID', 'pid', 'trigger', 'byteOffset']
+    adc_cols = [c for c in req.adc_cols if c not in skip_adc_cols]
     try:
         feature_schema = get_features_schema(req)
     except NotFound:
         feature_schema = {}
     feature_cols = [feature_schema[k] for k in sorted(feature_schema)]
-    return Response(json.dumps(adc_cols + feature_cols), mimetype=MIME_JSON)
+    def is_tail_col(c):
+        return re.match(r'^(Wedge|Ring|HOG)',c) is not None
+    fc_head = [c for c in feature_cols if not is_tail_col(c)]
+    fc_tail = [c for c in feature_cols if is_tail_col(c)]
+    return Response(json.dumps(adc_cols + fc_head + fc_tail), mimetype=MIME_JSON)
 
 def read_features(features_path):
     features_source = LocalFileSource(features_path)
@@ -853,11 +858,12 @@ def scatter(time_series,params,pid):
     targets = get_targets(adc, req.canonical_pid)
     
     # check if we need to use features file
-    x_from_feature = params['x'] != 'bottom' and params['x'] != 'fluorescenceLow'
-    y_from_feature = params['y'] != 'left' and params['y'] != 'scatteringLow'
     features_targets = {}
-    if x_from_feature or y_from_feature:
-        features_path = get_product_file(req.parsed,'features')
+    if params['x'] not in req.adc_cols or params['y'] not in req.adc_cols:
+        try:
+            features_path = get_product_file(req.parsed,'features')
+        except NotFound:
+            abort(404)
         columns = get_features_schema(req, features_path)
         for target in read_features(features_path):
             new_target = {}
