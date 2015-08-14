@@ -164,24 +164,9 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         .find('span:last')
         .append('<select id="y_axis_choice" style="width:150px"></select>');
     // set up the choices for x and y axes by calling the plot schema endpoint
-    var skip_columns = ['binID', 'pid', 'trigger', 'byteOffset'];
-    var delayed_columns = [];
     var schema_endpoint = endpointPfx + '/schema' + endpointSfx + pid;
     $.getJSON(schema_endpoint, function(r) {
         $.each(r, function(ix, choice) {
-            if ($.inArray(choice, skip_columns) != -1) { // skip over some irrelevant columns
-                return true;
-            }
-            // Push some less relevant columns to the bottom
-            if (choice.indexOf('Wedge') != -1 || choice.indexOf('Ring') != -1 || choice.indexOf('HOG') != -1) {
-                delayed_columns.push(choice);
-                return true;
-            }
-            var html = '<option value="'+choice+'">'+choice+'</option>';
-            $('#x_axis_choice').append(html);
-            $('#y_axis_choice').append(html);
-        });
-        $.each(delayed_columns, function(ix, choice) {
             var html = '<option value="'+choice+'">'+choice+'</option>';
             $('#x_axis_choice').append(html);
             $('#y_axis_choice').append(html);
@@ -365,10 +350,10 @@ function scatter_setup(elt, timeseries, pid, width, height) {
             var bin_pid = r.bin_pid;
             var roi_pids = [];
             var point_data = [];
-            // Handle old IFCB2 format issue where values are negative
+            // Handle old IFCB format issue where values are negative
             var inverse_x = false;
             var inverse_y = false;
-            if(bin_pid.indexOf("/IFCB2")) {
+            if(bin_pid.indexOf("/IFCB") != -1) {
                 console.log("Old file format, inversing fluorescence and scattering values...")
                 if (r.x_axis_label == "fluorescenceLow" || r.x_axis_label == "scatteringLow") {
                     inverse_x = true;
