@@ -20,28 +20,6 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     var endpointSfx = '/pid/';
     $this.data(HEIGHT, height);
 
-    // Hard coded simply because I don't know / want to find out how to pull this from Python where the csv is read. This is easier
-    var plotChoices = ['roi_number', 'fluorescenceLow', 'scatteringLow', 'Area', 'Biovolume', 'BoundingBox_xwidth', 'BoundingBox_ywidth', 'ConvexArea', 'ConvexPerimeter', 'Eccentricity', 'EquivDiameter',
-        'Extent', 'FeretDiameter', 'H180', 'H90', 'Hflip', 'MajorAxisLength', 'MinorAxisLength', 'Orientation', 'Perimeter', 'RWcenter2total_powerratio', 'RWhalfpowerintegral',
-        'Solidity', 'moment_invariant1', 'moment_invariant2', 'moment_invariant3', 'moment_invariant4', 'moment_invariant5', 'moment_invariant6', 'moment_invariant7',
-        'numBlobs', 'shapehist_kurtosis_normEqD', 'shapehist_mean_normEqD', 'shapehist_median_normEqD', 'shapehist_mode_normEqD', 'shapehist_skewness_normEqD',
-        'summedArea', 'summedBiovolume', 'summedConvexArea', 'summedConvexPerimeter', 'summedFeretDiameter', 'summedMajorAxisLength', 'summedMinorAxisLength',
-        'summedPerimeter', 'texture_average_contrast', 'texture_average_gray_level', 'texture_entropy', 'texture_smoothness', 'texture_third_moment',
-        'texture_uniformity', 'RotatedArea', 'RotatedBoundingBox_xwidth', 'RotatedBoundingBox_ywidth', 'Area_over_PerimeterSquared', 'Area_over_Perimeter',
-        'H90_over_Hflip', 'H90_over_H180', 'Hflip_over_H180', 'summedConvexPerimeter_over_Perimeter', 'rotated_BoundingBox_solidity', ' Wedge01', 'Wedge02',
-        'Wedge03', 'Wedge04', 'Wedge05', 'Wedge06', 'Wedge07', 'Wedge08', 'Wedge09', 'Wedge10', 'Wedge11', 'Wedge12', 'Wedge13', 'Wedge14', 'Wedge15', 'Wedge16',
-        'Wedge17', 'Wedge18', 'Wedge19', 'Wedge20', 'Wedge21', 'Wedge22', 'Wedge23', 'Wedge24', 'Wedge25', 'Wedge26', 'Wedge27', 'Wedge28', 'Wedge29', 'Wedge30',
-        'Wedge31', 'Wedge32', 'Wedge33', 'Wedge34', 'Wedge35', 'Wedge36', 'Wedge37', 'Wedge38', 'Wedge39', 'Wedge40', 'Wedge41', 'Wedge42', 'Wedge43', 'Wedge44',
-        'Wedge45', 'Wedge46', 'Wedge47', 'Wedge48', 'Ring01', 'Ring02', 'Ring03', 'Ring04', 'Ring05', 'Ring06', 'Ring07', 'Ring08', 'Ring09', 'Ring10',
-        'Ring11', 'Ring12', 'Ring13', 'Ring14', 'Ring15', 'Ring16', 'Ring17', 'Ring18', 'Ring19', 'Ring20', 'Ring21', 'Ring22', 'Ring23', 'Ring24', 'Ring25',
-        'Ring26', 'Ring27', 'Ring28', 'Ring29', 'Ring30', 'Ring31', 'Ring32', 'Ring33', 'Ring34', 'Ring35', 'Ring36', 'Ring37', 'Ring38', 'Ring39', 'Ring40',
-        'Ring41', 'Ring42', 'Ring43', 'Ring44', 'Ring45', 'Ring46', 'Ring47', 'Ring48', 'Ring49', 'Ring50', 'HOG01', 'HOG02', 'HOG03', 'HOG04', 'HOG05', 'HOG06',
-        'HOG07', 'HOG08', 'HOG09', 'HOG10', 'HOG11', 'HOG12', 'HOG13', 'HOG14', 'HOG15', 'HOG16', 'HOG17', 'HOG18', 'HOG19', 'HOG20', 'HOG21', 'HOG22', 'HOG23',
-        'HOG24', 'HOG25', 'HOG26', 'HOG27', 'HOG28', 'HOG29', 'HOG30', 'HOG31', 'HOG32', 'HOG33', 'HOG34', 'HOG35', 'HOG36', 'HOG37', 'HOG38', 'HOG39', 'HOG40', 'HOG41',
-        'HOG42', 'HOG43', 'HOG44', 'HOG45', 'HOG46', 'HOG47', 'HOG48', 'HOG49', 'HOG50', 'HOG51', 'HOG52', 'HOG53', 'HOG54', 'HOG55', 'HOG56', 'HOG57', 'HOG58', 'HOG59', 'HOG60',
-        'HOG61', 'HOG62', 'HOG63', 'HOG64', 'HOG65', 'HOG66', 'HOG67', 'HOG68', 'HOG69', 'HOG70', 'HOG71', 'HOG72', 'HOG73', 'HOG74', 'HOG75', 'HOG76', 'HOG77', 'HOG78', 'HOG79',
-        'HOG80', 'HOG81'];
-
     // Set some defaults
     var plotTypes = ['linear', 'log'];
     if ($this.data(PLOT_X_TYPE) == undefined) {
@@ -139,19 +117,19 @@ function scatter_setup(elt, timeseries, pid, width, height) {
         }, $this.data(PLOT_X_TYPE))
         .bind('select', function (event, value) {
             $this.data(PLOT_X_TYPE, value);
-             // Careful not to override other xaxis data
-             $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
-             if(value == 'log') {
-             $this.data(PLOT_OPTIONS).xaxis.transform = xf.transform;
-             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = xf.inverseTransform;
-             }
-             else {
-             // Setting to null defaults it to linear
-             $this.data(PLOT_OPTIONS).xaxis.transform = undefined;
-             $this.data(PLOT_OPTIONS).xaxis.inverseTransform = undefined;
-             }
-             // Keep plot reference updated
-             plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
+            // Careful not to override other xaxis data
+            $this.data(PLOT_OPTIONS).xaxis = $this.data(PLOT_OPTIONS).xaxis || {};
+            if(value == 'log') {
+                $this.data(PLOT_OPTIONS).xaxis.transform = xf.transform;
+                $this.data(PLOT_OPTIONS).xaxis.inverseTransform = xf.inverseTransform;
+            }
+            else {
+                // Setting to null defaults it to linear
+                $this.data(PLOT_OPTIONS).xaxis.transform = undefined;
+                $this.data(PLOT_OPTIONS).xaxis.inverseTransform = undefined;
+            }
+            // Keep plot reference updated
+            plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
         });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
@@ -188,15 +166,15 @@ function scatter_setup(elt, timeseries, pid, width, height) {
     // set up the choices for x and y axes by calling the plot schema endpoint
     var schema_endpoint = endpointPfx + '/schema' + endpointSfx + pid;
     $.getJSON(schema_endpoint, function(r) {
-	$.each(r, function(ix, choice) {
-	    var html = '<option value="'+choice+'">'+choice+'</option>';
-	    $('#x_axis_choice').append(html);
-	    $('#y_axis_choice').append(html);
-	});
-	// now allow previously-set x and y axes to persist
-	// by explicitly changing the value
-	$('#x_axis_choice').val($this.data(PLOT_X));
-	$('#y_axis_choice').val($this.data(PLOT_Y));
+        $.each(r, function(ix, choice) {
+            var html = '<option value="'+choice+'">'+choice+'</option>';
+            $('#x_axis_choice').append(html);
+            $('#y_axis_choice').append(html);
+        });
+        // now allow previously-set x and y axes to persist
+        // by explicitly changing the value
+        $('#x_axis_choice').val($this.data(PLOT_X));
+        $('#y_axis_choice').val($this.data(PLOT_Y));
     });
     $this.siblings('.bin_view_controls')
         .find('.bin_view_specific_controls')
@@ -372,10 +350,10 @@ function scatter_setup(elt, timeseries, pid, width, height) {
             var bin_pid = r.bin_pid;
             var roi_pids = [];
             var point_data = [];
-            // Handle old IFCB2 format issue where values are negative
+            // Handle old IFCB format issue where values are negative
             var inverse_x = false;
             var inverse_y = false;
-            if(bin_pid.indexOf("/IFCB2")) {
+            if(bin_pid.indexOf("/IFCB") != -1) {
                 console.log("Old file format, inversing fluorescence and scattering values...")
                 if (r.x_axis_label == "fluorescenceLow" || r.x_axis_label == "scatteringLow") {
                     inverse_x = true;
