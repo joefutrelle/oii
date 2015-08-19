@@ -891,21 +891,54 @@ def scatter(time_series,params,pid):
 
 #### skipping and tagging ####
 
-@app.route('/api/skip/<url:pid>')
-@roles_required('Admin')
-def set_skip_flag(pid):
-    req = DashboardRequest(pid, request)
+def get_orm_bin(req):
     b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
     if b is None:
         abort(404)
-    b.skip = True
-    session.commit()
+    return b
+
+@app.route('/api/get_skip/<url:pid>')
+def get_skip_flag(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
     result = {
-        'operation': 'set skip flag',
-        'skipFlag': b.skip,
+        'operation': 'get skip flag',
+        'skip': b.skip,
         'pid': pid
     }
     return Response(json.dumps(result),mimetype=MIME_JSON)
+
+def get_orm_bin(req):
+    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
+    if b is None:
+        abort(404)
+    return b
+
+def set_skip_flag(b,value):
+    b.skip = value
+    session.commit()
+    result = {
+        'operation': 'set skip flag',
+        'skip': b.skip,
+        'lid': b.lid
+    }
+    return result
+
+@app.route('/api/skip/<url:pid>')
+@roles_required('Admin')
+def skip_bin(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
+    r = set_skip_flag(b,True)
+    return Response(json.dumps(r),mimetype=MIME_JSON)
+
+@app.route('/api/unskip/<url:pid>')
+@roles_required('Admin')
+def unskip_bin(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
+    r = set_skip_flag(b,False)
+    return Response(json.dumps(r),mimetype=MIME_JSON)
 
 #### mosaics #####
 
