@@ -294,6 +294,12 @@ def admin_root():
 def serve_static_admin(filename):
     return send_from_directory(ADMIN_APP_DIR, filename)
 
+# endpoint to determine if user is logged in as admin
+@app.route('/is_admin')
+@roles_required('Admin')
+def is_admin():
+    return Response(json.dumps(dict(logged_in=True)),mimetype=MIME_JSON)
+
 @app.route('/api')
 @app.route('/api.html')
 def serve_doc():
@@ -882,7 +888,25 @@ def scatter(time_series,params,pid):
     if req.extension=='json':
         return scatter_json(targets,req.canonical_pid,params['x'],params['y'],features_targets)
     abort(404)
-    
+
+#### skipping and tagging ####
+
+@app.route('/api/skip/<url:pid>')
+@roles_required('Admin')
+def set_skip_flag(pid):
+    req = DashboardRequest(pid, request)
+    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
+    if b is None:
+        abort(404)
+    b.skip = True
+    session.commit()
+    result = {
+        'operation': 'set skip flag',
+        'skipFlag': b.skip,
+        'pid': pid
+    }
+    return Response(json.dumps(result),mimetype=MIME_JSON)
+
 #### mosaics #####
 
 def get_sorted_tiles(adc_path, schema_version, bin_pid):
