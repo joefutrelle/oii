@@ -53,7 +53,7 @@
 		$this.find('.bin_view_controls')
 		    .append('<span class="bin_view_specific_controls"></span>')
 		// now add the bin display
-		$this.append('<div class="bin_display"></div><div class="bin_links"></div>').find('.bin_display')
+		$this.append('<div class="bin_display"></div><div class="bin_links"></div><div class="bin_actions biggerText"></div>').find('.bin_display')
 		    .css('float','left');
 		// handle next / previous buttons
 		$this.find('.bin_view_next_prev .nextBin')
@@ -97,6 +97,32 @@
 		    $.getJSON(pid+'_medium.json', function(r) {
 			$this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
 			$this.find('.imagepager_date').attr('title',r.date).timeago();
+		    });
+		    // if privileged, add bin actions
+		    $.getJSON('/is_admin', function(r) {
+			$this.find('.bin_actions').empty()
+			    .append('Actions: <a href="#" class="skip"></a>')
+			    .find('.skip').on('get_skip',function() {
+				$.getJSON('/api/get_skip/'+pid,function(r) {
+				    if(r.skip) {
+					$this.find('.skip').empty().append('unskip')
+					    .off('click').on('click',function() {
+						$.getJSON('/api/unskip/'+pid, function(r) {
+						    $this.find('.skip').trigger('get_skip');
+						});
+					    });
+				    } else {
+					$this.find('.skip').empty().append('skip')
+					    .off('click').on('click',function() {
+						if(confirm('Are you sure you want to skip '+pid+'?')) {
+						    $.getJSON('/api/skip/'+pid, function(r) {
+							$this.find('.skip').trigger('get_skip');
+						    });
+						}
+					    });
+				    }
+				});
+			    }).trigger('get_skip');
 		    });
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type
