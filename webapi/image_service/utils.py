@@ -1,7 +1,7 @@
 from flask import Response
 import mimetypes
 from oii.image.io import as_pil
-from oii.image.pil.utils import filename2format
+from oii.image.pilutils import filename2format
 from StringIO import StringIO
 
 def image_types(filename):
