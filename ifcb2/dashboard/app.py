@@ -491,6 +491,21 @@ def nearest(ts_label, timestamp):
     resp = canonicalize_bin(ts_label, bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
+def feed_massage_bins(ts_label,bins):
+    resp = []
+    for bin in bins:
+        sample_time_str = iso8601(bin.sample_time.timetuple())
+        pid = canonicalize(get_url_root(), ts_label, bin.lid)
+        resp.append(dict(pid=pid, date=sample_time_str))
+    return resp
+
+@app.route('/<ts_label>/api/feed/day/<datetime:dt>')
+def serve_feed_day(ts_label,dt):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt)
+    resp = feed_massage_bins(ts_label, bins)
+    return Response(json.dumps(resp),mimetype=MIME_JSON)
+
 @app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
 @app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
@@ -506,11 +521,7 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
             bins = list(feed.before(bin_lid, n))
         else:
             bins = list(feed.after(bin_lid, n))
-    resp = []
-    for bin in bins:
-        sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        resp.append(dict(pid=pid, date=sample_time_str))
+    resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 def parsed2files(parsed):

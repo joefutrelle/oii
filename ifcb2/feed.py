@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 
@@ -31,6 +31,9 @@ class Feed(object):
         """all bins in a given time range"""
         return self._ts_query(start_time, end_time).\
             order_by(Bin.sample_time)
+    def day(self, dt):
+        day = dt.date()
+        return self._ts_query(day, day + timedelta(days=1))
     def daily_data_volume(self, start_time=None, end_time=None):
         """data volume in GB per day over the given time range"""
         start_time, end_time = _time_range_params(start_time, end_time)
