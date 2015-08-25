@@ -102,27 +102,7 @@
 		    $.getJSON('/is_admin', function(r) {
 			$this.find('.bin_actions').empty()
 			    .append('Actions: <a href="#" class="skip"></a>')
-			    .find('.skip').on('get_skip',function() {
-				$.getJSON('/api/get_skip/'+pid,function(r) {
-				    if(r.skip) {
-					$this.find('.skip').empty().append('unskip')
-					    .off('click').on('click',function() {
-						$.getJSON('/api/unskip/'+pid, function(r) {
-						    $this.find('.skip').trigger('get_skip');
-						});
-					    });
-				    } else {
-					$this.find('.skip').empty().append('skip')
-					    .off('click').on('click',function() {
-						if(confirm('Are you sure you want to skip '+pid+'?')) {
-						    $.getJSON('/api/skip/'+pid, function(r) {
-							$this.find('.skip').trigger('get_skip');
-						    });
-						}
-					    });
-				    }
-				});
-			    }).trigger('get_skip');
+			    .find('.skip').bin_skip(pid, true);
 		    });
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type
