@@ -506,6 +506,13 @@ def serve_feed_day(ts_label,dt):
     resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp),mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/feed/day/withskip/<datetime:dt>')
+def serve_feed_day_withskip(ts_label,dt):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt, include_skip=True)
+    resp = feed_massage_bins(ts_label, bins)
+    return Response(json.dumps(resp),mimetype=MIME_JSON)
+
 @app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
 @app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
