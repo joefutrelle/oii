@@ -1,0 +1,36 @@
+{% extends "master.html" %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+  $.getJSON('/{{ts_label}}/api/feed/day_skip/{{date}}',function(r) {
+    $.each(r,function(ix,b) {
+      var pid = b['pid'];
+      $('#bins_table').append('<tr class="tbl">\
+         <td class="tbl">'+b['date']+'</a></td>\
+         <td class="tbl"><a href="'+pid+'.html">'+pid+'</a></td>\
+         <td class="tbl"><span class="skip"></span></td>\
+       </tr>').find('.skip:last').bin_skip(pid, false);
+    });
+    $('tr:even').addClass('tbl_even');
+  });
+});
+</script>
+{% endblock head %}
+{% block content %}
+<!--
+params:
+static - static content location
+date - day
+-->
+<div>
+  <div class="major h1">{{ts_label}} day {{date}}</div>
+  <table class="major" id="bins_table">
+    <tr class="tbl">
+      <th class="tbl">time</th>
+      <th class="tbl">pid</th>
+      <th class="tbl">actions</th>
+    </tr>
+  </table>
+</div>
+{% endblock content %}

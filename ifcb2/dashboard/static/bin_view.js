@@ -101,7 +101,7 @@
 		    // if privileged, add bin actions
 		    $.getJSON('/is_admin', function(r) {
 			$this.find('.bin_actions').empty()
-			    .append('Actions: <a href="#" class="skip"></a>')
+			    .append('Actions: <span class="link skip"></span>')
 			    .find('.skip').bin_skip(pid, true);
 		    });
 		    // get the selection and user preferred size/scale from the workspace

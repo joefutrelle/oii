@@ -1,3 +1,4 @@
+
 import os, inspect
 import mimetypes
 import json
@@ -499,19 +500,28 @@ def feed_massage_bins(ts_label,bins):
         resp.append(dict(pid=pid, date=sample_time_str))
     return resp
 
+def _serve_feed_day(ts_label,dt,include_skip=False):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt,include_skip)
+    resp = feed_massage_bins(ts_label, bins)
+    return Response(json.dumps(resp), mimetype=MIME_JSON)
+
 @app.route('/<ts_label>/api/feed/day/<datetime:dt>')
 def serve_feed_day(ts_label,dt):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt)
-    resp = feed_massage_bins(ts_label, bins)
-    return Response(json.dumps(resp),mimetype=MIME_JSON)
+    return _serve_feed_day(ts_label,dt)
 
-@app.route('/<ts_label>/api/feed/day/withskip/<datetime:dt>')
-def serve_feed_day_withskip(ts_label,dt):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt, include_skip=True)
-    resp = feed_massage_bins(ts_label, bins)
-    return Response(json.dumps(resp),mimetype=MIME_JSON)
+@app.route('/<ts_label>/api/feed/day_skip/<datetime:dt>')
+def serve_feed_day_skip(ts_label,dt):
+    return _serve_feed_day(ts_label,dt,include_skip=True)
+
+@app.route('/<ts_label>/api/feed/day_admin/<datetime:dt>')
+def serve_day_admin(ts_label,dt):
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'date': iso8601(dt.date().timetuple())
+    }
+    return template_response('day_admin.html',**template)
 
 @app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
 @app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
