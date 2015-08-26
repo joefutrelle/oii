@@ -24,7 +24,11 @@ static - static content location
 date - day
 -->
 <div>
-  <div class="major h1">{{ts_label}} day {{date}}</div>
+  <div class="major h1">
+     <a href="{{prev_date_href}}" class="controlGray previousBin">&#x25C0;</a>
+     <a href="{{next_date_href}}" class="controlGray nextBin">&#x25B6;</a>
+     {{ts_label}} day {{date}}</div>
+  <div class="major">{{next_date_href}}</div>
   <table class="major" id="bins_table">
     <tr class="tbl">
       <th class="tbl">time</th>

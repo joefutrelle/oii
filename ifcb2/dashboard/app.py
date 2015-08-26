@@ -519,7 +519,9 @@ def serve_day_admin(ts_label,dt):
     template = {
         'static': STATIC,
         'ts_label': ts_label,
-        'date': iso8601(dt.date().timetuple())
+        'date': iso8601(dt.date().timetuple()),
+        'prev_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() - timedelta(days=1)).timetuple())),
+        'next_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() + timedelta(days=1)).timetuple()))
     }
     return template_response('day_admin.html',**template)
 
