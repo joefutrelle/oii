@@ -18,6 +18,16 @@ $(document).ready(function() {
         window.location.href = '/{{ts_label}}/dashboard/'+r.pid;
       });
     });
+    $('#skip_all_bins').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/skip_day/{{date}}', function(r) {
+        location.reload(true);
+      });
+    });
+    $('#unskip_all_bins').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/unskip_day/{{date}}', function(r) {
+        location.reload(true);
+      });
+    });
   });
 });
 </script>
@@ -33,6 +43,10 @@ date - day
      <a href="{{prev_date_href}}" class="controlGray previousBin">&#x25C0;</a>
      <a href="{{next_date_href}}" class="controlGray nextBin">&#x25B6;</a>
      <a href="/{{ts_label}}">{{ts_label}}</a> day <span class="pseudolink" id="day_date">{{date}}</a>
+  </div>
+  <div class="major">
+    <span id="skip_all_bins" class="pseudolink">Skip all bins</span>
+    <span id="unskip_all_bins" class="pseudolink">Unskip all bins</span>
   </div>
   <table class="major" id="bins_table">
     <tr class="tbl">

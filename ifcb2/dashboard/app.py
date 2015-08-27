@@ -969,6 +969,27 @@ def unskip_bin(pid):
     r = set_skip_flag(b,False)
     return Response(json.dumps(r),mimetype=MIME_JSON)
 
+def _skip_or_unskip_day(ts_label, dt, skip=True):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt,include_skip=True)
+    for b in bins:
+        b.skip = skip
+    session.commit()
+    r = {
+        'day': iso8601(dt.timetuple())
+    }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/skip_day/<datetime:dt>')
+@roles_required('Admin')
+def skip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=True)
+
+@app.route('/<ts_label>/api/unskip_day/<datetime:dt>')
+@roles_required('Admin')
+def unskip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=False)
+
 #### mosaics #####
 
 def get_sorted_tiles(adc_path, schema_version, bin_pid):

@@ -8,14 +8,14 @@
 		    $.getJSON('/api/get_skip/'+pid,function(r) {
 			if(r.skip) {
 			    $this.empty().append('(skipped: <span class="pseudolink">unskip</a>)')
-				.off('click').on('click',function() {
+				.off('click').on('click unskip_bin',function() {
 				    $.getJSON('/api/unskip/'+pid, function(r) {
 					$this.trigger(EVENT);
 				    });
 				});
 			} else {
 			    $this.empty().append('(active: <span class="pseudolink">skip</a>)')
-				.off('click').on('click',function() {
+				.off('click').on('click skip_bin',function() {
 				    var confirmed = true;
 				    if(require_confirm) {
 					confirmed = confirm('Are you sure you want to skip '+pid+'?');
