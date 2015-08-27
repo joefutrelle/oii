@@ -689,7 +689,6 @@ def serve_pid(pid):
             limit=2
         targets = adc.get_some_targets(offset,limit)
         targets = list_stitched_targets(targets)
-        print 'DEBUG pid=%s, target_no=%d, target_nos=%s' % (pid, target_no, [t[TARGET_NUMBER] for t in targets])
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
                 target = t
