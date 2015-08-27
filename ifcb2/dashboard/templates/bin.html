@@ -5,13 +5,31 @@
     <script type="text/javascript">
 $(document).ready(function() {
     $('#bin_view').bin_page('{{bin_pid}}','{{time_series}}');
+    <!-- files view -->
+    $.getJSON('/{{time_series}}/api/files/{{bin_pid}}',function(r) {
+      $.each(r, function(ix, f) {
+        $('#fixity table').append('<tr class="tbl">'+
+	  '<td class="tbl"><a href="/{{time_series}}/'+f.filename+'">'+f.filename+'</a></td>'+
+	  '<td class="tbl">'+f.length+'</td>'+
+	  '<td class="tbl">'+f.sha1+'</td>'+
+	  '<td class="tbl">'+f.fix_time+'</td>'+
+	  '<td class="tbl">'+f.local_path+'</td>'+
+	  '<td class="tbl">'+
+            (f.check.exists?'exists':'does not exist')+', '+
+            (f.check.length?'length matches':'length does not match')+' '+
+          '</td>'+
+          '</tr>'
+         );
+        $('#fixity tr:even').addClass('tbl_even');
+        $('#fixity').css('display','block');
+      });
+    });
 });
     </script>
 {% endblock head %}
 {% block content %}
   <div class="major h1">Sample bin {{bin_pid}}</div>
   <div id="bin_view" class="major"></div>
-  <div id="roi_image" class="major target_image"></div>
   <div style="clear: both"></div>
   <div class="major inline">
     <div>
@@ -31,7 +49,7 @@ $(document).ready(function() {
   </div>
 
 <!-- fixity -->
-<div>
+<div id="fixity" style="display:none">
 <table class="major inline">
 <tr class="tbl">
   <th class="tbl">filename</th>
@@ -41,24 +59,6 @@ $(document).ready(function() {
   <th class="tbl">local path</th>
   <th class="tbl">status</th>
 </tr>
-{% for file in files %}
-  <tr class="tbl">
-    <td class="tbl"><a href="{{time_series}}/{{file.filename}}">{{file.filename}}</a></td>
-    <td class="tbl">{{file.length}}</td>
-    <td class="tbl">{{file.sha1}}</td>
-    <td class="tbl">{{file.fix_time}}</td>
-    <td class="tbl">{{file.local_path}}</td>
-    <td class="tbl">
-      {% for k,v in file.check.items() %}
-        {% if not v %}
-          <span class="status_bad">{{k}}</span>
-	{% else %}
-          <span class="status_good">{{k}}</span>
-        {% endif %}
-      {% endfor %}
-    </td>
-  </tr>
-{% endfor %}
 </table>
 </div>
 

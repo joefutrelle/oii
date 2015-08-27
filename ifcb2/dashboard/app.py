@@ -516,7 +516,7 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
 def parsed2files(parsed):
     b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
     if b is None:
-        abort(404)
+        raise NotFound
     return b.files
 
 def pid2files(ts_label,pid):
@@ -524,7 +524,7 @@ def pid2files(ts_label,pid):
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
-        abort(404)
+        raise NotFound
     return parsed2files(parsed)
 
 def file2dict(f):
@@ -547,16 +547,18 @@ def get_files(parsed,check=False,fast=True):
     return result
 
 @app.route('/<ts_label>/api/files/<url:pid>')
+@roles_required('Admin')
 def serve_files(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
-    result = get_files(parsed)
+    result = get_files(parsed,check=True)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/files/check/<url:pid>')
+@roles_required('Admin')
 def check_files(ts_label, pid):
     # FIXME handle ts_label + lid
     # FIXME fast
@@ -659,7 +661,6 @@ def serve_pid(pid):
             limit=2
         targets = adc.get_some_targets(offset,limit)
         targets = list_stitched_targets(targets)
-        print 'DEBUG pid=%s, target_no=%d, target_nos=%s' % (pid, target_no, [t[TARGET_NUMBER] for t in targets])
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
                 target = t
@@ -735,7 +736,6 @@ def serve_pid(pid):
                 'targets': targets,
                 'target_pids': [t['pid'] for t in targets],
                 'date': req.timestamp,
-                'files': get_files(req.parsed,check=True) # note: ORM call!
             }
             print get_files(req.parsed)
             return template_response('bin.html', **template)
