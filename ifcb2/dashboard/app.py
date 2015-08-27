@@ -1,3 +1,4 @@
+
 import os, inspect
 import mimetypes
 import json
@@ -491,6 +492,39 @@ def nearest(ts_label, timestamp):
     resp = canonicalize_bin(ts_label, bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
+def feed_massage_bins(ts_label,bins):
+    resp = []
+    for bin in bins:
+        sample_time_str = iso8601(bin.sample_time.timetuple())
+        pid = canonicalize(get_url_root(), ts_label, bin.lid)
+        resp.append(dict(pid=pid, date=sample_time_str))
+    return resp
+
+def _serve_feed_day(ts_label,dt,include_skip=False):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt,include_skip)
+    resp = feed_massage_bins(ts_label, bins)
+    return Response(json.dumps(resp), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/feed/day/<datetime:dt>')
+def serve_feed_day(ts_label,dt):
+    return _serve_feed_day(ts_label,dt)
+
+@app.route('/<ts_label>/api/feed/day_skip/<datetime:dt>')
+def serve_feed_day_skip(ts_label,dt):
+    return _serve_feed_day(ts_label,dt,include_skip=True)
+
+@app.route('/<ts_label>/api/feed/day_admin/<datetime:dt>')
+def serve_day_admin(ts_label,dt):
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'date': iso8601(dt.date().timetuple()),
+        'prev_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() - timedelta(days=1)).timetuple())),
+        'next_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() + timedelta(days=1)).timetuple()))
+    }
+    return template_response('day_admin.html',**template)
+
 @app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
 @app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
@@ -506,11 +540,7 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
             bins = list(feed.before(bin_lid, n))
         else:
             bins = list(feed.after(bin_lid, n))
-    resp = []
-    for bin in bins:
-        sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        resp.append(dict(pid=pid, date=sample_time_str))
+    resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 def parsed2files(parsed):
@@ -941,6 +971,27 @@ def unskip_bin(pid):
     b = get_orm_bin(req)
     r = set_skip_flag(b,False)
     return Response(json.dumps(r),mimetype=MIME_JSON)
+
+def _skip_or_unskip_day(ts_label, dt, skip=True):
+    with Feed(session, ts_label) as feed:
+        bins = feed.day(dt,include_skip=True)
+    for b in bins:
+        b.skip = skip
+    session.commit()
+    r = {
+        'day': iso8601(dt.timetuple())
+    }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/skip_day/<datetime:dt>')
+@roles_required('Admin')
+def skip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=True)
+
+@app.route('/<ts_label>/api/unskip_day/<datetime:dt>')
+@roles_required('Admin')
+def unskip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=False)
 
 #### mosaics #####
 

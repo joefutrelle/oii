@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 
@@ -21,16 +21,25 @@ class Feed(object):
         return self
     def __exit__(self,type,value,traceback):
         pass
-    def _ts_query(self, start_time=None, end_time=None):
+    def _ts_query(self, start_time=None, end_time=None, include_skip=False):
         start_time, end_time = _time_range_params(start_time, end_time)
-        return self.session.query(Bin).filter(and_(\
-            Bin.ts_label==self.ts_label,\
-            Bin.sample_time >= start_time, Bin.sample_time <= end_time,\
-            ~Bin.skip))
+        # FIXME not sure how to do boolean value tests right
+        if include_skip:
+            return self.session.query(Bin).filter(and_(\
+                Bin.ts_label==self.ts_label,\
+                Bin.sample_time >= start_time, Bin.sample_time <= end_time))
+        else:
+            return self.session.query(Bin).filter(and_(\
+                Bin.ts_label==self.ts_label,\
+                Bin.sample_time >= start_time, Bin.sample_time <= end_time,\
+                ~Bin.skip))
     def time_range(self, start_time=None, end_time=None):
         """all bins in a given time range"""
         return self._ts_query(start_time, end_time).\
             order_by(Bin.sample_time)
+    def day(self, dt, include_skip=False):
+        day = dt.date()
+        return self._ts_query(day, day + timedelta(days=1), include_skip)
     def daily_data_volume(self, start_time=None, end_time=None):
         """data volume in GB per day over the given time range"""
         start_time, end_time = _time_range_params(start_time, end_time)
