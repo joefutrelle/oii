@@ -554,7 +554,10 @@ def serve_files(ts_label, pid):
         parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
-    result = get_files(parsed,check=True)
+    try:
+        result = get_files(parsed,check=True)
+    except NotFound:
+        abort(404)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/files/check/<url:pid>')
@@ -737,7 +740,6 @@ def serve_pid(pid):
                 'target_pids': [t['pid'] for t in targets],
                 'date': req.timestamp,
             }
-            print get_files(req.parsed)
             return template_response('bin.html', **template)
         if req.extension=='json':
             if req.product=='short':
