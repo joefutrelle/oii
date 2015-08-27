@@ -13,6 +13,11 @@ $(document).ready(function() {
        </tr>').find('.skip:last').bin_skip(pid, false);
     });
     $('tr:even').addClass('tbl_even');
+    $('#day_date').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/feed/nearest/{{date}}', function(r) { // find the nearest bin
+        window.location.href = '/{{ts_label}}/dashboard/'+r.pid;
+      });
+    });
   });
 });
 </script>
@@ -27,7 +32,7 @@ date - day
   <div class="major h1">
      <a href="{{prev_date_href}}" class="controlGray previousBin">&#x25C0;</a>
      <a href="{{next_date_href}}" class="controlGray nextBin">&#x25B6;</a>
-     {{ts_label}} day {{date}}
+     <a href="/{{ts_label}}">{{ts_label}}</a> day <span class="pseudolink" id="day_date">{{date}}</a>
   </div>
   <table class="major" id="bins_table">
     <tr class="tbl">

@@ -101,8 +101,12 @@
 		    // if privileged, add bin actions
 		    $.getJSON('/is_admin', function(r) {
 			$this.find('.bin_actions').empty()
-			    .append('Actions: <span class="link skip"></span>')
+			    .append('Actions: <span class="day_admin"></span> <span class="link skip"></span>')
 			    .find('.skip').bin_skip(pid, true);
+			$.getJSON(pid+'_medium.json', function(r) {
+				$this.find('.bin_actions .day_admin')
+				    .append('<a href="/'+timeseries+'/api/feed/day_admin/'+r.date+'">Go to day</a>');
+			    });
 		    });
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type

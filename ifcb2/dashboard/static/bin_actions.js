@@ -7,23 +7,21 @@
 		$this.on(EVENT, function() {
 		    $.getJSON('/api/get_skip/'+pid,function(r) {
 			if(r.skip) {
-			    $this.empty().append('unskip')
+			    $this.empty().append('(skipped: <span class="pseudolink">unskip</a>)')
 				.off('click').on('click',function() {
 				    $.getJSON('/api/unskip/'+pid, function(r) {
 					$this.trigger(EVENT);
 				    });
 				});
 			} else {
-			    $this.empty().append('skip')
+			    $this.empty().append('(active: <span class="pseudolink">skip</a>)')
 				.off('click').on('click',function() {
 				    var confirmed = true;
 				    if(require_confirm) {
 					confirmed = confirm('Are you sure you want to skip '+pid+'?');
 				    }
 				    if(confirmed) {
-					console.log('attempting to skipinize '+pid);
 					$.getJSON('/api/skip/'+pid, function(r) {
-					    console.log('fully skipinated '+pid);
 					    $this.trigger(EVENT);
 					});
 				    }

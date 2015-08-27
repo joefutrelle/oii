@@ -15,6 +15,11 @@ body {
 img {
     border: none;
 }
+.pseudolink {
+    cursor:pointer;
+    color:blue;
+    text-decoration:underline;    
+}
 #content {
     position: relative;
     min-height: 100%;
