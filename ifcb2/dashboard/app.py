@@ -921,6 +921,14 @@ def scatter(time_series,params,pid):
         return scatter_json(targets,req.canonical_pid,params['x'],params['y'],features_targets)
     abort(404)
 
+#### workflow ####
+
+@app.route('/api/workflow/recent')
+@app.route('/api/workflow/recent/<int:n>')
+def serve_wf_recent(n=None):
+    r = workflow_client.most_recent(n)
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
 #### skipping and tagging ####
 
 def get_orm_bin(req):

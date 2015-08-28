@@ -26,11 +26,11 @@ Scheduled task:
 - configged with a workflow client and the time series label
 - hit the "wakeup" endpoint with the acquisition key
 """
+from dashboard_conf import WORKFLOW_URL
 
-### FIXME config this right
 from oii.ifcb2.session import session
 
-client = WorkflowClient()
+client = WorkflowClient(WORKFLOW_URL)
 
 def schedule_products(pid, client):
     """dependencies:
