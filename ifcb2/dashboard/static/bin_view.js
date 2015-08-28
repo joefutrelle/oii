@@ -4,6 +4,7 @@
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
 		var PID = 'data_rbv_pid';
+		var DATE = 'data_rbv_date';
 		var VIEW_TYPE = 'data_rbv_view_type';
 		var WIDTH = 'data_rbv_view_width';
 		var HEIGHT = 'data_rbv_view_height';
@@ -77,6 +78,7 @@
 			return; // there's nothing to do
 		    }
 		    $this.data(PID, pid); // save pid for future redraws
+		    $this.removeData(DATE); // clear date
 		    // add bin links
 		    $this.find('.bin_links')
 			.empty()
@@ -93,20 +95,30 @@
 			.append('<span> <a href="'+pid+'_features.csv">features CSV</a></span>')
 			.append('<span> <a href="'+pid+'_class_scores.csv">autoclass CSV</a></span>')
 			.find('span').addClass('bin_label');
+		    $this.find('.bin_actions');
 		    // handle the total rois and timeago
 		    $.getJSON(pid+'_medium.json', function(r) {
 			$this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
 			$this.find('.imagepager_date').attr('title',r.date).timeago();
+			$this.data(DATE,r.date);
 		    });
 		    // if privileged, add bin actions
 		    $.getJSON('/is_admin', function(r) {
 			$this.find('.bin_actions').empty()
 			    .append('Actions: <span class="day_admin"></span> <span class="link skip"></span>')
 			    .find('.skip').bin_skip(pid, true);
-			$.getJSON(pid+'_medium.json', function(r) {
-				$this.find('.bin_actions .day_admin')
-				    .append('<a href="/'+timeseries+'/api/feed/day_admin/'+r.date+'">Go to day</a>');
+			function create_day_link(date) {
+			    $this.find('.bin_actions .day_admin')
+				.append('<a href="/'+timeseries+'/api/feed/day_admin/'+date+'">Go to day</a>');
+			}
+			if($this.data(DATE) != undefined) {
+			    create_day_link($this.data(DATE));
+			} else {
+			    $.getJSON(pid+'_medium.json', function(r) {
+				create_day_link(r.date);
+				$this.data(DATE,r.date);
 			    });
+			}
 		    });
 		    // get the selection and user preferred size/scale from the workspace
 		    var viewType = $this.data(VIEW_TYPE); // view type
