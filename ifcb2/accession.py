@@ -59,7 +59,7 @@ def list_filesets(root):
     return get_resolver().ifcb.files.list_raw_filesets(root)
 
 class Accession(object):
-    def __init__(self,session,ts_label,fast=False):
+    def __init__(self,session,ts_label,fast=True):
         """session = IFCB ORM session"""
         self.session = session
         self.ts_label = ts_label

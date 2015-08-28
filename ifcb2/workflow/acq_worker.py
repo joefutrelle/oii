@@ -31,12 +31,12 @@ Run worker as:
 celery --config=oii.workflow.async_config -A oii.ifcb2.workflow.acq_worker worker -n acq_worker_mock
 """
 
-### FIXME config this right
+from dashboard_conf import DASHBOARD_BASE_URL, WORKFLOW_URL
+
 from oii.ifcb2.session import session
 
-client = WorkflowClient()
-#URL_PREFIX='http://128.128.14.19:8080/'
-URL_PREFIX='http://demi.whoi.edu/'
+client = WorkflowClient(WORKFLOW_URL)
+URL_PREFIX=DASHBOARD_BASE_URL
 
 ### end FIXME
 
