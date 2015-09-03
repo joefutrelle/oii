@@ -65,11 +65,9 @@ def acc_wakeup(wakeup_key):
             logging.warn('START BATCH %s' % time_series)
             for fs in accession.list_filesets(): # FIXME debug, do all
                 lid = fs[LID]
-                print 'found lid %s' % lid # FIXME
                 if accession.bin_exists(lid):
                     continue # don't schedule accession if bin exists
                 pid = canonicalize(URL_PREFIX, time_series, fs[LID])
-                print 'canonicalized lid %s as %s' % (lid,pid) # FIXME
                 count += 1
                 if count % 100 == 0:
                     logging.warn('batch %s: scheduled %d bins' % (time_series, count))
@@ -79,7 +77,8 @@ def acc_wakeup(wakeup_key):
                     mutex.heartbeat() # retain mutex
                     then = time.time()
                 client.wakeup() # wakeup workers
-            logging.warn('END BATCH %s' % time_series)
+            logging.warn('END BATCH %s: %d bins scheduled' % (time_series,count))
             client.wakeup()
     except Busy:
+        logging.warn('BATCH not waking up')
         pass
