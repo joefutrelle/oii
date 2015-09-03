@@ -337,10 +337,13 @@ def serve_timeseries(ts_label=None, pid=None):
     for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
         if ts_label is None: # no time series specified
             return redirect(os.path.join(url_root, ts.label), code=302)
+        description = ts.description
+        if not description:
+            description = ts_label
         if ts.label == ts_label:
-            template['page_title'] = html.fromstring(ts.description).text_content()
-            template['title'] = ts.description
-        all_series.append((ts.label, ts.description))
+            template['page_title'] = html.fromstring(description).text_content()
+            template['title'] = description
+        all_series.append((ts.label, description))
     template['all_series'] = all_series
     template['base_url'] = url_root
     return template_response('timeseries.html', **template)
