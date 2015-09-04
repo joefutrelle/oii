@@ -12,6 +12,7 @@
         <div ng-if="!ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-default btn-sm" ng-click="editTimeSeries(ts)">Edit</button>
+		<button type="button" class="btn btn-default btn-sm" ng-click="checkPathsTimeSeries(ts)">Check Paths</button>
 		<button type="button" class="btn btn-default btn-sm" ng-click="accedeTimeSeries(ts)">Accede</button>
                 <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>

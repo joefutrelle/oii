@@ -78,11 +78,44 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
         }
     }
 
+    $scope.checkPathsTimeSeries = function(ts) {
+	var check_url = '/' + ts.label + '/api/check_roots';
+ 	var message = "No data found for "+ts.label;
+	$.getJSON(check_url, function(r) {
+	    message = "";
+	    $.each(r, function(root, found) {
+		if(found) {
+		    message = message + "Data found in "+root+". ";
+		} else {
+		    message = message + "NO DATA FOUND in "+root+"! ";
+		}
+	    });
+	    $scope.alert = message;
+	    $scope.$apply();
+	});
+    }
+
     $scope.accedeTimeSeries = function(ts) {
-	console.log("initiating accession on time series "+ts.label)
-	accession_url = "/" + ts.label + "/api/accede";
-	$scope.alert = "Initiating accession for "+ts.label+"...";
-	$.getJSON(accession_url, function(r) { });
+	var check_url = '/' + ts.label + '/api/check_roots';
+  	var accession_url = "/" + ts.label + "/api/accede";
+	$.getJSON(check_url, function(r) {
+            var someNotFound = false;
+	    $.each(r, function(root, found) {
+		if(!found) {
+                    $scope.alert = "ERROR: no data found in " + root + ".";
+		    $scope.$apply();
+		    someNotFound = true;
+                }
+            });
+	    if(!someNotFound) {
+		$scope.alert = "Data found, attempting to initiate accession for " + ts.label;
+		$scope.$apply();
+		$.getJSON(accession_url, function(r) {
+		    $scope.alert = "Data found, accession initiated for "+ts.label;
+		    $scope.$apply();
+		});
+            }
+        });
     };
 
     // remove timeseries group
