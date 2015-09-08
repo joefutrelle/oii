@@ -91,14 +91,20 @@ class Accession(object):
             b.files.append(f)
     def get_time_series(self):
         return self.session.query(TimeSeries).filter(and_(TimeSeries.label==self.ts_label,TimeSeries.enabled)).first()
-    def list_filesets(self):
+    def get_raw_roots(self):
         ts = self.get_time_series()
         if ts is None:
             return
         for dd in ts.data_dirs:
-            if dd.product_type != 'raw':
-                continue
-            for fs in list_filesets(dd.path):
+            if dd.product_type == 'raw':
+                yield dd.path
+    def list_filesets(self,root=None):
+        if root is not None:
+            ddpaths = [root]
+        else:
+            ddpaths = self.get_raw_roots()
+        for ddpath in ddpaths:
+            for fs in list_filesets(ddpath):
                 yield fs
     def add_fileset(self,fileset):
         """run one bin fileset through accession process. does not commit,

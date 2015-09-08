@@ -49,6 +49,7 @@ from oii.ifcb2.feed import Feed
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
+from oii.ifcb2.accession import Accession
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize, BIN_KEY
 from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium, class_scoresmat2csv
 from oii.ifcb2.image import read_target_image
@@ -605,6 +606,18 @@ def check_files(ts_label, pid):
         abort(404)
     result = get_files(parsed,check=True,fast=True) # FIXME set fast to false
     return Response(json.dumps(result), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/check_roots')
+@roles_required('Admin')
+def check_roots(ts_label):
+    acc = Accession(session, ts_label)
+    r = {}
+    for root in acc.get_raw_roots():
+        r[root] = False
+        for fs in acc.list_filesets(root):
+            r[root] = True
+            break
+    return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):

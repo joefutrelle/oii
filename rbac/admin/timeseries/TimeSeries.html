@@ -12,6 +12,7 @@
         <div ng-if="!ts.edit">
             <div class="btn-group pull-right">
                 <button type="button" class="btn btn-default btn-sm" ng-click="editTimeSeries(ts)">Edit</button>
+		<button type="button" class="btn btn-default btn-sm" ng-click="checkPathsTimeSeries(ts)">Check Paths</button>
 		<button type="button" class="btn btn-default btn-sm" ng-click="accedeTimeSeries(ts)">Accede</button>
                 <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to remove the '{{ts.label}}' time series?" ng-confirm-condition="true" ng-confirm-click="removeTimeSeries(ts)">Remove</button>
             </div>
@@ -61,12 +62,12 @@
                     <input type="text" class="form-control" ng-model="path.path">
 		    <select class="form-control btn btn-default dropdown-toggle" ng-model="path.product_type" ng-options="a for a in ['raw','blobs','features','class_scores','binzip']"></select>
                     <span class="input-group-btn">
-                        <button class="btn btn-default" type="button" ng-click="removePath(ts,path)">-</button>
+                        <button class="btn btn-default" type="button" ng-click="removePath(ts,path)">Remove</button>
                     </span>
                 </div>
             </div>
             <div class="list-group-item-text">
-                <button class="btn btn-sm btn-default" type="button" ng-click="addNewPath(ts)">Add Path</button>
+                <button class="btn btn-sm btn-default" type="button" ng-click="addNewPath(ts)">Add Another Path ...</button>
             </div>
         </div>
     </div>
