@@ -4,9 +4,55 @@
 ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Restangular', function ($scope, UserService, RoleService, Restangular) {
 
     // initialize local scope
-    $scope.newuser = false;
-    $scope.users= UserService;
-    $scope.editing = {};
+    $scope.alert = null;
+    var restore = {};
+    var rolesByName = {}
+
+    UserService.list.then(function(r) {
+	$scope.users = r;
+    });
+    RoleService.list.then(function(r) {
+	$scope.roles = r;
+	$.each(r, function(ix, role) {
+	    rolesByName[role.name] = {
+		'id': role.id,
+		'name': role.name,
+	    };
+	});
+    });
+
+    // create new user
+    $scope.addNewUser = function() {
+	var user = UserService.new();
+	$scope.users.push(user);
+	$scope.editUser(user);
+	return true;
+    }
+
+    $scope.deleteUser = function(user) {
+	var delete_user = Restangular.one("delete_user", user.id);
+	$scope.alert = "Deleting "+user.first_name+" "+user.last_name+" ...";
+	$scope.$apply();
+	delete_user.customPOST().then(function() {
+	    location.reload();
+	});
+    }
+
+    $scope.editUser = function(user) {
+        // copy user into "now editing"
+	restore[user.id] = {}
+        angular.copy(user, restore[user.id]);
+	user.edit = true;
+    }
+
+    $scope.cancelUser = function(user) {
+	if(user.id) {
+	    angular.copy(restore[user.id], user);
+	    delete restore[user.id];
+	} else {
+	    $scope.users = _.without($scope.users, user);
+	}
+    }
 
     // save user to server
     $scope.saveUser = function(user) {
@@ -14,78 +60,59 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
         // so here username will always be set to email address
         user.username = user.email;
         if(user.id) {
-            // user already exists on server. update.
-            // copy "now editing" object to user object
-            angular.copy($scope.editing[user.id], user);
-            // save to server
-            UserService.update(user).then(function(serverResponse) {
-                // successful response. delete from "now editing" list
-                delete $scope.editing[user.id];
+	    var patch_user = Restangular.one("patch_user", user.id);
+	    patch_user.customPOST(user).then(function() {
+                // successful response.
+                delete user.edit;
+		delete restore[user.id];
+		console.log('SUCCEEDED in patching user');
                 $scope.alert = null;
-            }, function(serverResponse) {
-                // failed! throw error
-                console.log(serverResponse);
-                $scope.alert = 'Unexpected ' + errorResponse.status.toString()
-                    + ' error while loading data from server.';
-            });
+            }, function(r) {
+		console.log('FAILED to patch user');
+		console.log(r);
+	    });
         } else {
-            // new user. post to server.
-            UserService.save(user).then(function(serverResponse) {
-                // copy server response to scope object
-                $scope.users.list.push(serverResponse);
-                $scope.newuser = false;
-                $scope.alert = null;
-            }, function(serverResponse) {
-                // failed! throw error
-                console.log(serverResponse);
-                $scope.alert = 'Unexpected ' + errorResponse.status.toString()
-                    + ' error while loading data from server.';
-            });
-        }
+	    UserService.post(user).then(function(r) {
+		angular.copy(r, user);
+	    });
+	}
     }
 
-    // create new user
-    $scope.addNewUser = function() {
-        $scope.newuser = UserService.new();
+    $scope.enableUser = function(user, flag) {
+	user.is_enabled = flag;
+	$scope.saveUser(user);
     }
 
-    // cancel new user creation
-    $scope.cancelUser = function(user) {
-        if (user.id) {
-            // cancel edit on existing user
-            delete $scope.editing[user.id];
-        } else {
-            // canel edit on new user
-            $scope.newuser = false;
-        }
+    $scope.isAdmin = function(user) {
+	var isAdmin = false;
+	if(user.roles.length > 0) {
+	    $.each(user.roles, function(ix,r) {
+		if(r.name=='Admin') {
+		    isAdmin = true;
+		}
+	    });
+	}
+	return isAdmin;
     }
 
-    $scope.editUser = function(user) {
-        // copy user into "now editing"
-        $scope.editing[user.id] = {}
-        angular.copy(user, $scope.editing[user.id]);
+    $scope.promoteUser = function(user) {
+	var promote_user = Restangular.one("promote_user", user.id);
+	promote_user.customPOST(user).then(function() {
+	    user.roles = [{
+		'name': 'Admin'
+	    }]
+	    console.log('user is now admin');
+	});
+	return true;
     }
 
-    $scope.isEditing = function(user) {
-        if (user.id in $scope.editing) {
-            return true
-        } else {
-            return false
-        }
-    }
-
-    // toggle user status
-    $scope.toggleUser = function(user) {
-        tmpuser = user.clone();
-        tmpuser.is_enabled = !tmpuser.is_enabled;
-        UserService.update(tmpuser).then(function(serverResponse) {
-            user.is_enabled = !user.is_enabled;
-        }, function(serverResponse) {
-            // failed! throw error
-            console.log(serverResponse);
-            $scope.alert = 'Unexpected ' + errorResponse.status.toString()
-                + ' error while loading data from server.';
-        });
+    $scope.demoteUser = function(user) {
+	var demote_user = Restangular.one("demote_user", user.id);
+	demote_user.customPOST(user).then(function() {
+	    user.roles = [];
+	    console.log('user is now not admin');
+	});
+	return true;
     }
 
     $scope.setPassword = function(user) {
@@ -97,7 +124,10 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     }
 
     $scope.pushPassword = function() {
-        UserService.updatePassword($scope.userpw, $scope.userpw.password).then(function(serverResponse) {
+	var pw_user = $scope.userpw;
+	var pw_password = $scope.userpw.password;
+	var pwchange = Restangular.one("setpassword", pw_user.id);
+	pwchange.customPOST({'password':pw_password},'',{},{}).then(function(serverResponse) {
             console.log(serverResponse);
             $scope.userpw = false;
         }, function(serverResponse) {

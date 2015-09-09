@@ -8,14 +8,14 @@ from security import roles_required, current_user, maketoken
 from oii.ifcb2.dashboard.flasksetup import manager, session, user_manager
 
 def patch_single_preprocessor(instance_id=None, data=None, **kw):
-    if current_app.config['DEBUG']:
-        # running in debug mode. show data
-        stdout.write("request data: %s\n" % str(data))
-        stdout.flush()
     if data.has_key('edit'):
         # remove restangularize "edit" field. probably a better way
         # to do this on the javascript side
         data.pop('edit')
+    if current_app.config['DEBUG']:
+        # running in debug mode. show data
+        stdout.write("request data: %s\n" % str(data))
+        stdout.flush()
 
 def admin_api_auth(instance_id=None, data=None, **kw):
     "Raise 401 if user is not logged in our does not have Admin role."
@@ -66,7 +66,7 @@ user_blueprint = manager.create_api_blueprint(
 #    validation_exceptions=[DBValidationError],
     methods=['GET', 'POST', 'DELETE','PATCH'],
     preprocessors=preprocessors,
-    exclude_columns=['password','api_keys'],
+    exclude_columns=['password'],
     results_per_page=None
     )
 role_blueprint = manager.create_api_blueprint(
@@ -123,11 +123,53 @@ def genkey(instid):
     else:
         return "missing key name", 400
 
+user_admin_blueprint = Blueprint('user_admin', __name__)
 
+@user_admin_blueprint.route('/delete_user/<int:instid>', methods=['POST'])
+@roles_required('Admin')
+def delete_user(instid):
+    user = session.query(User).filter_by(id=instid).first()
+    if not user:
+        return "User not found", 404
+    session.delete(user)
+    session.commit()
+    return "user deleted", 200
 
+@user_admin_blueprint.route('/patch_user/<int:instid>', methods=['POST'])
+@roles_required('Admin')
+def patch_user(instid):
+    data = json.loads(request.data)
+    user = session.query(User).filter_by(id=instid).first()
+    if not user:
+        return "User not found", 404
+    for k,v in data.items():
+        try:
+            if k not in ['id','password','roles']:
+                setattr(user,k,v)
+        except AttributeError:
+            pass
+    session.commit()
+    return "user patched", 200
 
+@user_admin_blueprint.route('/promote_user/<int:instid>', methods=['POST'])
+@roles_required('Admin')
+def promote_user(instid):
+    user = session.query(User).filter_by(id=instid).first()
+    adminRole = session.query(Role).filter_by(name='Admin').first()
+    if not user:
+        return "User not found", 404
+    if not adminRole:
+        return "Admin role not found", 404
+    user.roles = [adminRole]
+    session.commit()
+    return "user promoted", 200
 
-
-
-
-
+@user_admin_blueprint.route('/demote_user/<int:instid>', methods=['POST'])
+@roles_required('Admin')
+def demote_user(instid):
+    user = session.query(User).filter_by(id=instid).first()
+    if not user:
+        return "User not found", 404
+    user.roles = []
+    session.commit()
+    return "user demoted", 200

@@ -53,25 +53,26 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
     // save timeseries group to server
     $scope.saveInstrument = function(instr) {
         if(instr.id) {
-        // timeseries group already exists on server. update.
-        instr.patch().then(function(serverResponse) {
+            // timeseries group already exists on server. update.
+	    instr.patch().then(function(serverResponse) {
                 delete instr.edit;
                 delete restore[instr.id];
                 $scope.alert = null;
-        }, function(serverResponse) {
+            }, function(serverResponse) {
                 console.log(serverResponse);
                 $scope.alert = serverResponse.data.validation_errors;
-        });
+            });
+	    return true;
         } else {
-        // new timeseries group. post to server.
-        InstrumentService.post(instr).then(function(serverResponse) {
+            // new instrument. post to server.
+            InstrumentService.post(instr).then(function(serverResponse) {
                 // copy server response to scope object
                 angular.copy(serverResponse, instr);
                 $scope.alert = null;
-        }, function(serverResponse) {
+            }, function(serverResponse) {
                 console.log(serverResponse);
                 $scope.alert = serverResponse.data.validation_errors;
-        });
+            });
         }
     }
 

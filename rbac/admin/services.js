@@ -40,3 +40,16 @@ ifcbAdmin.service('RoleService', ['Restangular', function (Restangular) {
     this.list = Restangular.all('roles').getList();
 
 }]);
+
+ifcbAdmin.service('UserService', ['Restangular', function (Restangular) {
+
+    var baseTimeSeries = Restangular.all('users');
+    this.list = baseTimeSeries.getList();
+    this.post = baseTimeSeries.post;
+
+    this.new = function() {
+	return {first_name:'', last_name:'', email:'', is_enabled:true, roles: []};
+    }
+
+}]);
+

@@ -40,7 +40,7 @@ from oii.ifcb2 import files
 from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role, UserRoles
 
 from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
-from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint
+from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
 from oii.rbac.security import roles_required
@@ -280,6 +280,7 @@ app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(instrument_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(user_admin_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(keychain_blueprint, url_prefix=API_URL_PREFIX)

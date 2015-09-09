@@ -12,7 +12,7 @@
 <html>
 <head>
     <title>{% block title %}{% endblock %}</title>
-    {% block head %}
+{% block head %}
     <!-- jQuery -->
     <script type="text/javascript" src="{{static}}lib/jquery-1.9.1.min.js"></script>
     <!-- jQuery UI -->
@@ -51,7 +51,16 @@
     <script type="text/javascript" src="{{static}}target.js"></script>
     <script type="text/javascript" src="{{static}}scatter.js"></script>
     <script type="text/javascript" src="{{static}}timeseries.js"></script>
-    {% endblock head %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $.getJSON('/is_admin', function(r) {
+      $('#login_admin').empty().html('<a href="/admin">Admin</a>');
+    }, function(r) {
+      $('#login_admin').empty().html('<a href="/sec/login">Login</a>');
+    });
+});
+</script>
+{% endblock head %}
 </head>
 <body>
   <div id="content">
@@ -70,11 +79,11 @@
     <br>
     <a href="mailto:hsosik@whoi.edu">Heidi Sosik</a>, <a href="mailto:rolson@whoi.edu">Robert Olson</a>, <a href="mailto:jfutrelle@whoi.edu">Joe Futrelle</a> @ <a href="http://www.whoi.edu/">Woods Hole Oceanographic Institution</a>
     <br>
-    Version 3.0alpha - March 2015 -
+    Version 3.0alpha - September 2015 -
     <a href="/about">About</a>
     <a href="https://beagle.whoi.edu/redmine/projects/ifcb-web/wiki">User guide</a>
     <!-- FIXME makes assumptions about URLs -->
-    <a href="/admin">Admin</a>
+    <span id="login_admin"><a href="/sec/login?next=/admin">Admin</a></span>
     <a href="/api">API</a>
     <!--<a href="help/">About</a> /
     <a href="help.html" target="_none">Help</a-->

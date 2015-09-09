@@ -12,7 +12,6 @@
         <script src="/static/lib/restangular.min.js"></script>
         <script src="/admin/ifcbadmin.js"></script>
         <script src="/admin/services.js"></script>
-        <script src="/admin/users/UserService.js"></script>
         <script src="/admin/instruments/Instruments.js"></script>
         <script src="/admin/keychain/Keychain.js"></script>
         <script src="/admin/myaccount/MyAccount.js"></script>
@@ -36,7 +35,7 @@
             <div class="navbar-collapse collapse">
               <ul class="nav navbar-nav navbar-right">
                 <li><a href="#/myaccount">MyAccount</a></li>
-                <li><a href="/sec/logout">Logout</a></li>
+                <li><a href="/sec/logout?next=/">Logout</a></li>
               </ul>
               <form class="navbar-form navbar-right">
                 <input type="text" class="form-control" placeholder="Search...">
@@ -56,8 +55,8 @@
                 <li ng-class="navClass('time_series')"><a href="#/time_series">Time Series</a></li>
 		            <li ng-class="navClass('instruments')"><a href="#/instruments">Instruments</a></li>
                 <li ng-class="navClass('users')"><a href="#/users">Users</a></li>
-                <li ng-class="navClass('keychain')"><a href="#/keychain">Keychain</a></li>
-                <li ng-class="navClass('myaccount')"><a href="#/myaccount">My Account</a></li>
+                <!--<li ng-class="navClass('keychain')"><a href="#/keychain">Keychain</a></li>
+                <li ng-class="navClass('myaccount')"><a href="#/myaccount">My Account</a></li>-->
               </ul>
           </div>
           <!-- end side navbar -->
