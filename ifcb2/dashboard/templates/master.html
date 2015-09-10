@@ -54,9 +54,17 @@
 <script type="text/javascript">
 $(document).ready(function() {
     $.getJSON('/is_admin', function(r) {
-      $('#login_admin').empty().html('<a href="/admin">Admin</a>');
-    }, function(r) {
-      $('#login_admin').empty().html('<a href="/sec/login">Login</a>');
+      $('#login_admin').empty().html('<a href="/sec/logout">Log out</a> <a href="/admin">Admin</a>')
+        .find('a:first').on('click',function(e) {
+          e.preventDefault();
+          window.location.assign('/sec/logout?next=' + window.location);
+        });
+    }).fail(function(r) {
+      $('#login_admin').empty().html('<a href="/sec/login">Log in</a> <a href="/sec/login?next=/admin">Admin</a>')
+        .find('a:first').on('click',function(e) {
+          e.preventDefault();
+          window.location.assign('/sec/login?next=' + window.location);
+        });
     });
 });
 </script>
@@ -83,7 +91,7 @@ $(document).ready(function() {
     <a href="/about">About</a>
     <a href="https://beagle.whoi.edu/redmine/projects/ifcb-web/wiki">User guide</a>
     <!-- FIXME makes assumptions about URLs -->
-    <span id="login_admin"><a href="/sec/login?next=/admin">Admin</a></span>
+    <span id="login_admin"><a href="/sec/login">Log in</a> <a href="/sec/login?next=/admin">Admin</a></span>
     <a href="/api">API</a>
     <!--<a href="help/">About</a> /
     <a href="help.html" target="_none">Help</a-->
