@@ -109,14 +109,6 @@ def init_database(dbengine, session):
         u.roles.append(r)
         session.add(u)
         session.commit()
-    if not session.query(User).filter_by(email='user@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='User',
-            email='user@whoi.edu', username='user@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        session.add(u)
-        session.commit()
 
 @app.before_first_request
 def dashboard_config():
