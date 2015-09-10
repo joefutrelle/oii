@@ -108,7 +108,7 @@
 			    .append('Actions: <span class="day_admin"></span> <span class="link skip"></span>')
 			    .find('.skip').bin_skip(pid, true);
 			function create_day_link(date) {
-			    $this.find('.bin_actions .day_admin')
+			    $this.find('.bin_actions .day_admin').empty()
 				.append('<a href="/'+timeseries+'/api/feed/day_admin/'+date+'">Go to day</a>');
 			}
 			if($this.data(DATE) != undefined) {
