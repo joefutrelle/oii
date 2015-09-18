@@ -1,6 +1,6 @@
 
 
-ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function ($scope, TimeSeriesService) {
+ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesService', function ($scope, Restangular, TimeSeriesService) {
 
     // initialize local scope
     $scope.alert = null;
@@ -50,14 +50,16 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
     $scope.saveTimeSeries = function(ts) {
 	console.log("saving time series "+ts.label);
         // remove blank paths before save
-        for (var i = 0; i < ts.data_dirs.length; i++) {
-            if (ts.data_dirs[i].path.trim() == "") {
-                $scope.removePath(ts, ts.data_dirs[i]);
-            }
-        }
+        $.each(ts.data_dirs, function(ix, dd) {
+			if(dd.path.trim()=="") {
+				$scope.removePath(ts, dd);
+			} else {
+				console.log(ts.label+" has "+dd.product_type+" path "+dd.path);
+			}
+		});
         if(ts.id) {
         // timeseries group already exists on server. update.
-        ts.patch().then(function(serverResponse) {
+        Restangular.copy(ts).patch().then(function(serverResponse) {
                 delete ts.edit;
                 delete restore[ts.id];
                 $scope.alert = null;
