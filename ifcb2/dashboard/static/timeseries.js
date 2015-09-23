@@ -127,7 +127,7 @@ function timeseries_setup(e, pid, timeseries) {
 		'background-color: ' + color + ';'+
 		'border: 1px solid ' + color + ';';
 	    var bar = '<div class="bar" style="' + style + '" ' +
-		' title="'+gb.toFixed(2)+'GB"></div>';
+		' title="'+date+'"></div>';
 	    var item = {
 		'group': 'bytes/day', // "Group" is displayed on the left as a label
 		'start': start,
