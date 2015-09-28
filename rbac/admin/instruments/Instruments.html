@@ -25,10 +25,13 @@
                 <button type="button" class="btn btn-default btn-sm" ng-click="cancelInstrument(instr)">Cancel</button>
             </div>
             <div class="row ifcbformrow"><div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-addon">Name</span>
-                    <input type="text" class="form-control" ng-model="instr.name">
-                </div>
+                <ng-form name="instr_name_form">
+					<div class="input-group">
+                        <span class="input-group-addon">Name</span>
+                        <input type="text" name="instr_name" class="form-control" ng-model="instr.name" pattern="[a-zA-Z0-9_]+" placeholder="my_ifcb">  
+                    </div>
+                    <span ng-show="instr_name_form.instr_name.$error.pattern">Please do not use spaces or special characters.</span>
+                </ng-form>
             </div></div>
             <div class="row ifcbformrow"><div class="col-md-5">
                 <div class="input-group">
