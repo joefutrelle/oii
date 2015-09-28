@@ -4,7 +4,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesServ
 
     // initialize local scope
     $scope.alert = null;
-    var restore = {};
+    $scope.restore = {};
 
     // load iniital data from api
     TimeSeriesService.list.then(function(serverResponse) {
@@ -28,8 +28,8 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesServ
 
     // mark timeseries group for editing
     $scope.editTimeSeries = function(ts) {
-        restore[ts.id] = {};
-        angular.copy(ts, restore[ts.id]);
+        $scope.restore[ts.id] = {};
+        angular.copy(ts, $scope.restore[ts.id]);
         ts.edit = true;
     }
 
@@ -38,8 +38,10 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesServ
         if (ts.id) {
             // cancel edit on saved timeseries
             // restore unedited copy
-            angular.copy(restore[ts.id], ts);
-            delete restore[ts.id];
+            console.log('cancel');
+			console.log($scope.restore[ts.id]);
+            angular.copy($scope.restore[ts.id], ts);
+            delete $scope.restore[ts.id];
         } else {
             // cancel creation of new timeseries
             $scope.time_series  = _.without($scope.time_series, ts);
@@ -61,7 +63,7 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesServ
         // timeseries group already exists on server. update.
         Restangular.copy(ts).patch().then(function(serverResponse) {
                 delete ts.edit;
-                delete restore[ts.id];
+                delete $scope.restore[ts.id];
                 $scope.alert = null;
         }, function(serverResponse) {
                 console.log(serverResponse);
@@ -129,9 +131,21 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesServ
 
     // remove path
     $scope.removePath = function(ts,p) {
-        // remove only from local scrope
+        // remove only from local scope
         // server is updated with saveTimeSeries()
         ts.data_dirs = _.without(ts.data_dirs, p);
     }
+
+$scope.$on('$locationChangeStart', function( event ) {
+	if($.isEmptyObject($scope.restore)) {
+		return;
+	}
+	$.each($scope.time_series, function(ix, ts) {
+		if(ts.edit) {
+			$scope.cancelTimeSeries(ts);
+			ts.edit = false;
+		}
+	});
+});
 
 }]);
