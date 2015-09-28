@@ -1,12 +1,12 @@
 
 
 // users controller
-ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Restangular', function ($scope, UserService, RoleService, Restangular) {
+ifcbAdmin.controller('UserCtrl', ['$scope', '$window', 'UserService', 'RoleService', 'Restangular', function ($scope, $window, UserService, RoleService, Restangular) {
 
     // initialize local scope
     $scope.alert = null;
-    var restore = {};
-    var rolesByName = {}
+    $scope.restore = {};
+    $scope.rolesByName = {}
 
     UserService.list.then(function(r) {
 	$scope.users = r;
@@ -14,7 +14,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     RoleService.list.then(function(r) {
 	$scope.roles = r;
 	$.each(r, function(ix, role) {
-	    rolesByName[role.name] = {
+	    $scope.rolesByName[role.name] = {
 		'id': role.id,
 		'name': role.name,
 	    };
@@ -32,23 +32,23 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
     $scope.deleteUser = function(user) {
 	var delete_user = Restangular.one("delete_user", user.id);
 	$scope.alert = "Deleting "+user.first_name+" "+user.last_name+" ...";
-	$scope.$apply();
 	delete_user.customPOST().then(function() {
-	    location.reload();
+	    $window.location.reload();
 	});
     }
 
     $scope.editUser = function(user) {
         // copy user into "now editing"
-	restore[user.id] = {}
-        angular.copy(user, restore[user.id]);
+	$scope.restore[user.id] = {}
+        angular.copy(user, $scope.restore[user.id]);
 	user.edit = true;
     }
 
     $scope.cancelUser = function(user) {
-	if(user.id) {
-	    angular.copy(restore[user.id], user);
-	    delete restore[user.id];
+	if(user.id && !$.isEmptyObject($scope.restore)) {
+	    angular.copy($scope.restore[user.id], user);
+	    delete $scope.restore[user.id];
+	    user.edit = false;
 	} else {
 	    $scope.users = _.without($scope.users, user);
 	}
@@ -64,7 +64,7 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
 	    patch_user.customPOST(user).then(function() {
                 // successful response.
                 delete user.edit;
-		delete restore[user.id];
+		delete $scope.restore[user.id];
 		console.log('SUCCEEDED in patching user');
                 $scope.alert = null;
             }, function(r) {
@@ -137,5 +137,15 @@ ifcbAdmin.controller('UserCtrl', ['$scope', 'UserService', 'RoleService', 'Resta
                 + ' error while loading data from server.';
         });
     }
-
+$scope.$on('$locationChangeStart', function( event ) {
+	if($.isEmptyObject($scope.restore)) {
+		return;
+	}
+	$.each($scope.users, function(ix, u) {
+		if(u.edit) {
+			$scope.cancelUser(u);
+			u.edit = false;
+		}
+	});
+});
 }]);

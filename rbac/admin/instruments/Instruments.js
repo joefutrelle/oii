@@ -3,7 +3,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
 
     // initialize local scope
     $scope.alert = null;
-    var restore = {};
+    $scope.restore = {};
 
     // load iniital data from api
     TimeSeriesService.list.then(function(serverResponse) {
@@ -32,8 +32,8 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
 
     // mark timeseries group for editing
     $scope.editInstrument = function(instr) {
-        restore[instr.id] = {};
-        angular.copy(instr, restore[instr.id]);
+        $scope.restore[instr.id] = {};
+        angular.copy(instr, $scope.restore[instr.id]);
         instr.edit = true;
     }
 
@@ -42,8 +42,8 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
         if (instr.id) {
             // cancel edit on saved timeseries
             // restore unedited copy
-            angular.copy(restore[instr.id], instr);
-            delete restore[instr.id];
+            angular.copy($scope.restore[instr.id], instr);
+            delete $scope.restore[instr.id];
         } else {
             // cancel creation of new timeseries
             $scope.instruments  = _.without($scope.instruments, instr);
@@ -56,7 +56,7 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
             // timeseries group already exists on server. update.
 	    instr.patch().then(function(serverResponse) {
                 delete instr.edit;
-                delete restore[instr.id];
+                delete $scope.restore[instr.id];
                 $scope.alert = null;
             }, function(serverResponse) {
                 console.log(serverResponse);
@@ -82,5 +82,17 @@ ifcbAdmin.controller('InstrumentCtrl', ['$scope', 'InstrumentService', 'TimeSeri
             $scope.instruments = _.without($scope.instruments, instr);
         });
     }
+    
+$scope.$on('$locationChangeStart', function( event ) {
+	if($.isEmptyObject($scope.restore)) {
+		return;
+	}
+	$.each($scope.instruments, function(ix, ts) {
+		if(ts.edit) {
+			$scope.cancelInstrument(ts);
+			ts.edit = false;
+		}
+	});
+});
 
 }]);
