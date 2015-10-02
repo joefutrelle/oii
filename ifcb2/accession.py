@@ -98,6 +98,14 @@ class Accession(object):
         for dd in ts.data_dirs:
             if dd.product_type == 'raw':
                 yield dd.path
+    def accepts_products(self, product_type):
+        ts = self.get_time_series()
+        if ts is None:
+            return False
+        for dd in ts.data_dirs:
+            if dd.product_type == product_type:
+                return True
+        return False
     def list_filesets(self,root=None):
         if root is not None:
             ddpaths = [root]

@@ -612,6 +612,13 @@ def check_roots(ts_label):
             break
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/accepts_products/<product_type>')
+def accepts_products(ts_label, product_type):
+    acc = Accession(session, ts_label)
+    return Response(json.dumps({
+        product_type: acc.accepts_products(product_type)
+    }), mimetype=MIME_JSON)
+    
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):
     # initiate batch accession
