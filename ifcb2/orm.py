@@ -70,6 +70,10 @@ class Bin(Base):
     sample_time = Column(DateTime(timezone=True), index=True)
     skip = Column(Boolean, default=False)
 
+    lat = Column(Numeric, index=True)
+    lon = Column(Numeric, index=True)
+    depth = Column(Numeric, index=True)
+    
     triggers = Column(Integer,default=0)
     duration = Column(Numeric,default=0)
     temperature = Column(Numeric,default=0)
@@ -88,6 +92,38 @@ class Bin(Base):
             return 0
         else:
             return self.triggers / self.duration
+
+class BinTag(Base):
+    __tablename__ = 'bin_tags'
+    
+    id = Column(Integer, primary_key=True)
+    bin_id = Column(Integer, ForeignKey('bins.id'))
+    tag = Column(String, index=True)
+    
+    bin = relationship('Bin', backref=backref('tags',order_by=tag,
+                        cascade='all, delete-orphan'))
+                        
+    __table_args__ = (
+        UniqueConstraint('bin_id','tag'),
+    )
+    
+    def __repr__(self):
+        return '#%s' % self.tag
+
+class BinComment(Base):
+    __tablename__ = 'bin_comments'
+    
+    id = Column(Integer, primary_key=True)
+    bin_id = Column(Integer, ForeignKey('bins.id'))
+    ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
+    user_name = Column(String)
+    comment = Column(String, index=True)
+    
+    bin = relationship('Bin', backref=backref('comments',order_by=ts,
+                        cascade='all, delete-orphan'))
+                        
+    def __repr__(self):
+        return '<Comment %s: "%s" @ %s>' % (self.user_name, self.comment, self.ts)
 
 class File(Base):
     __tablename__ = 'fixity'
