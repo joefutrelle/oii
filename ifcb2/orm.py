@@ -8,6 +8,7 @@ import pytz
 
 from sqlalchemy import Column, ForeignKey, and_, or_, desc
 from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric, UniqueConstraint
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
@@ -79,6 +80,8 @@ class Bin(Base):
     temperature = Column(Numeric,default=0)
     humidity = Column(Numeric,default=0)
 
+    tags = association_proxy('bintags', 'tag', creator=lambda t: BinTag(tag=unicode(t)))
+    
     __table_args__ = (
         UniqueConstraint('ts_label', 'lid'),
     )
@@ -100,7 +103,7 @@ class BinTag(Base):
     bin_id = Column(Integer, ForeignKey('bins.id'))
     tag = Column(String, index=True)
     
-    bin = relationship('Bin', backref=backref('tags',order_by=tag,
+    bin = relationship('Bin', backref=backref('bintags',order_by=tag,
                         cascade='all, delete-orphan'))
                         
     __table_args__ = (
