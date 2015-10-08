@@ -145,6 +145,32 @@ img.logo {
   margin-bottom: 15px;
   display: inline-block;
 }
+.tag {
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background: #dddddd;
+  padding: 3px 8px 3px 8px;
+  box-shadow: 0px 0px 2px #777777;
+  margin: 7px 3px 7px 3px;
+}
+.removeable_tag {
+    font-family: sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #888888;
+}
+.removeable_tag:before {
+    content: '\000d7\a0';
+}
+.addable_tag {
+    font-family: sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #888888;
+}
+.addable_tag:before {
+    content: '+';
+}
 div.h1 {
     margin-top: 5px;
     margin-bottom: 10px;

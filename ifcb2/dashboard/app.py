@@ -573,6 +573,17 @@ def serve_remove_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
     Tagging(session, ts_label).remove_tag(b, tag_name)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/tag_view/<url:pid>')
+@roles_required('Admin')
+def serve_tag_view(pid):
+    parsed = parse_pid(pid)
+    template = {
+        'static': STATIC,
+        'ts_label': parsed['ts_label'],
+        'pid': parsed['pid']
+    }
+    return template_response('tag_view.html', **template)
     
 ### files and accession ###
 

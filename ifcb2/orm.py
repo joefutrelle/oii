@@ -103,7 +103,7 @@ class BinTag(Base):
     bin_id = Column(Integer, ForeignKey('bins.id'))
     tag = Column(String, index=True)
     
-    bin = relationship('Bin', backref=backref('bintags',order_by=tag,
+    bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
                         
     __table_args__ = (
