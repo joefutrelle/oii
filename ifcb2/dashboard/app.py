@@ -46,6 +46,7 @@ from oii.rbac import security
 from oii.rbac.security import roles_required
 
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.tagging import Tagging
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -540,18 +541,61 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-def parsed2files(parsed):
-    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
-    if b is None:
-        raise NotFound
-    return b.files
+### tagging ###
 
-def pid2files(ts_label,pid):
+@app.route('/<ts_label>/api/tags/<url:pid>')
+def serve_tags(ts_label, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+    
+@app.route('/<ts_label>/api/search_tags/<tag_names>')
+def serve_search_tags(ts_label, tag_names):
+    tag_names = re.split(r',',tag_names)
+    q = Tagging(session, ts_label).search_tags_all(tag_names)
+    bins = [canonicalize(get_url_root(), ts_label, bin.lid) for bin in q]
+    return Response(json.dumps(bins), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/tag_cloud')
+def serve_tag_cloud(ts_label):
+    cloud = Tagging(session, ts_label).tag_cloud()
+    return Response(json.dumps(cloud), mimetype=MIME_JSON)
+    
+@app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
+@roles_required('Admin')
+def serve_add_tag(ts_label, tag_name, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    Tagging(session, ts_label).add_tag(b, tag_name)
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
+@roles_required('Admin')
+def serve_remove_tag(ts_label, tag_name, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    Tagging(session, ts_label).remove_tag(b, tag_name)
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+    
+### files and accession ###
+
+def parse_bin_query(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
+        abort(404)
+    return parsed
+    
+def parsed2bin(parsed):
+    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
+    if b is None:
         raise NotFound
+    return b
+    
+def parsed2files(parsed):
+    b = parsed2bin(parsed)
+    return b.files
+
+def pid2files(ts_label,pid):
+    parsed = parse_bin_query(ts_label, pid)
     return parsed2files(parsed)
 
 def file2dict(f):

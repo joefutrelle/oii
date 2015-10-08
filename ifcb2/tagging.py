@@ -22,8 +22,11 @@ class Tagging(object):
             self._commit(commit)
     def remove_tag(self, b, tag, commit=True):
         """remove a tag from a bin"""
-        b.tags.remove(tag)
-        self._commit(commit)
+        try:
+            b.tags.remove(tag)
+            self._commit(commit)
+        except ValueError:
+            pass
     def tag_cloud(self):
         """get a dict of tags and frequency for a given time series"""
         rows = self.session.query(BinTag.tag, func.count(BinTag.tag)).\
