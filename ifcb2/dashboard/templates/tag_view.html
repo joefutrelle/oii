@@ -3,63 +3,9 @@
 {% block head %}
   {{ super() }}
     <script type="text/javascript">
-(function($) {
-    $.fn.extend({
-       removeableTag: function(clk) {
-           return this.each(function () {
-               var $this = $(this); // retain ref to $(this)
-               $this.prepend('<a class="removeable_tag"></a>').find('a:first')
-                   .css('cursor','pointer')
-                   .bind('click', clk);
-           });
-       },
-       addTag: function(clk) {
-           return this.each(function() {
-               var $this = $(this);
-               $this.prepend('<a class="addable_tag"></a>').find('a:first')
-                    .css('cursor','pointer')
-                    .on('click', clk)
-            })
-        }
-    });//$.fn.extend
-})(jQuery);//end of plugin
 $(document).ready(function() {
-    function refresh_tags(df) {
-        $.getJSON('/{{ts_label}}/api/tags/{{pid}}', function(r) {
-            $('#bin_tags').empty();
-            $.each(r, function(ix, tag) {
-                $('#bin_tags').append('<div class="tag inline">'+tag+'</div>')
-                    .find('.tag:last').removeableTag(function() {
-                        $.getJSON('/{{ts_label}}/api/remove_tag/'+tag+'/{{pid}}', refresh_tags);
-                    });
-            });
-            $('#bin_tags').append('<div class="tag inline add_tag"></div>')
-                .find('.tag:last').addTag(function() {
-                    $('#bin_tags').find('.add_tag').empty()
-                    .append('<input type="text"></input>')
-                    .find('input:last').focus().on('enterKey', function() {
-                        var tag = $(this).val().trim();
-                        if(!tag) {
-                            refresh_tags();
-                        } else {
-                            $.getJSON('/{{ts_label}}/api/add_tag/'+tag+'/{{pid}}', function() {
-                                refresh_tags(function() {
-                                    $('a.addable_tag').trigger('click');
-                                });
-                            });
-                        }
-                    }).on('keyup', function(e) {
-                        if(e.keyCode == 13) {
-                            $(this).trigger('enterKey');
-                        }
-                    });
-                });
-            if(df) {
-                df();
-            }
-        });
-    }
-    refresh_tags();
+    $('#ro_bin_tags').binTags('{{ts_label}}','{{pid}}');
+    $('#bin_tags').editableBinTags('{{ts_label}}','{{pid}}');
 });
     </script>
 {% endblock head %}
@@ -67,6 +13,7 @@ $(document).ready(function() {
 <div>
     <div>ts_label = {{ts_label}}</div>
     <div>pid = {{pid}}</div>
+    <div id="ro_bin_tags"></div>
     <div id="bin_tags"></div>
 </div>
 {% endblock content %}
