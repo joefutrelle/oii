@@ -46,7 +46,7 @@ from oii.rbac import security
 from oii.rbac.security import roles_required
 
 from oii.ifcb2.feed import Feed
-from oii.ifcb2.tagging import Tagging
+from oii.ifcb2.tagging import Tagging, normalize_tag
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -547,13 +547,50 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
 def serve_tags(ts_label, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+def parse_tags(tag_names):
+    return [normalize_tag(t.strip()) for t in re.split(r',',tag_names)]
+
+TAG_PAGE_SIZE=20
+    
+# helper for tag search endpoints
+def search_tags(ts_label, tag_names, page=1):
+    hasNext = False
+    tags = parse_tags(tag_names)
+    start,end = (page-1)*TAG_PAGE_SIZE, (page*TAG_PAGE_SIZE) + 1
+    q = Tagging(session, ts_label).search_tags_all(tags)[start:end]
+    rows = [{
+        'time': iso8601(bin.sample_time.timetuple()),
+        'pid': canonicalize(get_url_root(), ts_label, bin.lid),
+        'tags': map(unicode,bin.tags)
+    } for bin in q]
+    if len(rows) > TAG_PAGE_SIZE:
+        hasNext = True
+        rows = rows[:-1] 
+    return rows, hasNext
     
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
-def serve_search_tags(ts_label, tag_names):
-    tag_names = re.split(r',',tag_names)
-    q = Tagging(session, ts_label).search_tags_all(tag_names)
-    bins = [canonicalize(get_url_root(), ts_label, bin.lid) for bin in q]
-    return Response(json.dumps(bins), mimetype=MIME_JSON)
+@app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags(ts_label, tag_names, page=1):
+    rows, hasNext = search_tags(ts_label, tag_names, page)
+    return Response(json.dumps(rows), mimetype=MIME_JSON)
+
+# next, the HTML template version of this API call
+@app.route('/<ts_label>/search_tags/<tag_names>')
+@app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags_template(ts_label, tag_names, page=1):
+    rows, hasNext = search_tags(ts_label, tag_names, page)
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'tags': parse_tags(tag_names),
+        'rows': rows,
+        'page': page,
+        'prev': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, max(page-1,1)),
+        'hasNext': hasNext,
+        'next': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, page+1)
+    }
+    return template_response("tag_search.html", **template)
 
 @app.route('/<ts_label>/api/tag_cloud')
 def serve_tag_cloud(ts_label):
@@ -574,12 +611,14 @@ def serve_remove_tag(ts_label, tag_name, pid):
     Tagging(session, ts_label).remove_tag(b, tag_name)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
-@app.route('/tag_view/<url:pid>')
+@app.route('/tag_view/<tags>/<url:pid>')
 @roles_required('Admin')
-def serve_tag_view(pid):
+def serve_tag_view(tags, pid):
     parsed = parse_pid(pid)
+    tags = re.split(r',',tags)
     template = {
         'static': STATIC,
+        'tags': tags,
         'ts_label': parsed['ts_label'],
         'pid': parsed['pid']
     }

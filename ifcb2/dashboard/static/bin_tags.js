@@ -65,6 +65,8 @@
                                             });
                                         });
                                     }
+                                }).on('focusout', function() {
+                                    refresh_tags();
                                 });
                             });
                         if(df) {
