@@ -19,8 +19,10 @@
         binTags: function(ts_label, pid) {
             return this.each(function() {
                 var $this = $(this);
+                $this.empty();
                 $.getJSON('/'+ts_label+'/api/tags/'+pid, function(r) {
-                    $this.empty();
+                    if(r.length==0) { return; }
+                    $this.empty().append('Tags:');
                     $.each(r, function(ix, tag) {
                         $this.append('<div class="tag inline">'+tag+'</div>');
                     });
@@ -30,9 +32,10 @@
         editableBinTags: function(ts_label, pid) {
             return this.each(function() {
                 var $this = $(this);
+                $this.empty();
                 var refresh_tags = function(df) {
                     $.getJSON('/'+ts_label+'/api/tags/'+pid, function(r) {
-                        $this.empty();
+                        $this.empty().append('Tags:');
                         $.each(r, function(ix, tag) {
                             $this.append('<div class="tag inline">'+tag+'</div>')
                                 .find('.tag:last').removeableTag(function() {
