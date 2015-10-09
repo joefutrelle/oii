@@ -1,8 +1,13 @@
+import re
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
 from oii.ifcb2.orm import Bin, BinTag
 
+def normalize_tag(tagname):
+    return re.sub(r'[^\w ]','',tagname.lower())
+    
 class Tagging(object):
     def __init__(self, session, ts_label):
         self.session = session
@@ -17,11 +22,13 @@ class Tagging(object):
     def add_tag(self, b, tag, commit=True):
         """add a tag to a bin."""
         # head off duplicates
+        tag = normalize_tag(tag)
         if tag not in b.tags:
             b.tags.append(tag)
             self._commit(commit)
     def remove_tag(self, b, tag, commit=True):
         """remove a tag from a bin"""
+        tag = normalize_tag(tag)
         try:
             b.tags.remove(tag)
             self._commit(commit)
@@ -35,9 +42,11 @@ class Tagging(object):
             group_by(BinTag.tag, Bin.ts_label)
         return dict(list(rows))
     def search_tags_all(self, tag_names):
+        """find all bins that have all tags"""
         q = self.session.query(Bin).\
             filter(Bin.ts_label.like(self.ts_label))
         for tag_name in tag_names:
+            tag_name = normalize_tag(tag_name)
             q = q.filter(Bin.tags.contains(tag_name))
         q = q.order_by(Bin.sample_time.desc())
         return q
