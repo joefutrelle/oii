@@ -1,30 +1,42 @@
 (function($) {
     $.fn.extend({
-       removeableTag: function(clk) {
-           return this.each(function () {
-               var $this = $(this); // retain ref to $(this)
-               $this.prepend('<a class="removeable_tag"></a>').find('a:first')
-                   .css('cursor','pointer')
-                   .bind('click', clk);
-           });
-       },
-       addTag: function(clk) {
-           return this.each(function() {
-               var $this = $(this);
-               $this.prepend('<a class="addable_tag"></a>').find('a:first')
+        // add a tag-styled tag with link
+        addTag: function(ts_label, tag) {
+            return this.each(function() {
+                var href = '/'+ts_label+'/search_tags/'+tag;
+                var a = '<a href="'+href+'" class="tag_link">'+tag+'</a>';
+                $(this).append('<div class="tag inline">'+a+'</div>');
+            });
+        },
+        // add an "x" button and attach click handler
+        removeableTag: function(clk) {
+            return this.each(function () {
+                $(this).prepend('<a class="removeable_tag"></a>').find('a:first')
                     .css('cursor','pointer')
-                    .on('click', clk)
+                    .bind('click', clk);
+            });
+        },
+        // add a "+" button and attach click handler
+        addableTag: function(clk) {
+            return this.each(function() {
+                $(this).empty().prepend('<a class="addable_tag"></a>');
+                $(this)
+                    .css('cursor','pointer')
+                    .on('click', clk);
             })
         },
+        // non-editable tags
         binTags: function(ts_label, pid) {
             return this.each(function() {
                 var $this = $(this);
                 $this.empty();
+                // get tags from the server and show as non-editable
                 $.getJSON('/'+ts_label+'/api/tags/'+pid, function(r) {
                     if(r.length==0) { return; }
                     $this.empty().append('Tags:');
+                    // add an inline tag-styled div per tag
                     $.each(r, function(ix, tag) {
-                        $this.append('<div class="tag inline">'+tag+'</div>');
+                        $this.addTag(ts_label, tag);
                     });
                 });
             });
@@ -33,47 +45,77 @@
             return this.each(function() {
                 var $this = $(this);
                 $this.empty();
+                // get tags from server and show as editable
                 var refresh_tags = function(df) {
                     $.getJSON('/'+ts_label+'/api/tags/'+pid, function(r) {
                         $this.empty().append('Tags:');
+                        // add an inline editable-tag-styled div per tag
                         $.each(r, function(ix, tag) {
-                            $this.append('<div class="tag inline">'+tag+'</div>')
+                            $this.addTag(ts_label, tag)
+                                // add an X button that deletes the tag
                                 .find('.tag:last').removeableTag(function() {
+                                    console.log('user clicked x on '+tag);//FIXME debug
+                                    // X clicked; delete the tag
                                     $.getJSON('/'+ts_label+'/api/remove_tag/'+tag+'/'+pid, function() {
+                                        // reload tags from server
                                         refresh_tags();
                                     });
                                 });
                         });
-                        $this.append('<div class="tag inline add_tag"></div>')
-                            .find('.tag:last').addTag(function() {
-                                $this.find('.add_tag').empty()
-                                .append('<input type="text"></input> <a class="close_new_tag removeable_tag"></a>')
-                                .find('a:last').css('cursor','pointer').on('click', function() {
+                        // put a text box in the last div for user to enter a new tag
+                        var openForEditing = function() {
+                            $this.find('.add_tag')
+                                .empty()
+                                // add a text box
+                                .append('<input type="text"></input>')
+                                // and an X button to close
+                                .append(' <a class="close_new_tag removeable_tag"></a>')
+                                .find('.close_new_tag')
+                                .css('cursor','pointer')
+                                .on('click', function() {
+                                    // user clicked X button, cancel
                                     refresh_tags();
                                 })
-                                .prev().focus().on('keyup', function(e) {
-                                    if(e.keyCode != 13) {
-                                        return;
-                                    }
+                                .prev().focus()
+                                // enter key in text area adds tag
+                                .on('keyup', function(e) {
+                                    if(e.keyCode != 13) { return; }
+                                    // get the text of the tag from the text box
                                     var tag = $(this).val().trim();
-                                    if(!tag) {
-                                        refresh_tags();
-                                    } else {
+                                    if(!tag) { refresh_tags(); } // user typed nothing, cancel
+                                    else {
+                                        // add the tag on the server
                                         $.getJSON('/'+ts_label+'/api/add_tag/'+tag+'/'+pid, function() {
+                                            // reload tags from server
                                             refresh_tags(function() {
-                                                $('a.addable_tag').trigger('click');
+                                                // and click "+" to add another tag
+                                                $this.find('a.addable_tag').trigger('click');
                                             });
                                         });
                                     }
                                 }).on('focusout', function() {
-                                    refresh_tags();
+                                    // user focused out, close the text box
+                                    closeForEditing();
                                 });
+                        };//openForEditing
+                        // set up a "+" button that will open for editing
+                        var closeForEditing = function() {
+                            $this.find('.add_tag').addableTag(function() {
+                                openForEditing();
                             });
+                        };
+                        // add a "+" button
+                        $this.append('<div class="tag inline add_tag"></div>');
+                        // close it for editing
+                        closeForEditing();
+                        // run deferred function now that we have refreshed tags
                         if(df) {
                             df();
                         }
                     });
                 }//refresh_tags
+                // entry point of editableBinTags
+                // initially, refresh tags
                 refresh_tags();
             });//this.each
         }//editableBinTags

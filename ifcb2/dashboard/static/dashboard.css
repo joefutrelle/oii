@@ -140,6 +140,17 @@ img.logo {
   padding: 7px;
   box-shadow: 0px 0px 5px #777777;
 }
+.plain_link {
+  text-decoration: none;
+  color: #000;
+}
+.tag_link {
+  text-decoration: none;
+  color: #000;
+}
+.tag_link:hover {
+  text-decoration: underline;
+}
 .inline {
   margin-top: 15px;
   margin-bottom: 15px;
@@ -148,10 +159,11 @@ img.logo {
 .tag {
   -moz-border-radius: 3px;
   border-radius: 3px;
-  background: #dddddd;
+  background: #ffffff;
   padding: 3px 8px 3px 8px;
   box-shadow: 0px 0px 2px #777777;
   margin: 7px 3px 7px 3px;
+  font-family: sans-serif;
 }
 .removeable_tag {
     font-family: sans-serif;
@@ -168,7 +180,7 @@ img.logo {
     font-weight: bold;
     color: #888888;
 }
-.addable_tag:before {
+.addable_tag:after {
     content: '+';
 }
 div.h1 {

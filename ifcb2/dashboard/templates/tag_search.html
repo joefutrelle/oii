@@ -42,7 +42,11 @@ $(document).ready(function() {
             <tr class="tbl">
                 <td class="tbl">{{row.time}}</td>
                 <td class="tbl"><a href="{{row.pid}}.html">{{row.pid}}</a></td>
-                <td class="tbl">{{', '.join(row.tags)}}</td>
+                <td>
+                    {% for tag in row.tags %}<div class="tag inline">
+                        <a href="/{{ts_label}}/search_tags/{{tag}}" class="tag_link">{{tag}}</a>
+                    </div>{% endfor %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
