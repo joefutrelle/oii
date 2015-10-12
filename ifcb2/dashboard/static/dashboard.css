@@ -44,10 +44,13 @@ body {
 .ui-button-text {
     font-size: small !important;
 }
-.tbl {
+td.tbl {
     padding-left: 4px;
     padding-right: 4px;
     font-family: monospace;
+}
+th.tbl {
+    font-family: sans-serif;
 }
 .tbl_even {
     background: #aaaaaa;
