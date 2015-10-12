@@ -5,6 +5,7 @@
     <script type="text/javascript">
 $(document).ready(function() {
     $('#bin_view').bin_page('{{bin_pid}}','{{time_series}}');
+    $('#bin_metadata').collapsing('metadata',0);
     <!-- files view -->
     $.getJSON('/{{time_series}}/api/files/{{bin_pid}}',function(r) {
       $.each(r, function(ix, f) {
@@ -36,16 +37,18 @@ $(document).ready(function() {
       <b>{{date}}</b>
       (<a href="/{{time_series}}/dashboard/{{bin_pid}}">Show in time series</a>)
     </div>
-    <div class="metadata_key">context</div>
+    <div id="bin_metadata">
+      <div class="metadata_key">context</div>
 {% for v in context %}
-    <div>{{v}}</div>
+      <div>{{v}}</div>
 {% endfor %}
 {% for k,v in properties %}
-  <div>
-    <span class="metadata_key">{{k}}</span>
-    <span class="metadata_value">{{v}}</span>
-  </div>
+      <div>
+        <span class="metadata_key">{{k}}</span>
+        <span class="metadata_value">{{v}}</span>
+      </div>
 {% endfor %}
+    </div>
   </div>
 
 <!-- fixity -->
