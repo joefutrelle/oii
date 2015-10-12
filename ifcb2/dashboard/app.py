@@ -710,9 +710,12 @@ def serve_pid(pid):
             limit=2
         targets = adc.get_some_targets(offset,limit)
         targets = list_stitched_targets(targets)
+        target = None
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
                 target = t
+        if target is None:
+            abort(404)
         add_pid(target, canonical_bin_pid)
         # check for image
         mimetype = mimetypes.types_map['.' + extension]
