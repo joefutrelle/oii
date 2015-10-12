@@ -162,7 +162,7 @@ img.logo {
   background: #ffffff;
   padding: 3px 8px 3px 8px;
   box-shadow: 0px 0px 2px #777777;
-  margin: 7px 3px 7px 3px;
+  margin: 3px;
   font-family: sans-serif;
 }
 .removeable_tag {
@@ -170,6 +170,7 @@ img.logo {
     font-size: 15px;
     font-weight: bold;
     color: #888888;
+    cursor: pointer;
 }
 .removeable_tag:before {
     content: '\000d7\a0';
@@ -182,6 +183,9 @@ img.logo {
 }
 .addable_tag:after {
     content: '+';
+}
+.add_tag {
+    cursor: pointer;
 }
 div.h1 {
     margin-top: 5px;

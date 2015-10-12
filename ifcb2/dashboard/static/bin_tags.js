@@ -8,21 +8,11 @@
                 $(this).append('<div class="tag inline">'+a+'</div>');
             });
         },
-        // add an "x" button and attach click handler
-        removeableTag: function(clk) {
-            return this.each(function () {
-                $(this).prepend('<a class="removeable_tag"></a>').find('a:first')
-                    .css('cursor','pointer')
-                    .bind('click', clk);
-            });
-        },
         // add a "+" button and attach click handler
-        addableTag: function(clk) {
+        _tags_addableTag: function(clk) {
             return this.each(function() {
                 $(this).empty().prepend('<a class="addable_tag"></a>');
-                $(this)
-                    .css('cursor','pointer')
-                    .on('click', clk);
+                $(this).on('click', clk);
             })
         },
         // non-editable tags
@@ -53,7 +43,9 @@
                         $.each(r, function(ix, tag) {
                             $this.addTag(ts_label, tag)
                                 // add an X button that deletes the tag
-                                .find('.tag:last').removeableTag(function() {
+                                .find('.tag:last')
+                                .prepend('<a class="removeable_tag"></a>')
+                                .find('.removeable_tag').on('click', function() {
                                     console.log('user clicked x on '+tag);//FIXME debug
                                     // X clicked; delete the tag
                                     $.getJSON('/'+ts_label+'/api/remove_tag/'+tag+'/'+pid, function() {
@@ -71,7 +63,6 @@
                                 // and an X button to close
                                 .append(' <a class="close_new_tag removeable_tag"></a>')
                                 .find('.close_new_tag')
-                                .css('cursor','pointer')
                                 .on('click', function() {
                                     // user clicked X button, cancel
                                     refresh_tags();
@@ -100,7 +91,7 @@
                         };//openForEditing
                         // set up a "+" button that will open for editing
                         var closeForEditing = function() {
-                            $this.find('.add_tag').addableTag(function() {
+                            $this.find('.add_tag')._tags_addableTag(function() {
                                 openForEditing();
                             });
                         };
