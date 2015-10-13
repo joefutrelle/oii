@@ -52,6 +52,9 @@ td.tbl {
 th.tbl {
     font-family: sans-serif;
 }
+.skip {
+    font-family: sans-serif;
+}
 .tbl_even {
     background: #aaaaaa;
 }

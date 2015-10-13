@@ -36,6 +36,7 @@ $(document).ready(function() {
 <!--
 params:
 static - static content location
+ts_label - time series label
 date - day
 -->
 <div>
@@ -44,7 +45,7 @@ date - day
      <a href="{{next_date_href}}" class="controlGray nextBin">&#x25B6;</a>
      <a href="/{{ts_label}}">{{ts_label}}</a> day <span class="pseudolink" id="day_date">{{date}}</a>
   </div>
-  <div class="major">
+  <div class="major inline" style="margin-top:7px">
     <span id="skip_all_bins" class="pseudolink">Skip all bins</span>
     <span id="unskip_all_bins" class="pseudolink">Unskip all bins</span>
   </div>
