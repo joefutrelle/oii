@@ -489,18 +489,24 @@ def nearest(ts_label, timestamp):
     resp = canonicalize_bin(ts_label, bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-def feed_massage_bins(ts_label,bins):
+def feed_massage_bins(ts_label,bins,include_skip=False):
     resp = []
     for bin in bins:
         sample_time_str = iso8601(bin.sample_time.timetuple())
         pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        resp.append(dict(pid=pid, date=sample_time_str))
+        entry = {
+            'pid': pid,
+            'date': sample_time_str
+        }
+        if include_skip:
+            entry['skip'] = bin.skip
+        resp.append(entry);
     return resp
 
 def _serve_feed_day(ts_label,dt,include_skip=False):
     with Feed(session, ts_label) as feed:
         bins = feed.day(dt,include_skip)
-    resp = feed_massage_bins(ts_label, bins)
+    resp = feed_massage_bins(ts_label, bins, include_skip=include_skip)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/day/<datetime:dt>')
