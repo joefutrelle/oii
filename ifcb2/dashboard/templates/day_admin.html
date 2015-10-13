@@ -7,7 +7,7 @@ $(document).ready(function() {
     $.each(r,function(ix,b) {
       var pid = b.pid;
       $('#bins_table').append('<tr class="tbl">\
-         <td class="tbl">foo'+b['date']+'</a></td>\
+         <td class="tbl">'+b['date']+'</a></td>\
          <td class="tbl"><a href="'+pid+'.html">'+pid+'</a></td>\
          <td class="tbl"><span class="skip"></span></td>\
        </tr>').find('.skip:last').bin_skip(pid, false, b.skip);
