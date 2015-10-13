@@ -5,12 +5,12 @@
 $(document).ready(function() {
   $.getJSON('/{{ts_label}}/api/feed/day_skip/{{date}}',function(r) {
     $.each(r,function(ix,b) {
-      var pid = b['pid'];
+      var pid = b.pid;
       $('#bins_table').append('<tr class="tbl">\
-         <td class="tbl">'+b['date']+'</a></td>\
+         <td class="tbl">foo'+b['date']+'</a></td>\
          <td class="tbl"><a href="'+pid+'.html">'+pid+'</a></td>\
          <td class="tbl"><span class="skip"></span></td>\
-       </tr>').find('.skip:last').bin_skip(pid, false);
+       </tr>').find('.skip:last').bin_skip(pid, false, b.skip);
     });
     $('tr:even').addClass('tbl_even');
     $('#day_date').on('click', function() {
