@@ -5,7 +5,7 @@
                 var $this = $(this); // retain ref to $(this)
                 var EVENT='bin_skip_get_flag';
                 var showSkipped = function() {
-                    $this.empty().append('(skipped: <span class="pseudolink">unskip</a>)')
+                    $this.empty().append('(skipped: <span class="pseudolink">unskip</span>)')
                         .off('click').on('click unskip_bin',function() {
                             $.getJSON('/api/unskip/'+pid, function(r) {
                                 $this.trigger(EVENT);
@@ -13,7 +13,7 @@
                         });
                 };
                 var showActive = function() {
-                    $this.empty().append('(active: <span class="pseudolink">skip</a>)')
+                    $this.empty().append('(active: <span class="pseudolink">skip</span>)')
                         .off('click').on('click skip_bin',function() {
                             var confirmed = true;
                             if(require_confirm) {
