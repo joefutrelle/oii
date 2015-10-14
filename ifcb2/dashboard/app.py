@@ -2,6 +2,7 @@
 import os, inspect
 import mimetypes
 import json
+import _strptime
 from time import strptime
 from io import BytesIO
 import re
