@@ -108,26 +108,30 @@
                         $this.find('.imagepager_date').attr('title',r.date).timeago();
                         $this.data(DATE,r.date);
                     });
-                    // if privileged, add bin actions
-                    $.getJSON('/is_admin', function(r) {
-                        $this.find('.bin_tags').editableBinTags(timeseries, pid);
-                        $this.find('.bin_actions').empty()
-                            .append('Actions: <span class="day_admin"></span> <span class="link skip"></span>')
-                            .find('.skip').bin_skip(pid, true);
-                        function create_day_link(date) {
-                            $this.find('.bin_actions .day_admin').empty()
-                                .append('<a href="/'+timeseries+'/api/feed/day_admin/'+date+'">Go to day</a>');
+                    $.getJSON('/login_status', function(r) {
+                        // if privileged, add bin actions
+                        if(r.admin) {
+                            $this.find('.bin_actions').empty()
+                                .append('Actions: <span class="day_admin"></span> <span class="link skip"></span>')
+                                .find('.skip').bin_skip(pid, true);
+                            function create_day_link(date) {
+                                $this.find('.bin_actions .day_admin').empty()
+                                    .append('<a href="/'+timeseries+'/api/feed/day_admin/'+date+'">Go to day</a>');
+                            }
+                            if($this.data(DATE) != undefined) {
+                                create_day_link($this.data(DATE));
+                            } else {
+                                $.getJSON(pid+'_medium.json', function(r) {
+                                    create_day_link(r.date);
+                                    $this.data(DATE,r.date);
+                                });
+                            }
                         }
-                        if($this.data(DATE) != undefined) {
-                            create_day_link($this.data(DATE));
+                        if(r.logged_in) {
+                            $this.find('.bin_tags').editableBinTags(timeseries, pid);
                         } else {
-                            $.getJSON(pid+'_medium.json', function(r) {
-                                create_day_link(r.date);
-                                $this.data(DATE,r.date);
-                            });
+                            $this.find('.bin_tags').binTags(timeseries, pid);
                         }
-                    }).fail(function(r) { // not admin
-                        $this.find('.bin_tags').binTags(timeseries, pid);
                     });
                     // get the selection and user preferred size/scale from the workspace
                     var viewType = $this.data(VIEW_TYPE); // view type

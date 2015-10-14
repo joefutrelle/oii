@@ -19,12 +19,13 @@ class Tagging(object):
             self.session.commit()
         except IntegrityError:
             self.session.rollback()
-    def add_tag(self, b, tag, commit=True):
+    def add_tag(self, b, tag, user_email=None, commit=True):
         """add a tag to a bin."""
         # head off duplicates
-        tag = normalize_tag(tag)
+        tag_name = normalize_tag(tag)
+        tag = BinTag(tag=tag_name, user_email=user_email)
         if tag not in b.tags:
-            b.tags.append(tag)
+            b.bintags.append(tag)
             self._commit(commit)
     def remove_tag(self, b, tag, commit=True):
         """remove a tag from a bin"""

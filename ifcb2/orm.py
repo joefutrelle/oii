@@ -102,6 +102,8 @@ class BinTag(Base):
     id = Column(Integer, primary_key=True)
     bin_id = Column(Integer, ForeignKey('bins.id'))
     tag = Column(String, index=True)
+    ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
+    user_email = Column(String)
     
     bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
@@ -119,7 +121,7 @@ class BinComment(Base):
     id = Column(Integer, primary_key=True)
     bin_id = Column(Integer, ForeignKey('bins.id'))
     ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
-    user_name = Column(String)
+    user_email = Column(String, index=True)
     comment = Column(String, index=True)
     
     bin = relationship('Bin', backref=backref('comments',order_by=ts,
@@ -212,6 +214,9 @@ class User(Base, UserMixin):
     def is_active(self):
       return self.is_enabled
 
+    def has_role(self,role_name):
+        return role_name in [r.name for r in self.roles]
+        
     def __repr__(self):
         return "<User(email='%s')>" % self.email
 

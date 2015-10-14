@@ -43,7 +43,7 @@ from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
-from oii.rbac.security import roles_required
+from oii.rbac.security import roles_required, login_required, current_user
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.tagging import Tagging, normalize_tag
@@ -294,7 +294,30 @@ def serve_static_admin(filename):
 @app.route('/is_admin')
 @roles_required('Admin')
 def is_admin():
-    return Response(json.dumps(dict(logged_in=True)),mimetype=MIME_JSON)
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+# endpoint to determine if user is logged in as anyone
+@app.route('/is_logged_in')
+@login_required
+def is_logged_in():
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+@app.route('/login_status')
+def login_status():
+    user = current_user
+    if user.is_authenticated():
+        r = {
+            'logged_in': True,
+            'email': user.email,
+            'admin': user.has_role('Admin')
+        }
+    else:
+        r = {
+            'logged_in': False,
+            'email': None,
+            'admin': False
+        }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/api')
 @app.route('/api.html')
@@ -604,31 +627,19 @@ def serve_tag_cloud(ts_label):
     return Response(json.dumps(cloud), mimetype=MIME_JSON)
     
 @app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
-@roles_required('Admin')
+@login_required
 def serve_add_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
-    Tagging(session, ts_label).add_tag(b, tag_name)
+    user_email = current_user.email
+    Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
-@roles_required('Admin')
+@login_required
 def serve_remove_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
     Tagging(session, ts_label).remove_tag(b, tag_name)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
-
-@app.route('/tag_view/<tags>/<url:pid>')
-@roles_required('Admin')
-def serve_tag_view(tags, pid):
-    parsed = parse_pid(pid)
-    tags = re.split(r',',tags)
-    template = {
-        'static': STATIC,
-        'tags': tags,
-        'ts_label': parsed['ts_label'],
-        'pid': parsed['pid']
-    }
-    return template_response('tag_view.html', **template)
     
 ### files and accession ###
 
