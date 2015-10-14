@@ -208,10 +208,16 @@ TARGET_RDF_TEMPLATE="""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-synt
 """
 
 def _target2metadata(pid, target, timestamp, bin_pid, template):
+    # duck type target; if it's a dict, convert to duples, otherwise assume duples
+    try:
+        target = target.items()
+    except AttributeError:
+        pass
     bindings = {
         'pid': pid,
-        'target': target.items(), # FIXME sort according to ADC schema using oii.utils.order_keys
-        'targetNumber': target['targetNumber'],
+        'target': target,
+        'timestamp': timestamp,
+        'targetNumber': dict(target)['targetNumber'],
         'bin_pid': bin_pid
     }
     return Environment().from_string(template).render(**bindings)
