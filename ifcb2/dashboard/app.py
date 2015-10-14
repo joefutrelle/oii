@@ -7,7 +7,6 @@ from io import BytesIO
 import re
 import PIL
 import shutil
-from oii.utils import gen_id
 from array import array
 from zipfile import ZipFile
 from lxml import html
@@ -23,7 +22,7 @@ import numpy as np
 
 from skimage.segmentation import find_boundaries
 
-from oii.utils import coalesce, memoize
+from oii.utils import coalesce, memoize, gen_id, order_keys
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime, utcdtnow
 from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
@@ -740,19 +739,20 @@ def serve_pid(pid):
         if extension == 'json':
             return Response(json.dumps(target),mimetype=MIME_JSON)
         target = get_target_metadata(target,targets)
+        target_ordered = [(k,target[k]) for k in order_keys(target, req.adc_cols)]
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
-            return Response(target2xml(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+            return Response(target2xml(req.canonical_pid, target_ordered, req.timestamp, canonical_bin_pid), mimetype='text/xml')
         if extension == 'rdf':
-            return Response(target2rdf(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+            return Response(target2rdf(req.canonical_pid, target_ordered, req.timestamp, canonical_bin_pid), mimetype='text/xml')
         if extension in ['html', 'htm']:
             template = {
                 'static': STATIC,
                 'target_pid': req.canonical_pid,
                 'bin_pid': canonical_bin_pid,
                 'properties': target,
-                'target': target.items(), # FIXME use order_keys
+                'target': target_ordered,
                 'date': req.timestamp
             }
             return template_response('target.html',**template)
@@ -777,8 +777,7 @@ def serve_pid(pid):
         # end of views
         # not a special view, handle representations of targets
         if req.extension=='csv':
-            adc_cols = req.parsed[ADC_COLS].split(' ')
-            lines = targets2csv(targets,adc_cols)
+            lines = targets2csv(targets,req.adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
