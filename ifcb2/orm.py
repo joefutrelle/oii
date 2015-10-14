@@ -11,7 +11,7 @@ from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric, 
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, foreign, remote
 from flask.ext.user import UserMixin
 
 from oii.times import text2utcdatetime
@@ -105,6 +105,11 @@ class BinTag(Base):
     ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
     user_email = Column(String)
     
+    # this is a read-only relationship allowing a user to be deleted without invalidating
+    # tags that the user has made
+    user = relationship('User',uselist=False,primaryjoin='BinTag.user_email==User.email',
+                        foreign_keys='User.email')
+    
     bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
                         
@@ -123,6 +128,11 @@ class BinComment(Base):
     ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
     user_email = Column(String, index=True)
     comment = Column(String, index=True)
+
+    # this is a read-only relationship allowing a user to be deleted without invalidating
+    # comments that the user has made
+    user = relationship('User',uselist=False,primaryjoin='BinComment.user_email==User.email',
+                        foreign_keys='User.email')
     
     bin = relationship('Bin', backref=backref('comments',order_by=ts,
                         cascade='all, delete-orphan'))
