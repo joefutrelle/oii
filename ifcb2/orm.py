@@ -134,6 +134,10 @@ class BinComment(Base):
     user = relationship('User',uselist=False,primaryjoin='BinComment.user_email==User.email',
                         foreign_keys='User.email')
     
+    @property
+    def username(self):
+        return '%s %s' % (self.user.first_name, self.user.last_name)
+            
     bin = relationship('Bin', backref=backref('comments',order_by=ts,
                         cascade='all, delete-orphan'))
                         

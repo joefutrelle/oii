@@ -37,7 +37,7 @@ from oii.image.pilutils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import files
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role, UserRoles
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, BinComment, User, Role, UserRoles
 
 from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
@@ -640,7 +640,57 @@ def serve_remove_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
     Tagging(session, ts_label).remove_tag(b, tag_name)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+### comments ###
+
+def comment2dict(c):
+    return {
+        'id': c.id,
+        'author': c.username,
+        'ts': iso8601(c.ts.timetuple()),
+        'body': c.comment
+    }
+
+@app.route('/api/debug_comments/<url:pid>')
+def serve_debug_comments(pid):
+    return template_response('debug_comments.html', **{
+        'static': STATIC,
+        'bin_pid': pid
+    });
+
+@app.route('/api/comments/<url:pid>')
+def serve_comments(pid):
+    bin = pid2bin(pid)
+    r = [comment2dict(bc) for bc in bin.comments]
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/add_comment/<url:pid>',methods=['POST'])
+@login_required
+def serve_add_comment(pid):
+    bc = BinComment(comment=request.form['body'], user_email=current_user.email)
+    bin = pid2bin(pid)
+    bin.comments.append(bc)
+    try:
+        session.commit()
+        return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
+    except:
+        session.rollback()
+    abort(500)
     
+@app.route('/api/delete_comment/<int:id>')
+@login_required
+def serve_delete_comment(id):
+    bc = session.query(BinComment).filter(BinComment.id==id).first()
+    if bc is None:
+        abort(404)
+    session.delete(bc)
+    try:
+        session.commit()
+        return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
+    except:
+        session.rollback()
+    abort(500)
+
 ### files and accession ###
 
 def parse_bin_query(ts_label, pid):
@@ -661,6 +711,9 @@ def parsed2files(parsed):
     b = parsed2bin(parsed)
     return b.files
 
+def pid2bin(pid):
+    return parsed2bin(parse_bin_query(None, pid))
+    
 def pid2files(ts_label,pid):
     parsed = parse_bin_query(ts_label, pid)
     return parsed2files(parsed)
