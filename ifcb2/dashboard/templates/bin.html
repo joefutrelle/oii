@@ -6,24 +6,25 @@
 $(document).ready(function() {
     $('#bin_view').bin_page('{{bin_pid}}','{{time_series}}');
     $('#bin_metadata').collapsing('metadata',0);
+    $('#targets').collapsing('targets',1);
     <!-- files view -->
     $.getJSON('/{{time_series}}/api/files/{{bin_pid}}',function(r) {
-      $.each(r, function(ix, f) {
-        $('#fixity table').append('<tr class="tbl">'+
-	  '<td class="tbl"><a href="/{{time_series}}/'+f.filename+'">'+f.filename+'</a></td>'+
-	  '<td class="tbl">'+f.length+'</td>'+
-	  '<td class="tbl">'+f.sha1+'</td>'+
-	  '<td class="tbl">'+f.fix_time+'</td>'+
-	  '<td class="tbl">'+f.local_path+'</td>'+
-	  '<td class="tbl">'+
-            (f.check.exists?'exists':'does not exist')+', '+
-            (f.check.length?'length matches':'length does not match')+' '+
-          '</td>'+
-          '</tr>'
-         );
+        $.each(r, function(ix, f) {
+            $('#fixity').append('<tr class="tbl">'+
+                '<td class="tbl"><a href="/{{time_series}}/'+f.filename+'">'+f.filename+'</a></td>'+
+                '<td class="tbl" title="'+f.length+'">'+filesize(f.length)+'</td>'+
+                '<td class="tbl">'+f.sha1+'</td>'+
+                '<td class="tbl">'+f.fix_time+'</td>'+
+                '<td class="tbl">'+f.local_path+'</td>'+
+                '<td class="tbl">'+
+                (f.check.exists?'exists':'does not exist')+', '+
+                (f.check.length?'length matches':'length does not match')+' '+
+                '</td>'+
+            '</tr>');
+        });
         $('#fixity tr:even').addClass('tbl_even');
-        $('#fixity').css('display','block');
-      });
+        $('#fixity').collapsing('files',1);
+        $('#fixity_container').css('display','inline-block');
     });
 });
     </script>
@@ -51,9 +52,10 @@ $(document).ready(function() {
     </div>
   </div>
 
+<div style="clear:both"></div>
 <!-- fixity -->
-<div id="fixity" style="display:none">
-<table class="major inline">
+<div id="fixity_container" class="major inline" style="display:none">
+<table id="fixity">
 <tr class="tbl">
   <th class="tbl">filename</th>
   <th class="tbl">length</th>
@@ -65,10 +67,9 @@ $(document).ready(function() {
 </table>
 </div>
 
-<div style="clear: both"></div>
-
+<div style="clear:both"></div>
 <!-- targets -->
-<div><table class="major">
+<div class="major inline"><table id="targets">
 <tr class="tbl">
   <th class="tbl">#/trigger</th>
   <th class="tbl">pid</th>
