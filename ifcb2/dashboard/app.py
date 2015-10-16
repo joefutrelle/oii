@@ -644,11 +644,16 @@ def serve_remove_tag(ts_label, tag_name, pid):
 ### comments ###
 
 def comment2dict(c):
+    try:
+        deletable = c.user_email==current_user.email or current_user.has_role('Admin')
+    except:
+        deletable = False
     return {
         'id': c.id,
         'author': c.username,
         'ts': iso8601(c.ts.timetuple()),
-        'body': c.comment
+        'body': c.comment,
+        'deletable': deletable
     }
 
 @app.route('/api/debug_comments/<url:pid>')
@@ -683,10 +688,10 @@ def serve_delete_comment(id):
     bc = session.query(BinComment).filter(BinComment.id==id).first()
     if bc is None:
         abort(404)
-    session.delete(bc)
+    bc.bin.comments.remove(bc)
     try:
         session.commit()
-        return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
+        return Response(json.dumps(dict(deleted=True)), mimetype=MIME_JSON)
     except:
         session.rollback()
     abort(500)

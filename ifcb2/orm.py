@@ -108,7 +108,7 @@ class BinTag(Base):
     # this is a read-only relationship allowing a user to be deleted without invalidating
     # tags that the user has made
     user = relationship('User',uselist=False,primaryjoin='BinTag.user_email==User.email',
-                        foreign_keys='User.email')
+                        foreign_keys='User.email',passive_deletes=True)
     
     bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
@@ -132,7 +132,7 @@ class BinComment(Base):
     # this is a read-only relationship allowing a user to be deleted without invalidating
     # comments that the user has made
     user = relationship('User',uselist=False,primaryjoin='BinComment.user_email==User.email',
-                        foreign_keys='User.email')
+                        foreign_keys='User.email',passive_deletes=True)
     
     @property
     def username(self):

@@ -19,6 +19,7 @@ class Tagging(object):
             self.session.commit()
         except IntegrityError:
             self.session.rollback()
+            raise
     def add_tag(self, b, tag, user_email=None, commit=True):
         """add a tag to a bin."""
         # head off duplicates
@@ -28,13 +29,8 @@ class Tagging(object):
             b.bintags.append(tag)
             self._commit(commit)
     def remove_tag(self, b, tag, commit=True):
-        """remove a tag from a bin"""
-        tag = normalize_tag(tag)
-        try:
-            b.tags.remove(tag)
-            self._commit(commit)
-        except ValueError:
-            pass
+        b.tags.remove(normalize_tag(tag))
+        self._commit(commit)
     def tag_cloud(self):
         """get a dict of tags and frequency for a given time series"""
         rows = self.session.query(BinTag.tag, func.count(BinTag.tag)).\

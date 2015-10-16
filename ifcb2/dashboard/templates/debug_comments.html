@@ -4,38 +4,10 @@
   {{ super() }}
 <script type="text/javascript">
 $(document).ready(function() {
-    var refresh_comments = function() {
-        $.getJSON('/api/comments/{{bin_pid}}', function(r) {
-            $('.comments').empty();
-            $.each(r, function(ix, c) {
-                $('.comments').append('<div class="comment">'+
-                    '<div class="comment_author">'+c.author+'</div>'+
-                    '<div class="comment_ts timeago" title="'+c.ts+'">'+c.ts+'</div>'+
-                    '<div class="comment_body">'+c.body+'</div>'+
-                    '<button class="delete_comment">Delete</button>'+
-                '</div>').find('.timeago').timeago()
-                .end().find('.comment:last .delete_comment').on('click', function() {
-                    if(confirm('really delete this comment?')) {
-                        $.getJSON('/api/delete_comment/'+c.id, function() {
-                            refresh_comments();
-                        });
-                    }
-                });
-            });
-        });
-    };
-    $('#add_comment').on('click', function() {
-        body = $('#new_comment_body').val();
-        $.post('/api/add_comment/{{bin_pid}}', { body: body }, function() {
-            refresh_comments();
-        });
-    });
-    refresh_comments();
+    $('.comments').bin_comments('{{bin_pid}}');
 });
 </script>
 {% endblock %}
 {% block content %}
 <div class="comments"></div>
-<input id="new_comment_body" type="text">
-<button id="add_comment">Add comment</button>
 {% endblock %}
