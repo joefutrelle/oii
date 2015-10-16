@@ -195,6 +195,7 @@ img.logo {
 }
 .comment {
     border: 1px solid #888888;
+    box-shadow: 0px 0px 2px #777777;
     border-radius: 4px;
     background: white;
     margin-top: 5px;

@@ -58,6 +58,7 @@
                     .append('<div class="bin_links"></div>')
                     .append('<div class="bin_actions biggerText"></div>')
                     .append('<div class="bin_tags biggerText"></div>')
+                    .append('<div class="bin_comments biggerText"></div>')
                     .find('.bin_display')
                     .css('float','left')
                     .end().find('.bin_tags')
@@ -133,6 +134,13 @@
                             $this.find('.bin_tags').binTags(timeseries, pid);
                         }
                     });
+                    $.getJSON('/api/comments/'+pid, function(r) {
+                        $this.find('.bin_comments').empty().append('<div class="pseudolink">'+r.length+' comment(s)')
+                            .find('div.pseudolink').on('click', function() {
+                                $this.find('.bin_comments').empty().append('<div></div>')
+                                    .find('div:last').bin_comments(pid).collapsing('comments',true);
+                            });
+                        });
                     // get the selection and user preferred size/scale from the workspace
                     var viewType = $this.data(VIEW_TYPE); // view type
                     var width = $this.data(WIDTH); // width of displayed view

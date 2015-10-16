@@ -7,7 +7,7 @@
                     $.getJSON('/api/comments_editable/'+bin_pid, function(r) {
                         $this.empty();
                         $.each(r.comments, function(ix, c) {
-                            var button_elt = '';
+                            var delete_control = '';
                             if(c.deletable) {
                                 delete_control = '<a class="close delete_comment"></a>';
                             }
