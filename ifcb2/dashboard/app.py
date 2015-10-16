@@ -643,11 +643,10 @@ def serve_remove_tag(ts_label, tag_name, pid):
 
 ### comments ###
 
-def comment2dict(c):
-    try:
-        deletable = c.user_email==current_user.email or current_user.has_role('Admin')
-    except:
-        deletable = False
+def comment2dict(c, current_user=None):
+    deletable = current_user is not None and \
+        current_user.is_authenticated() and \
+        (c.user_email==current_user.email or current_user.has_role('Admin'))
     return {
         'id': c.id,
         'author': c.username,
@@ -667,6 +666,16 @@ def serve_debug_comments(pid):
 def serve_comments(pid):
     bin = pid2bin(pid)
     r = [comment2dict(bc) for bc in bin.comments]
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/comments_editable/<url:pid>')
+def serve_comments_editable(pid):
+    bin = pid2bin(pid)
+    rc = [comment2dict(c, current_user) for c in bin.comments]
+    r = {
+        'addable': current_user.is_authenticated(),
+        'comments': rc
+    }
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/api/add_comment/<url:pid>',methods=['POST'])
