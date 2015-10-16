@@ -35,7 +35,7 @@
                                 $.post('/api/add_comment/'+bin_pid, { body: body }, function() {
                                     refresh_comments();
                                 });
-                            });
+                            }).end().find('textarea').focus();
                         }
                     });
                 };
