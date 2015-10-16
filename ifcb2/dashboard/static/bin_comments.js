@@ -9,13 +9,12 @@
                         $.each(r.comments, function(ix, c) {
                             var button_elt = '';
                             if(c.deletable) {
-                                button_elt = '<button class="delete_comment">Delete</button>';
+                                delete_control = '<a class="close delete_comment"></a>';
                             }
                             $this.append('<div class="comment">'+
-                                '<div class="comment_author">'+c.author+'</div>'+
-                                '<div class="comment_ts timeago" title="'+c.ts+'">'+c.ts+'</div>'+
+                                '<div class="comment_heading">'+delete_control+c.author+' commented '+
+                                '<span class="comment_ts timeago" title="'+c.ts+'">'+c.ts+'</span></div>'+
                                 '<div class="comment_body">'+c.body+'</div>'+
-                                button_elt+
                             '</div>').find('.timeago').timeago()
                             .end().find('.comment:last .delete_comment').on('click', function() {
                                 if(confirm('really delete this comment?')) {
@@ -26,11 +25,13 @@
                             });
                         });
                         if(r.addable) {
-                            $this.append('<div class="comment">'+
-                                '<input id="new_comment_body" type="text">'+    
+                            $this.append('<div>'+
+                                '<div>'+
+                                   '<textarea class="new_comment_body" rows="5" placeholder="Leave a comment"></textarea>'+ 
+                                '</div>'+
                                 '<button class="add_comment">Add comment</button>'+
                             '</div>').find('button.add_comment').on('click', function() {
-                                var body = $('#new_comment_body').val();
+                                var body = $this.find('.new_comment_body').val();
                                 $.post('/api/add_comment/'+bin_pid, { body: body }, function() {
                                     refresh_comments();
                                 });
