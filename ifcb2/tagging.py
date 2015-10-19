@@ -1,7 +1,7 @@
 import re
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, distinct
 
 from oii.ifcb2.orm import Bin, BinTag
 
@@ -9,7 +9,7 @@ def normalize_tag(tagname):
     return re.sub(r'[^\w ]','',tagname.lower())
     
 class Tagging(object):
-    def __init__(self, session, ts_label):
+    def __init__(self, session, ts_label=None):
         self.session = session
         self.ts_label = ts_label
     def _commit(self, commit):
@@ -47,3 +47,9 @@ class Tagging(object):
             q = q.filter(Bin.tags.contains(tag_name))
         q = q.order_by(Bin.sample_time.desc())
         return q
+    def autocomplete(self, tag_stem):
+        """autocomplete a tag; this query is NOT specific to one timeseries"""
+        rows = self.session.query(distinct(BinTag.tag)).\
+            filter(BinTag.tag.like('%s%%' % tag_stem)).\
+            order_by(BinTag.tag)
+        return list([row[0] for row in rows])

@@ -87,6 +87,13 @@
                                 }).on('focusout', function() {
                                     // user focused out, close the text box
                                     closeForEditing();
+                                }).autocomplete({
+                                    minLength: 2,
+                                    source: function(req, resp) {
+                                        $.getJSON('/autocomplete_tag?stem='+req.term, function(r) {
+                                            resp(r);
+                                        });
+                                    }
                                 });
                         };//openForEditing
                         // set up a "+" button that will open for editing

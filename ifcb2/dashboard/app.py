@@ -163,6 +163,9 @@ def template_response(template, mimetype=None, ttl=None, **kw):
         mimetype = 'application/octet-stream'
     return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
 
+def jsonr(obj):
+    return Response(json.dumps(obj), mimetype=MIME_JSON)
+
 #### generic IFCB utils #####
 # FIXME refactor!
 
@@ -641,6 +644,11 @@ def serve_remove_tag(ts_label, tag_name, pid):
     Tagging(session, ts_label).remove_tag(b, tag_name)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
+@app.route('/autocomplete_tag',methods=['GET','POST'])
+def serve_autocomplete_tag():
+    stem = request.values['stem']
+    return Response(json.dumps(Tagging(session).autocomplete(stem)), mimetype=MIME_JSON)
+    
 ### comments ###
 
 def comment2dict(c, current_user=None):
