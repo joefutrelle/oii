@@ -90,9 +90,7 @@
                                 }).autocomplete({
                                     minLength: 2,
                                     source: function(req, resp) {
-                                        $.getJSON('/autocomplete_tag?stem='+req.term, function(r) {
-                                            resp(r);
-                                        });
+                                        $.getJSON('/autocomplete_tag?stem='+req.term, resp);
                                     }
                                 });
                         };//openForEditing
