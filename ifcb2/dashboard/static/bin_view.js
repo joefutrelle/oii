@@ -135,8 +135,10 @@
                         }
                     });
                     $.getJSON('/api/comments/'+pid, function(r) {
-                        $this.find('.bin_comments').empty().append('<div class="pseudolink">'+r.length+' comment(s)')
-                            .find('div.pseudolink').on('click', function() {
+                        $this.find('.bin_comments').empty().append('<div>'+
+                                '<span class="pseudolink">'+r.length+' comment(s)</span> '+
+                            '</div>')
+                            .find('.pseudolink').on('click', function() {
                                 $this.find('.bin_comments').empty().append('<div></div>')
                                     .find('div:last').bin_comments(pid).collapsing('comments',true);
                             });

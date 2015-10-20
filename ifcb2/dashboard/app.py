@@ -13,11 +13,12 @@ from zipfile import ZipFile
 from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
+from urllib import urlencode
 
 from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 import numpy as np
 
@@ -161,6 +162,8 @@ def template_response(template, mimetype=None, ttl=None, **kw):
         (mimetype, _) = mimetypes.guess_type(template)
     if mimetype is None:
         mimetype = 'application/octet-stream'
+    if 'static' not in kw:
+        kw.update({'static': STATIC})
     return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
 
 def jsonr(obj):
@@ -388,9 +391,9 @@ def volume(ts_label,start=None,end=None):
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
 
-def canonicalize_bin(ts_label, b):
+def canonicalize_bin(b):
     return {
-        'pid': canonicalize(get_url_root(), ts_label, b.lid),
+        'pid': canonicalize(get_url_root(), b.ts_label, b.lid),
         'date': iso8601(b.sample_time.timetuple())
     }
 
@@ -399,7 +402,7 @@ def serve_feed_json(ts_label):
     bins = []
     with Feed(session, ts_label) as feed:
         for b in feed.latest():
-            bins.append(canonicalize_bin(ts_label, b))
+            bins.append(canonicalize_bin(b))
     return Response(json.dumps(bins), mimetype=MIME_JSON)
 
 # elapsed time since most recent bin before timestamp default now
@@ -423,7 +426,7 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
     with Feed(session, ts_label) as feed:
         result = []
         for b in feed.time_range(start, end):
-            r = canonicalize_bin(ts_label, b)
+            r = canonicalize_bin(b)
             r.update(callback(b))
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
@@ -513,7 +516,7 @@ def nearest(ts_label, timestamp):
             break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
-    resp = canonicalize_bin(ts_label, bin)
+    resp = canonicalize_bin(bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 def feed_massage_bins(ts_label,bins,include_skip=False):
@@ -655,20 +658,48 @@ def comment2dict(c, current_user=None):
     deletable = current_user is not None and \
         current_user.is_authenticated() and \
         (c.user_email==current_user.email or current_user.has_role('Admin'))
+    bin_pid = canonicalize_bin(c.bin)['pid']
     return {
         'id': c.id,
+        'bin_pid': bin_pid,
         'author': c.username,
         'ts': iso8601(c.ts.timetuple()),
         'body': c.comment,
         'deletable': deletable
     }
 
-@app.route('/api/debug_comments/<url:pid>')
-def serve_debug_comments(pid):
-    return template_response('debug_comments.html', **{
+COMMENT_PAGE_SIZE=12
+
+def search_comments(ts_label, search_string, page=1):
+    hasNext = False
+    start,end = (page-1)*COMMENT_PAGE_SIZE, (page*COMMENT_PAGE_SIZE) + 1
+    tq = func.plainto_tsquery('english', search_string)
+    q = session.query(BinComment).join(Bin).\
+        filter(Bin.ts_label==ts_label).\
+        filter(BinComment.comment.op('@@')(tq))[start:end]
+    r = [comment2dict(c) for c in q]
+    if len(r) > COMMENT_PAGE_SIZE:
+        hasNext = True
+        r = r[:-1] 
+    return r, hasNext
+    
+@app.route('/<ts_label>/search_comments')
+@app.route('/<ts_label>search_comments/page/<int:page>')
+def serve_search_comments(ts_label, page=1):
+    search_query = request.args.get('q')
+    comments, hasNext = search_comments(ts_label, search_query, page)
+    q = urlencode({'q': search_query})
+    template = {
         'static': STATIC,
-        'bin_pid': pid
-    });
+        'ts_label': ts_label,
+        'query': search_query,
+        'comments': comments,
+        'page': page,
+        'prev': '/%s/search_comments/page/%d?%s' % (ts_label, max(page-1,1),q),
+        'hasNext': hasNext,
+        'next': '/%s/search_comments/page/%d?%s' % (ts_label, page+1,q)
+    }
+    return template_response("comment_search.html", **template)
 
 @app.route('/api/comments/<url:pid>')
 def serve_comments(pid):
@@ -702,6 +733,7 @@ def serve_add_comment(pid):
 @app.route('/api/delete_comment/<int:id>')
 @login_required
 def serve_delete_comment(id):
+    session.expire_all()
     bc = session.query(BinComment).filter(BinComment.id==id).first()
     if bc is None:
         abort(404)

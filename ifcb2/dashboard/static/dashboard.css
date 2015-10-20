@@ -212,6 +212,13 @@ img.logo {
     background: #dddddd;
     padding: 5px;
 }
+.comment_link {
+  text-decoration: none;
+  color: #888888;
+}
+.comment_link:hover {
+  text-decoration: underline;
+}
 .comment_body {
     padding: 5px;
     overflow: hidden;

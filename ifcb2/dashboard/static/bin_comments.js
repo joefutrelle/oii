@@ -1,5 +1,21 @@
 (function($) {
     $.fn.extend({
+        append_comment: function(c, deletable) {
+            return this.each(function() {
+                var delete_control = '';
+                if(deletable) {
+                   delete_control = '<a class="close delete_comment"></a>';
+                }
+                $(this).append('<div class="comment">'+
+                    '<div class="comment_heading">'+delete_control+c.author+' commented '+
+                        '<a href="'+c.bin_pid+'.html" class="comment_link">'+
+                            '<span class="comment_ts timeago" title="'+c.ts+'">'+
+                                c.ts+
+                        '</span></a></div>'+
+                        '<div class="comment_body">'+c.body+'</div>'+
+                    '</div>').find('.timeago').timeago();
+            });
+        },
         bin_comments: function(bin_pid) {
             return this.each(function() {
                 var $this = $(this);
@@ -7,18 +23,11 @@
                     $.getJSON('/api/comments_editable/'+bin_pid, function(r) {
                         $this.empty();
                         $.each(r.comments, function(ix, c) {
-                            var delete_control = '';
-                            if(c.deletable) {
-                                delete_control = '<a class="close delete_comment"></a>';
-                            }
-                            $this.append('<div class="comment">'+
-                                '<div class="comment_heading">'+delete_control+c.author+' commented '+
-                                '<span class="comment_ts timeago" title="'+c.ts+'">'+c.ts+'</span></div>'+
-                                '<div class="comment_body">'+c.body+'</div>'+
-                            '</div>').find('.timeago').timeago()
-                            .end().find('.comment:last .delete_comment').on('click', function() {
-                                if(confirm('really delete this comment?')) {
-                                    $.getJSON('/api/delete_comment/'+c.id, function() {
+                            var cid = c.id;
+                            $this.append_comment(c, c.deletable);
+                            $this.find('.comment:last .delete_comment').on('click', function() {
+                                if(confirm('Really delete this comment?')) {
+                                    $.getJSON('/api/delete_comment/'+cid, function() {
                                         refresh_comments();
                                     });
                                 }

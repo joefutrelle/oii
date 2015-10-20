@@ -142,7 +142,7 @@ class BinComment(Base):
                         cascade='all, delete-orphan'))
                         
     def __repr__(self):
-        return '<Comment %s: "%s" @ %s>' % (self.user_name, self.comment, self.ts)
+        return '<Comment %s: "%s" @ %s>' % (self.username, self.comment, self.ts)
 
 class File(Base):
     __tablename__ = 'fixity'
