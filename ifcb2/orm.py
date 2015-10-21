@@ -109,7 +109,11 @@ class BinTag(Base):
     # tags that the user has made
     user = relationship('User',uselist=False,primaryjoin='BinTag.user_email==User.email',
                         foreign_keys='User.email',passive_deletes=True)
-    
+                        
+    @property
+    def username(self):
+        return '%s %s' % (self.user.first_name, self.user.last_name)
+
     bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
                         
@@ -133,7 +137,7 @@ class BinComment(Base):
     # comments that the user has made
     user = relationship('User',uselist=False,primaryjoin='BinComment.user_email==User.email',
                         foreign_keys='User.email',passive_deletes=True)
-    
+                          
     @property
     def username(self):
         return '%s %s' % (self.user.first_name, self.user.last_name)

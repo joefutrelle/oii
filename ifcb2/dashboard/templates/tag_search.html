@@ -6,6 +6,12 @@
 $(document).ready(function() {
     $('thead tr:even').addClass('tbl_even');
     $('tbody tr:odd').addClass('tbl_even'); // sic
+    $('.skipped').each(function(ix, s) {
+        $(s).bin_skip($(s).attr('title'),true);
+    });
+    $('.unskipped').each(function(ix, s) {
+        $(s).bin_skip($(s).attr('title'),false);
+    });
 });
 </script>
 {% endblock %}
@@ -20,6 +26,9 @@ $(document).ready(function() {
                 <th class="tbl">time</th>
                 <th class="tbl">pid</th>
                 <th class="tbl">tags</th>
+                {% if isAdmin %}
+                <th class="tbl">skip</th>
+                {% endif %}
             </tr>
         </thead>
         <tfoot>
@@ -47,6 +56,13 @@ $(document).ready(function() {
                         <a href="/{{ts_label}}/search_tags/{{tag}}" class="tag_link">{{tag}}</a>
                     </div>{% endfor %}
                 </td>
+                {% if isAdmin %}
+                  {% if row.skip %}
+                    <td class="skipped" title="{{row.pid}}"></td>
+                  {% else %}
+                    <td class="unskipped" title="{{row.pid}}"></td>
+                  {% endif %}
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

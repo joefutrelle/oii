@@ -3,15 +3,17 @@ import re
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, distinct
 
+from oii.orm_utils import page_query
 from oii.ifcb2.orm import Bin, BinTag
 
 def normalize_tag(tagname):
     return re.sub(r'[^\w ]','',tagname.lower())
     
 class Tagging(object):
-    def __init__(self, session, ts_label=None):
+    def __init__(self, session, ts_label=None, page_size=10):
         self.session = session
         self.ts_label = ts_label
+        self.page_size = page_size
     def _commit(self, commit):
         if not commit:
             return
@@ -38,7 +40,7 @@ class Tagging(object):
             filter(Bin.ts_label.like(self.ts_label)).\
             group_by(BinTag.tag, Bin.ts_label)
         return dict(list(rows))
-    def search_tags_all(self, tag_names):
+    def search_tags_all(self, tag_names, page=0):
         """find all bins that have all tags"""
         q = self.session.query(Bin).\
             filter(Bin.ts_label.like(self.ts_label))
@@ -46,7 +48,12 @@ class Tagging(object):
             tag_name = normalize_tag(tag_name)
             q = q.filter(Bin.tags.contains(tag_name))
         q = q.order_by(Bin.sample_time.desc())
-        return q
+        return page_query(q, page, self.page_size)
+    def recent(self, page=0):
+        q = self.session.query(BinTag).join(Bin).\
+            filter(Bin.ts_label.like(self.ts_label)).\
+            order_by(BinTag.ts.desc())
+        return page_query(q, page, self.page_size)
     def autocomplete(self, tag_stem):
         """autocomplete a tag; this query is NOT specific to one timeseries"""
         rows = self.session.query(distinct(BinTag.tag)).\

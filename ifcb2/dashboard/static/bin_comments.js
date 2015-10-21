@@ -39,7 +39,7 @@
                                    '<textarea class="new_comment_body" rows="5" placeholder="Leave a comment"></textarea>'+ 
                                 '</div>'+
                                 '<button class="add_comment">Add comment</button>'+
-                            '</div>').find('button.add_comment').on('click', function() {
+                            '</div>').find('button.add_comment').button().on('click', function() {
                                 var body = $this.find('.new_comment_body').val();
                                 $.post('/api/add_comment/'+bin_pid, { body: body }, function() {
                                     refresh_comments();

@@ -47,6 +47,7 @@ from oii.rbac import security
 from oii.rbac.security import roles_required, login_required, current_user
 
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.comments import Comments
 from oii.ifcb2.tagging import Tagging, normalize_tag
 from oii.ifcb2.formats.adc import Adc
 
@@ -586,22 +587,19 @@ def serve_tags(ts_label, pid):
 def parse_tags(tag_names):
     return [normalize_tag(t.strip()) for t in re.split(r',',tag_names)]
 
-TAG_PAGE_SIZE=20
+TAG_PAGE_SIZE=3
     
 # helper for tag search endpoints
 def search_tags(ts_label, tag_names, page=1):
-    hasNext = False
     tags = parse_tags(tag_names)
-    start,end = (page-1)*TAG_PAGE_SIZE, (page*TAG_PAGE_SIZE) + 1
-    q = Tagging(session, ts_label).search_tags_all(tags)[start:end]
+    r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
+        search_tags_all(tags, page)
     rows = [{
         'time': iso8601(bin.sample_time.timetuple()),
+        'skip': bin.skip,
         'pid': canonicalize(get_url_root(), ts_label, bin.lid),
         'tags': map(unicode,bin.tags)
-    } for bin in q]
-    if len(rows) > TAG_PAGE_SIZE:
-        hasNext = True
-        rows = rows[:-1] 
+    } for bin in r]
     return rows, hasNext
     
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
@@ -614,6 +612,7 @@ def serve_search_tags(ts_label, tag_names, page=1):
 @app.route('/<ts_label>/search_tags/<tag_names>')
 @app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags_template(ts_label, tag_names, page=1):
+    is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
     rows, hasNext = search_tags(ts_label, tag_names, page)
     template = {
         'static': STATIC,
@@ -623,9 +622,32 @@ def serve_search_tags_template(ts_label, tag_names, page=1):
         'page': page,
         'prev': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, max(page-1,1)),
         'hasNext': hasNext,
-        'next': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, page+1)
+        'next': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, page+1),
+        'isAdmin': is_admin
     }
     return template_response("tag_search.html", **template)
+
+def tag2dict(t):
+    bin_pid = canonicalize_bin(t.bin)['pid']
+    return {
+        'id': t.id,
+        'bin_pid': bin_pid,
+        'author': t.username,
+        'ts': iso8601(t.ts.timetuple()),
+        'tag': t.tag
+    }
+
+@app.route('/<ts_label>/api/recent_tags')
+@app.route('/<ts_label>/api/recent_tags/page/<int:page>')
+def serve_recent_tags(ts_label, page=1):
+    tags, hasNext = Tagging(session, ts_label, page_size=TAG_PAGE_SIZE).\
+        recent(page)
+    return jsonr({
+        'tags': [tag2dict(t) for t in tags],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_tags/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_tags/page/%d' % (ts_label, max(page-1,1))
+    })
 
 @app.route('/<ts_label>/api/tag_cloud')
 def serve_tag_cloud(ts_label):
@@ -668,23 +690,27 @@ def comment2dict(c, current_user=None):
         'deletable': deletable
     }
 
-COMMENT_PAGE_SIZE=12
+COMMENT_PAGE_SIZE=10
 
 def search_comments(ts_label, search_string, page=1):
-    hasNext = False
-    start,end = (page-1)*COMMENT_PAGE_SIZE, (page*COMMENT_PAGE_SIZE) + 1
-    tq = func.plainto_tsquery('english', search_string)
-    q = session.query(BinComment).join(Bin).\
-        filter(Bin.ts_label==ts_label).\
-        filter(BinComment.comment.op('@@')(tq))[start:end]
-    r = [comment2dict(c) for c in q]
-    if len(r) > COMMENT_PAGE_SIZE:
-        hasNext = True
-        r = r[:-1] 
-    return r, hasNext
-    
+    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+        search(search_string, page=page)
+    return [comment2dict(c) for c in r], hasNext
+
+@app.route('/<ts_label>/api/recent_comments')
+@app.route('/<ts_label>/api/recent_comments/page/<int:page>')
+def serve_api_recent_comments(ts_label, page=1):
+    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+        recent(page)
+    return jsonr({
+        'comments': [comment2dict(c) for c in r],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_comments/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_comments/page/%d' % (ts_label, max(page-1,1))
+    })        
+
 @app.route('/<ts_label>/search_comments')
-@app.route('/<ts_label>search_comments/page/<int:page>')
+@app.route('/<ts_label>/search_comments/page/<int:page>')
 def serve_search_comments(ts_label, page=1):
     search_query = request.args.get('q')
     comments, hasNext = search_comments(ts_label, search_query, page)
