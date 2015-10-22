@@ -653,8 +653,9 @@ def serve_recent_tags(ts_label, page=1):
     })
 
 @app.route('/<ts_label>/api/tag_cloud')
-def serve_tag_cloud(ts_label):
-    cloud = Tagging(session, ts_label).tag_cloud()
+@app.route('/<ts_label>/api/tag_cloud/limit/<int:limit>')
+def serve_tag_cloud(ts_label, limit=25):
+    cloud = Tagging(session, ts_label).tag_cloud(limit)
     return Response(json.dumps(cloud), mimetype=MIME_JSON)
     
 @app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')

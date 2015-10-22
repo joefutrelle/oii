@@ -118,8 +118,8 @@
         tagCloud: function(ts_label, min_font, max_font) {
             return this.each(function() {
                 var $this = $(this);
-                if(min_font == undefined) { min_font = 18; }
-                if(max_font == undefined) { max_font = 50; }
+                if(min_font == undefined) { min_font = 14; }
+                if(max_font == undefined) { max_font = 35; }
                 $.getJSON('/'+ts_label+'/api/tag_cloud', function(r) {
                     var min_count = 99999;
                     var max_count = 1;
@@ -127,8 +127,6 @@
                         if(tf.count < min_count) { min_count = tf.count; }
                         if(tf.count > max_count) { max_count = tf.count; }
                     });
-                    var min_font = 18;
-                    var max_font = 50;
                     $.each(r, function(ix, tf) {
                         var size = tf.count == min_count ? min_font :
                             (tf.count / max_count) * (max_font - min_font) + min_font;

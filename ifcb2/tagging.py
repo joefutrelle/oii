@@ -33,7 +33,7 @@ class Tagging(object):
     def remove_tag(self, b, tag, commit=True):
         b.tags.remove(normalize_tag(tag))
         self._commit(commit)
-    def tag_cloud(self, limit=50):
+    def tag_cloud(self, limit=25):
         """get a list of of tags and frequency for a given time series"""
         rows = self.session.query(BinTag.tag, func.count(BinTag.tag)).\
             join(Bin).\
