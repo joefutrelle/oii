@@ -1,0 +1,44 @@
+{% extends "master.html" %}
+{% block title %}{{query}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.timeago').timeago();
+    $('.filesize').each(function(ix, elt) {
+        var fs = filesize($(elt).text());
+        $(elt).empty().append(fs);
+    });
+    $.getJSON('/{{ts_label}}/api/recent_comments',function(r) {
+        $.each(r.comments, function(ix, c) {
+            $('#recent_comments').append_comment(c, false, c.bin_pid, c.bin_lid);
+        });
+    });
+    $.getJSON('/{{ts_label}}/api/recent_tags',function(r) {
+        $.each(r.tags, function(ix, t) {
+            $('#recent_tags').append('<div class="major">'+
+                t.author + ' tagged ' + 
+                '<a href="'+t.bin_pid+'.html">'+t.bin_lid+'</a> as '+
+                '<span class="the_tag"></span> '+
+                '<span class="timeago" title="' + t.ts + '"></span>'+
+            '</div>').find('div:last .timeago').timeago()
+            .end().find('div:last .the_tag').addTag('{{ts_label}}',t.tag);
+        });
+    });
+});
+</script>
+{% endblock %}
+{% block content %}
+<div class="major h1">Time series {{ts_label}}</div>
+<div>
+    Total bins: {{total_bins}}
+</div>
+<div>
+    Total data volume: <span class="filesize">{{total_data_volume}}</span>
+</div>
+<div>
+    Most recent bin: <a href="{{mrb.pid}}.html"><span class="timeago" title="{{mrb.date}}"></span></a>
+</div>
+<div id="recent_comments" style="float:left"></div>
+<div id="recent_tags" style="float:right"></div>
+{% endblock %}

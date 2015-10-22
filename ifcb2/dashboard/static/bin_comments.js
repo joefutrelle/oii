@@ -1,10 +1,16 @@
 (function($) {
     $.fn.extend({
-        append_comment: function(c, deletable) {
+        append_comment: function(c, deletable, bin_pid, bin_lid) {
             return this.each(function() {
                 var delete_control = '';
                 if(deletable) {
                    delete_control = '<a class="close delete_comment"></a>';
+                }
+                var bin_link = '';
+                if(bin_pid) {
+                    bin_link = '<div class="comment_heading">'+
+                        '<a href="'+bin_pid+'.html">'+bin_lid+'</a>'+
+                    '</div>';
                 }
                 $(this).append('<div class="comment">'+
                     '<div class="comment_heading">'+delete_control+c.author+' commented '+
@@ -13,6 +19,7 @@
                                 c.ts+
                         '</span></a></div>'+
                         '<div class="comment_body">'+c.body+'</div>'+
+                        bin_link+
                     '</div>').find('.timeago').timeago();
             });
         },

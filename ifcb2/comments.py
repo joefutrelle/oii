@@ -16,5 +16,7 @@ class Comments(object):
         q = q.filter(BinComment.comment.op('@@')(tq))
         return page_query(q, page, self.page_size)
     def recent(self, page=0):
-        q = self.session.query(BinComment).order_by(BinComment.ts.desc())
+        q = self.session.query(BinComment).join(Bin).\
+            filter(Bin.ts_label==self.ts_label).\
+            order_by(BinComment.ts.desc())
         return page_query(q, page, self.page_size)

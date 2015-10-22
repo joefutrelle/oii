@@ -49,6 +49,12 @@ class Feed(object):
             filter(Bin.id==File.bin_id).\
             group_by(func.DATE(Bin.sample_time)).\
             order_by(func.DATE(Bin.sample_time))
+    def total_data_volume(self):
+        return self.session.query(func.sum(File.length)).join(Bin).\
+            filter(Bin.ts_label==self.ts_label).scalar()
+    def total_bins(self):
+        return self.session.query(func.count(Bin.id)).\
+            filter(Bin.ts_label==self.ts_label).scalar()
     def nearest(self,n=1,timestamp=None):
         """nearest bin. timestamp must be a utc datetime, defaults to now"""
         if timestamp is None:

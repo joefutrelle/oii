@@ -587,7 +587,7 @@ def serve_tags(ts_label, pid):
 def parse_tags(tag_names):
     return [normalize_tag(t.strip()) for t in re.split(r',',tag_names)]
 
-TAG_PAGE_SIZE=3
+TAG_PAGE_SIZE=20
     
 # helper for tag search endpoints
 def search_tags(ts_label, tag_names, page=1):
@@ -632,6 +632,7 @@ def tag2dict(t):
     return {
         'id': t.id,
         'bin_pid': bin_pid,
+        'bin_lid': t.bin.lid,
         'author': t.username,
         'ts': iso8601(t.ts.timetuple()),
         'tag': t.tag
@@ -684,6 +685,7 @@ def comment2dict(c, current_user=None):
     return {
         'id': c.id,
         'bin_pid': bin_pid,
+        'bin_lid': c.bin.lid,
         'author': c.username,
         'ts': iso8601(c.ts.timetuple()),
         'body': c.comment,
@@ -771,6 +773,21 @@ def serve_delete_comment(id):
         session.rollback()
     abort(500)
 
+### time series status page ###
+
+@app.route('/<ts_label>/status')
+def serve_timeseries_status(ts_label):
+    feed = Feed(session, ts_label)
+    total_bins = feed.total_bins()
+    total_data_volume = feed.total_data_volume()
+    mrb = feed.latest(1).first()
+    return template_response('timeseries_status.html', **{
+        'ts_label': ts_label,
+        'total_bins': total_bins,
+        'total_data_volume': total_data_volume,
+        'mrb': canonicalize_bin(mrb)
+    });
+    
 ### files and accession ###
 
 def parse_bin_query(ts_label, pid):
