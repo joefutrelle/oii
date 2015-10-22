@@ -597,6 +597,8 @@ def search_tags(ts_label, tag_names, page=1):
     rows = [{
         'time': iso8601(bin.sample_time.timetuple()),
         'skip': bin.skip,
+        'n_comments': len(bin.comments),
+        'lid': bin.lid,
         'pid': canonicalize(get_url_root(), ts_label, bin.lid),
         'tags': map(unicode,bin.tags)
     } for bin in r]
