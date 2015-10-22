@@ -33,13 +33,17 @@ class Tagging(object):
     def remove_tag(self, b, tag, commit=True):
         b.tags.remove(normalize_tag(tag))
         self._commit(commit)
-    def tag_cloud(self):
-        """get a dict of tags and frequency for a given time series"""
+    def tag_cloud(self, limit=50):
+        """get a list of of tags and frequency for a given time series"""
         rows = self.session.query(BinTag.tag, func.count(BinTag.tag)).\
             join(Bin).\
             filter(Bin.ts_label.like(self.ts_label)).\
-            group_by(BinTag.tag, Bin.ts_label)
-        return dict(list(rows))
+            group_by(BinTag.tag).\
+            order_by(func.count(BinTag.tag).desc())[:limit]
+        return [{
+            'tag': row[0],
+            'count': row[1]
+        } for row in sorted(rows, key=lambda row: row[0])]
     def search_tags_all(self, tag_names, page=0):
         """find all bins that have all tags"""
         q = self.session.query(Bin).\

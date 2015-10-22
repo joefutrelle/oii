@@ -49,6 +49,7 @@ $(document).ready(function() {
         });
     };
     more_tags('/{{ts_label}}/api/recent_tags');
+    $('#tag_cloud').tagCloud('{{ts_label}}');
 });
 </script>
 {% endblock %}
@@ -69,7 +70,8 @@ $(document).ready(function() {
     <div id="recent_comments"></div>
     <div id="more_comments"></div>
 </div>
-<div style="float:right">
+<div style="float:right; width:512px">
+    <div id="tag_cloud"></div>
     <div id="recent_tags"></div>
     <div id="more_tags"></div>
 </div>
