@@ -1,5 +1,13 @@
 (function($) {
     $.fn.extend({
+        format_comment_body: function() {
+            return this.each(function() {
+                var comment_text = $(this).html();
+                comment_text = comment_text.replace(/\n/g, '<br/>');
+                console.log(comment_text);
+                $(this).empty().append(comment_text);
+            });
+        },
         append_comment: function(c, deletable, bin_pid, bin_lid) {
             return this.each(function() {
                 var delete_control = '';
@@ -20,7 +28,8 @@
                         '</span></a></div>'+
                         '<div class="comment_body">'+c.body+'</div>'+
                         bin_link+
-                    '</div>').find('.timeago').timeago();
+                    '</div>').find('.timeago').timeago()
+                    .end().find('.comment_body').format_comment_body();
             });
         },
         bin_comments: function(bin_pid) {

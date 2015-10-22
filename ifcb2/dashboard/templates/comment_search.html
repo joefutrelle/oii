@@ -16,6 +16,7 @@ $(document).ready(function() {
         if(e.keyCode != 13) { return; }
         $('#search').trigger('click');
     });
+    $('.comment_body').format_comment_body();
 });
 </script>
 {% endblock %}
@@ -35,7 +36,7 @@ $(document).ready(function() {
             </span>
         </a>
     </div>
-    <div class="comment_body">{{c['body']}}</div>
+    <div class="comment_body">{{c.body}}</div>
     <div class="comment_heading">
         <a href="{{c.bin_pid}}.html">{{c.bin_lid}}</a>
     </div>
