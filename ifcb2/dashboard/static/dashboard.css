@@ -150,6 +150,9 @@ img.logo {
   padding: 7px;
   box-shadow: 0px 0px 5px #777777;
 }
+.bottom_space {
+  margin-bottom: 7px;
+}
 .plain_link {
   text-decoration: none;
   color: #000;
@@ -198,10 +201,11 @@ img.logo {
     cursor: pointer;
 }
 .comment {
-    border: 1px solid #888888;
-    box-shadow: 0px 0px 2px #777777;
+    border: 1px solid #aaaaaa;
+    box-shadow: 0px 0px 4px #777777;
     border-radius: 4px;
-    background: white;
+    background: #dddddd;
+    padding: 2px;
     margin-top: 5px;
     margin-bottom: 8px;
     width: 512px;
@@ -212,7 +216,6 @@ img.logo {
 }
 .comment_heading {
     color: #888888;
-    border-bottom: 1px solid #888888;
     background: #dddddd;
     padding: 5px;
 }
@@ -226,12 +229,14 @@ img.logo {
 .comment_body {
     padding: 5px;
     overflow: hidden;
+    background: white;
 }
 .new_comment_body {
     font-family: sans-serif;
     font-size: 15px;
-    width: 508px;
+    width: 512px;
     resize: vertical;
+    margin-bottom: 5px;
 }
 div.h1 {
     margin-top: 5px;
