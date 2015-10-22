@@ -44,10 +44,12 @@ class Tagging(object):
             'tag': row[0],
             'count': row[1]
         } for row in sorted(rows, key=lambda row: row[0])]
-    def search_tags_all(self, tag_names, page=0):
+    def search_tags_all(self, tag_names, page=0, include_skip=False):
         """find all bins that have all tags"""
         q = self.session.query(Bin).\
             filter(Bin.ts_label.like(self.ts_label))
+        if not include_skip:
+            q = q.filter(~Bin.skip)
         for tag_name in tag_names:
             tag_name = normalize_tag(tag_name)
             q = q.filter(Bin.tags.contains(tag_name))

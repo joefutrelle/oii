@@ -590,10 +590,11 @@ def parse_tags(tag_names):
 TAG_PAGE_SIZE=20
     
 # helper for tag search endpoints
-def search_tags(ts_label, tag_names, page=1):
+def search_tags(ts_label, tag_names, page=1, include_skip=False):
     tags = parse_tags(tag_names)
+    session.expire_all()
     r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
-        search_tags_all(tags, page)
+        search_tags_all(tags, page, include_skip)
     rows = [{
         'time': iso8601(bin.sample_time.timetuple()),
         'skip': bin.skip,
@@ -615,7 +616,7 @@ def serve_search_tags(ts_label, tag_names, page=1):
 @app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags_template(ts_label, tag_names, page=1):
     is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
-    rows, hasNext = search_tags(ts_label, tag_names, page)
+    rows, hasNext = search_tags(ts_label, tag_names, page, include_skip=is_admin)
     template = {
         'static': STATIC,
         'ts_label': ts_label,
