@@ -4,7 +4,6 @@
             return this.each(function() {
                 var comment_text = $(this).html();
                 comment_text = comment_text.replace(/\n/g, '<br/>');
-                console.log(comment_text);
                 $(this).empty().append(comment_text);
             });
         },

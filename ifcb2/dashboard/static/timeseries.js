@@ -96,7 +96,10 @@ function timeseries_setup(e, pid, timeseries) {
 		}
 	    });
 	});
-    $('#timeline').collapsing('timeline',true);
+    $('#timeline').collapsing('timeline',true).on('collapse_state', function(e, cs) {
+        $('#date_label').css('display',cs ? 'block' : 'none');
+        $('#timeline_title').css('display',cs ? 'block' : 'none');
+    });
     // now load the data volume series
     console.log('loading data series...');
     // call the data volume API

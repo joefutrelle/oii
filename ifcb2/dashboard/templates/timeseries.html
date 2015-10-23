@@ -25,18 +25,19 @@ $(document).ready(function() {
   <div id="title_content">
     <div class="title">{{title|safe}}</div>
     <div class="dashboard_links">
+      <select id="ts_menu"></select>
       <span>View <a href="{{base_url}}{{time_series}}/metrics.html">metrics</a>:
       {% for m in all_metrics %}
         <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
       {% endfor %}
       </span>
-      <span>
-        <select id="ts_menu"></select>
-      </span>
+      <span>See <a href="/{{time_series}}/activity">recent activity</a></span>
     </div>
-    <div class="h2">Data volume by day</div>
   </div>
-  <div id="timeline"></div>
+  <div>
+    <div class="h2" id="timeline_title">Data volume by day</div>      
+    <div id="timeline"></div>
+  </div>
 </div>
 <div id="timeseries">
   <div id="date_label" class="major"></div>

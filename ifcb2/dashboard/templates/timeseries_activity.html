@@ -52,7 +52,14 @@ $(document).ready(function() {
     $('#tag_cloud').tagCloud('{{ts_label}}');
     $('button.search').button().on('click', function() {
         var query = $('input.search').val();
-        var url = '/{{ts_label}}/search_comments?' + $.param({q:query});
+        var target = $('#search_target').val();
+        var url = '';
+        if(target=='comments') {
+            url = '/{{ts_label}}/search_comments?' + $.param({q:query});
+        } else {
+            query = query.replace(/ +/g,'+');
+            url = '/{{ts_label}}/search_tags/' + query;
+        }
         window.location.href = url;
     });
     var input = $('input.search');
@@ -67,11 +74,14 @@ $(document).ready(function() {
 {% endblock %}
 {% block content %}
 <div class="major">
-    <div class="title inline">Time series {{ts_label}}</div>
+    <div class="title inline">Recent activity on <a href="/{{ts_label}}">{{ts_label}}</a></div>
     <div style="float:right;">
         <input class="search"></input>
         <button class="search">Search</button><br/>
-        Search comments
+        Search <select id="search_target">
+            <option>comments</option>
+            <option>tags</option>
+        </select>
     </div>
 </div>
 <br/>

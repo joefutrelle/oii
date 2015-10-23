@@ -585,7 +585,7 @@ def serve_tags(ts_label, pid):
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 def parse_tags(tag_names):
-    return [normalize_tag(t.strip()) for t in re.split(r',',tag_names)]
+    return [normalize_tag(t.strip()) for t in re.split(r'[, +]',tag_names)]
 
 TAG_PAGE_SIZE=20
     
@@ -777,15 +777,15 @@ def serve_delete_comment(id):
         session.rollback()
     abort(500)
 
-### time series status page ###
+### time series acrtivity page ###
 
-@app.route('/<ts_label>/status')
+@app.route('/<ts_label>/activity')
 def serve_timeseries_status(ts_label):
     feed = Feed(session, ts_label)
     total_bins = feed.total_bins()
     total_data_volume = feed.total_data_volume()
     mrb = feed.latest(1).first()
-    return template_response('timeseries_status.html', **{
+    return template_response('timeseries_activity.html', **{
         'ts_label': ts_label,
         'total_bins': total_bins,
         'total_data_volume': total_data_volume,
