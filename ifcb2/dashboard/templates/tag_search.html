@@ -17,7 +17,7 @@ $(document).ready(function() {
 {% endblock %}
 {% block content %}
 <div class="major h1">
-    {{ts_label}} bins tagged {{', '.join(tags)}}
+    <a href="/{{ts_label}}">{{ts_label}}</a> bins tagged {{', '.join(tags)}}
 </div>
 <div id="results">
     <table class="major">

@@ -22,7 +22,7 @@ $(document).ready(function() {
 {% endblock %}
 {% block content %}
 <div class="major h1">
-  {{ts_label}} comments matching "{{query}}"
+  <a href="/{{ts_label}}">{{ts_label}}</a> comments matching "{{query}}"
 </div>
 <input type="text" id="query" value="{{query}}"></input>
 <button id="search">Search</button>

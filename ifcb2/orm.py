@@ -112,7 +112,10 @@ class BinTag(Base):
                         
     @property
     def username(self):
-        return '%s %s' % (self.user.first_name, self.user.last_name)
+        try:
+            return '%s %s' % (self.user.first_name, self.user.last_name)
+        except AttributeError:
+            return self.user_email
 
     bin = relationship('Bin', backref=backref('bintags',order_by=id,
                         cascade='all, delete-orphan'))
@@ -140,7 +143,10 @@ class BinComment(Base):
                           
     @property
     def username(self):
-        return '%s %s' % (self.user.first_name, self.user.last_name)
+        try:
+            return '%s %s' % (self.user.first_name, self.user.last_name)
+        except AttributeError:
+            return self.user_email
             
     bin = relationship('Bin', backref=backref('comments',order_by=ts,
                         cascade='all, delete-orphan'))
