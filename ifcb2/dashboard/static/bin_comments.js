@@ -88,8 +88,10 @@
                     window.location.href = url;
                 });
                 var input = $this.find('input.search');
-                var tmp = input.focus().val();
-                input.val('').val(tmp);
+                setTimeout(function() {
+                    var tmp = $(input).focus().val();
+                    $(input).val('').val(tmp);
+                });
                 $(input).on('keyup',function(e) {
                     if(e.keyCode!=13) { return; }
                     $('button.search').click();
