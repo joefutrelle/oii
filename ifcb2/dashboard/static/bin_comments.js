@@ -82,7 +82,7 @@
                     if(target=='comments') {
                         url = '/'+ts_label+'/search_comments?' + $.param({q:query});
                     } else {
-                        query = query.replace(/ +/g,'+');
+                        query = query.replace(/ *, */g,'+');
                         url = '/'+ts_label+'/search_tags/' + query;
                     }
                     window.location.href = url;

@@ -585,7 +585,7 @@ def serve_tags(ts_label, pid):
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 def parse_tags(tag_names):
-    return [normalize_tag(t.strip()) for t in re.split(r'[, +]',tag_names)]
+    return [normalize_tag(t.strip()) for t in re.split(r'[,+]',tag_names)]
 
 TAG_PAGE_SIZE=20
     
