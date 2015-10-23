@@ -68,6 +68,7 @@ function timeseries_setup(e, pid, timeseries) {
 	    }
 	});
     }
+    $('#search').timeseries_search(timeseries);
     // add the timeline control
     $('#timeline').timeline()
 	.timeline_bind('timechange', function(timeline, r) {

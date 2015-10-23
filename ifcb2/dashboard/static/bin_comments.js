@@ -65,6 +65,36 @@
                 };
                 refresh_comments();
             });
+        },
+        timeseries_search: function(ts_label) {
+            return this.each(function() {
+                var $this = $(this);
+                $this.empty().append('<input class="search"></input>'+
+                    '<button class="search">Search</button><br/>'+
+                    'Search <select class="search_target">'+
+                        '<option>comments</option>'+
+                        '<option>tags</option>'+
+                    '</select>');
+                $this.find('button.search').button().on('click', function() {
+                    var query = $('input.search').val();
+                    var target = $('select.search_target').val();
+                    var url = '';
+                    if(target=='comments') {
+                        url = '/'+ts_label+'/search_comments?' + $.param({q:query});
+                    } else {
+                        query = query.replace(/ +/g,'+');
+                        url = '/'+ts_label+'/search_tags/' + query;
+                    }
+                    window.location.href = url;
+                });
+                var input = $this.find('input.search');
+                var tmp = input.focus().val();
+                input.val('').val(tmp);
+                $(input).on('keyup',function(e) {
+                    if(e.keyCode!=13) { return; }
+                    $('button.search').click();
+                });
+            });
         }
     });//$.fn.extend
 })(jQuery);//end of plugin
