@@ -134,15 +134,22 @@
                             $this.find('.bin_tags').binTags(timeseries, pid);
                         }
                     });
+                    var scrollToComments = window.location.hash.substring(1) == 'comments';
                     $.getJSON('/api/comments/'+pid, function(r) {
-                        $this.find('.bin_comments').empty().append('<div>'+
-                                '<span class="pseudolink">'+r.length+' comment(s)</span> '+
-                            '</div>')
-                            .find('.pseudolink').on('click', function() {
-                                $this.find('.bin_comments').empty().append('<div></div>')
-                                    .find('div:last').bin_comments(pid).collapsing('comments',true);
-                            });
-                        });
+                        if(scrollToComments) {
+                            $this.find('.bin_comments').empty().append('<div></div>')
+                                .find('div:last').bin_comments(pid).collapsing('comments',true);
+                            $this.find('.bin_comments').get(0).scrollIntoView();
+                        } else {
+                            $this.find('.bin_comments').empty().append('<div>'+
+                                    '<span class="pseudolink">'+r.length+' comment(s)</span> '+
+                                '</div>')
+                                .find('.pseudolink').on('click', function() {
+                                    $this.find('.bin_comments').empty().append('<div></div>')
+                                        .find('div:last').bin_comments(pid).collapsing('comments',false);
+                                });
+                        }
+                    });
                     // get the selection and user preferred size/scale from the workspace
                     var viewType = $this.data(VIEW_TYPE); // view type
                     var width = $this.data(WIDTH); // width of displayed view

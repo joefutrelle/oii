@@ -29,9 +29,9 @@ $(document).ready(function() {
 {% for c in comments %}
 <div class="comment">
     <div class="comment_heading">
-        {{c['author']}} commented
-        <a href="{{c['bin_pid']}}.html" class="comment_link">
-            <span class="comment_ts timeago" title="{{c['ts']}}">
+        {{c.author}} commented
+        <a href="{{c.bin_pid}}.html#comments" class="comment_link">
+            <span class="comment_ts timeago" title="{{c.ts}}">
                 {{c.ts}}
             </span>
         </a>
