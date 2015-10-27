@@ -1,0 +1,15 @@
+{% extends "master.html" %}
+{% block title %}Debug comments {{bin_pid}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.comments').bin_comments('{{bin_pid}}').collapsing('comments',true);
+});
+</script>
+{% endblock %}
+{% block content %}
+<div class="major inline">
+    <div class="comments"></div>
+</div>
+{% endblock %}

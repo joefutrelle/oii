@@ -1,0 +1,75 @@
+{% extends "master.html" %}
+{% block title %}{{ts_label}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('thead tr:even').addClass('tbl_even');
+    $('tbody tr:odd').addClass('tbl_even'); // sic
+    $('.skipped').each(function(ix, s) {
+        $(s).bin_skip($(s).attr('title'),true);
+    });
+    $('.unskipped').each(function(ix, s) {
+        $(s).bin_skip($(s).attr('title'),false);
+    });
+});
+</script>
+{% endblock %}
+{% block content %}
+<div class="major h1">
+    <a href="/{{ts_label}}">{{ts_label}}</a> bins tagged {{', '.join(tags)}}
+</div>
+<div id="results">
+    <table class="major">
+        <thead>
+            <tr class="tbl">
+                <th class="tbl">time</th>
+                <th class="tbl">pid</th>
+                <th class="tbl">tags</th>
+                <th class="tbl">comments</th>
+                {% if isAdmin %}
+                <th class="tbl">skip</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tfoot>
+            <tr>
+                <td colspan="3">
+                    {% if page > 1 %}
+                        <a class="controlGray" href="{{prev}}">&#x25C0; Previous</a>
+                    {% endif %}
+                    {% if page > 1 and hasNext %}
+                        <span class="controlGray"> | </span>
+                    {% endif %}
+                    {% if hasNext %}
+                        <a class="controlGray" href="{{next}}">Next &#x25B6;</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tfoot>
+        <tbody>
+            {% for row in rows %}
+            <tr class="tbl">
+                <td class="tbl">{{row.time}}</td>
+                <td class="tbl"><a href="{{row.pid}}.html">{{row.lid}}</a></td>
+                <td class="tbh">
+                    {% for tag in row.tags %}<div class="tag inline">
+                        <a href="/{{ts_label}}/search_tags/{{tag}}" class="tag_link">{{tag}}</a>
+                    </div>{% endfor %}
+                </td>
+                <td class="tbh">
+                    <a href="{{row.pid}}.html#comments">{{row.n_comments}} comments</a>
+                </td>
+                {% if isAdmin %}
+                  {% if row.skip %}
+                    <td class="skipped" title="{{row.pid}}"></td>
+                  {% else %}
+                    <td class="unskipped" title="{{row.pid}}"></td>
+                  {% endif %}
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

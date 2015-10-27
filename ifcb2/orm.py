@@ -8,9 +8,10 @@ import pytz
 
 from sqlalchemy import Column, ForeignKey, and_, or_, desc
 from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean, Numeric, UniqueConstraint
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, foreign, remote
 from flask.ext.user import UserMixin
 
 from oii.times import text2utcdatetime
@@ -70,11 +71,17 @@ class Bin(Base):
     sample_time = Column(DateTime(timezone=True), index=True)
     skip = Column(Boolean, default=False)
 
+    lat = Column(Numeric, index=True)
+    lon = Column(Numeric, index=True)
+    depth = Column(Numeric, index=True)
+    
     triggers = Column(Integer,default=0)
     duration = Column(Numeric,default=0)
     temperature = Column(Numeric,default=0)
     humidity = Column(Numeric,default=0)
 
+    tags = association_proxy('bintags', 'tag', creator=lambda t: BinTag(tag=unicode(t)))
+    
     __table_args__ = (
         UniqueConstraint('ts_label', 'lid'),
     )
@@ -88,6 +95,64 @@ class Bin(Base):
             return 0
         else:
             return self.triggers / self.duration
+
+class BinTag(Base):
+    __tablename__ = 'bin_tags'
+    
+    id = Column(Integer, primary_key=True)
+    bin_id = Column(Integer, ForeignKey('bins.id'))
+    tag = Column(String, index=True)
+    ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
+    user_email = Column(String)
+    
+    # this is a read-only relationship allowing a user to be deleted without invalidating
+    # tags that the user has made
+    user = relationship('User',uselist=False,primaryjoin='BinTag.user_email==User.email',
+                        foreign_keys='User.email',passive_deletes=True)
+                        
+    @property
+    def username(self):
+        try:
+            return '%s %s' % (self.user.first_name, self.user.last_name)
+        except AttributeError:
+            return self.user_email
+
+    bin = relationship('Bin', backref=backref('bintags',order_by=id,
+                        cascade='all, delete-orphan'))
+                        
+    __table_args__ = (
+        UniqueConstraint('bin_id','tag'),
+    )
+    
+    def __repr__(self):
+        return '#%s' % self.tag
+
+class BinComment(Base):
+    __tablename__ = 'bin_comments'
+    
+    id = Column(Integer, primary_key=True)
+    bin_id = Column(Integer, ForeignKey('bins.id'))
+    ts = Column(DateTime(timezone=True), default=lambda: datetime.now())
+    user_email = Column(String, index=True)
+    comment = Column(String, index=True)
+
+    # this is a read-only relationship allowing a user to be deleted without invalidating
+    # comments that the user has made
+    user = relationship('User',uselist=False,primaryjoin='BinComment.user_email==User.email',
+                        foreign_keys='User.email',passive_deletes=True)
+                          
+    @property
+    def username(self):
+        try:
+            return '%s %s' % (self.user.first_name, self.user.last_name)
+        except AttributeError:
+            return self.user_email
+            
+    bin = relationship('Bin', backref=backref('comments',order_by=ts,
+                        cascade='all, delete-orphan'))
+                        
+    def __repr__(self):
+        return '<Comment %s: "%s" @ %s>' % (self.username, self.comment, self.ts)
 
 class File(Base):
     __tablename__ = 'fixity'
@@ -173,6 +238,9 @@ class User(Base, UserMixin):
     def is_active(self):
       return self.is_enabled
 
+    def has_role(self,role_name):
+        return role_name in [r.name for r in self.roles]
+        
     def __repr__(self):
         return "<User(email='%s')>" % self.email
 

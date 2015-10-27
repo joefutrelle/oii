@@ -1,0 +1,54 @@
+{% extends "master.html" %}
+{% block title %}{{query}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.timeago').timeago();
+    $('#search').button().on('click',function() {
+        var url = '/{{ts_label}}/search_comments?' + $.param({q:$('#query').val()});
+        window.location.href = url;
+    });
+    var input = $('#query');
+    var tmp = input.focus().val();
+    input.val('').val(tmp);
+    input.on('keyup',function(e) {
+        if(e.keyCode != 13) { return; }
+        $('#search').trigger('click');
+    });
+    $('.comment_body').format_comment_body();
+});
+</script>
+{% endblock %}
+{% block content %}
+<div class="major h1">
+  <a href="/{{ts_label}}">{{ts_label}}</a> comments matching "{{query}}"
+</div>
+<input type="text" id="query" value="{{query}}"></input>
+<button id="search">Search</button>
+{% for c in comments %}
+<div class="comment">
+    <div class="comment_heading">
+        {{c.author}} commented
+        <a href="{{c.bin_pid}}.html#comments" class="comment_link">
+            <span class="comment_ts timeago" title="{{c.ts}}">
+                {{c.ts}}
+            </span>
+        </a>
+    </div>
+    <div class="comment_body">{{c.body}}</div>
+    <div class="comment_heading">
+        <a href="{{c.bin_pid}}.html">{{c.bin_lid}}</a>
+    </div>
+</div>
+{% endfor %}
+    {% if page > 1 %}
+        <a class="controlGray" href="{{prev}}">&#x25C0; Previous</a>
+    {% endif %}
+    {% if page > 1 and hasNext %}
+        <span class="controlGray"> | </span>
+    {% endif %}
+    {% if hasNext %}
+        <a class="controlGray" href="{{next}}">Next &#x25B6;</span>
+    {% endif %}
+{% endblock %}

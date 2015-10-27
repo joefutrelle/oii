@@ -13,11 +13,12 @@ from zipfile import ZipFile
 from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
+from urllib import urlencode
 
 from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 import numpy as np
 
@@ -37,15 +38,17 @@ from oii.image.pilutils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import files
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role, UserRoles
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, BinComment, User, Role, UserRoles
 
 from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
-from oii.rbac.security import roles_required
+from oii.rbac.security import roles_required, login_required, current_user
 
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.comments import Comments
+from oii.ifcb2.tagging import Tagging, normalize_tag
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -160,7 +163,12 @@ def template_response(template, mimetype=None, ttl=None, **kw):
         (mimetype, _) = mimetypes.guess_type(template)
     if mimetype is None:
         mimetype = 'application/octet-stream'
+    if 'static' not in kw:
+        kw.update({'static': STATIC})
     return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+
+def jsonr(obj):
+    return Response(json.dumps(obj), mimetype=MIME_JSON)
 
 #### generic IFCB utils #####
 # FIXME refactor!
@@ -293,7 +301,30 @@ def serve_static_admin(filename):
 @app.route('/is_admin')
 @roles_required('Admin')
 def is_admin():
-    return Response(json.dumps(dict(logged_in=True)),mimetype=MIME_JSON)
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+# endpoint to determine if user is logged in as anyone
+@app.route('/is_logged_in')
+@login_required
+def is_logged_in():
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+@app.route('/login_status')
+def login_status():
+    user = current_user
+    if user.is_authenticated():
+        r = {
+            'logged_in': True,
+            'email': user.email,
+            'admin': user.has_role('Admin')
+        }
+    else:
+        r = {
+            'logged_in': False,
+            'email': None,
+            'admin': False
+        }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/api')
 @app.route('/api.html')
@@ -361,9 +392,9 @@ def volume(ts_label,start=None,end=None):
             })
     return Response(json.dumps(dv), mimetype=MIME_JSON)
 
-def canonicalize_bin(ts_label, b):
+def canonicalize_bin(b):
     return {
-        'pid': canonicalize(get_url_root(), ts_label, b.lid),
+        'pid': canonicalize(get_url_root(), b.ts_label, b.lid),
         'date': iso8601(b.sample_time.timetuple())
     }
 
@@ -372,7 +403,7 @@ def serve_feed_json(ts_label):
     bins = []
     with Feed(session, ts_label) as feed:
         for b in feed.latest():
-            bins.append(canonicalize_bin(ts_label, b))
+            bins.append(canonicalize_bin(b))
     return Response(json.dumps(bins), mimetype=MIME_JSON)
 
 # elapsed time since most recent bin before timestamp default now
@@ -396,7 +427,7 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
     with Feed(session, ts_label) as feed:
         result = []
         for b in feed.time_range(start, end):
-            r = canonicalize_bin(ts_label, b)
+            r = canonicalize_bin(b)
             r.update(callback(b))
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
@@ -486,7 +517,7 @@ def nearest(ts_label, timestamp):
             break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
-    resp = canonicalize_bin(ts_label, bin)
+    resp = canonicalize_bin(bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 def feed_massage_bins(ts_label,bins,include_skip=False):
@@ -546,18 +577,246 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-def parsed2files(parsed):
-    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
-    if b is None:
-        raise NotFound
-    return b.files
+### tagging ###
 
-def pid2files(ts_label,pid):
+@app.route('/<ts_label>/api/tags/<url:pid>')
+def serve_tags(ts_label, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+def parse_tags(tag_names):
+    return [normalize_tag(t.strip()) for t in re.split(r'[,+]',tag_names)]
+
+TAG_PAGE_SIZE=20
+    
+# helper for tag search endpoints
+def search_tags(ts_label, tag_names, page=1, include_skip=False):
+    tags = parse_tags(tag_names)
+    session.expire_all()
+    r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
+        search_tags_all(tags, page, include_skip)
+    rows = [{
+        'time': iso8601(bin.sample_time.timetuple()),
+        'skip': bin.skip,
+        'n_comments': len(bin.comments),
+        'lid': bin.lid,
+        'pid': canonicalize(get_url_root(), ts_label, bin.lid),
+        'tags': map(unicode,bin.tags)
+    } for bin in r]
+    return rows, hasNext
+    
+@app.route('/<ts_label>/api/search_tags/<tag_names>')
+@app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags(ts_label, tag_names, page=1):
+    rows, hasNext = search_tags(ts_label, tag_names, page)
+    return Response(json.dumps(rows), mimetype=MIME_JSON)
+
+# next, the HTML template version of this API call
+@app.route('/<ts_label>/search_tags/<tag_names>')
+@app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags_template(ts_label, tag_names, page=1):
+    is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
+    rows, hasNext = search_tags(ts_label, tag_names, page, include_skip=is_admin)
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'tags': parse_tags(tag_names),
+        'rows': rows,
+        'page': page,
+        'prev': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, max(page-1,1)),
+        'hasNext': hasNext,
+        'next': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, page+1),
+        'isAdmin': is_admin
+    }
+    return template_response("tag_search.html", **template)
+
+def tag2dict(t):
+    bin_pid = canonicalize_bin(t.bin)['pid']
+    return {
+        'id': t.id,
+        'bin_pid': bin_pid,
+        'bin_lid': t.bin.lid,
+        'author': t.username,
+        'ts': iso8601(t.ts.timetuple()),
+        'tag': t.tag
+    }
+
+@app.route('/<ts_label>/api/recent_tags')
+@app.route('/<ts_label>/api/recent_tags/page/<int:page>')
+def serve_recent_tags(ts_label, page=1):
+    tags, hasNext = Tagging(session, ts_label, page_size=TAG_PAGE_SIZE).\
+        recent(page)
+    return jsonr({
+        'tags': [tag2dict(t) for t in tags],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_tags/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_tags/page/%d' % (ts_label, max(page-1,1))
+    })
+
+@app.route('/<ts_label>/api/tag_cloud')
+@app.route('/<ts_label>/api/tag_cloud/limit/<int:limit>')
+def serve_tag_cloud(ts_label, limit=25):
+    cloud = Tagging(session, ts_label).tag_cloud(limit)
+    return Response(json.dumps(cloud), mimetype=MIME_JSON)
+    
+@app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
+@login_required
+def serve_add_tag(ts_label, tag_name, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    user_email = current_user.email
+    Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
+@login_required
+def serve_remove_tag(ts_label, tag_name, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    Tagging(session, ts_label).remove_tag(b, tag_name)
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/autocomplete_tag',methods=['GET','POST'])
+def serve_autocomplete_tag():
+    stem = request.values['stem']
+    return Response(json.dumps(Tagging(session).autocomplete(stem)), mimetype=MIME_JSON)
+    
+### comments ###
+
+def comment2dict(c, current_user=None):
+    deletable = current_user is not None and \
+        current_user.is_authenticated() and \
+        (c.user_email==current_user.email or current_user.has_role('Admin'))
+    bin_pid = canonicalize_bin(c.bin)['pid']
+    return {
+        'id': c.id,
+        'bin_pid': bin_pid,
+        'bin_lid': c.bin.lid,
+        'author': c.username,
+        'ts': iso8601(c.ts.timetuple()),
+        'body': c.comment,
+        'deletable': deletable
+    }
+
+COMMENT_PAGE_SIZE=10
+
+def search_comments(ts_label, search_string, page=1):
+    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+        search(search_string, page=page)
+    return [comment2dict(c) for c in r], hasNext
+
+@app.route('/<ts_label>/api/recent_comments')
+@app.route('/<ts_label>/api/recent_comments/page/<int:page>')
+def serve_api_recent_comments(ts_label, page=1):
+    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+        recent(page)
+    return jsonr({
+        'comments': [comment2dict(c) for c in r],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_comments/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_comments/page/%d' % (ts_label, max(page-1,1))
+    })        
+
+@app.route('/<ts_label>/search_comments')
+@app.route('/<ts_label>/search_comments/page/<int:page>')
+def serve_search_comments(ts_label, page=1):
+    search_query = request.args.get('q')
+    comments, hasNext = search_comments(ts_label, search_query, page)
+    q = urlencode({'q': search_query})
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'query': search_query,
+        'comments': comments,
+        'page': page,
+        'prev': '/%s/search_comments/page/%d?%s' % (ts_label, max(page-1,1),q),
+        'hasNext': hasNext,
+        'next': '/%s/search_comments/page/%d?%s' % (ts_label, page+1,q)
+    }
+    return template_response("comment_search.html", **template)
+
+@app.route('/api/comments/<url:pid>')
+def serve_comments(pid):
+    bin = pid2bin(pid)
+    r = [comment2dict(bc) for bc in bin.comments]
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/comments_editable/<url:pid>')
+def serve_comments_editable(pid):
+    bin = pid2bin(pid)
+    rc = [comment2dict(c, current_user) for c in bin.comments]
+    r = {
+        'addable': current_user.is_authenticated(),
+        'comments': rc
+    }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/add_comment/<url:pid>',methods=['POST'])
+@login_required
+def serve_add_comment(pid):
+    bc = BinComment(comment=request.form['body'], user_email=current_user.email)
+    bin = pid2bin(pid)
+    bin.comments.append(bc)
+    try:
+        session.commit()
+        return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
+    except:
+        session.rollback()
+    abort(500)
+    
+@app.route('/api/delete_comment/<int:id>')
+@login_required
+def serve_delete_comment(id):
+    session.expire_all()
+    bc = session.query(BinComment).filter(BinComment.id==id).first()
+    if bc is None:
+        abort(404)
+    bc.bin.comments.remove(bc)
+    try:
+        session.commit()
+        return Response(json.dumps(dict(deleted=True)), mimetype=MIME_JSON)
+    except:
+        session.rollback()
+    abort(500)
+
+### time series acrtivity page ###
+
+@app.route('/<ts_label>/activity')
+def serve_timeseries_status(ts_label):
+    feed = Feed(session, ts_label)
+    total_bins = feed.total_bins()
+    total_data_volume = feed.total_data_volume()
+    mrb = feed.latest(1).first()
+    return template_response('timeseries_activity.html', **{
+        'ts_label': ts_label,
+        'total_bins': total_bins,
+        'total_data_volume': total_data_volume,
+        'mrb': canonicalize_bin(mrb)
+    });
+    
+### files and accession ###
+
+def parse_bin_query(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
+        abort(404)
+    return parsed
+    
+def parsed2bin(parsed):
+    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
+    if b is None:
         raise NotFound
+    return b
+    
+def parsed2files(parsed):
+    b = parsed2bin(parsed)
+    return b.files
+
+def pid2bin(pid):
+    return parsed2bin(parse_bin_query(None, pid))
+    
+def pid2files(ts_label,pid):
+    parsed = parse_bin_query(ts_label, pid)
     return parsed2files(parsed)
 
 def file2dict(f):

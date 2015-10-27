@@ -12,6 +12,11 @@ body {
     padding: 0px 0px 0px 0px;
     -ms-overflow-style: scrollbar;
 }
+.normal_font {
+    font-weight: normal;
+    font-family: sans-serif;
+    font-size: small;
+}
 img {
     border: none;
 }
@@ -48,6 +53,10 @@ td.tbl {
     padding-left: 4px;
     padding-right: 4px;
     font-family: monospace;
+}
+td.tbh {
+    padding-left: 4px;
+    padding-right: 4px;
 }
 th.tbl {
     font-family: sans-serif;
@@ -146,10 +155,93 @@ img.logo {
   padding: 7px;
   box-shadow: 0px 0px 5px #777777;
 }
+.bottom_space {
+  margin-bottom: 7px;
+}
+.plain_link {
+  text-decoration: none;
+  color: #000;
+}
+.tag_link {
+  text-decoration: none;
+  color: #000;
+}
+.tag_link:hover {
+  text-decoration: underline;
+}
 .inline {
   margin-top: 15px;
   margin-bottom: 15px;
   display: inline-block;
+}
+.tag {
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background: #ffffff;
+  padding: 3px 8px 3px 8px;
+  box-shadow: 0px 0px 2px #777777;
+  margin: 3px;
+  font-family: sans-serif;
+}
+.removeable_tag {
+    font-family: sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #888888;
+    cursor: pointer;
+}
+.removeable_tag:before {
+    content: '\000d7\a0';
+}
+.addable_tag {
+    font-family: sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #888888;
+}
+.addable_tag:after {
+    content: '+';
+}
+.add_tag {
+    cursor: pointer;
+}
+.comment {
+    border: 1px solid #aaaaaa;
+    box-shadow: 0px 0px 4px #777777;
+    border-radius: 4px;
+    background: #dddddd;
+    padding: 2px;
+    margin-top: 5px;
+    margin-bottom: 8px;
+    width: 512px;
+}
+.delete_comment {
+    margin-right: 3px;
+    height: 7px;
+}
+.comment_heading {
+    color: #888888;
+    background: #dddddd;
+    padding: 5px;
+}
+.comment_link {
+  text-decoration: none;
+  color: #888888;
+}
+.comment_link:hover {
+  text-decoration: underline;
+}
+.comment_body {
+    padding: 5px;
+    overflow: hidden;
+    background: white;
+}
+.new_comment_body {
+    font-family: sans-serif;
+    font-size: 15px;
+    width: 512px;
+    resize: vertical;
+    margin-bottom: 5px;
 }
 div.h1 {
     margin-top: 5px;
@@ -184,13 +276,14 @@ div.h2 {
 .close {
     display: block;
     float: right;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     font-family: sans-serif;
     font-size: 15px;
     font-weight: bold;
     text-align: right;
     color: #888888;
+    cursor: pointer;
 }
 .close:before {
     content: '\000d7';
