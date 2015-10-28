@@ -146,7 +146,7 @@
                                 '</div>')
                                 .find('.pseudolink').on('click', function() {
                                     $this.find('.bin_comments').empty().append('<div></div>')
-                                        .find('div:last').bin_comments(pid).collapsing('comments',false);
+                                        .find('div:last').bin_comments(pid).collapsing('comments',true);
                                 });
                         }
                     });
