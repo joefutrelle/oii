@@ -42,7 +42,8 @@ class Geo(object):
     def get_track(self):
         q = self.session.query(Bin.lid, Bin.sample_time, Bin.lat, Bin.lon, Bin.depth).\
             filter(Bin.ts_label==self.ts_label).\
-            filter(and_(Bin.lat.isnot(None), Bin.lon.isnot(None)))
+            filter(and_(Bin.lat.isnot(None), Bin.lon.isnot(None))).\
+            order_by(Bin.sample_time)
         track = [dict(zip([LID,DATE,LAT,LON,DEPTH],row)) for row in q]
         return track
     def get_wkt(self):
