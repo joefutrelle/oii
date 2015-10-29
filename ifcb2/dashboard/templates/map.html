@@ -27,7 +27,7 @@ function create_overlay(map) {
     overlay.setMap(map);
     return overlay;
 }
-function draw_track(featureOverlay, color) {
+function draw_track(map, featureOverlay, color) {
     $.getJSON('/{{ts_label}}/api/track',function(r) {
         var format = new ol.format.WKT({
             defaultDataProjection: 'ESPG:4326'
@@ -45,12 +45,14 @@ function draw_track(featureOverlay, color) {
             })
         }));
         featureOverlay.addFeature(feature);
+        var center = ol.proj.transform([r.center.lon, r.center.lat], 'EPSG:4326', 'EPSG:3857');
+        map.getView().setCenter(center);
     });
 }
 $(document).ready(function() {
     var map = create_map();
     var overlay = create_overlay(map);
-    draw_track(overlay, '#ffcc33');
+    draw_track(map, overlay, '#ffcc33');
 });
 </script>
 {% endblock %}

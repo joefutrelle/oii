@@ -1,6 +1,6 @@
 import csv
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from oii.ifcb2 import LID
 from oii.ifcb2.orm import Bin
@@ -46,6 +46,14 @@ class Geo(object):
             order_by(Bin.sample_time)
         track = [dict(zip([LID,DATE,LAT,LON,DEPTH],row)) for row in q]
         return track
+    def get_center(self):
+        """get average location on track"""
+        ll = self.session.query(func.avg(Bin.lon), func.avg(Bin.lat)).\
+            filter(Bin.ts_label==self.ts_label).\
+            filter(and_(Bin.lat.isnot(None),Bin.lon.isnot(None))).first()
+        if ll is not None:
+            return dict(zip([LON,LAT],map(float,ll)))
+        return None
     def get_wkt(self):
         """get track in WKT format"""
         ps = ['%.6f %.6f' % (p[LON], p[LAT]) for p in self.get_track()]

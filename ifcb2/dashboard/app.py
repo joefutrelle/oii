@@ -898,7 +898,12 @@ from oii.ifcb2.geo import Geo
 @app.route('/<ts_label>/api/track')
 def serve_track(ts_label):
     geo = Geo(session,ts_label)
-    return jsonr(dict(track=geo.get_wkt()))
+    center = geo.get_center()
+    wkt = geo.get_wkt()
+    return jsonr({
+        'center': center,
+        'track': wkt
+    })
 
 @app.route('/<ts_label>/map')
 def serve_map(ts_label):
