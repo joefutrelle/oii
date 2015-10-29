@@ -28,7 +28,7 @@ function create_overlay(map) {
     return overlay;
 }
 function draw_track(map, featureOverlay, color) {
-    $.getJSON('/{{ts_label}}/api/track',function(r) {
+    $.getJSON('/{{ts_label}}/api/geo/track',function(r) {
         var format = new ol.format.WKT({
             defaultDataProjection: 'ESPG:4326'
         });
@@ -44,7 +44,7 @@ function draw_track(map, featureOverlay, color) {
                 width: 2
             })
         }));
-        featureOverlay.addFeature(feature);
+        featureOverlay.addFeature(feature); // add LINESTRING for track
         var center = ol.proj.transform([r.center.lon, r.center.lat], 'EPSG:4326', 'EPSG:3857');
         map.getView().setCenter(center);
     });

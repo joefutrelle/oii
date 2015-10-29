@@ -893,18 +893,26 @@ def accede(ts_label):
 
 ### geo ###
 
-from oii.ifcb2.geo import Geo
+from oii.ifcb2.geo import Geo, LAT, LON, DEPTH
 
-@app.route('/<ts_label>/api/track')
+@app.route('/<ts_label>/api/geo/track')
 def serve_track(ts_label):
     geo = Geo(session,ts_label)
     center = geo.get_center()
-    wkt = geo.get_wkt()
+    points = [{
+        'lid': p[LID],
+        'date': iso8601(p['date'].timetuple()),
+        'lat': float(p[LAT]),
+        'lon': float(p[LON]),
+        'depth': float(p[DEPTH])
+    } for p in geo.get_track()]
+    track = geo.get_wkt()
     return jsonr({
         'center': center,
-        'track': wkt
+        'points': points,
+        'track': track
     })
-
+    
 @app.route('/<ts_label>/map')
 def serve_map(ts_label):
     return template_response('map.html', **{
