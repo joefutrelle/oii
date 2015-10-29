@@ -1,0 +1,59 @@
+{% extends "master.html" %}
+{% block title %}{{ts_label}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+function create_map() {
+    // create map based on MapQuest satellite layer
+    var mqLayer = new ol.layer.Tile({
+        source: new ol.source.MapQuest({layer:'sat'})
+    });
+    // center of the universe is Woods Hole MA
+    var woho = ol.proj.transform([-70.661810, 41.526994], 'EPSG:4326', 'EPSG:3857');
+    var aView = new ol.View({
+        center: woho,
+        zoom: 4
+    });
+    var map = new ol.Map({
+        target: 'the_map'
+    });
+    map.addLayer(mqLayer);
+    map.setView(aView);
+    return map;
+}
+function create_overlay(map) {
+    // create an overlay for features
+    var overlay = new ol.FeatureOverlay();
+    overlay.setMap(map);
+    return overlay;
+}
+function draw_track(featureOverlay, color) {
+    $.getJSON('/{{ts_label}}/api/track',function(r) {
+        var format = new ol.format.WKT({
+            defaultDataProjection: 'ESPG:4326'
+        });
+        var geom = format.readGeometry(r.track);
+        geom.transform('EPSG:4326', 'EPSG:3857');
+        var feature = new ol.Feature({
+            geometry: geom,
+            name: '{{ts_label}}'
+        });
+        feature.setStyle(new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: color,
+                width: 2
+            })
+        }));
+        featureOverlay.addFeature(feature);
+    });
+}
+$(document).ready(function() {
+    var map = create_map();
+    var overlay = create_overlay(map);
+    draw_track(overlay, '#ffcc33');
+});
+</script>
+{% endblock %}
+{% block content %}
+<div id="the_map"></div>
+{% endblock %}

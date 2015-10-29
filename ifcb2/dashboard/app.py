@@ -891,6 +891,21 @@ def accede(ts_label):
     workflow_client.wakeup(key)
     return Response(json.dumps(dict(wakeup_key=key)), mimetype=MIME_JSON)
 
+### geo ###
+
+from oii.ifcb2.geo import Geo
+
+@app.route('/<ts_label>/api/track')
+def serve_track(ts_label):
+    geo = Geo(session,ts_label)
+    return jsonr(dict(track=geo.get_wkt()))
+
+@app.route('/<ts_label>/map')
+def serve_map(ts_label):
+    return template_response('map.html', **{
+        'ts_label': ts_label
+    });
+    
 ### bins, targets, and products ###
 
 def get_target_metadata(target,targets):
