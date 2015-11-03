@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 
 from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
@@ -14,12 +15,21 @@ def _time_range_params(start_time=None, end_time=None):
         end_time = datetime.utcfromtimestamp(2147483647)
     return start_time, end_time
 
+def parse_ts_label_tag(ts_label_tag):
+    try:
+        ts_label, tag = re.split(':',ts_label_tag)
+    except ValueError:
+        ts_label, tag = ts_label_tag, None
+    return ts_label, tag
+
 class Feed(object):
     """use with with"""
     def __init__(self, session, ts_label, tag=None):
         self.session = session
-        self.ts_label = ts_label
-        self.tag = tag
+        if tag is None:
+            self.ts_label, self.tag = parse_ts_label_tag(ts_label)
+        else:
+            self.tag = tag
     def __enter__(self):
         return self
     def __exit__(self,type,value,traceback):
@@ -72,8 +82,11 @@ class Feed(object):
         n_before = self._ts_query(end_time=timestamp).\
                    order_by(desc(Bin.sample_time)).\
                    limit(n).all()
-        min_date = datetime2utcdatetime(n_before[-1].sample_time)
-        max_date = timestamp + (timestamp - min_date)
+        try:
+            min_date = datetime2utcdatetime(n_before[-1].sample_time)
+            max_date = timestamp + (timestamp - min_date)
+        except IndexError:
+            max_date = datetime.utcfromtimestamp(2147483647)
         n_after = self._ts_query(start_time=timestamp, end_time=max_date).\
                   order_by(Bin.sample_time).\
                   limit(n).all()

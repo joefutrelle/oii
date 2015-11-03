@@ -432,40 +432,15 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/feed/trigger_rate')
-@app.route('/<ts_label>/api/feed/trigger_rate/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/start/<datetime:start>/end/<datetime:end>')
-def trigger_rate(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'trigger_rate': float(b.trigger_rate)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/temperature')
-@app.route('/<ts_label>/api/feed/temperature/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/start/<datetime:start>/end/<datetime:end>')
-def temperature(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'temperature': float(b.temperature)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/humidity')
-@app.route('/<ts_label>/api/feed/humidity/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/start/<datetime:start>/end/<datetime:end>')
-def humidity(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'humidity': float(b.humidity)
-        }
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/start/<datetime:start>/end/<datetime:end>')
+def serve_metric_series(ts_label,metric,start=None,end=None,s=None):
+    # take advantage of the fact that bin attributes are named the same as our metric names here,
+    # and that they're all floating point
+    callback = lambda b: { metric: float(getattr(b,metric)) }
     return ts_metric(ts_label,callback,start,end,s)
 
 ## metric views ##
@@ -523,12 +498,7 @@ def nearest(ts_label, timestamp):
 def feed_massage_bins(ts_label,bins,include_skip=False):
     resp = []
     for bin in bins:
-        sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        entry = {
-            'pid': pid,
-            'date': sample_time_str
-        }
+        entry = canonicalize_bin(bin)
         if include_skip:
             entry['skip'] = bin.skip
         resp.append(entry);
@@ -559,8 +529,8 @@ def serve_day_admin(ts_label,dt):
     }
     return template_response('day_admin.html',**template)
 
-@app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
-@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
     if not after_before in ['before','after']:
         abort(400)
