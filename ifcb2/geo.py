@@ -47,7 +47,8 @@ class Geo(object):
         track = [dict(zip([LID,DATE,LAT,LON,DEPTH],row)) for row in q]
         return track
     def get_center(self):
-        """get average location on track"""
+        """get average location on track.
+        may not be identical to geospatial centroid"""
         ll = self.session.query(func.avg(Bin.lon), func.avg(Bin.lat)).\
             filter(Bin.ts_label==self.ts_label).\
             filter(and_(Bin.lat.isnot(None),Bin.lon.isnot(None))).first()
