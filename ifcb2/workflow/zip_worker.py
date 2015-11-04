@@ -13,9 +13,11 @@ from oii.ifcb2.represent import binpid2zip
 from oii.workflow import COMPLETED, AVAILABLE, ERROR
 from oii.workflow.client import WorkflowClient
 from oii.workflow.async import async, wakeup_task
+from oii.rbac.utils import secure_upload
 
-### FIXME config this right
-client = WorkflowClient()
+from worker_config import WORKFLOW_URL, API_KEY
+
+client = WorkflowClient(WORKFLOW_URL)
 
 def do_binzip(pid, job):
     def log_callback(msg):
@@ -29,7 +31,7 @@ def do_binzip(pid, job):
         binpid2zip(pid, zip_path)
         # construct binzip URL
         log_callback('depositing %s' % binzip_url)
-        upload(zip_path, binzip_url)
+        secure_upload(zip_path, binzip_url, API_KEY)
     log_callback('deposited %s' % binzip_url)
     client.wakeup()
 
