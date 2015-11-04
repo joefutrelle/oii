@@ -48,7 +48,7 @@ from oii.rbac.security import roles_required, login_required, current_user
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
-from oii.ifcb2.tagging import Tagging, normalize_tag
+from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -349,6 +349,7 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
+    ts_label_notag, tag = parse_ts_label_tag(ts_label)
     template = {
         'static': STATIC,
         'time_series': ts_label,
@@ -364,8 +365,8 @@ def serve_timeseries(ts_label=None, pid=None):
             return redirect(os.path.join(url_root, ts.label), code=302)
         description = ts.description
         if not description:
-            description = ts_label
-        if ts.label == ts_label:
+            description = ts_label_notag
+        if ts.label == ts_label_notag:
             template['page_title'] = html.fromstring(description).text_content()
             template['title'] = description
         all_series.append((ts.label, description))
@@ -1307,7 +1308,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         abort(404)
     adc_path = paths['adc_path']
     roi_path = paths['roi_path']
-    bin_pid = canonicalize(get_url_root(), time_series, parsed['bin_lid'])
+    bin_pid = parsed['namespace'] + parsed['bin_lid']
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))

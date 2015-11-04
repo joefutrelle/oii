@@ -8,11 +8,20 @@ from oii.ifcb2.orm import Bin, BinTag
 
 def normalize_tag(tagname):
     return re.sub(r'[^\w ]','',tagname.lower())
-    
+
+def parse_ts_label_tag(ts_label_tag):
+    if ts_label_tag is None:
+        return None, None
+    try:
+        ts_label, tag = re.split(':',ts_label_tag)
+    except ValueError:
+        ts_label, tag = ts_label_tag, None
+    return ts_label, tag
+
 class Tagging(object):
     def __init__(self, session, ts_label=None, page_size=10):
         self.session = session
-        self.ts_label = ts_label
+        self.ts_label, _ = parse_ts_label_tag(ts_label)
         self.page_size = page_size
     def _commit(self, commit):
         if not commit:

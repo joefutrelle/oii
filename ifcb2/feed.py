@@ -6,7 +6,7 @@ from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 from oii.times import utcdtnow, datetime2utcdatetime
 from oii.ifcb2.orm import Bin, File
 
-from oii.ifcb2.tagging import normalize_tag
+from oii.ifcb2.tagging import parse_ts_label_tag, normalize_tag
 
 def _time_range_params(start_time=None, end_time=None):
     if start_time is None:
@@ -14,13 +14,6 @@ def _time_range_params(start_time=None, end_time=None):
     if end_time is None:
         end_time = datetime.utcfromtimestamp(2147483647)
     return start_time, end_time
-
-def parse_ts_label_tag(ts_label_tag):
-    try:
-        ts_label, tag = re.split(':',ts_label_tag)
-    except ValueError:
-        ts_label, tag = ts_label_tag, None
-    return ts_label, tag
 
 class Feed(object):
     """use with with"""

@@ -2,11 +2,12 @@ from sqlalchemy import func
 
 from oii.orm_utils import page_query
 from oii.ifcb2.orm import Bin, BinComment
+from oii.ifcb2.tagging import parse_ts_label_tag
 
 class Comments(object):
     def __init__(self, session, ts_label=None, page_size=25):
         self.session = session
-        self.ts_label = ts_label
+        self.ts_label, _ = parse_ts_label_tag(ts_label)
         self.page_size = page_size
     def search(self, search_string, page=0):
         tq = func.plainto_tsquery('english', search_string)
