@@ -44,7 +44,7 @@ from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
-from oii.rbac.security import roles_required, login_required, current_user
+from oii.rbac.security import roles_required, login_required, current_user, api_roles_required
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
@@ -1083,6 +1083,7 @@ def serve_pid(pid):
 ####### deposit ########
 
 @app.route('/<url:pid>',methods=['PUT'])
+@api_roles_required('Admin')
 def deposit(pid):
     req = DashboardRequest(pid, request)
     try:
