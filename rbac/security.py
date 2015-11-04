@@ -3,8 +3,9 @@ from functools import wraps
 from flask import Blueprint, request, Response, current_app
 from flask_user import login_required, roles_required, current_user
 from oii.ifcb2.orm import APIKey
+from oii.ioutils import upload
 
-AUTHORIZATION_HEADER='X-Authorization'
+from oii.rbac import AUTHORIZATION_HEADER
 
 def maketoken():
     s = string.ascii_uppercase + string.digits + string.ascii_lowercase
