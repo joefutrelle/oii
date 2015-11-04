@@ -3,6 +3,9 @@ from functools import wraps
 from flask import Blueprint, request, Response, current_app
 from flask_user import login_required, roles_required, current_user
 from oii.ifcb2.orm import APIKey
+from oii.ioutils import upload
+
+from oii.rbac import AUTHORIZATION_HEADER
 
 def maketoken():
     s = string.ascii_uppercase + string.digits + string.ascii_lowercase
@@ -14,8 +17,8 @@ def api_roles_required(*required_roles):
         def decorated_view(*args, **kwargs):
             # default auth status is faluse
             authorized = False
-            # unpack token from Authorization header
-            token = request.headers.get('Authorization')
+            # unpack token from X-Authorization header
+            token = request.headers.get(AUTHORIZATION_HEADER)
             if token and len(token) > 7 and token[0:7] == "Bearer ":
                 token = token[7:].strip()
                 session = current_app.config.get('SESSION')

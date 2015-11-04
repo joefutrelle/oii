@@ -2,9 +2,12 @@
 ifcbAdmin.controller('KeyChainCtrl', ['$scope', 'UserService', 'Restangular', function ($scope, UserService, Restangular) {
 
     var baseKeychain = Restangular.all('api_keys');
-    $scope.users = UserService;
     $scope.newkey = false;
-
+    
+    UserService.list.then(function(r) {
+        $scope.users = r;
+    });
+    
     function refreshKeychain() {
         baseKeychain.getList().then(function(serverResponse) {
             $scope.keychain = serverResponse;
