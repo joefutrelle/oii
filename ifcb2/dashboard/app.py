@@ -579,6 +579,7 @@ def search_tags(ts_label, tag_names, page=1, include_skip=False):
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
 @app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
     rows, hasNext = search_tags(ts_label, tag_names, page)
     return Response(json.dumps(rows), mimetype=MIME_JSON)
 
@@ -586,6 +587,7 @@ def serve_search_tags(ts_label, tag_names, page=1):
 @app.route('/<ts_label>/search_tags/<tag_names>')
 @app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags_template(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
     is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
     rows, hasNext = search_tags(ts_label, tag_names, page, include_skip=is_admin)
     template = {
