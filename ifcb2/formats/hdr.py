@@ -55,5 +55,5 @@ def parse_hdr(lines):
     return props
 
 def parse_hdr_file(path):
-    lines = list(fileinput.input(path))
+    lines = list(fileinput.FileInput(path))
     return parse_hdr(lines)
