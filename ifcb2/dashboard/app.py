@@ -350,10 +350,17 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
     ts_label_notag, tag = parse_ts_label_tag(ts_label)
+    feed = Feed(session, ts_label)
+    total_bins = feed.total_bins()
+    total_data_volume = feed.total_data_volume()
     template = {
         'static': STATIC,
         'time_series': ts_label,
-        'all_metrics': METRICS
+        'all_metrics': METRICS,
+        'tag': tag,
+        'ts_label_notag': ts_label_notag,
+        'total_bins': total_bins,
+        'total_data_volume': total_data_volume
     }
     if pid is not None:
         template['pid'] = pid

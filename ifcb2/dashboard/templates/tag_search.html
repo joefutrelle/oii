@@ -7,10 +7,10 @@ $(document).ready(function() {
     $('thead tr:even').addClass('tbl_even');
     $('tbody tr:odd').addClass('tbl_even'); // sic
     $('.skipped').each(function(ix, s) {
-        $(s).bin_skip($(s).attr('title'),true);
+        $(s).bin_skip($(s).attr('title'),false,true);
     });
     $('.unskipped').each(function(ix, s) {
-        $(s).bin_skip($(s).attr('title'),false);
+        $(s).bin_skip($(s).attr('title'),false,false);
     });
 });
 </script>

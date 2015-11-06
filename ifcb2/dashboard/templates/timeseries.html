@@ -17,15 +17,22 @@ $(document).ready(function() {
         var v = $('#ts_menu option:selected').val();
         window.location = '{{base_url}}' + v;
     });
+    $('.filesize').each(function(ix, elt) {
+        var fs = filesize($(elt).text());
+        $(elt).empty().append(fs);
+    });
 });
 </script>
 {% endblock head %}
 {% block content %}
 <div id="title" class="major">
   <div id="title_content">
-    <div class="title">{{title|safe}}
+    <div class="title">
         {% if tag %}
-        bins tagged <a href="/{{time_series}}/search_tags/{{tag}}">{{tag}}</a>
+        <a href="/{{ts_label_notag}}">{{title|safe}}</a>
+        bins tagged <a href="/{{ts_label_notag}}/search_tags/{{tag}}">{{tag}}</a>
+        {% else %}
+        {{title|safe}}
         {% endif %}
         <div id="search" class="normal_font" style="float:right"></div>
     </div>
@@ -36,11 +43,11 @@ $(document).ready(function() {
         <a href="{{base_url}}{{time_series}}/{{m}}.html">{{m}}</a>
       {% endfor %}
       </span>
-      <span>See <a href="/{{time_series}}/activity">recent activity</a></span>
+      <span>See <a href="/{{ts_label_notag}}/activity">recent activity</a></span>
     </div>
   </div>
   <div>
-    <div class="h2" id="timeline_title">Data volume by day</div>      
+    <div class="h2" id="timeline_title">Data volume (total {{total_bins}} bins, <span class="filesize">{{total_data_volume}}</span>)</div>      
     <div id="timeline"></div>
   </div>
 </div>
