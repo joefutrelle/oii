@@ -18,6 +18,11 @@ $(document).ready(function() {
 {% block content %}
 <div class="major h1">
     <a href="/{{ts_label}}">{{ts_label}}</a> bins tagged {{', '.join(tags)}}
+    <div class="normal_font">See in timeseries:
+        {% for tag in tags %}
+        <a href="/{{ts_label}}:{{tag}}">{{tag}}</a>
+        {% endfor %}
+    </div>
 </div>
 <div id="results">
     <table class="major">

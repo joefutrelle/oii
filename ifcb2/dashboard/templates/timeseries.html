@@ -24,6 +24,9 @@ $(document).ready(function() {
 <div id="title" class="major">
   <div id="title_content">
     <div class="title">{{title|safe}}
+        {% if tag %}
+        bins tagged <a href="/{{time_series}}/search_tags/{{tag}}">{{tag}}</a>
+        {% endif %}
         <div id="search" class="normal_font" style="float:right"></div>
     </div>
     <div class="dashboard_links">
