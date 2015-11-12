@@ -7,17 +7,24 @@ $(document).ready(function() {
     $('thead tr:even').addClass('tbl_even');
     $('tbody tr:odd').addClass('tbl_even'); // sic
     $('.skipped').each(function(ix, s) {
-        $(s).bin_skip($(s).attr('title'),true);
+        $(s).bin_skip($(s).attr('title'),false,true);
     });
     $('.unskipped').each(function(ix, s) {
-        $(s).bin_skip($(s).attr('title'),false);
+        $(s).bin_skip($(s).attr('title'),false,false);
     });
+    $('#search').timeseries_search('{{ts_label}}','{{', '.join(tags)}}','tags');
 });
 </script>
 {% endblock %}
 {% block content %}
 <div class="major h1">
     <a href="/{{ts_label}}">{{ts_label}}</a> bins tagged {{', '.join(tags)}}
+    <div id="search" class="normal_font" style="float:right"></div>
+    <div class="normal_font">See in timeseries:
+        {% for tag in tags %}
+        <a href="/{{ts_label}}:{{tag}}">{{tag}}</a>
+        {% endfor %}
+    </div>
 </div>
 <div id="results">
     <table class="major">

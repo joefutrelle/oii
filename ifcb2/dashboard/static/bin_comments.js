@@ -66,14 +66,18 @@
                 refresh_comments();
             });
         },
-        timeseries_search: function(ts_label) {
+        timeseries_search: function(ts_label, query, tags_or_comments) {
             return this.each(function() {
                 var $this = $(this);
-                $this.empty().append('<input class="search"></input>'+
+                if(query==undefined) { query = ''; }
+                if(tags_or_comments==undefined) { tags_or_comments='neither'; }
+                var tag_select = tags_or_comments == 'tags' ? ' selected="selected"' : '';
+                var comment_select = tags_or_comments == 'comments' ? ' selected="selected"' : '';
+                $this.empty().append('<input class="search" value="'+query+'"></input>'+
                     '<button class="search">Search</button><br/>'+
                     'Search <select class="search_target">'+
-                        '<option>comments</option>'+
-                        '<option>tags</option>'+
+                        '<option'+comment_select+'>comments</option>'+
+                        '<option'+tag_select+'>tags</option>'+
                     '</select>');
                 $this.find('button.search').button().on('click', function() {
                     var query = $('input.search').val();

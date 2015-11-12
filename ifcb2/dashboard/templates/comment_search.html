@@ -5,17 +5,7 @@
 <script type="text/javascript">
 $(document).ready(function() {
     $('.timeago').timeago();
-    $('#search').button().on('click',function() {
-        var url = '/{{ts_label}}/search_comments?' + $.param({q:$('#query').val()});
-        window.location.href = url;
-    });
-    var input = $('#query');
-    var tmp = input.focus().val();
-    input.val('').val(tmp);
-    input.on('keyup',function(e) {
-        if(e.keyCode != 13) { return; }
-        $('#search').trigger('click');
-    });
+    $('#search').timeseries_search('{{ts_label}}','{{query}}','comments');
     $('.comment_body').format_comment_body();
 });
 </script>
@@ -23,9 +13,9 @@ $(document).ready(function() {
 {% block content %}
 <div class="major h1">
   <a href="/{{ts_label}}">{{ts_label}}</a> comments matching "{{query}}"
+  <div id="search" class="normal_font" style="float:right"></div>
+  <div>&nbsp;</div>
 </div>
-<input type="text" id="query" value="{{query}}"></input>
-<button id="search">Search</button>
 {% for c in comments %}
 <div class="comment">
     <div class="comment_heading">

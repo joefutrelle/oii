@@ -48,7 +48,7 @@ from oii.rbac.security import roles_required, login_required, current_user, api_
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
-from oii.ifcb2.tagging import Tagging, normalize_tag
+from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
 from oii.ifcb2.formats.adc import Adc
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -349,10 +349,18 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
+    ts_label_notag, tag = parse_ts_label_tag(ts_label)
+    feed = Feed(session, ts_label)
+    total_bins = feed.total_bins()
+    total_data_volume = feed.total_data_volume()
     template = {
         'static': STATIC,
         'time_series': ts_label,
-        'all_metrics': METRICS
+        'all_metrics': METRICS,
+        'tag': tag,
+        'ts_label_notag': ts_label_notag,
+        'total_bins': total_bins,
+        'total_data_volume': total_data_volume
     }
     if pid is not None:
         template['pid'] = pid
@@ -364,8 +372,8 @@ def serve_timeseries(ts_label=None, pid=None):
             return redirect(os.path.join(url_root, ts.label), code=302)
         description = ts.description
         if not description:
-            description = ts_label
-        if ts.label == ts_label:
+            description = ts_label_notag
+        if ts.label == ts_label_notag:
             template['page_title'] = html.fromstring(description).text_content()
             template['title'] = description
         all_series.append((ts.label, description))
@@ -432,40 +440,15 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
             result.append(r)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/feed/trigger_rate')
-@app.route('/<ts_label>/api/feed/trigger_rate/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/start/<datetime:start>/end/<datetime:end>')
-def trigger_rate(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'trigger_rate': float(b.trigger_rate)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/temperature')
-@app.route('/<ts_label>/api/feed/temperature/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/start/<datetime:start>/end/<datetime:end>')
-def temperature(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'temperature': float(b.temperature)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/humidity')
-@app.route('/<ts_label>/api/feed/humidity/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/start/<datetime:start>/end/<datetime:end>')
-def humidity(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'humidity': float(b.humidity)
-        }
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/start/<datetime:start>/end/<datetime:end>')
+def serve_metric_series(ts_label,metric,start=None,end=None,s=None):
+    # take advantage of the fact that bin attributes are named the same as our metric names here,
+    # and that they're all floating point
+    callback = lambda b: { metric: float(getattr(b,metric)) }
     return ts_metric(ts_label,callback,start,end,s)
 
 ## metric views ##
@@ -523,12 +506,7 @@ def nearest(ts_label, timestamp):
 def feed_massage_bins(ts_label,bins,include_skip=False):
     resp = []
     for bin in bins:
-        sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        entry = {
-            'pid': pid,
-            'date': sample_time_str
-        }
+        entry = canonicalize_bin(bin)
         if include_skip:
             entry['skip'] = bin.skip
         resp.append(entry);
@@ -559,8 +537,8 @@ def serve_day_admin(ts_label,dt):
     }
     return template_response('day_admin.html',**template)
 
-@app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
-@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
     if not after_before in ['before','after']:
         abort(400)
@@ -608,6 +586,7 @@ def search_tags(ts_label, tag_names, page=1, include_skip=False):
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
 @app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
     rows, hasNext = search_tags(ts_label, tag_names, page)
     return Response(json.dumps(rows), mimetype=MIME_JSON)
 
@@ -615,6 +594,7 @@ def serve_search_tags(ts_label, tag_names, page=1):
 @app.route('/<ts_label>/search_tags/<tag_names>')
 @app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
 def serve_search_tags_template(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
     is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
     rows, hasNext = search_tags(ts_label, tag_names, page, include_skip=is_admin)
     template = {
@@ -1338,7 +1318,7 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         abort(404)
     adc_path = paths['adc_path']
     roi_path = paths['roi_path']
-    bin_pid = canonicalize(get_url_root(), time_series, parsed['bin_lid'])
+    bin_pid = parsed['namespace'] + parsed['bin_lid']
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))
