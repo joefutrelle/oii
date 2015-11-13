@@ -85,18 +85,33 @@ function timeseries_setup(e, pid, timeseries) {
 	}).timeline_bind('rangechange', function(timeline, r) {
 	    updateDateLabel(timeline);
 	}).getTimeline(function(t) {
-	    // when the user clicks on the data series, show the nearest bin
-	    $('#timeline').bind('click', {timeline:t}, function(event) {
-		// because timeline's select event is too coarse, we want to handle
-		// every click. then we need to interrogate the timeline object itself,
-		// hence the surrounding call to getTimeline
-		var clickDate = event.data.timeline.clickDate;
-		if(clickDate != undefined) {
-		    // because timeline uses the current locale, we need to adjust for timezone offset
-		    var utcClickDate = asUTC(clickDate);
-		    showNearest(utcClickDate);
-		}
-	    });
+        // here we track mousedown and move events
+        // to distinguish clicking from dragging
+        $('#timeline').on('mousedown',function(e) {
+            $('#timeline').data('mouse','down');
+        });
+        $('#timeline').on('mousemove',function(e) {
+            var state = $('#timeline').data('mouse');
+            if(state=='down' || state=='dragging') {
+                $('#timeline').data('mouse','dragging');
+            }
+        });
+        // when the user clicks on the data series, show the nearest bin
+        $('#timeline').on('click', {timeline:t}, function(event) {
+            var state = $('#timeline').data('mouse');
+            if(state != 'dragging') {
+                // because timeline's select event is too coarse, we want to handle
+                // every click. then we need to interrogate the timeline object itself,
+                // hence the surrounding call to getTimeline
+                var clickDate = event.data.timeline.clickDate;
+                if(clickDate != undefined) {
+                    // because timeline uses the current locale, we need to adjust for timezone offset
+                    var utcClickDate = asUTC(clickDate);
+                    showNearest(utcClickDate);
+                }
+            }
+            $('#timeline').data('mouse','up');
+        });
 	});
     $('#timeline').collapsing('timeline',true).on('collapse_state', function(e, cs) {
         $('#date_label').css('display',cs ? 'block' : 'none');
