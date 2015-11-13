@@ -51,6 +51,7 @@ function timeseries_setup(e, pid, timeseries) {
 	    $('#timeline').getTimeline(function(t) {
 		console.log('setting custom time to '+newCustomTime);
 		t.setCustomTime(newCustomTime);
+        t.redrawContent();
 		updateDateLabel(t);
 	    });
 	});
