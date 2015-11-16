@@ -44,7 +44,8 @@ from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
 from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
-from oii.rbac.security import roles_required, login_required, current_user, api_roles_required
+from oii.rbac.security import current_user, effective_user
+from oii.rbac.security import login_required, api_required, api_login_required, roles_required, api_roles_required, api_login_roles_required
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
@@ -640,15 +641,15 @@ def serve_tag_cloud(ts_label, limit=25):
     return Response(json.dumps(cloud), mimetype=MIME_JSON)
     
 @app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
-@login_required
+@api_login_required
 def serve_add_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
-    user_email = current_user.email
+    user_email = effective_user().email
     Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
     return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
-@login_required
+@api_login_required
 def serve_remove_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
     Tagging(session, ts_label).remove_tag(b, tag_name)
@@ -730,7 +731,7 @@ def serve_comments_editable(pid):
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/api/add_comment/<url:pid>',methods=['POST'])
-@login_required
+@api_login_required
 def serve_add_comment(pid):
     bc = BinComment(comment=request.form['body'], user_email=current_user.email)
     bin = pid2bin(pid)
@@ -743,7 +744,7 @@ def serve_add_comment(pid):
     abort(500)
     
 @app.route('/api/delete_comment/<int:id>')
-@login_required
+@api_login_required
 def serve_delete_comment(id):
     session.expire_all()
     bc = session.query(BinComment).filter(BinComment.id==id).first()
@@ -1230,7 +1231,7 @@ def set_skip_flag(b,value):
     return result
 
 @app.route('/api/skip/<url:pid>')
-@roles_required('Admin')
+@api_roles_required('Admin')
 def skip_bin(pid):
     req = DashboardRequest(pid, request)
     b = get_orm_bin(req)
@@ -1238,7 +1239,7 @@ def skip_bin(pid):
     return Response(json.dumps(r),mimetype=MIME_JSON)
 
 @app.route('/api/unskip/<url:pid>')
-@roles_required('Admin')
+@api_roles_required('Admin')
 def unskip_bin(pid):
     req = DashboardRequest(pid, request)
     b = get_orm_bin(req)
@@ -1257,12 +1258,12 @@ def _skip_or_unskip_day(ts_label, dt, skip=True):
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/skip_day/<datetime:dt>')
-@roles_required('Admin')
+@api_roles_required('Admin')
 def skip_day(ts_label,dt):
     return _skip_or_unskip_day(ts_label, dt, skip=True)
 
 @app.route('/<ts_label>/api/unskip_day/<datetime:dt>')
-@roles_required('Admin')
+@api_roles_required('Admin')
 def unskip_day(ts_label,dt):
     return _skip_or_unskip_day(ts_label, dt, skip=False)
 
@@ -1299,6 +1300,7 @@ def parse_mosaic_params(params):
     page = int(params[PAGE])
     return (size, scale, page)
 
+@app.route('/<time_series>/api/mosaic/pid/<url:pid>')
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<url:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
