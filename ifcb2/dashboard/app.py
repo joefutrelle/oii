@@ -1010,6 +1010,8 @@ def serve_pid(pid):
                 return serve_features_bin(req.parsed)
             if req.product=='class_scores':
                 return serve_class_scores_bin(req.parsed)
+            if req.product not in ['medium','short','raw']:
+                raise NotFound
         except NotFound:
             abort(404)
         # gonna need targets unless heft is medium or below
@@ -1052,7 +1054,11 @@ def serve_pid(pid):
             try:
                 zip_path = get_product_file(req.parsed, 'binzip')
                 if os.path.exists(zip_path):
-                    return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+                    try:
+                        return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+                    except IOError:
+                        # for spurious false positives from os.path.exists (?)
+                        pass
             except NotFound:
                 pass
             except:
@@ -1060,7 +1066,7 @@ def serve_pid(pid):
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
-    return 'unimplemented'
+    abort(404)
 
 ####### deposit ########
 
