@@ -864,7 +864,8 @@ def accepts_products(ts_label, product_type):
     return Response(json.dumps({
         product_type: acc.accepts_products(product_type)
     }), mimetype=MIME_JSON)
-    
+
+# FIXME protect with api_login_roles_required
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):
     # initiate batch accession
@@ -1231,7 +1232,7 @@ def set_skip_flag(b,value):
     return result
 
 @app.route('/api/skip/<url:pid>')
-@api_roles_required('Admin')
+@api_login_roles_required('Admin')
 def skip_bin(pid):
     req = DashboardRequest(pid, request)
     b = get_orm_bin(req)
@@ -1239,7 +1240,7 @@ def skip_bin(pid):
     return Response(json.dumps(r),mimetype=MIME_JSON)
 
 @app.route('/api/unskip/<url:pid>')
-@api_roles_required('Admin')
+@api_login_roles_required('Admin')
 def unskip_bin(pid):
     req = DashboardRequest(pid, request)
     b = get_orm_bin(req)
@@ -1258,12 +1259,12 @@ def _skip_or_unskip_day(ts_label, dt, skip=True):
     return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/skip_day/<datetime:dt>')
-@api_roles_required('Admin')
+@api_login_roles_required('Admin')
 def skip_day(ts_label,dt):
     return _skip_or_unskip_day(ts_label, dt, skip=True)
 
 @app.route('/<ts_label>/api/unskip_day/<datetime:dt>')
-@api_roles_required('Admin')
+@api_login_roles_required('Admin')
 def unskip_day(ts_label,dt):
     return _skip_or_unskip_day(ts_label, dt, skip=False)
 
