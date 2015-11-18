@@ -50,7 +50,7 @@ from oii.rbac.security import login_required, api_required, api_login_required, 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
 from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
-from oii.ifcb2.formats.adc import Adc
+from oii.ifcb2.formats.adc import Adc, SCHEMA_VERSION_1
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.accession import Accession
@@ -931,6 +931,7 @@ class DashboardRequest(object):
             self.extension = self.parsed['extension']
         self.timestamp = get_timestamp(self.parsed)
         self.product = self.parsed[PRODUCT]
+        self.stitch = self.schema_version == SCHEMA_VERSION_1
 
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
@@ -955,8 +956,9 @@ def serve_pid(pid):
         if target_no==1: # if target_no is 1, pull two targets
             offset=1
             limit=2
-        targets = adc.get_some_targets(offset,limit)
-        targets = list_stitched_targets(targets)
+        targets = list(adc.get_some_targets(offset,limit))
+        if req.stitch:
+            targets = list_stitched_targets(targets)
         target = None
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
@@ -976,7 +978,7 @@ def serve_pid(pid):
                 img = get_target_image(req.parsed, target, roi_path)
                 return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
         # not an image, so get more metadata
-        targets = get_targets(adc, canonical_bin_pid)
+        targets = get_targets(adc, canonical_bin_pid, req.stitch)
         # not an image, check for JSON
         if extension == 'json':
             return Response(json.dumps(target),mimetype=MIME_JSON)
@@ -1017,7 +1019,7 @@ def serve_pid(pid):
         # gonna need targets unless heft is medium or below
         targets = []
         if req.product != 'short':
-            targets = get_targets(adc, req.canonical_pid)
+            targets = get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
         # not a special view, handle representations of targets
         if req.extension=='csv':
@@ -1172,7 +1174,7 @@ def scatter(time_series,params,pid):
         abort(404)
     adc_path = paths['adc_path']
     adc = Adc(adc_path, req.schema_version)
-    targets = get_targets(adc, req.canonical_pid)
+    targets = get_targets(adc, req.canonical_pid, req.stitch)
     
     # check if we need to use features file
     features_targets = {}
@@ -1282,7 +1284,8 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
         (w,h) = t.size
         return 0 - (w * h)
     adc = Adc(adc_path, schema_version)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
+    stitch = schema_version == SCHEMA_VERSION_1
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid, stitch)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
