@@ -933,14 +933,19 @@ class DashboardRequest(object):
         self.product = self.parsed[PRODUCT]
         self.stitch = self.schema_version == SCHEMA_VERSION_1
 
-@app.route('/api/was_stitched/<url:pid>')
+@app.route('/api/bad_stitch/<url:pid>')
 @api_login_roles_required('Admin')
-def serve_was_stitched(pid):
+def serve_bad_stitch(pid):
     """for IFCB schema version 2 bins, figures out if it would have been stitched.
     this is for detecting problem bins from before dashboard v4.2"""
     req = DashboardRequest(pid, request)
+    def r(b,p=None):
+        return jsonr({
+            'stitched': b,
+            'product': p
+        })
     if req.schema_version == SCHEMA_VERSION_1:
-        return jsonr(dict(stitched=False))
+        return r(False)
     try:
         paths = get_fileset(req.parsed)
     except NotFound:
@@ -948,8 +953,35 @@ def serve_was_stitched(pid):
     adc = Adc(paths['adc_path'], req.schema_version)
     targets = list(adc.get_targets())
     stitched_targets = list_stitched_targets(targets)
-    answer = len(stitched_targets) < len(targets)
-    return jsonr(dict(stitched=answer))
+    if len(stitched_targets) == len(targets):
+        # there never would have been a reason to stitch
+        return r(False)
+    # it could have been a bad stitch
+    # now check the binzip, if it exists
+    binzip = get_product_file(req.parsed,'binzip')
+    if binzip is not None:
+        csv_bytes = get_zip_entry_bytes(binzip,req.bin_lid + '.csv')
+        csv_lines = sum(1 for line in StringIO(csv_bytes)) - 1
+        # if csv has fewer ROIs than unstitched targets, the binzip contains bad stitches
+        if csv_lines < len(targets):
+            return r(True,'binzip')
+    # the blob zip could still be bad, check it
+    blob_zip = get_product_file(req.parsed,'blobs')
+    if blob_zip is not None:
+        zipfile = ZipFile(blob_zip)
+        n_blobs = len(zipfile.namelist())
+        zipfile.close()
+        # if fewer blobs than unstitched targets, the blob contains bad stitches
+        if n_blobs < len(targets):
+            return r(True,'blobs')
+    # the features could still be bad, check it
+    features_csv = get_product_file(req.parsed,'features')
+    if features_csv:
+        with open(features_csv) as csvin:
+            csv_lines = sum(1 for line in csvin) - 1
+            if csv_lines < len(targets):
+                return r(True,'features')
+    return r(False)
 
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
