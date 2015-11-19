@@ -50,7 +50,7 @@ from oii.rbac.security import login_required, api_required, api_login_required, 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
 from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
-from oii.ifcb2.formats.adc import Adc
+from oii.ifcb2.formats.adc import Adc, SCHEMA_VERSION_1
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
 from oii.ifcb2.accession import Accession
@@ -931,6 +931,63 @@ class DashboardRequest(object):
             self.extension = self.parsed['extension']
         self.timestamp = get_timestamp(self.parsed)
         self.product = self.parsed[PRODUCT]
+        self.stitch = self.schema_version == SCHEMA_VERSION_1
+
+@app.route('/api/bad_stitch/<url:pid>')
+@api_login_roles_required('Admin')
+def serve_bad_stitch(pid):
+    """for IFCB schema version 2 bins, figures out if it would have been stitched.
+    this is for detecting problem bins from before dashboard v4.2"""
+    req = DashboardRequest(pid, request)
+    def r(b,p=None):
+        return jsonr({
+            'stitched': b,
+            'product': p
+        })
+    if req.schema_version == SCHEMA_VERSION_1:
+        return r(False)
+    try:
+        paths = get_fileset(req.parsed)
+    except NotFound:
+        abort(404)
+    adc = Adc(paths['adc_path'], req.schema_version)
+    targets = list(adc.get_targets())
+    stitched_targets = list_stitched_targets(targets)
+    if len(stitched_targets) == len(targets):
+        # there never would have been a reason to stitch
+        return r(False)
+    # it could have been a bad stitch
+    # now check the binzip, if it exists
+    try:
+        binzip = get_product_file(req.parsed,'binzip')
+        csv_bytes = get_zip_entry_bytes(binzip,req.bin_lid + '.csv')
+        csv_lines = sum(1 for line in StringIO(csv_bytes)) - 1
+        # if csv has fewer ROIs than unstitched targets, the binzip contains bad stitches
+        if csv_lines < len(targets):
+            return r(True,'binzip')
+    except NotFound:
+        pass
+    # the blob zip could still be bad, check it
+    try:
+        blob_zip = get_product_file(req.parsed,'blobs')
+        zipfile = ZipFile(blob_zip)
+        n_blobs = len(zipfile.namelist())
+        zipfile.close()
+        # if fewer blobs than unstitched targets, the blob contains bad stitches
+        if n_blobs < len(targets):
+            return r(True,'blobs')
+    except NotFound:
+        pass
+    # the features could still be bad, check it
+    try:
+        features_csv = get_product_file(req.parsed,'features')
+        with open(features_csv) as csvin:
+            csv_lines = sum(1 for line in csvin) - 1
+            if csv_lines < len(targets):
+                return r(True,'features')
+    except NotFound:
+        pass
+    return r(False)
 
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
@@ -955,8 +1012,9 @@ def serve_pid(pid):
         if target_no==1: # if target_no is 1, pull two targets
             offset=1
             limit=2
-        targets = adc.get_some_targets(offset,limit)
-        targets = list_stitched_targets(targets)
+        targets = list(adc.get_some_targets(offset,limit))
+        if req.stitch:
+            targets = list_stitched_targets(targets)
         target = None
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
@@ -976,7 +1034,7 @@ def serve_pid(pid):
                 img = get_target_image(req.parsed, target, roi_path)
                 return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
         # not an image, so get more metadata
-        targets = get_targets(adc, canonical_bin_pid)
+        targets = get_targets(adc, canonical_bin_pid, req.stitch)
         # not an image, check for JSON
         if extension == 'json':
             return Response(json.dumps(target),mimetype=MIME_JSON)
@@ -1017,7 +1075,7 @@ def serve_pid(pid):
         # gonna need targets unless heft is medium or below
         targets = []
         if req.product != 'short':
-            targets = get_targets(adc, req.canonical_pid)
+            targets = get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
         # not a special view, handle representations of targets
         if req.extension=='csv':
@@ -1172,7 +1230,7 @@ def scatter(time_series,params,pid):
         abort(404)
     adc_path = paths['adc_path']
     adc = Adc(adc_path, req.schema_version)
-    targets = get_targets(adc, req.canonical_pid)
+    targets = get_targets(adc, req.canonical_pid, req.stitch)
     
     # check if we need to use features file
     features_targets = {}
@@ -1282,7 +1340,8 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
         (w,h) = t.size
         return 0 - (w * h)
     adc = Adc(adc_path, schema_version)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
+    stitch = schema_version == SCHEMA_VERSION_1
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid, stitch)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles

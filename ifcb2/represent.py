@@ -18,7 +18,7 @@ from oii.times import iso8601
 from oii.ifcb2 import SCHEMA_VERSION, NAMESPACE, BIN_LID
 from oii.ifcb2.identifiers import parse_pid, as_product, get_timestamp, add_pids, PID
 from oii.ifcb2.identifiers import TIMESTAMP, TIMESTAMP_FORMAT
-from oii.ifcb2.formats.adc import Adc, TARGET_NUMBER
+from oii.ifcb2.formats.adc import Adc, TARGET_NUMBER, SCHEMA_VERSION_1
 from oii.ifcb2.formats.hdr import parse_hdr_file
 from oii.ifcb2.image import read_target_image
 
@@ -156,6 +156,7 @@ def binpid2zip(pid, outfile, log_callback=None):
             log_callback(msg)
     """Generate a zip file given a canonical pid"""
     parsed = parse_pid(pid)
+    stitch = parsed[SCHEMA_VERSION] == SCHEMA_VERSION_1
     bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
     timestamp = iso8601(strptime(parsed[TIMESTAMP], parsed[TIMESTAMP_FORMAT]))
     log('copying raw data for %s to temp files ...' % bin_pid)
@@ -167,8 +168,9 @@ def binpid2zip(pid, outfile, log_callback=None):
         adc_path = adc_tmp.name
         drain(UrlSource(bin_pid+'.adc'), LocalFileSink(adc_path))
         adc = Adc(adc_path, parsed[SCHEMA_VERSION])
-        unstitched_targets = add_pids(adc.get_targets(), bin_pid)
-        stitched_targets = list_stitched_targets(unstitched_targets)
+        targets = add_pids(adc.get_targets(), bin_pid)
+        if stitch:
+            targets = list_stitched_targets(targets)
     with tempfile.NamedTemporaryFile() as roi_tmp:
         roi_path = roi_tmp.name
         drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
@@ -183,7 +185,7 @@ def binpid2zip(pid, outfile, log_callback=None):
         outfile - where to write resulting zip file"""
         log('creating zip file for %s' % bin_pid)
         with open(outfile,'wb') as fout:
-            return bin2zip(parsed,bin_pid,stitched_targets,hdr,timestamp,roi_path,fout)
+            return bin2zip(parsed,bin_pid,targets,hdr,timestamp,roi_path,fout)
 
 # individual target representations
 
