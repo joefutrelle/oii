@@ -958,29 +958,35 @@ def serve_bad_stitch(pid):
         return r(False)
     # it could have been a bad stitch
     # now check the binzip, if it exists
-    binzip = get_product_file(req.parsed,'binzip')
-    if binzip is not None:
+    try:
+        binzip = get_product_file(req.parsed,'binzip')
         csv_bytes = get_zip_entry_bytes(binzip,req.bin_lid + '.csv')
         csv_lines = sum(1 for line in StringIO(csv_bytes)) - 1
         # if csv has fewer ROIs than unstitched targets, the binzip contains bad stitches
         if csv_lines < len(targets):
             return r(True,'binzip')
+    except NotFound:
+        pass
     # the blob zip could still be bad, check it
-    blob_zip = get_product_file(req.parsed,'blobs')
-    if blob_zip is not None:
+    try:
+        blob_zip = get_product_file(req.parsed,'blobs')
         zipfile = ZipFile(blob_zip)
         n_blobs = len(zipfile.namelist())
         zipfile.close()
         # if fewer blobs than unstitched targets, the blob contains bad stitches
         if n_blobs < len(targets):
             return r(True,'blobs')
+    except NotFound:
+        pass
     # the features could still be bad, check it
-    features_csv = get_product_file(req.parsed,'features')
-    if features_csv:
+    try:
+        features_csv = get_product_file(req.parsed,'features')
         with open(features_csv) as csvin:
             csv_lines = sum(1 for line in csvin) - 1
             if csv_lines < len(targets):
                 return r(True,'features')
+    except NotFound:
+        pass
     return r(False)
 
 @app.route('/<url:pid>',methods=['GET'])
