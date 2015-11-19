@@ -933,6 +933,24 @@ class DashboardRequest(object):
         self.product = self.parsed[PRODUCT]
         self.stitch = self.schema_version == SCHEMA_VERSION_1
 
+@app.route('/api/was_stitched/<url:pid>')
+@api_login_roles_required('Admin')
+def serve_was_stitched(pid):
+    """for IFCB schema version 2 bins, figures out if it would have been stitched.
+    this is for detecting problem bins from before dashboard v4.2"""
+    req = DashboardRequest(pid, request)
+    if req.schema_version == SCHEMA_VERSION_1:
+        return jsonr(dict(stitched=False))
+    try:
+        paths = get_fileset(req.parsed)
+    except NotFound:
+        abort(404)
+    adc = Adc(paths['adc_path'], req.schema_version)
+    targets = list(adc.get_targets())
+    stitched_targets = list_stitched_targets(targets)
+    answer = len(stitched_targets) < len(targets)
+    return jsonr(dict(stitched=answer))
+
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
     req = DashboardRequest(pid, request)
