@@ -1068,7 +1068,8 @@ def serve_pid(pid):
                 return serve_features_bin(req.parsed)
             if req.product=='class_scores':
                 return serve_class_scores_bin(req.parsed)
-            if req.product not in ['medium','short','raw']:
+            # FIXME below is a kludge. logic overcomplicated
+            if req.product not in ['medium','short','raw','binzip']:
                 raise NotFound
         except NotFound:
             abort(404)
