@@ -1129,6 +1129,20 @@ def serve_pid(pid):
 
 ####### deposit ########
 
+from time import sleep
+
+@app.route('/api/product_exists/<url:pid>')
+def product_exists(pid):
+    req = DashboardRequest(pid, request)
+    try:
+        destpath = files.get_product_destination(session, pid)
+    except NotFound:
+        abort(404)
+    if os.path.exists(destpath):
+        return jsonr({'exists':True})
+    else:
+        abort(404)
+
 @app.route('/<url:pid>',methods=['PUT'])
 @api_roles_required('Admin')
 def deposit(pid):
@@ -1145,7 +1159,7 @@ def deposit(pid):
         pass
     with open(destpath_part,'w') as out:
         shutil.copyfileobj(StringIO(product_data), out)
-    os.rename(destpath_part, destpath)
+    shutil.move(destpath_part, destpath)
     utcnow = iso8601()
     message = '%s wrote %d bytes to %s' % (utcnow, len(product_data), destpath)
     return Response(json.dumps(dict(
