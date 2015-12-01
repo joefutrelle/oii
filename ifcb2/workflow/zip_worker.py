@@ -6,7 +6,7 @@ from oii.ioutils import upload, exists
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE, BIN_LID
-from oii.ifcb2.workflow import RAW2BINZIP
+from oii.ifcb2.workflow import RAW2BINZIP, accepts_product
 from oii.ifcb2.identifiers import as_product, parse_pid
 from oii.ifcb2.represent import binpid2zip
 
@@ -23,6 +23,10 @@ def do_binzip(pid, job):
     def log_callback(msg):
         logging.warn('BINZIP %s' % msg)
         client.heartbeat(pid,message=msg)
+    if not accepts_product(pid):
+        log_callback('skipping %s, not accepted' % pid)
+        client.wakeup()
+        return
     parsed = parse_pid(pid)
     binzip_url = '%s%s_binzip.zip' % (parsed[NAMESPACE], parsed[BIN_LID])
     log_callback('creating zipfile for %s' % pid)
