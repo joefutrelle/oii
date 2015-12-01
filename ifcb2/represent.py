@@ -3,6 +3,7 @@ import re
 import json
 from zipfile import ZipFile, ZIP_DEFLATED
 import shutil
+from io import BytesIO
 import tempfile
 from time import strptime
 
@@ -171,6 +172,10 @@ def binpid2zip(pid, outfile, log_callback=None):
         targets = add_pids(adc.get_targets(), bin_pid)
         if stitch:
             targets = list_stitched_targets(targets)
+        else:
+            targets = [t.copy() for t in targets]
+            for target in targets:
+                target[STITCHED] = 0
     with tempfile.NamedTemporaryFile() as roi_tmp:
         roi_path = roi_tmp.name
         drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
@@ -185,7 +190,7 @@ def binpid2zip(pid, outfile, log_callback=None):
         outfile - where to write resulting zip file"""
         log('creating zip file for %s' % bin_pid)
         with open(outfile,'wb') as fout:
-            return bin2zip(parsed,bin_pid,targets,hdr,timestamp,roi_path,fout)
+            bin2zip(parsed,bin_pid,targets,hdr,timestamp,roi_path,fout)
 
 # individual target representations
 
