@@ -99,6 +99,7 @@ class Feed(object):
             filter(~Bin.skip)
         q = self._with_tag(q)
         q = q.filter(Bin.sample_time > self.session.query(Bin.sample_time).\
+                   filter(Bin.ts_label==self.ts_label).\
                    filter(Bin.lid==bin_lid).\
                    as_scalar()).\
             order_by(Bin.sample_time).\
@@ -111,6 +112,7 @@ class Feed(object):
             filter(~Bin.skip)
         q = self._with_tag(q)
         q = q.filter(Bin.sample_time < self.session.query(Bin.sample_time).\
+                   filter(Bin.ts_label==self.ts_label).\
                    filter(Bin.lid==bin_lid).\
                    as_scalar()).\
             order_by(desc(Bin.sample_time)).\
