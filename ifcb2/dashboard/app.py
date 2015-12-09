@@ -861,10 +861,24 @@ def check_roots(ts_label):
 @app.route('/<ts_label>/api/accepts_products/<product_type>')
 def accepts_products(ts_label, product_type):
     acc = Accession(session, ts_label)
+    accepts = acc.accepts_products(product_type)
     return Response(json.dumps({
-        product_type: acc.accepts_products(product_type)
+        'time_series': ts_label,
+        product_type: accepts,
+        'accepts': accepts
     }), mimetype=MIME_JSON)
 
+@app.route('/api/accepts_product/<url:pid>')
+def accepts_product(pid):
+    req = DashboardRequest(pid, request)
+    acc = Accession(session, req.time_series)
+    accepts = acc.accepts_products(req.product)
+    return Response(json.dumps({
+        'time_series': req.time_series,
+        req.product: accepts,
+        'accepts': accepts
+    }), mimetype=MIME_JSON)
+    
 # FIXME protect with api_login_roles_required
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):
