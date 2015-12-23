@@ -1,6 +1,9 @@
 BLOB_IMAGE='blob'
+BOUNDING_BOX='bounding_box'
+PIXELS='pixels'
 PERIMETER_IMAGE='perimeter_image'
 CONVEX_HULL_IMAGE='convex_hull_image'
+ROTATED_BLOB_IMAGE='rotated_blob_image'
 
 AREA='area'
 EQUIV_DIAMETER='equiv_diameter'
@@ -11,6 +14,7 @@ FERET_DIAMETER='feret_diameter'
 MINOR_AXIS_LENGTH='minor_axis_length'
 MAJOR_AXIS_LENGTH='major_axis_length'
 ECCENTRICITY='eccentricity'
+ORIENTATION='orientation'
 PERIMETER='perimeter'
 SOLIDITY='solidity'
 

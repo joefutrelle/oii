@@ -1,27 +1,22 @@
 import numpy as np
 
-from skimage.morphology import convex_hull_images
+from skimage.morphology import convex_hull_image
 
-def areas(blobs):
-    return [np.sum(np.array(B).astype(np.bool)) for B in blobs]
+def blob_area(B):
+    return np.sum(np.array(B).astype(np.bool))
     
-def extents(blobs,blob_areas=None):
-    if blob_areas is None:
-        blob_areas = areas(blobs)
-    return [(float(a) / (b.shape[0] * b.shape[1])) for a,b in zip(areas,blobs)]
-    
-def convex_areas(blobs,convex_hull_images=None):
-    if convex_hull_images is None:
-        convex_hull_images = [convex_hull_image(B) for B in blobs]
-    return [np.sum(ch.astype(np.bool)) for ch in convex_hull_images]
+def blob_extent(B,area=None):
+    if area is None:
+        area = blob_area(B)
+    return float(area) / B.size
 
-def solidities(areas, convex_areas):
-    return [float(a)/ca for a,ca in zip(areas, convex_areas)]
+def equiv_diameter(area):
+    return np.sqrt(4*area/np.pi)
 
-def ellipse_properties(blob):
+def ellipse_properties(B):
     """returns major axis length, minor axis length, eccentricity,
     and orientation"""
-    P = np.vstack(np.where(blob))
+    P = np.vstack(np.where(B))
     S = np.cov(P)
     x, y = np.diag(S)
     xy = S[1,0] # S[0,1] would work too
@@ -46,15 +41,16 @@ def ellipse_properties(blob):
         
     return maj_axis, min_axis, ecc, orientation
 
-def invmoments(image):
+def invmoments(B):
     """compute invariant moments. see
     Digital Image Processing in MATLAB, ch. 11"""
-    M, N = image.shape
+    B = np.array(B).astype(np.bool)
+    M, N = B.shape
     x, y = np.meshgrid(np.arange(1,N+1), np.arange(1,M+1))
 
     x = x.flatten()
     y = y.flatten()
-    F = image.flatten().astype(float)
+    F = B.flatten().astype(float)
 
     def m(p,q):
         return np.sum(x**p * y**q * F)

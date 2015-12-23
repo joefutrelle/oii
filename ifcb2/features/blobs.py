@@ -30,3 +30,4 @@ def rotate_blob(blob, theta):
     blob = binary_dilation(blob,SE2)
     blob = bwmorph_thin(blob,1)
     return blob
+
