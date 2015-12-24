@@ -10,10 +10,14 @@ SE2 = disk(2).astype(np.bool)
 SE3 = np.ones((5,5)).astype(np.bool)
 
 def find_perimeter(B):
-    B = np.array(B).astype(np.bool)
+    B = np.array(B).astype(np.bool) * 1
     """find boundaries via erosion and logical and,
     using four-connectivity"""
-    return B & np.invert(binary_erosion(B,FOUR))
+    #return B & np.invert(binary_erosion(B,FOUR))
+    S = np.array([[ 0,-1, 0],
+                  [-1, 4,-1],
+                  [ 0,-1, 0]])
+    return correlate(B,S) > 0
     
 def hysthresh(img,T1,T2):
     """hysteresis thresholding"""
