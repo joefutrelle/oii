@@ -1,6 +1,7 @@
 import numpy as np
 
-from skimage.morphology import convex_hull_image
+from scipy.spatial import ConvexHull
+from skimage.draw import polygon
 
 def blob_area(B):
     return np.sum(np.array(B).astype(np.bool))
@@ -86,4 +87,20 @@ def invmoments(B):
         ( 3 * (e[3,0] + e[1,2])**2 - (e[2,1] + e[0,3])**2 )
 
     return phi1, phi2, phi3, phi4, phi5, phi6, phi7
+    
+def convex_hull(perimeter_points):
+    P = np.vstack(perimeter_points).T
+    hull = ConvexHull(P)
+    return P[hull.vertices]
 
+def convex_hull_perimeter(hull):
+    ab = hull - np.roll(hull,1,axis=0)
+    ab2 = np.power(ab,2)
+    D = np.sqrt(np.sum(ab2,axis=1))
+    return np.sum(D)
+
+def convex_hull_image(hull,shape):
+    chi = np.zeros(shape,dtype=np.bool)
+    y, x = polygon(hull[:,0], hull[:,1])
+    chi[y,x] = 1
+    return chi

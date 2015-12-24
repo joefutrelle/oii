@@ -1,12 +1,11 @@
 import numpy as np
 
-from skimage.morphology import convex_hull_image
-
 from oii.utils import imemoize
 
 from oii.ifcb2.features.segmentation import segment_roi
 from oii.ifcb2.features.blobs import find_blobs, rotate_blob
-from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties, invmoments
+from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties, \
+    invmoments, convex_hull, convex_hull_image, convex_hull_perimeter
 from oii.ifcb2.features.morphology import find_perimeter
 from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
 from oii.ifcb2.features.perimeter import perimeter_stats
@@ -19,14 +18,16 @@ class Blob(object):
         self.image = np.array(blob_image).astype(np.bool)
         self.roi_image = roi_image
     @property
+    def shape(self):
+        return self.image.shape
+    @property
+    def size(self):
+        return self.image.size
+    @property
     @imemoize
     def pixels(self):
         """all pixel values, as a flat list"""
         return self.roi_image[np.where(self.image)]
-    @property
-    @imemoize
-    def convex_hull_image(self):
-        return convex_hull_image(self.image)
     @property
     @imemoize
     def area(self):
@@ -39,6 +40,18 @@ class Blob(object):
     @imemoize
     def extent(self):
         return float(self.area) / self.image.size
+    @property
+    @imemoize
+    def convex_hull(self):
+        return convex_hull(self.perimeter_points)
+    @property
+    @imemoize
+    def convex_hull_image(self):
+        return convex_hull_image(self.convex_hull, self.shape)
+    @property
+    @imemoize
+    def convex_perimeter(self):
+        return convex_hull_perimeter(self.convex_hull)
     @property
     @imemoize
     def convex_area(self):
