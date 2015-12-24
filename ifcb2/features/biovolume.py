@@ -4,11 +4,12 @@ from scipy.ndimage.morphology import distance_transform_edt
 
 from oii.ifcb2.features.morphology import find_perimeter
 
-def distmap_volume(B):
+def distmap_volume(B,perimeter_image=None):
     """Moberg & Sosik biovolume algorithm
     returns volume and representative transect"""
-    B = np.array(B).astype(np.bool)
-    D = distance_transform_edt(1-find_perimeter(B)) + 1
+    if perimeter_image is None:
+        perimeter_image = find_perimeter(B)
+    D = distance_transform_edt(1-perimeter_image) + 1
     D = D * (B>0)
     Dm = np.ma.array(D,mask=1-B)
     # representative transect
@@ -27,3 +28,4 @@ def sor_volume(B):
     """known as volumewalk in Moberg / Sosik code"""
     C = np.sum(B.astype(np.bool),axis=0) * 0.5
     return np.sum(C**2 * np.pi)
+
