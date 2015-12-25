@@ -192,4 +192,5 @@ class Roi(object):
     def blobs(self):
         labeled, bboxes, blobs = find_blobs(self.blobs_image)
         cropped_rois = [self.image[bbox] for bbox in bboxes]
-        return [Blob(B,R) for B,R in zip(blobs,cropped_rois)]
+        Bs = [Blob(b,R) for b,R in zip(blobs,cropped_rois)]
+        return sorted(Bs, key=lambda B: B.area, reverse=True)

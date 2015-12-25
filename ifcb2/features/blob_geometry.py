@@ -21,8 +21,8 @@ def ellipse_properties(B):
     S = np.cov(P)
     x, y = np.diag(S)
     xy = S[1,0] # S[0,1] would work too
-    
-    c = np.sqrt((x-y)**2 - 4*xy**2)
+
+    c = np.sqrt((x-y)**2 + 4*xy**2)
 
     maj_axis = 2 * np.sqrt(2) * np.sqrt(x + y + c)
     min_axis = 2 * np.sqrt(2) * np.sqrt(x + y - c)
