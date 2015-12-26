@@ -1,5 +1,7 @@
 import numpy as np
 
+from numpy.linalg import eig
+
 from scipy.spatial import ConvexHull
 from skimage.draw import polygon
 
@@ -17,29 +19,25 @@ def equiv_diameter(area):
 def ellipse_properties(B):
     """returns major axis length, minor axis length, eccentricity,
     and orientation"""
-    P = np.vstack(np.where(B))
-    S = np.cov(P)
-    x, y = np.diag(S)
-    xy = S[1,0] # S[0,1] would work too
+    P = np.vstack(np.where(B)) # coords of all points
+    # magnitudes and orthonormal basis vectors
+    # are computed via the eigendecomposition of
+    # the covariance matrix of the coordinates
+    eVal, eVec,  = eig(np.cov(P))
 
-    c = np.sqrt((x-y)**2 + 4*xy**2)
+    # axes lengths are 4x the sqrt of the eigenvalues,
+    # major and minor lenghts are max, min of them
+    L = 4 * np.sqrt(eVal)
+    maj_axis, min_axis = np.max(L), np.min(L)
 
-    maj_axis = 2 * np.sqrt(2) * np.sqrt(x + y + c)
-    min_axis = 2 * np.sqrt(2) * np.sqrt(x + y - c)
+    # orientation is derived from the major axis's
+    # eigenvector
+    x,y = eVec[:, np.argmax(L)]
+    orientation = (180/np.pi) * np.arctan(y/x) - 90
     
+    # eccentricity = 1st eccentricity
     ecc = np.sqrt(1-(min_axis/maj_axis)**2)
     
-    if y > x:
-        n = y - x + np.sqrt((y-x)**2 + 4*xy**2)
-        d = 2 * xy
-    else:
-        n = 2 * xy
-        d = x - y + np.sqrt((x-y)**2 + 4*xy**2)
-    if n==0 and d==0:
-        orientation = 0
-    else:
-        orientation = (180/np.pi) * np.arctan(n/d) - 90
-        
     return maj_axis, min_axis, ecc, orientation
 
 def invmoments(B):
