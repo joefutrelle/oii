@@ -1,4 +1,15 @@
+##### FIXME
+
+# convex perimeter requires convex hull, but regionprops computes
+# convex hull separately. not clear whether it's optimal to use
+# regionprops and also compute convex hull myself, or whether
+# it's OK to do my own computation for the perimeter and also
+# call into regionprops for its convex hull params
+
+
 import numpy as np
+
+from skimage.measure import regionprops
 
 from oii.utils import imemoize
 
@@ -30,57 +41,57 @@ class Blob(object):
         return self.roi_image[np.where(self.image)]
     @property
     @imemoize
+    def regionprops(self):
+        return regionprops(self.image*1)[0]
+    @property
+    @imemoize
     def area(self):
-        return np.sum(self.image)
+        return self.regionprops.area
     @property
     @imemoize
     def equiv_diameter(self):
-        return equiv_diameter(self.area)
+        return self.regionprops.equivalent_diameter
     @property
     @imemoize
     def extent(self):
-        return float(self.area) / self.image.size
+        return self.regionprops.extent
     @property
     @imemoize
     def convex_hull(self):
         return convex_hull(self.perimeter_points)
     @property
     @imemoize
-    def convex_hull_image(self):
-        return convex_hull_image(self.convex_hull, self.shape)
-    @property
-    @imemoize
     def convex_perimeter(self):
         return convex_hull_perimeter(self.convex_hull)
     @property
     @imemoize
-    def convex_area(self):
-        return np.sum(self.convex_hull_image)
+    def convex_hull_image(self):
+        return self.regionprops.convex_image
     @property
     @imemoize
-    def ellipse_properties(self):
-        # major axis length, minor axis length, eccentricity, orientation
-        return ellipse_properties(self.image)
+    def convex_area(self):
+        return self.regionprops.convex_area
     @property
     @imemoize
     def major_axis_length(self):
-        return self.ellipse_properties[0]
+        return self.regionprops.major_axis_length
     @property
     @imemoize
     def minor_axis_length(self):
-        return self.ellipse_properties[1]
+        return self.regionprops.minor_axis_length
     @property
     @imemoize
     def eccentricity(self):
-        return self.ellipse_properties[2]
+        return self.regionprops.eccentricity
     @property
     @imemoize
     def orientation(self):
-        return self.ellipse_properties[3]
+        """return orientation in degrees"""
+        return (180/np.pi) * self.regionprops.orientation
     @property
     @imemoize
     def solidity(self):
-        return float(self.area) / self.convex_area
+        return self.regionprops.solidity
     @property
     @imemoize
     def rotated_image(self):

@@ -3,7 +3,7 @@ import numpy as np
 from numpy.linalg import eig
 
 from scipy.spatial import ConvexHull
-from skimage.draw import polygon
+from skimage.draw import polygon, line
 
 def blob_area(B):
     return np.sum(np.array(B).astype(np.bool))
@@ -19,6 +19,9 @@ def equiv_diameter(area):
 def ellipse_properties(B):
     """returns major axis length, minor axis length, eccentricity,
     and orientation"""
+    """note that these values are all computable using
+    skimnage.measure.regionprops, which differs only in that
+    it returns the orientation in radians"""
     P = np.vstack(np.where(B)) # coords of all points
     # magnitudes and orthonormal basis vectors
     # are computed via the eigendecomposition of
@@ -98,7 +101,13 @@ def convex_hull_perimeter(hull):
     return np.sum(D)
 
 def convex_hull_image(hull,shape):
+    """this can also be computed using
+    skimage.measure.regionprops"""
     chi = np.zeros(shape,dtype=np.bool)
+    # points in the convex hull
     y, x = polygon(hull[:,0], hull[:,1])
     chi[y,x] = 1
+    # points on the convex hull
+    for row in np.hstack((hull, np.roll(hull,1,axis=0))):
+        chi[line(*row)]=1
     return chi
