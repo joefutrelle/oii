@@ -1,12 +1,3 @@
-##### FIXME
-
-# convex perimeter requires convex hull, but regionprops computes
-# convex hull separately. not clear whether it's optimal to use
-# regionprops and also compute convex hull myself, or whether
-# it's OK to do my own computation for the perimeter and also
-# call into regionprops for its convex hull params
-
-
 import numpy as np
 
 from skimage.measure import regionprops
@@ -66,11 +57,11 @@ class Blob(object):
     @property
     @imemoize
     def convex_hull_image(self):
-        return self.regionprops.convex_image
+        return convex_hull_image(self.convex_hull, self.shape)
     @property
     @imemoize
     def convex_area(self):
-        return self.regionprops.convex_area
+        return np.sum(self.convex_hull_image)
     @property
     @imemoize
     def major_axis_length(self):
@@ -91,7 +82,7 @@ class Blob(object):
     @property
     @imemoize
     def solidity(self):
-        return self.regionprops.solidity
+        return float(self.area) / self.convex_area
     @property
     @imemoize
     def rotated_image(self):
