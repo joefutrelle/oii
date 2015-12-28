@@ -28,6 +28,8 @@ def rotate_blob(blob, theta):
     blob = rotate(blob,-1*theta,resize=True)
     blob = binary_closing(blob,SE3)
     blob = binary_dilation(blob,SE2)
-    blob = bwmorph_thin(blob,1)
+    # note that H Sosik's version does one iteration
+    # of thinning but 3 is closer to area-preserving
+    blob = bwmorph_thin(blob,3)
     return blob
 
