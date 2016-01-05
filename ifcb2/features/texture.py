@@ -1,13 +1,15 @@
 import numpy as np
 from skimage.exposure import rescale_intensity, histogram
 from scipy.stats import moment
-
-def enhance_contrast(image):
-    p1, p99 = np.percentile(image, (1,99))
-    return rescale_intensity(image)
     
 def masked_pixels(image,mask):
     return image[np.where(mask)]
+    
+def texture_pixels(image,mask):
+    I = image.astype(np.float)
+    p1, p99 = np.percentile(image,(1,99))
+    E = rescale_intensity(I, in_range=(p1,p99)) * 255
+    return E[np.where(mask)]
     
 def statxture(pixels):
     """computes a variety of texture stats from

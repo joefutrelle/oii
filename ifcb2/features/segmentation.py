@@ -1,11 +1,11 @@
 import numpy as np
 
 from scipy.cluster.vq import kmeans2
-
+from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import binary_closing, binary_dilation, remove_small_objects
 
 from oii.ifcb2.features.phasecong import phasecong_Mm
-from oii.ifcb2.features.morphology import SE2, SE3, hysthresh, bwmorph_thin, fill_holes
+from oii.ifcb2.features.morphology import SE2, SE3, hysthresh, bwmorph_thin
 
 # parameters
 HT_T1, HT_T2 = 0.2, 0.1
@@ -39,7 +39,7 @@ def segment_roi(roi):
     # step 8. thinning
     B = bwmorph_thin(B,3)
     # step 9. fill holes
-    B = fill_holes(B)
+    B = binary_fill_holes(B)
     # step 10. remove blobs smaller than BLOB_MIN
     B = remove_small_objects(B,BLOB_MIN,connectivity=2)
     # done.
