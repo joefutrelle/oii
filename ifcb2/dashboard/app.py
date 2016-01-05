@@ -617,7 +617,7 @@ def tag2dict(t):
         'id': t.id,
         'bin_pid': bin_pid,
         'bin_lid': t.bin.lid,
-        'author': t.username,
+        'author': t.username if t.username else 'anonymous',
         'ts': iso8601(t.ts.timetuple()),
         'tag': t.tag
     }

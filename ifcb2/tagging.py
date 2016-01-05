@@ -35,12 +35,17 @@ class Tagging(object):
         """add a tag to a bin."""
         # head off duplicates
         tag_name = normalize_tag(tag)
-        tag = BinTag(tag=tag_name, user_email=user_email)
-        if tag not in b.tags:
-            b.bintags.append(tag)
+        if tag_name not in b.tags:
+            bintag = BinTag(tag=tag_name, user_email=user_email)
+            b.bintags.append(bintag)
             self._commit(commit)
     def remove_tag(self, b, tag, commit=True):
-        b.tags.remove(normalize_tag(tag))
+        try:
+            b.tags.remove(normalize_tag(tag))
+        except ValueError:
+            # ignore: this just means the tag doesn't exist
+            # and so does not need to be removed
+            pass
         self._commit(commit)
     def tag_cloud(self, limit=25):
         """get a list of of tags and frequency for a given time series"""

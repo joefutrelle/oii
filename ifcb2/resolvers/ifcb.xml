@@ -25,21 +25,21 @@
     <first>
       <!-- IFCB v1 ID syntax -->
       <match var="suffix" timestamp="(IFCB1_(yyyy_YYY_HHMMSS))(any)" groups="lid timestamp tpe">
-	<var name="schema_version">v1</var>
-	<var name="adc_cols">&v1_adc_cols;</var>
-	<var name="instrument">${n1}</var>
-	<var name="year">${yyyy}</var>
-	<var name="yearday">${yyyy}_${YYY}</var>
-	<var name="timestamp_format">%Y_%j_%H%M%S</var>
+        <var name="schema_version">v1</var>
+        <var name="adc_cols">&v1_adc_cols;</var>
+        <var name="instrument">${n1}</var>
+        <var name="year">${yyyy}</var>
+        <var name="yearday">${yyyy}_${YYY}</var>
+        <var name="timestamp_format">%Y_%j_%H%M%S</var>
       </match>
       <!-- IFCB v2 ID syntax -->
       <match var="suffix" timestamp="(D(yyyymmddTHHMMSS)_IFCB111)(any)" groups="lid timestamp tpe">
-	<var name="schema_version">v2</var>
-	<var name="adc_cols">&v2_adc_cols;</var>
-	<var name="instrument">${n1}</var>
-	<var name="year">${yyyy}</var>
-	<var name="yearday">${yyyy}${mm}${dd}</var>
-	<var name="timestamp_format">%Y%m%dT%H%M%S</var>
+        <var name="schema_version">v2</var>
+        <var name="adc_cols">&v2_adc_cols;</var>
+        <var name="instrument">${n1}</var>
+        <var name="year">${yyyy}</var>
+        <var name="yearday">${yyyy}${mm}${dd}</var>
+        <var name="timestamp_format">%Y%m%dT%H%M%S</var>
       </match>
     </first>
     <var name="bin_lid">${lid}</var>
@@ -51,9 +51,9 @@
       <!-- default product is raw -->
       <var name="product">raw</var>
       <match var="tpe" pattern="${re.target}?${re.product}?${re.ext}?"
-	     groups="target product extension"/>
+             groups="target product extension"/>
       <match var="target" optional="true">
-	<var name="lid">${lid}_${target}</var>
+        <var name="lid">${lid}_${target}</var>
       </match>
     </all>
   </rule>
@@ -65,30 +65,30 @@
   </rule>
   <namespace name="files">
     <!-- given a parsed pid including extension, and a root directory,
-	 return all possible candidate paths -->
+         return all possible candidate paths -->
     <rule name="file_path">
       <!-- pass in "filename" -->
       <!-- now compute schema-dependent day directory names -->
       <first>
-	<test var="schema_version" eq="v1">
-	  <var name="day_dir">IFCB${instrument}_${yearday}</var>
-	</test>
-	<test var="schema_version" eq="v2">
-	  <var name="day_dir">
-	    <!-- 2014 and on directory structure -->
-	    <val>D${yearday}</val>
-	    <!-- pre-2014 directory structure -->
-	    <val>D${year}/D${yearday}</val>
-	  </var>
-	</test>
+        <test var="schema_version" eq="v1">
+          <var name="day_dir">IFCB${instrument}_${yearday}</var>
+        </test>
+        <test var="schema_version" eq="v2">
+          <var name="day_dir">
+            <!-- 2014 and on directory structure -->
+            <val>D${yearday}</val>
+            <!-- pre-2014 directory structure -->
+            <val>D${year}/D${yearday}</val>
+          </var>
+        </test>
       </first>
       <var name="file_path">
-	<!-- 2014 and on directory structure -->
-	<val>${root}/${year}/${day_dir}/${filename}</val>
-	<!-- alternately, try schema-independent flat structure -->
-	<val>${root}/${filename}</val>
-	<!-- finally, try pre-2014 directory structure -->
-	<val>${root}/${day_dir}/${filename}</val>
+        <!-- 2014 and on directory structure -->
+        <val>${root}/${year}/${day_dir}/${filename}</val>
+        <!-- alternately, try schema-independent flat structure -->
+        <val>${root}/${filename}</val>
+        <!-- finally, try pre-2014 directory structure -->
+        <val>${root}/${day_dir}/${filename}</val>
       </var>
     </rule>
     <!-- given a pid and root directory, find preferred raw path -->
@@ -115,17 +115,17 @@
     <rule name="list_raw_filesets" uses="root">
       <!-- strategy: list hdr files, then look for corresponding adc and roi files -->
       <any>
-	<var name="data_dir">${root}</var>
-	<path var="data_dir" match="${root}/IFCB*"/>
-	<path var="year_dir" match="${root}/[0-9]*">
-	  <any>
-	    <path var="data_dir" match="${year_dir}/D*"/>
-	    <path var="data_dir" match="${year_dir}/IFCB*"/>
-	  </any>
-	</path>
-	<path var="year_dir" match="${root}/D[0-9]*">
-	  <path var="data_dir" match="${year_dir}/D*"/>
-	</path>
+        <var name="data_dir">${root}</var>
+        <path var="data_dir" match="${root}/IFCB*"/>
+        <path var="year_dir" match="${root}/[0-9]*">
+          <any>
+            <path var="data_dir" match="${year_dir}/D*"/>
+            <path var="data_dir" match="${year_dir}/IFCB*"/>
+          </any>
+        </path>
+        <path var="year_dir" match="${root}/D[0-9]*">
+          <path var="data_dir" match="${year_dir}/D*"/>
+        </path>
       </any>
       <path var="hdr_path" match="${data_dir}/*.hdr"/>
       <match var="hdr_path" pattern="(.*/(.*))\.hdr$" groups="basename lid"/>
@@ -137,41 +137,41 @@
     <rule name="product_path">
       <!-- generate appropriate product filename -->
       <first>
-	<test var="product" eq="blobs">
-	  <var name="filename">
-	    <val>${bin_lid}_blobs_v2.zip</val>
-	    <val>${bin_lid}.zip</val>
-	  </var>
-	</test>
-	<test var="product" eq="features">
-	  <var name="filename">${bin_lid}_fea_v2.csv</var>
-	</test>
-	<test var="product" eq="multiblob">
-	  <!-- feature sidecar files -->
-	  <var name="filename">multiblob/${bin_lid}_multiblob_v2.csv</var>
-	</test>
-	<test var="product" eq="class_scores">
-	  <var name="filename">{bin_lid}_class_v1.mat</var>
-	</test>
-	<test var="product" eq="binzip">
-	  <var name="filename">${bin_lid}_binzip_v1.zip</var>
-	</test>
+        <test var="product" eq="blobs">
+          <var name="filename">
+            <val>${bin_lid}_blobs_v2.zip</val>
+            <val>${bin_lid}.zip</val>
+          </var>
+        </test>
+        <test var="product" eq="features">
+          <var name="filename">${bin_lid}_fea_v2.csv</var>
+        </test>
+        <test var="product" eq="multiblob">
+          <!-- feature sidecar files -->
+          <var name="filename">multiblob/${bin_lid}_multiblob_v2.csv</var>
+        </test>
+        <test var="product" eq="class_scores">
+          <var name="filename">{bin_lid}_class_v1.mat</var>
+        </test>
+        <test var="product" eq="binzip">
+          <var name="filename">${bin_lid}_binzip_v1.zip</var>
+        </test>
       </first>
       <any>
-	<!-- try product-specific directory structures -->
-	<first>
-	  <test var="product" eq="blobs">
-	    <var name="file_path">${root}/${year}/${yearday}/${filename}</var>
-	  </test>
-	  <test var="product" eq="features">
-	    <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
-	  </test>
-	  <test var="product" eq="class_scores">
-	    <var name="file_path">${root}/class${year}_v1/${bin_lid}_class_v1.mat</var>
-	  </test>
-	</first>
-	<!-- if they don't work, use the >=2014 standard directory patterns -->
-	<invoke rule="ifcb.files.file_path"/>
+        <!-- try product-specific directory structures -->
+        <first>
+          <test var="product" eq="blobs">
+            <var name="file_path">${root}/${year}/${yearday}/${filename}</var>
+          </test>
+          <test var="product" eq="features">
+            <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
+          </test>
+          <test var="product" eq="class_scores">
+            <var name="file_path">${root}/class${year}_v1/${bin_lid}_class_v1.mat</var>
+          </test>
+        </first>
+        <!-- if they don't work, use the >=2014 standard directory patterns -->
+        <invoke rule="ifcb.files.file_path"/>
       </any>
     </rule>
     <rule name="find_product" nth="1">
@@ -181,47 +181,47 @@
     <!-- detecting data directories -->
     <rule name="validate_data_dir" uses="root product" nth="1">
       <first>
-	<!-- raw filesets -->
-	<test var="product" eq="raw">
-	  <!-- try each extension -->
-	  <split group="extension" value="adc hdr roi"/>
-	  <var name="name_glob">*.${extension}</var>
-	  <!-- try flat, v1, and v2 directory layouts -->
-	  <!-- FIXME try 2014 layout -->
-	  <any>
-	    <path match="${root}/[0-9]*/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/>
-	    <path match="${root}/[0-9]*/D[0-9]*/${name_glob}"/>
-	    <path match="${root}/${name_glob}"/>
-	    <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
-	    <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
-	  </any>
-	</test>
-	<!-- blobs -->
-	<test var="product" eq="blobs">
-	  <var name="name_glob">*_blobs_v*.zip</var>
-	  <!-- try the yyyy/yyyymmdd directory layout -->
-	  <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
-	</test>
-	<test var="product" eq="features">
-	  <var name="name_glob">*_fea_v*.csv</var>
-	  <!-- try the featuresyyyy_vn directory layout -->
-	  <path match="${root}/features[0-9]*_v[0-9]*/${name_glob}"/>
-	</test>
+        <!-- raw filesets -->
+        <test var="product" eq="raw">
+          <!-- try each extension -->
+          <split group="extension" value="adc hdr roi"/>
+          <var name="name_glob">*.${extension}</var>
+          <!-- try flat, v1, and v2 directory layouts -->
+          <!-- FIXME try 2014 layout -->
+          <any>
+            <path match="${root}/[0-9]*/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/>
+            <path match="${root}/[0-9]*/D[0-9]*/${name_glob}"/>
+            <path match="${root}/${name_glob}"/>
+            <path match="${root}/IFCB[0-9]_[0-9]*_[0-9]*/${name_glob}"/> <!-- FIXME test -->
+            <path match="${root}/D[0-9]*/D[0-9]*/${name_glob}"/> <!-- FIXME test -->
+          </any>
+        </test>
+        <!-- blobs -->
+        <test var="product" eq="blobs">
+          <var name="name_glob">*_blobs_v*.zip</var>
+          <!-- try the yyyy/yyyymmdd directory layout -->
+          <path match="${root}/[0-9]*/[0-9]*/${name_glob}"/>
+        </test>
+        <test var="product" eq="features">
+          <var name="name_glob">*_fea_v*.csv</var>
+          <!-- try the featuresyyyy_vn directory layout -->
+          <path match="${root}/features[0-9]*_v[0-9]*/${name_glob}"/>
+        </test>
       </first>
     </rule>
     <rule name="find_data_dirs" uses="root" distinct="directory product">
       <!-- identify all data directories including their product type -->
       <first>
-	<all include="directory product">
-	  <!-- use the validate_data_dir on each product type -->
-	  <split group="product" value="raw blobs features"/>
-	  <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
-	</all>
-	<!-- recursively descend into any subdirectories -->
-	<all>
-	  <path var="root" match="${root}/*/"/>
-	  <invoke rule="ifcb.files.find_data_dirs" include="directory product"/>
-	</all>
+        <all include="directory product">
+          <!-- use the validate_data_dir on each product type -->
+          <split group="product" value="raw blobs features"/>
+          <invoke rule="ifcb.files.validate_data_dir" rename="root" as="directory"/>
+        </all>
+        <!-- recursively descend into any subdirectories -->
+        <all>
+          <path var="root" match="${root}/*/"/>
+          <invoke rule="ifcb.files.find_data_dirs" include="directory product"/>
+        </all>
       </first>
     </rule>
   </namespace>
@@ -230,27 +230,27 @@
     <!-- return the column scheme for a given schema -->
     <rule name="schema" uses="schema_version">
       <first>
-	<test var="schema_version" eq="v1">
-	  <var name="columns">&v1_adc_cols;</var>
-	  <var name="types">&v1_adc_types;</var>
-	</test>
-	<test var="schema_version" eq="v2">
-	  <var name="columns">&v2_adc_cols;</var>
-	  <var name="types">&v2_adc_types;</var>
-	</test>
+        <test var="schema_version" eq="v1">
+          <var name="columns">&v1_adc_cols;</var>
+          <var name="types">&v1_adc_types;</var>
+        </test>
+        <test var="schema_version" eq="v2">
+          <var name="columns">&v2_adc_cols;</var>
+          <var name="types">&v2_adc_types;</var>
+        </test>
       </first>
     </rule>
     <!-- given an ADC file and a schema version, return all the targets as solutions -->
     <rule name="parse" uses="adc_file schema_version">
       <all count="targetNumber">
-	<first>
-	  <test var="schema_version" eq="v1">
-	    <csv file="${adc_file}" vars="&v1_adc_cols;"/>
-	  </test>
-	  <test var="schema_version" eq="v2">
-	    <csv file="${adc_file}" vars="&v2_adc_cols;"/>
-	  </test>
-	</first>
+        <first>
+          <test var="schema_version" eq="v1">
+            <csv file="${adc_file}" vars="&v1_adc_cols;"/>
+          </test>
+          <test var="schema_version" eq="v2">
+            <csv file="${adc_file}" vars="&v2_adc_cols;"/>
+          </test>
+        </first>
       </all>
     </rule>
     <!-- given an ADC file, schema version, and target number, return that target -->

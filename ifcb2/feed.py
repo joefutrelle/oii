@@ -27,6 +27,8 @@ class Feed(object):
         return self
     def __exit__(self,type,value,traceback):
         pass
+    def get_bin(self, lid):
+        return self.session.query(Bin).filter(and_(Bin.lid==lid,Bin.ts_label==self.ts_label)).first()
     def _with_tag(self, q):
         if self.tag is not None:
             q = q.filter(Bin.tags.contains(normalize_tag(self.tag)))
@@ -118,7 +120,12 @@ class Feed(object):
             order_by(desc(Bin.sample_time)).\
             limit(n)
         return q
-    ## metrics
+    def all(self):
+        """yield all bins, regardless of skip, tag, or any other constraints"""
+        q = self.session.query(Bin).\
+            filter(Bin.ts_label==self.ts_label).\
+            order_by(Bin.sample_time)
+        return q
     def elapsed(self,timestamp=None):
         """time elapsed since latest bin at the given time (default now) (utc datetime).
         returns a timedelta"""
