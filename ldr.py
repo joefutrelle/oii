@@ -694,8 +694,8 @@ class Resolver(object):
     def __init__(self,*files):
         self.namespace = parse(*files)
         self._add_positional_functions()
-    def invoke(self,name,**bindings):
-        for s in invoke(name,bindings,self.namespace):
+    def invoke(self,_name,**bindings):
+        for s in invoke(_name,bindings,self.namespace):
             yield s
     def as_function(self,name):
         def _fn(**bindings):

@@ -1361,6 +1361,35 @@ def skip_day(ts_label,dt):
 def unskip_day(ts_label,dt):
     return _skip_or_unskip_day(ts_label, dt, skip=False)
 
+#### external metadata ####
+
+from oii.ifcb2.metadata import write_metadata
+
+@app.route('/<ts_label>/metadata/<filename>')
+def serve_metadata_file(ts_label, filename):
+    for s in ifcb().files.parse_metadata_filename(filename):
+        year = int(s['year'])
+        feed = Feed(session, ts_label)
+        sout = StringIO()
+        write_metadata(feed, sout, year=year)
+        return Response(sout.getvalue(), mimetype='text/csv')
+
+@app.route('/<ts_label>/metadata.html')
+def serve_metadata_links(ts_label):
+    with Feed(session, ts_label) as feed:
+        def derit():
+            for year in feed.years():
+                filename = '%s_%d_metadata.csv' % (ts_label, year)
+                href = '/%s/metadata/%s' % (ts_label, filename)
+                yield {
+                    'label': filename,
+                    'href': href
+                }
+        links = list(derit())
+        return template_response('metadata_links.html',**{
+            'links': links
+        })
+
 #### mosaics #####
 
 def get_sorted_tiles(adc_path, schema_version, bin_pid):

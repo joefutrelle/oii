@@ -140,5 +140,6 @@ class Feed(object):
         return [int(row[0]) for row in q]
     def year(self, year):
         q = self.session.query(Bin).filter(func.date_part('year',Bin.sample_time)==year).\
+            filter(Bin.ts_label==self.ts_label).\
             order_by(Bin.sample_time)
         return q

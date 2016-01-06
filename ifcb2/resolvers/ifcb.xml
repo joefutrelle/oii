@@ -224,7 +224,11 @@
         </all>
       </first>
     </rule>
-    <rule name="find_metadata" uses="root">
+    <rule name="parse_metadata_filename" uses="name">
+        <match var="name" pattern="(.*)_(\d\d\d\d)_metadata.csv"
+            groups="ts_label year"/>
+    </rule>
+    <rule name="find_metadata_files" uses="root">
       <path match="${root}/*_metadata.csv" var="file_path"/>
     </rule>
   </namespace>

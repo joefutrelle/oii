@@ -1,0 +1,19 @@
+{% extends "master.html" %}
+{% block title %}{{query}}{% endblock %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+});
+</script>
+{% endblock %}
+{% block content %}
+<ul>
+{% for link in links %}
+<li>
+    <a href="{{link.href}}">{{link.label}}</a>
+</li>
+{% endfor %}
+</ul>
+{% endblock %}
+

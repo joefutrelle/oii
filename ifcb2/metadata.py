@@ -1,6 +1,11 @@
 import sys
 import csv
 import re
+import tempfile
+
+from zipfile import ZipFile, ZIP_DEFLATED
+from StringIO import StringIO
+import shutil
 
 from tagging import Tagging
 
@@ -21,11 +26,28 @@ REMOVE_TAG='removetag'
 
 SCHEMA=[LID, LAT, LON, DEPTH, SKIP, ADD_TAG, REMOVE_TAG]
 
-def write_metadata(feed, fout=sys.stdout):
-    q = feed.all()
+def write_metadata_zip(feed, fout=sys.stdout):
+    with tempfile.SpooledTemporaryFile() as temp:
+        z = ZipFile(temp,'w',ZIP_DEFLATED)
+        for year in feed.years():
+            print year
+            yout = StringIO()
+            write_metadata(feed, yout, year=year)
+            name = '%s_%d_metadata.csv' % (feed.ts_label, year)
+            z.writestr(name, yout.getvalue())
+            yout.close()
+        z.close()
+        temp.seek(0)
+        shutil.copyfileobj(temp, fout)
+
+def write_metadata(feed, fout=sys.stdout, year=None):
+    if year is None:
+        q = feed.all()
+    else:
+        q = feed.year(year)
     writer = csv.DictWriter(fout, SCHEMA)
     writer.writeheader()
-    for b in q.all():
+    for b in q:
         writer.writerow({
             LID: b.lid,
             LAT: b.lat,
