@@ -224,6 +224,9 @@
         </all>
       </first>
     </rule>
+    <rule name="find_metadata" uses="root">
+      <path match="${root}/*_metadata.csv" var="file_path"/>
+    </rule>
   </namespace>
   <!-- ADC parsing -->
   <namespace name="adc">

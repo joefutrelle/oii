@@ -120,12 +120,6 @@ class Feed(object):
             order_by(desc(Bin.sample_time)).\
             limit(n)
         return q
-    def all(self):
-        """yield all bins, regardless of skip, tag, or any other constraints"""
-        q = self.session.query(Bin).\
-            filter(Bin.ts_label==self.ts_label).\
-            order_by(Bin.sample_time)
-        return q
     def elapsed(self,timestamp=None):
         """time elapsed since latest bin at the given time (default now) (utc datetime).
         returns a timedelta"""
@@ -133,3 +127,18 @@ class Feed(object):
             timestamp = utcdtnow()
         latest = self.latest(1,timestamp)[0]
         return timestamp - latest.sample_time
+    def all(self):
+        """all bins, regardless of skip, tag, or any other constraints"""
+        q = self.session.query(Bin).\
+            filter(Bin.ts_label==self.ts_label).\
+            order_by(Bin.sample_time)
+        return q
+    def years(self):
+        q = self.session.query(func.date_part('year',Bin.sample_time)).distinct().\
+            filter(Bin.ts_label==self.ts_label).\
+            order_by(func.date_part('year',Bin.sample_time))
+        return [int(row[0]) for row in q]
+    def year(self, year):
+        q = self.session.query(Bin).filter(func.date_part('year',Bin.sample_time)==year).\
+            order_by(Bin.sample_time)
+        return q
