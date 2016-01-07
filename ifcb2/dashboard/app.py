@@ -188,7 +188,7 @@ def parse_pid(pid):
 def get_data_roots(ts_label, product_type='raw'):
     return files.get_data_roots(session, ts_label, product_type)
 
-def get_timestamp(parsed_pid):
+def parse_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
 
 def get_unstitched_targets(adc, bin_pid):
@@ -943,9 +943,14 @@ class DashboardRequest(object):
         self.extension = 'json' # default
         if 'extension' in self.parsed:
             self.extension = self.parsed['extension']
-        self.timestamp = get_timestamp(self.parsed)
+        self.timestamp = self.get_timestamp()
         self.product = self.parsed[PRODUCT]
         self.stitch = self.schema_version == SCHEMA_VERSION_1
+    def get_timestamp(self):
+        b = get_orm_bin(self, False)
+        if b is not None:
+            return iso8601(b.sample_time.timetuple())
+        return parse_timestamp(self.parsed)
 
 @app.route('/api/bad_stitch/<url:pid>')
 @api_login_roles_required('Admin')
@@ -1291,10 +1296,11 @@ def serve_wf_recent(n=None):
 
 #### skipping and tagging ####
 
-def get_orm_bin(req):
+def get_orm_bin(req, abort_404=True):
     b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
     if b is None:
-        abort(404)
+        if abort_404:
+            abort(404)
     return b
 
 @app.route('/api/get_skip/<url:pid>')
@@ -1307,12 +1313,6 @@ def get_skip_flag(pid):
         'pid': pid
     }
     return Response(json.dumps(result),mimetype=MIME_JSON)
-
-def get_orm_bin(req):
-    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
-    if b is None:
-        abort(404)
-    return b
 
 def set_skip_flag(b,value):
     b.skip = value
