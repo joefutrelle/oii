@@ -45,7 +45,7 @@ def ellipse_properties(B):
 
 def invmoments(B):
     """compute invariant moments. see
-    Digital Image Processing in MATLAB, ch. 11"""
+    Digital Image Processing Using MATLAB, ch. 11"""
     B = np.array(B).astype(np.bool)
     M, N = B.shape
     x, y = np.meshgrid(np.arange(1,N+1), np.arange(1,M+1))
@@ -63,32 +63,33 @@ def invmoments(B):
     def mu(p,q):
         return np.sum((x - x_)**p * (y - y_)**q * F)
 
-    @np.vectorize
     def eta(p,q):
         gamma = (p + q) / 2. + 1.
         return mu(p,q) / mu(0,0)**gamma
 
-    q, p = np.meshgrid(np.arange(4),np.arange(4))
-    e = eta(p,q)
-
-    phi1 = e[2,0] + e[0,2]
-    phi2 = (e[2,0] - e[0,2])**2 + 4 * e[1,1]**2
-    phi3 = (e[3,0] - 3 * e[1,2])**2 + (3 * e[2,1] - e[0,3])**2
-    phi4 = (e[3,0] + e[1,2])**2 + (e[2,1] + e[0,3])**2
-    phi5 = (e[3,0] - 3 * e[1,2]) * (e[3,0] + e[1,2]) * \
-        ( (e[3,0] + e[1,2])**2 - 3 * (e[2,1] + e[0,3])**2 ) + \
-        (3 * e[2,1] - e[0,3]) * (e[2,1] + e[0,3]) * \
-        ( 3 * (e[3,0] + e[1,2])**2 - (e[2,1] + e[0,3])**2 )
-    phi6 = (e[2,0] - e[0,2]) * \
-        ( (e[3,0] + e[1,2])**2 - (e[2,1] + e[0,3])**2 ) + \
-        4 * e[1,1] * (e[3,0] + e[1,2]) * (e[2,1] + e[0,3])
-    phi7 = (3 * e[2,1] - e[0,3]) * (e[3,0] + e[1,2]) * \
-        ( (e[3,0] + e[1,2])**2 - 3 * (e[2,1] + e[0,3])**2 ) + \
-        (3 * e[1,2] - e[3,0]) * (e[2,1] + e[0,3]) * \
-        ( 3 * (e[3,0] + e[1,2])**2 - (e[2,1] + e[0,3])**2 )
+    e20, e02 = eta(2,0), eta(0,2)
+    e11 = eta(1,1)
+    e30, e03 = eta(3,0), eta(0,3)
+    e12, e21 = eta(1,2), eta(2,1)
+    
+    phi1 = e20 + e02
+    phi2 = (e20 - e02)**2 + 4 * e11**2
+    phi3 = (e30 - 3 * e12)**2 + (3 * e21 - e03)**2
+    phi4 = (e30 + e12)**2 + (e21 + e03)**2
+    phi5 = (e30 - 3 * e12) * (e30 + e12) * \
+        ( (e30 + e12)**2 - 3 * (e21 + e03)**2 ) + \
+        (3 * e21 - e03) * (e21 + e03) * \
+        ( 3 * (e30 + e12)**2 - (e21 + e03)**2 )
+    phi6 = (e20 - e02) * \
+        ( (e30 + e12)**2 - (e21 + e03)**2 ) + \
+        4 * e11 * (e30 + e12) * (e21 + e03)
+    phi7 = (3 * e21 - e03) * (e30 + e12) * \
+        ( (e30 + e12)**2 - 3 * (e21 + e03)**2 ) + \
+        (3 * e12 - e30) * (e21 + e03) * \
+        ( 3 * (e30 + e12)**2 - (e21 + e03)**2 )
 
     return phi1, phi2, phi3, phi4, phi5, phi6, phi7
-    
+
 def convex_hull(perimeter_points):
     P = np.vstack(perimeter_points).T
     hull = ConvexHull(P)

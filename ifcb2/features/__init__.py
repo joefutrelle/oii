@@ -11,7 +11,7 @@ from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties,
 from oii.ifcb2.features.morphology import find_perimeter
 from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
 from oii.ifcb2.features.perimeter import perimeter_stats
-from oii.ifcb2.features.texture import statxture
+from oii.ifcb2.features.texture import statxture, masked_pixels, texture_pixels
 
 class Blob(object):
     def __init__(self,blob_image,roi_image):
@@ -29,7 +29,12 @@ class Blob(object):
     @imemoize
     def pixels(self):
         """all pixel values, as a flat list"""
-        return self.roi_image[np.where(self.image)]
+        return masked_pixels(self.roi_image, self.image)
+    @property
+    @imemoize
+    def texture_pixels(self):
+        """all pixel values of the contrast-enhanced image, as a flat list"""
+        return texture_pixels(self.roi_image, self.image)
     @property
     @imemoize
     def regionprops(self):
@@ -156,7 +161,7 @@ class Blob(object):
     def texture_stats(self):
         """mean intensity, avg contrast, smoothness,
         third moment, uniformity, entropy of pixels"""
-        return statxture(self.pixels)
+        return statxture(self.texture_pixels)
     @property
     @imemoize
     def texture_average_gray_level(self):
