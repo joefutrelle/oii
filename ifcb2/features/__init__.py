@@ -10,8 +10,9 @@ from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties,
     invmoments, convex_hull, convex_hull_image, convex_hull_perimeter
 from oii.ifcb2.features.morphology import find_perimeter
 from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
-from oii.ifcb2.features.perimeter import perimeter_stats
+from oii.ifcb2.features.perimeter import perimeter_stats, hausdorff_symmetry
 from oii.ifcb2.features.texture import statxture, masked_pixels, texture_pixels
+from oii.ifcb2.features.hog import image_hog
 
 class Blob(object):
     def __init__(self,blob_image,roi_image):
@@ -38,7 +39,7 @@ class Blob(object):
     @property
     @imemoize
     def regionprops(self):
-        return regionprops(self.image*1)[0]
+        return regionprops(self.image)[0]
     @property
     @imemoize
     def area(self):
@@ -186,6 +187,10 @@ class Blob(object):
     @imemoize
     def texture_entropy(self):
         return self.texture_stats[5]
+    @property
+    @imemoize
+    def hausdorff_symmetry(self):
+        return hausdorff_symmetry(self.rotated_image)
         
 class Roi(object):
     def __init__(self,roi_image):
@@ -201,3 +206,7 @@ class Roi(object):
         cropped_rois = [self.image[bbox] for bbox in bboxes]
         Bs = [Blob(b,R) for b,R in zip(blobs,cropped_rois)]
         return sorted(Bs, key=lambda B: B.area, reverse=True)
+    @property
+    @imemoize
+    def hog(self):
+        return image_hog(self.image)
