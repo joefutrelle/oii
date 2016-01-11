@@ -50,7 +50,7 @@ def modified_hausdorff(A,B):
     
 def hausdorff_symmetry(B):
     """given a binary image, compute modified hausdorff distance between
-    its perimeter and its perimeter rotated 90, 180, and mirrored
+    its perimeter and its perimeter rotated 180, 90, and mirrored
     across its centroid in the up/down direction. intended to be used
     with binary regions rotated so that their major axis is horizontal.
     """
