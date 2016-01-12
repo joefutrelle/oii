@@ -15,6 +15,7 @@ from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
 from oii.ifcb2.features.perimeter import perimeter_stats, hausdorff_symmetry
 from oii.ifcb2.features.texture import statxture, masked_pixels, texture_pixels
 from oii.ifcb2.features.hog import image_hog
+from oii.ifcb2.features.ringwedge import ring_wedge
 
 class Blob(object):
     def __init__(self,blob_image,roi_image):
@@ -64,7 +65,7 @@ class Blob(object):
     @property
     @imemoize
     def convex_hull(self):
-        """verticies of convex hull of blob"""
+        """vertices of convex hull of blob"""
         return convex_hull(self.perimeter_points)
     @property
     @imemoize
@@ -207,7 +208,7 @@ class Blob(object):
     @property
     @imemoize
     def texture_stats(self):
-        """mean intensity, avg contrast, smoothness,
+        """mean intensity, average contrast, smoothness,
         third moment, uniformity, entropy of texture pixels.
         based on algorithm described in Digital Image Processing Using
         MATLAB, pp . 464-468.
@@ -248,7 +249,7 @@ class Blob(object):
     def hausdorff_symmetry(self):
         """takes the rotated blob perimeter and compares it
         with itself rotated 180 degrees, rotated 90 degrees,
-        and mirrored across the major axis, and then computes
+        and mirrored across the major axis, using
         the modified Hausdorff distance between the rotated
         blob perimeter and each of those variants"""
         return hausdorff_symmetry(self.rotated_image)
@@ -277,3 +278,18 @@ class Roi(object):
         """returns the Histogram of Oriented Gradients of the image.
         see oii.ifcb2.features.hog"""
         return image_hog(self.image)
+    @property
+    @imemoize
+    def ring_wedge(self):
+        pwr_integral, pwr_ratio, wedges, rings = ring_wedge(self.image)
+        return wedges, rings
+    @property
+    @imemoize
+    def wedge(self):
+        return self.ring_wedge[0]
+    @property
+    @imemoize
+    def ring(self):
+        return self.ring_wedge[1]
+
+
