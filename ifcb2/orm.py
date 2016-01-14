@@ -68,7 +68,12 @@ class Bin(Base):
     id = Column(Integer, primary_key=True)
     ts_label = Column(String)
     lid = Column(String, index=True)
+    # 'sample time' is timestamp from filename, which is really the
+    # time when the sample was rung
     sample_time = Column(DateTime(timezone=True), index=True)
+    # 'sample taken time' when set indicates when the sample was taken
+    # if it is not the run time
+    sample_taken_time = Column(DateTime(timezone=True), index=True)
     skip = Column(Boolean, default=False)
 
     lat = Column(Numeric, index=True)
