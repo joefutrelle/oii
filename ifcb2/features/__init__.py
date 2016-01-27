@@ -253,6 +253,18 @@ class Blob(object):
         the modified Hausdorff distance between the rotated
         blob perimeter and each of those variants"""
         return hausdorff_symmetry(self.rotated_image)
+    @property
+    @imemoize
+    def h180(self):
+        return self.hausdorff_symmetry[0]
+    @property
+    @imemoize
+    def h90(self):
+        return self.hausdorff_symmetry[1]
+    @property
+    @imemoize
+    def hflip(self):
+        return self.hausdorff_symmetry[2]
         
 class Roi(object):
     def __init__(self,roi_image):

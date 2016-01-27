@@ -20,5 +20,5 @@ def ifcb_segment(img):
     # step 4. morphological reconstruction
     seed = np.copy(thin_blob)
     seed[1:-1,1:-1] = 1
-    four=np.disk(1).astype(np.bool)
+    four=disk(1).astype(np.bool)
     return reconstruction(seed,thin_blob,method='erosion',selem=four)
