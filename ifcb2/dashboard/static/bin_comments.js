@@ -78,7 +78,10 @@
                     'Search <select class="search_target">'+
                         '<option'+comment_select+'>comments</option>'+
                         '<option'+tag_select+'>tags</option>'+
-                    '</select>');
+                    '</select>')
+                    .find('.search_target').on('change',function(e) {
+                        tags_or_comments = $('select.search_target').val();
+                    });
                 $this.find('button.search').button().on('click', function() {
                     var query = $('input.search').val();
                     var target = $('select.search_target').val();
@@ -99,6 +102,13 @@
                 $(input).on('keyup',function(e) {
                     if(e.keyCode!=13) { return; }
                     $('button.search').click();
+                }).autocomplete({
+                    minLength: 2,
+                    source: function(req, resp) {
+                        if(tags_or_comments=='tags') {
+                            $.getJSON('/autocomplete_tag?stem='+req.term, resp);
+                        }
+                    }
                 });
             });
         }
