@@ -1094,6 +1094,10 @@ def serve_pid(pid):
         if req.product=='flow':
             flow = get_flow(get_req_targets())
             return jsonr(dict(pid=req.canonical_pid,date=req.timestamp,flow=flow))
+        # targets for bin page
+        if req.product=='targetstable':
+            targets = get_req_targets()
+            return template_response('targets_table.html',**dict(targets=targets));
         # not a special view, handle representations of targets
         if req.extension=='csv':
             targets = get_req_targets()
