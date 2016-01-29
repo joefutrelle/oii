@@ -64,6 +64,8 @@ from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 from oii.ifcb2 import v1_stitching
 
+from oii.ifcb2.flow import get_flow
+
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
@@ -1087,24 +1089,29 @@ def serve_pid(pid):
                 return serve_features_bin(req.parsed)
             if req.product=='class_scores':
                 return serve_class_scores_bin(req.parsed)
-            # FIXME below is a kludge. logic overcomplicated
-            if req.product not in ['medium','short','raw','binzip']:
-                raise NotFound
         except NotFound:
             abort(404)
         # gonna need targets unless heft is medium or below
-        targets = []
-        if req.product != 'short':
-            targets = get_targets(adc, req.canonical_pid, req.stitch)
+        def get_req_targets():
+            return get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
+        # computed flow
+        if req.product=='flow':
+            flow = get_flow(get_req_targets())
+            return jsonr(dict(pid=req.canonical_pid,date=req.timestamp,flow=flow))
+        # targets for bin page
+        if req.product=='targetstable':
+            targets = get_req_targets()
+            return template_response('targets_table.html',**dict(targets=targets));
         # not a special view, handle representations of targets
         if req.extension=='csv':
+            targets = get_req_targets()
             lines = targets2csv(targets,req.adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
         if req.extension in ['html', 'htm']:
-            targets = list(targets)
+            targets = list(get_req_targets())
             context, props = split_hdr(hdr)
             template = {
                 'static': STATIC,
@@ -1121,11 +1128,14 @@ def serve_pid(pid):
             if req.product=='short':
                 return Response(bin2json_short(req.canonical_pid,hdr,req.timestamp),mimetype=MIME_JSON)
             if req.product=='medium':
+                targets = get_req_targets()
                 return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
             return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
         if req.extension=='xml':
+            targets = get_req_targets()
             return Response(bin2xml(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='rdf':
+            targets = get_req_targets()
             return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='zip':
             # look to see if the zipfile is resolvable
@@ -1141,6 +1151,7 @@ def serve_pid(pid):
                 pass
             except:
                 raise
+            targets = get_req_targets()
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
