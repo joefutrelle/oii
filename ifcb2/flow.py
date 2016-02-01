@@ -19,6 +19,7 @@ def get_flow(targets):
     D90 /= np.max(D90)
 
     i = np.linspace(0,1,D90.size)
-    slope, intercept, rval, pval, stderr = stats.linregress(i,D90)
+    
+    flow = 1000. * np.sum((D90-i)**2) / X.size
 
-    return 1 - slope
+    return flow
