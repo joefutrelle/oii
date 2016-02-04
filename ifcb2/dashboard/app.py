@@ -1092,7 +1092,8 @@ def serve_pid(pid):
         # end of views
         # computed flow
         if req.product=='flow':
-            flow = get_flow(get_req_targets())
+            targets = get_req_targets()
+            flow = get_flow(targets)
             return jsonr(dict(pid=req.canonical_pid,date=req.timestamp,flow=flow))
         # not a special view, handle representations of targets
         if req.extension=='csv':
