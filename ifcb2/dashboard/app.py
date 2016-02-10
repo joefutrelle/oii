@@ -1107,6 +1107,10 @@ def serve_pid(pid):
                 'date': req.timestamp
             })
             return jsonr(flow)
+        # targets for bin page
+        if req.product=='targetstable':
+            targets = get_req_targets()
+            return template_response('targets_table.html',**dict(targets=targets));
         # not a special view, handle representations of targets
         if req.extension=='csv':
             targets = get_req_targets()
@@ -1177,6 +1181,16 @@ def product_exists(pid):
     else:
         abort(404)
 
+def save_product(destpath, data):
+    destpath_part = '%s_%s.part' % (destpath, gen_id())
+    try:
+        os.makedirs(os.path.dirname(destpath))
+    except:
+        pass
+    with open(destpath_part,'w') as out:
+        shutil.copyfileobj(StringIO(data), out)
+    shutil.move(destpath_part, destpath)
+    
 @app.route('/<url:pid>',methods=['PUT'])
 @api_roles_required('Admin')
 def deposit(pid):
@@ -1186,14 +1200,7 @@ def deposit(pid):
     except NotFound:
         abort(404)
     product_data = request.data
-    destpath_part = '%s_%s.part' % (destpath, gen_id())
-    try:
-        os.makedirs(os.path.dirname(destpath))
-    except:
-        pass
-    with open(destpath_part,'w') as out:
-        shutil.copyfileobj(StringIO(product_data), out)
-    shutil.move(destpath_part, destpath)
+    save_product(destpath, product_data)
     utcnow = iso8601()
     message = '%s wrote %d bytes to %s' % (utcnow, len(product_data), destpath)
     return Response(json.dumps(dict(
@@ -1428,6 +1435,23 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     size, scale, page = parse_mosaic_params(params)
     (w,h) = size
     parsed = parse_pid(pid)
+    extension = parsed['extension']
+    # caching
+    default_mosaic = False
+    if w==800 and h==600 and scale==0.33 and page==1:
+        default_mosaic = True
+    cached_path = None
+    if default_mosaic and extension=='jpg':
+        try:
+            product_pid = next(ifcb().as_product(pid,'mosaic'))['pid']
+            cached_path = files.get_product_destination(session, product_pid)
+            if os.path.exists(cached_path):
+                return Response(file(cached_path),direct_passthrough=True,mimetype='image/jpeg')
+        except NotFound:
+            pass
+        except StopIteration:
+            pass
+    # didn't find a cached version, need to make one
     schema_version = parsed['schema_version']
     try:
         paths = get_fileset(parsed)
@@ -1439,7 +1463,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))
-    extension = parsed['extension']
     # serve JSON on request
     if extension == 'json':
         return Response(json.dumps(list(layout2json(layout, scale))), mimetype=MIME_JSON)
@@ -1454,6 +1477,8 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
             image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    if cached_path is not None and mimetype=='image/jpeg':
+        save_product(cached_path, as_bytes(mosaic_image))
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
 
