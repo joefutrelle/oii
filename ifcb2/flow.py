@@ -65,13 +65,18 @@ def core(X, Y):
     aspect_ratio = 1. * np.ptp(x[zix]) / np.ptp(y[zix])
     return min(aspect_ratio, 1/aspect_ratio)
 
-def get_metric(X, Y):
+def get_metrics(X, Y):
     # compute weighted sum of metrics
-    i, D = get_distance_histogram(X, Y)
+    i, D = get_distance_histogram(X, Y)  
     cs = camera_spot(i, D)
     clip = clipping(X, Y)
     cr = core(X, Y)
-    return (cs * 10.) + (clip * 0.5) + (cr * 2.5)
+    return {
+        "camera_spot": cs,
+        "clipping": clip,
+        "core_aspect": cr,
+        "position": (cs * 10.) + (clip * 0.5) + (cr * 2.5)
+    }
 
 def get_flow(targets):
     if not targets: # no ROIs
@@ -81,4 +86,4 @@ def get_flow(targets):
     # exclude -999
     X = X[np.where(X != -999)]
     Y = Y[np.where(Y != -999)]
-    return get_metric(X, Y)
+    return get_metrics(X, Y)
