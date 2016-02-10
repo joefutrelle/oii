@@ -72,10 +72,13 @@ def get_metric(X, Y):
     clip = clipping(X, Y)
     cr = core(X, Y)
     return (cs * 10.) + (clip * 0.5) + (cr * 2.5)
-    
+
 def get_flow(targets):
     if not targets: # no ROIs
         return 0 # unable to determine that this is bad flow
     X = np.array([p['left'] for p in targets])
     Y = np.array([p['bottom'] for p in targets])
+    # exclude -999
+    X = X[np.where(X != -999)]
+    Y = Y[np.where(Y != -999)]
     return get_metric(X, Y)
