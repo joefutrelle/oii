@@ -558,6 +558,14 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/feed/random')
+@app.route('/<ts_label>/api/feed/random/n/<int:n>')
+def serve_random(ts_label,n=1):
+    with Feed(session, ts_label) as feed:
+        bins = list(feed.random(n))
+        resp = feed_massage_bins(ts_label, bins)
+        return jsonr(resp)
+
 ### tagging ###
 
 @app.route('/<ts_label>/api/tags/<url:pid>')
@@ -1090,11 +1098,15 @@ def serve_pid(pid):
         def get_req_targets():
             return get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
-        # computed flow
-        if req.product=='flow':
+        # computed position metrics
+        if req.product=='position':
             targets = get_req_targets()
             flow = get_flow(targets)
-            return jsonr(dict(pid=req.canonical_pid,date=req.timestamp,flow=flow))
+            flow.update({
+                'pid': req.canonical_pid,
+                'date': req.timestamp
+            })
+            return jsonr(flow)
         # targets for bin page
         if req.product=='targetstable':
             targets = get_req_targets()
