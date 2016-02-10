@@ -1098,11 +1098,15 @@ def serve_pid(pid):
         def get_req_targets():
             return get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
-        # computed flow
-        if req.product=='flow':
+        # computed position metrics
+        if req.product=='position':
             targets = get_req_targets()
             flow = get_flow(targets)
-            return jsonr(dict(pid=req.canonical_pid,date=req.timestamp,flow=flow))
+            flow.update({
+                'pid': req.canonical_pid,
+                'date': req.timestamp
+            })
+            return jsonr(flow)
         # not a special view, handle representations of targets
         if req.extension=='csv':
             targets = get_req_targets()
