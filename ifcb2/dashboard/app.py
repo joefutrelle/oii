@@ -64,6 +64,8 @@ from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 from oii.ifcb2 import v1_stitching
 
+from oii.ifcb2.flow import get_flow
+
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
@@ -555,6 +557,14 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
             bins = list(feed.after(bin_lid, n))
     resp = feed_massage_bins(ts_label, bins)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/feed/random')
+@app.route('/<ts_label>/api/feed/random/n/<int:n>')
+def serve_random(ts_label,n=1):
+    with Feed(session, ts_label) as feed:
+        bins = list(feed.random(n))
+        resp = feed_massage_bins(ts_label, bins)
+        return jsonr(resp)
 
 ### tagging ###
 
@@ -1082,24 +1092,34 @@ def serve_pid(pid):
                 return serve_features_bin(req.parsed)
             if req.product=='class_scores':
                 return serve_class_scores_bin(req.parsed)
-            # FIXME below is a kludge. logic overcomplicated
-            if req.product not in ['medium','short','raw','binzip']:
-                raise NotFound
         except NotFound:
             abort(404)
         # gonna need targets unless heft is medium or below
-        targets = []
-        if req.product != 'short':
-            targets = get_targets(adc, req.canonical_pid, req.stitch)
+        def get_req_targets():
+            return get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
+        # computed position metrics
+        if req.product=='position':
+            targets = get_req_targets()
+            flow = get_flow(targets)
+            flow.update({
+                'pid': req.canonical_pid,
+                'date': req.timestamp
+            })
+            return jsonr(flow)
+        # targets for bin page
+        if req.product=='targetstable':
+            targets = get_req_targets()
+            return template_response('targets_table.html',**dict(targets=targets));
         # not a special view, handle representations of targets
         if req.extension=='csv':
+            targets = get_req_targets()
             lines = targets2csv(targets,req.adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
         if req.extension in ['html', 'htm']:
-            targets = list(targets)
+            targets = list(get_req_targets())
             context, props = split_hdr(hdr)
             template = {
                 'static': STATIC,
@@ -1116,11 +1136,14 @@ def serve_pid(pid):
             if req.product=='short':
                 return Response(bin2json_short(req.canonical_pid,hdr,req.timestamp),mimetype=MIME_JSON)
             if req.product=='medium':
+                targets = get_req_targets()
                 return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
             return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
         if req.extension=='xml':
+            targets = get_req_targets()
             return Response(bin2xml(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='rdf':
+            targets = get_req_targets()
             return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='zip':
             # look to see if the zipfile is resolvable
@@ -1136,6 +1159,7 @@ def serve_pid(pid):
                 pass
             except:
                 raise
+            targets = get_req_targets()
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
@@ -1157,6 +1181,16 @@ def product_exists(pid):
     else:
         abort(404)
 
+def save_product(destpath, data):
+    destpath_part = '%s_%s.part' % (destpath, gen_id())
+    try:
+        os.makedirs(os.path.dirname(destpath))
+    except:
+        pass
+    with open(destpath_part,'w') as out:
+        shutil.copyfileobj(StringIO(data), out)
+    shutil.move(destpath_part, destpath)
+    
 @app.route('/<url:pid>',methods=['PUT'])
 @api_roles_required('Admin')
 def deposit(pid):
@@ -1166,14 +1200,7 @@ def deposit(pid):
     except NotFound:
         abort(404)
     product_data = request.data
-    destpath_part = '%s_%s.part' % (destpath, gen_id())
-    try:
-        os.makedirs(os.path.dirname(destpath))
-    except:
-        pass
-    with open(destpath_part,'w') as out:
-        shutil.copyfileobj(StringIO(product_data), out)
-    shutil.move(destpath_part, destpath)
+    save_product(destpath, product_data)
     utcnow = iso8601()
     message = '%s wrote %d bytes to %s' % (utcnow, len(product_data), destpath)
     return Response(json.dumps(dict(
@@ -1408,6 +1435,23 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     size, scale, page = parse_mosaic_params(params)
     (w,h) = size
     parsed = parse_pid(pid)
+    extension = parsed['extension']
+    # caching
+    default_mosaic = False
+    if w==800 and h==600 and scale==0.33 and page==1:
+        default_mosaic = True
+    cached_path = None
+    if default_mosaic and extension=='jpg':
+        try:
+            product_pid = next(ifcb().as_product(pid,'mosaic'))['pid']
+            cached_path = files.get_product_destination(session, product_pid)
+            if os.path.exists(cached_path):
+                return Response(file(cached_path),direct_passthrough=True,mimetype='image/jpeg')
+        except NotFound:
+            pass
+        except StopIteration:
+            pass
+    # didn't find a cached version, need to make one
     schema_version = parsed['schema_version']
     try:
         paths = get_fileset(parsed)
@@ -1419,7 +1463,6 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))
-    extension = parsed['extension']
     # serve JSON on request
     if extension == 'json':
         return Response(json.dumps(list(layout2json(layout, scale))), mimetype=MIME_JSON)
@@ -1434,6 +1477,8 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
             image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    if cached_path is not None and mimetype=='image/jpeg':
+        save_product(cached_path, as_bytes(mosaic_image))
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
 

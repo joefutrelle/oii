@@ -92,12 +92,16 @@ class Feed(object):
         return self._ts_query(end_time=timestamp).\
             order_by(desc(Bin.sample_time)).\
             limit(n)
-    def after(self,bin_lid,n=1):
-        """n bins after a given one"""
+    def _bin_query(self,with_tag=False):
         q = self.session.query(Bin).\
             filter(Bin.ts_label==self.ts_label).\
             filter(~Bin.skip)
-        q = self._with_tag(q)
+        if with_tag:
+            q = self._with_tag(q)
+        return q
+    def after(self,bin_lid,n=1):
+        """n bins after a given one"""
+        q = self._bin_query(with_tag=True)
         q = q.filter(Bin.sample_time > self.session.query(Bin.sample_time).\
                    filter(Bin.ts_label==self.ts_label).\
                    filter(Bin.lid==bin_lid).\
@@ -107,16 +111,17 @@ class Feed(object):
         return q
     def before(self,bin_lid,n=1):
         """n bins before a given one"""
-        q = self.session.query(Bin).\
-            filter(Bin.ts_label==self.ts_label).\
-            filter(~Bin.skip)
-        q = self._with_tag(q)
+        q = self._bin_query(with_tag=True)
         q = q.filter(Bin.sample_time < self.session.query(Bin.sample_time).\
                    filter(Bin.ts_label==self.ts_label).\
                    filter(Bin.lid==bin_lid).\
                    as_scalar()).\
             order_by(desc(Bin.sample_time)).\
             limit(n)
+        return q
+    def random(self,n=1):
+        q = self._bin_query(with_tag=True)
+        q = q.order_by(func.random()).limit(n)
         return q
     ## metrics
     def elapsed(self,timestamp=None):
