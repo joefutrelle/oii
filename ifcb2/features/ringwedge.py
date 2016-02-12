@@ -12,55 +12,43 @@ from oii.utils import memoize
 # Python port: Joe Futrelle, 2016
 
 _DIM=301
+_N_RINGS=50
+_N_WEDGES=48
 
 _eps = np.finfo(float).eps
 
 @memoize
-def ring_mask(i,dim=_DIM):
-    # ring masks are a series of 50 concentric rings, each dim/100
-    # pixels thick, around the center of the dim x dim array
-    s = dim/100.
-    rmin = (i * s) + _eps
-    rmax = (i+1) * s
-    c = (dim//2)+1
-    mask = np.zeros((dim,dim),dtype=np.bool)
-    mask[circle(c,c,rmax)]=True
-    mask[circle(c,c,rmin)]=False
-    return mask
+def unit_circle(dim=_DIM):
+    I = np.linspace(-1,1,dim)
+    X, Y = np.meshgrid(I,I)
+    r = np.sqrt(X**2 + Y**2)
+    theta = np.arctan2(Y,X)
+    return r, theta
+
+@memoize
+def ring_mask(i,dim=_DIM,n_rings=_N_RINGS):
+    # ring masks are a series of adjacent concentric rings
+    # around the center of the unit circle
+    w = 1. / n_rings
+    r, _ = unit_circle(dim)
+    inner_rad = i*w
+    outer_rad = (i+1)*w
+    return (r > inner_rad) & (r < outer_rad)
     
 @memoize
-def wedge_mask(i,dim=_DIM):
-    # wedge masks are a series of 48 triangles between the center of
-    # the dim x dim array and two adjacent vertices of a radius dim/100
-    # semicircle divided into 48 arc segments. the semicircle is the
-    # bottom half of a dim x dim array.
-    mask = np.zeros((dim,dim),dtype=np.bool)
-    c = (dim//2)
-    def theta(i):
-        return -1. * i * (np.pi / 48.) + (np.pi / 2.)
-    def vertex(i):
-        return c + np.cos(theta(i)) * (dim//2), c + np.sin(theta(i)) * (dim//2)
-    v1y, v1x = vertex(i)
-    v2y, v2x = vertex(i+1)
-    wy, wx = np.array([c, v1y, v2y]), np.array([c, v1x, v2x])
-    mask[polygon(wy,wx)]=True
-    mask[c,c:]=0 # exclude the right side of the central horizontal
-    mask[:,c]=0 # exclude the central vertical
-    return mask
+def wedge_mask(i,dim=_DIM,n_wedges=_N_WEDGES):
+    # wedge masks are adjacent, equal-sized "pie slices" of the
+    # bottom half of the unit circle
+    r, th = unit_circle(dim)
+    return (r<1) & (th > i*np.pi/n_wedges) & (th < (i+1)*np.pi/n_wedges)
     
 @memoize
-def filter_masks(dim=_DIM):
-    # FIXME simplify using skimage.draw.circle
-    # the mask and filter generated here are the center of the fft
-    # where most of the energy is found
-    df = 1./((dim-1.)*6.45)
-    f = np.arange(-0.5/6.45, 0.5*1/6.45, df)
-    I,J = np.meshgrid(f,f)
-    d = I**2 + J**2
-    mask = np.zeros((dim,dim),dtype=np.bool)
-    mask[d < (15*df)**2]=1
-    filt=np.invert(mask)
-    return mask, filt
+def filter_masks(dim=_DIM,radius=0.1):
+    # the center mask is a circle a tenth the size of a unit circle;
+    # the filter mask is its inverse
+    r, _ = unit_circle(dim)
+    center_mask = r < radius
+    return center_mask, np.invert(center_mask)
     
 def ring_wedge(image,dim=_DIM):
     # perform fft and scale its intensities to dim x dim
