@@ -11,7 +11,7 @@ from scipy.cluster.vq import kmeans2
 from skimage.segmentation import find_boundaries
 from skimage.morphology import binary_dilation
 
-from scikits.learn.mixture import GMM
+from sklearn.mixture import GMM
 
 EIGHT = np.ones((3,3))
 FOUR = np.array([[0, 1, 0],
