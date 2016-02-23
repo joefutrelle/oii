@@ -265,6 +265,27 @@ class Blob(object):
     @imemoize
     def hflip(self):
         return self.hausdorff_symmetry[2]
+    @property
+    @imemoize
+    def ring_wedge(self):
+        pwr_integral, pwr_ratio, wedges, rings = ring_wedge(self.image)
+        return pwr_integral, pwr_ratio, wedges, rings
+    @property
+    @imemoize
+    def rw_power_integral(self):
+        return self.ring_wedge[0]
+    @property
+    @imemoize
+    def rw_power_ratio(self):
+        return self.ring_wedge[1]
+    @property
+    @imemoize
+    def wedge(self):
+        return self.ring_wedge[2]
+    @property
+    @imemoize
+    def ring(self):
+        return self.ring_wedge[3]
         
 class Roi(object):
     def __init__(self,roi_image):
@@ -290,18 +311,6 @@ class Roi(object):
         """returns the Histogram of Oriented Gradients of the image.
         see oii.ifcb2.features.hog"""
         return image_hog(self.image)
-    @property
-    @imemoize
-    def ring_wedge(self):
-        pwr_integral, pwr_ratio, wedges, rings = ring_wedge(self.image)
-        return wedges, rings
-    @property
-    @imemoize
-    def wedge(self):
-        return self.ring_wedge[0]
-    @property
-    @imemoize
-    def ring(self):
-        return self.ring_wedge[1]
+
 
 
