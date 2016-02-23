@@ -28,6 +28,12 @@ class Blob(object):
         """h,w of blob image"""
         return self.image.shape
     @property
+    def bbox_ywidth(self):
+        return self.shape[0]
+    @property
+    def bbox_xwidth(self):
+        return self.shape[1]
+    @property
     def size(self):
         """h*w of blob image"""
         return self.image.size
@@ -122,10 +128,16 @@ class Blob(object):
     @imemoize
     def rotated_shape(self):
         """height, width of rotated image's bounding box"""
-        ys, xs = find_objects(B.rotated_image)[0]
+        ys, xs = find_objects(self.rotated_image)[0]
         h = ys.stop - ys.start
         w = xs.stop - xs.start
         return h, w
+    @property
+    def rotated_bbox_xwidth(self):
+        return self.rotated_shape[1]
+    @property
+    def rotated_bbox_ywidth(self):
+        return self.rotated_shape[0]
     @property
     @imemoize
     def perimeter_image(self):
@@ -305,6 +317,9 @@ class Roi(object):
         cropped_rois = [self.image[bbox] for bbox in bboxes]
         Bs = [Blob(b,R) for b,R in zip(blobs,cropped_rois)]
         return sorted(Bs, key=lambda B: B.area, reverse=True)
+    @property
+    def num_blobs(self):
+        return len(self.blobs)
     @property
     @imemoize
     def hog(self):
