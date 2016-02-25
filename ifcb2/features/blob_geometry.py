@@ -3,6 +3,7 @@ import numpy as np
 from numpy.linalg import eig
 
 from scipy.spatial import ConvexHull
+from scipy.spatial.distance import pdist
 from skimage.draw import polygon, line
 
 def blob_area(B):
@@ -101,6 +102,10 @@ def convex_hull_perimeter(hull):
     ab2 = np.power(ab,2)
     D = np.sqrt(np.sum(ab2,axis=1))
     return np.sum(D)
+
+def feret_diameter(hull):
+    D = pdist(hull)
+    return np.max(D)
 
 def convex_hull_image(hull,shape):
     """this can also be computed using

@@ -9,7 +9,8 @@ from oii.utils import imemoize
 from oii.ifcb2.features.segmentation import segment_roi
 from oii.ifcb2.features.blobs import find_blobs, rotate_blob
 from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties, \
-    invmoments, convex_hull, convex_hull_image, convex_hull_perimeter
+    invmoments, convex_hull, convex_hull_image, convex_hull_perimeter, \
+    feret_diameter
 from oii.ifcb2.features.morphology import find_perimeter
 from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
 from oii.ifcb2.features.perimeter import perimeter_stats, hausdorff_symmetry
@@ -82,6 +83,10 @@ class Blob(object):
     def convex_perimeter(self):
         """perimeter of convex hull"""
         return convex_hull_perimeter(self.convex_hull)
+    @property
+    @imemoize
+    def feret_diameter(self):
+        return feret_diameter(self.convex_hull)
     @property
     @imemoize
     def convex_hull_image(self):
@@ -372,6 +377,9 @@ class Roi(object):
     @property
     def summed_perimeter(self):
         return self.summed_attr('perimeter')
+    @property
+    def summed_feret_diameter(self):
+        return self.summed_attr('feret_diameter')
     @property
     def summed_convex_perimeter_over_perimeter(self):
         return self.summed_convex_perimeter / self.summed_perimeter
