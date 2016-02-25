@@ -52,5 +52,5 @@ def image_hog(image):
             H[cont,:] = H2
             cont += 1
     
-    # flatten results into column vector of size B * nwin_x * nwin_y
-    return H.reshape((-1,1))
+    # flatten results into row vector of size B * nwin_x * nwin_y
+    return H.ravel()

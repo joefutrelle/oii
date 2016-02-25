@@ -65,6 +65,10 @@ class Blob(object):
         return self.regionprops.equivalent_diameter
     @property
     @imemoize
+    def perimeter(self):
+        return self.regionprops.perimeter
+    @property
+    @imemoize
     def extent(self):
         """extent of blob"""
         return self.regionprops.extent
@@ -182,17 +186,6 @@ class Blob(object):
         return self.biovolume_and_transect[1]
     @property
     @imemoize
-    def invmoments(self):
-        """invariant moments computed using algorithm described in
-        Digital Image Processing Using MATLAB, pp. 470-472"""
-        return invmoments(self.image)
-    @property
-    @imemoize
-    def phi(self,n):
-        """nth invariant moment (see invmoments)"""
-        return self.invmoments[n-1]
-    @property
-    @imemoize
     def perimeter_stats(self):
         """mean, median, skewness, kurtosis of pairwise distances
         between each pair of perimeter points"""
@@ -298,6 +291,24 @@ class Blob(object):
     @imemoize
     def ring(self):
         return self.ring_wedge[3]
+    @property
+    def area_over_perimeter_squared(self):
+        return self.area / self.perimeter**2
+    @property
+    def area_over_perimeter(self):
+        return self.area / self.perimeter
+    @property
+    def h90_over_hflip(self):
+        return self.h90 / self.hflip
+    @property
+    def h90_over_h180(self):
+        return self.h90 / self.h180
+    @property
+    def hflip_over_h180(self):
+        return self.hflip / self.h180
+    @property
+    def rotated_bbox_solidity(self):
+        return 0 # unimplemented
         
 class Roi(object):
     def __init__(self,roi_image):
@@ -326,6 +337,142 @@ class Roi(object):
         """returns the Histogram of Oriented Gradients of the image.
         see oii.ifcb2.features.hog"""
         return image_hog(self.image)
+    @property
+    @imemoize
+    def invmoments(self):
+        """invariant moments computed using algorithm described in
+        Digital Image Processing Using MATLAB, pp. 470-472"""
+        return invmoments(self.blobs_image)
+    @property
+    @imemoize
+    def phi(self,n):
+        """nth invariant moment (see invmoments)"""
+        return self.invmoments[n-1]
+    @imemoize
+    def summed_attr(self, attr):
+        return np.sum(getattr(b,attr) for b in self.blobs)
+    @property
+    def summed_area(self):
+        return self.summed_attr('area')
+    @property
+    def summed_biovolume(self):
+        return self.summed_attr('biovolume')
+    @property
+    def summed_convex_area(self):
+        return self.summed_attr('convex_area')
+    @property
+    def summed_convex_perimeter(self):
+        return self.summed_attr('convex_perimeter')
+    @property
+    def summed_major_axis_length(self):
+        return self.summed_attr('major_axis_length')
+    @property
+    def summed_minor_axis_length(self):
+        return self.summed_attr('minor_axis_length')
+    @property
+    def summed_perimeter(self):
+        return self.summed_attr('perimeter')
+    @property
+    def summed_convex_perimeter_over_perimeter(self):
+        return self.summed_convex_perimeter / self.summed_perimeter
+        
+FEATURE_SCHEMA=[
+'Area','Biovolume','BoundingBox_xwidth','BoundingBox_ywidth','ConvexArea',
+'ConvexPerimeter','Eccentricity','EquivDiameter','Extent','FeretDiameter',
+'H180','H90','Hflip','MajorAxisLength','MinorAxisLength','Orientation',
+'Perimeter','RWcenter2total_powerratio','RWhalfpowerintegral','Solidity',
+'moment_invariant1','moment_invariant2','moment_invariant3',
+'moment_invariant4','moment_invariant5','moment_invariant6',
+'moment_invariant7','numBlobs','shapehist_kurtosis_normEqD',
+'shapehist_mean_normEqD','shapehist_median_normEqD',
+'shapehist_mode_normEqD','shapehist_skewness_normEqD','summedArea',
+'summedBiovolume','summedConvexArea','summedConvexPerimeter',
+'summedFeretDiameter','summedMajorAxisLength','summedMinorAxisLength',
+'summedPerimeter','texture_average_contrast','texture_average_gray_level',
+'texture_entropy','texture_smoothness','texture_third_moment',
+'texture_uniformity','RotatedArea','RotatedBoundingBox_xwidth',
+'RotatedBoundingBox_ywidth','Wedge01','Wedge02','Wedge03','Wedge04',
+'Wedge05','Wedge06','Wedge07','Wedge08','Wedge09','Wedge10','Wedge11',
+'Wedge12','Wedge13','Wedge14','Wedge15','Wedge16','Wedge17','Wedge18',
+'Wedge19','Wedge20','Wedge21','Wedge22','Wedge23','Wedge24','Wedge25',
+'Wedge26','Wedge27','Wedge28','Wedge29','Wedge30','Wedge31','Wedge32',
+'Wedge33','Wedge34','Wedge35','Wedge36','Wedge37','Wedge38','Wedge39',
+'Wedge40','Wedge41','Wedge42','Wedge43','Wedge44','Wedge45','Wedge46',
+'Wedge47','Wedge48','Ring01','Ring02','Ring03','Ring04','Ring05','Ring06',
+'Ring07','Ring08','Ring09','Ring10','Ring11','Ring12','Ring13','Ring14',
+'Ring15','Ring16','Ring17','Ring18','Ring19','Ring20','Ring21','Ring22',
+'Ring23','Ring24','Ring25','Ring26','Ring27','Ring28','Ring29','Ring30',
+'Ring31','Ring32','Ring33','Ring34','Ring35','Ring36','Ring37','Ring38',
+'Ring39','Ring40','Ring41','Ring42','Ring43','Ring44','Ring45','Ring46',
+'Ring47','Ring48','Ring49','Ring50','HOG01','HOG02','HOG03','HOG04',
+'HOG05','HOG06','HOG07','HOG08','HOG09','HOG10','HOG11','HOG12','HOG13',
+'HOG14','HOG15','HOG16','HOG17','HOG18','HOG19','HOG20','HOG21','HOG22',
+'HOG23','HOG24','HOG25','HOG26','HOG27','HOG28','HOG29','HOG30','HOG31',
+'HOG32','HOG33','HOG34','HOG35','HOG36','HOG37','HOG38','HOG39','HOG40',
+'HOG41','HOG42','HOG43','HOG44','HOG45','HOG46','HOG47','HOG48','HOG49',
+'HOG50','HOG51','HOG52','HOG53','HOG54','HOG55','HOG56','HOG57','HOG58',
+'HOG59','HOG60','HOG61','HOG62','HOG63','HOG64','HOG65','HOG66','HOG67',
+'HOG68','HOG69','HOG70','HOG71','HOG72','HOG73','HOG74','HOG75','HOG76',
+'HOG77','HOG78','HOG79','HOG80','HOG81','Area_over_PerimeterSquared',
+'Area_over_Perimeter','H90_over_Hflip','H90_over_H180','Hflip_over_H180',
+'summedConvexPerimeter_over_Perimeter','rotated_BoundingBox_solidity'
+]
+
+def get_all_features(r,b):
+    return [
+        b.area,
+        b.biovolume,
+        b.bbox_xwidth,
+        b.bbox_ywidth,
+        b.convex_area,
+        b.convex_perimeter,
+        b.eccentricity,
+        b.equiv_diameter,
+        b.extent,
+        0, # feret diameter
+        b.h180,
+        b.h90,
+        b.hflip,
+        b.major_axis_length,
+        b.minor_axis_length,
+        b.orientation,
+        b.perimeter,
+        b.rw_power_ratio,
+        b.rw_power_integral,
+        b.solidity
+    ] + list(b.invmoments) + [
+        r.num_blobs,
+        b.perimeter_kurtosis,
+        b.perimeter_mean,
+        b.perimeter_median,
+        0, # perimeter mode (deprecated)
+        b.perimeter_skewness,
+        r.summed_area,
+        r.summed_biovolume,
+        r.summed_convex_area,
+        r.summed_convex_perimeter,
+        0, # summed feret diameter (unimplemented)
+        r.summed_major_axis_length,
+        r.summed_minor_axis_length,
+        r.summed_perimeter,
+        b.texture_average_contrast,
+        b.texture_average_gray_level,
+        b.texture_entropy,
+        b.texture_smoothness,
+        b.texture_third_moment,
+        b.texture_uniformity,
+        b.rotated_area,
+        b.rotated_bbox_xwidth,
+        b.rotated_bbox_ywidth
+    ] + list(b.wedge) + list(b.ring) + list(r.hog) + [
+        b.area_over_perimeter_squared,
+        b.area_over_perimeter,
+        b.h90_over_hflip,
+        b.h90_over_h180,
+        b.hflip_over_h180,
+        r.summed_convex_perimeter_over_perimeter,
+        b.rotated_bbox_solidity
+    ]
 
 
 

@@ -46,13 +46,13 @@ def ellipse_properties(B):
 def invmoments(B):
     """compute invariant moments. see
     Digital Image Processing Using MATLAB, ch. 11"""
-    B = np.array(B).astype(np.bool)
+    B = np.array(B).astype(np.float64)
     M, N = B.shape
     x, y = np.meshgrid(np.arange(1,N+1), np.arange(1,M+1))
 
     x = x.flatten()
     y = y.flatten()
-    F = B.flatten().astype(float)
+    F = B.flatten()
 
     def m(p,q):
         return np.sum(x**p * y**q * F)
@@ -63,30 +63,31 @@ def invmoments(B):
     def mu(p,q):
         return np.sum((x - x_)**p * (y - y_)**q * F)
 
-    def eta(p,q):
+    def n(p,q): # eta sorta looks like n
         gamma = (p + q) / 2. + 1.
         return mu(p,q) / mu(0,0)**gamma
 
-    e20, e02 = eta(2,0), eta(0,2)
-    e11 = eta(1,1)
-    e30, e03 = eta(3,0), eta(0,3)
-    e12, e21 = eta(1,2), eta(2,1)
+    # assign some variables so the eqns aren't impossible to read
+    n20, n02 = n(2,0), n(0,2)
+    n11 = n(1,1)
+    n30, n03 = n(3,0), n(0,3)
+    n12, n21 = n(1,2), n(2,1)
     
-    phi1 = e20 + e02
-    phi2 = (e20 - e02)**2 + 4 * e11**2
-    phi3 = (e30 - 3 * e12)**2 + (3 * e21 - e03)**2
-    phi4 = (e30 + e12)**2 + (e21 + e03)**2
-    phi5 = (e30 - 3 * e12) * (e30 + e12) * \
-        ( (e30 + e12)**2 - 3 * (e21 + e03)**2 ) + \
-        (3 * e21 - e03) * (e21 + e03) * \
-        ( 3 * (e30 + e12)**2 - (e21 + e03)**2 )
-    phi6 = (e20 - e02) * \
-        ( (e30 + e12)**2 - (e21 + e03)**2 ) + \
-        4 * e11 * (e30 + e12) * (e21 + e03)
-    phi7 = (3 * e21 - e03) * (e30 + e12) * \
-        ( (e30 + e12)**2 - 3 * (e21 + e03)**2 ) + \
-        (3 * e12 - e30) * (e21 + e03) * \
-        ( 3 * (e30 + e12)**2 - (e21 + e03)**2 )
+    phi1 = n20 + n02
+    phi2 = (n20 - n02)**2 + 4 * n11**2
+    phi3 = (n30 - 3 * n12)**2 + (3 * n21 - n03)**2
+    phi4 = (n30 + n12)**2 + (n21 + n03)**2
+    phi5 = (n30 - 3 * n12) * (n30 + n12) * \
+        ( (n30 + n12)**2 - 3 * (n21 + n03)**2 ) + \
+        (3 * n21 - n03) * (n21 + n03) * \
+        ( 3 * (n30 + n12)**2 - (n21 + n03)**2 )
+    phi6 = (n20 - n02) * \
+        ( (n30 + n12)**2 - (n21 + n03)**2 ) + \
+        4 * n11 * (n30 + n12) * (n21 + n03)
+    phi7 = (3 * n21 - n03) * (n30 + n12) * \
+        ( (n30 + n12)**2 - 3 * (n21 + n03)**2 ) + \
+        (3 * n12 - n30) * (n21 + n03) * \
+        ( 3 * (n30 + n12)**2 - (n21 + n03)**2 )
 
     return phi1, phi2, phi3, phi4, phi5, phi6, phi7
 
