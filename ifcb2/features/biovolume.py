@@ -29,3 +29,10 @@ def sor_volume(B):
     C = np.sum(B.astype(np.bool),axis=0) * 0.5
     return np.sum(C**2 * np.pi)
 
+# the following represents how SOR volumes are computed in v2 features
+def sor_volume_v2(B):
+    S = np.sum(B,axis=0) > 0
+    C = np.argmax(B,axis=0)
+    C2 = (B.shape[0] - np.argmax(np.flipud(B),axis=0)) * S
+    H = (C2-C) * 0.5
+    return np.sum(H**2 * np.pi)

@@ -18,6 +18,7 @@ def statxture(pixels):
     average_gray_level = np.mean(pixels)
     average_contrast = np.std(pixels)
 
+    # compute normalized histogram
     H = histogram(pixels)[0]
     H = H / (1. * len(pixels))
     L = len(H)

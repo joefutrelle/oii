@@ -7,12 +7,12 @@ from skimage.measure import regionprops
 from oii.utils import imemoize
 
 from oii.ifcb2.features.segmentation import segment_roi
-from oii.ifcb2.features.blobs import find_blobs, rotate_blob
+from oii.ifcb2.features.blobs import find_blobs, rotate_blob, rotate_blob_sor_v2
 from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties, \
     invmoments, convex_hull, convex_hull_image, convex_hull_perimeter, \
     feret_diameter
 from oii.ifcb2.features.morphology import find_perimeter
-from oii.ifcb2.features.biovolume import distmap_volume, sor_volume
+from oii.ifcb2.features.biovolume import distmap_volume, sor_volume, sor_volume_v2
 from oii.ifcb2.features.perimeter import perimeter_stats, hausdorff_symmetry
 from oii.ifcb2.features.texture import statxture, masked_pixels, texture_pixels
 from oii.ifcb2.features.hog import image_hog
@@ -127,7 +127,8 @@ class Blob(object):
     def rotated_image(self):
         """blob rotated so major axis is horizontal. may
         not be touching edges of returned image"""
-        return rotate_blob(self.image, self.orientation)
+        # FIXME v2. post-testing should use default niter=3
+        return rotate_blob(self.image, self.orientation, niter=1)
     @property
     @imemoize
     def rotated_area(self):
@@ -166,7 +167,10 @@ class Blob(object):
     @imemoize
     def sor_volume(self):
         """volume of blob computed via solid of revolution method"""
-        return sor_volume(self.rotated_image)
+        # FIXME v2. post-testing should use self.rotated_image
+        rotated_image = rotate_blob_sor_v2(self.image, self.orientation)
+        # FIXME v2. post-testing should use sor_volume
+        return sor_volume_v2(rotated_image)
     @property
     @imemoize
     def biovolume_and_transect(self):
@@ -384,7 +388,7 @@ class Roi(object):
     def summed_convex_perimeter_over_perimeter(self):
         return self.summed_convex_perimeter / self.summed_perimeter
         
-FEATURE_SCHEMA=[
+FEATURES_SCHEMA=[
 'Area','Biovolume','BoundingBox_xwidth','BoundingBox_ywidth','ConvexArea',
 'ConvexPerimeter','Eccentricity','EquivDiameter','Extent','FeretDiameter',
 'H180','H90','Hflip','MajorAxisLength','MinorAxisLength','Orientation',
@@ -426,7 +430,8 @@ FEATURE_SCHEMA=[
 'summedConvexPerimeter_over_Perimeter','rotated_BoundingBox_solidity'
 ]
 
-def get_all_features(r,b):
+def get_all_features(r):
+    b = r.blobs[0]
     return [
         b.area,
         b.biovolume,
@@ -437,7 +442,7 @@ def get_all_features(r,b):
         b.eccentricity,
         b.equiv_diameter,
         b.extent,
-        0, # feret diameter
+        b.feret_diameter,
         b.h180,
         b.h90,
         b.hflip,
@@ -448,7 +453,7 @@ def get_all_features(r,b):
         b.rw_power_ratio,
         b.rw_power_integral,
         b.solidity
-    ] + list(b.invmoments) + [
+    ] + list(r.invmoments) + [
         r.num_blobs,
         b.perimeter_kurtosis,
         b.perimeter_mean,
@@ -459,7 +464,7 @@ def get_all_features(r,b):
         r.summed_biovolume,
         r.summed_convex_area,
         r.summed_convex_perimeter,
-        0, # summed feret diameter (unimplemented)
+        r.summed_feret_diameter,
         r.summed_major_axis_length,
         r.summed_minor_axis_length,
         r.summed_perimeter,
@@ -481,6 +486,4 @@ def get_all_features(r,b):
         r.summed_convex_perimeter_over_perimeter,
         b.rotated_bbox_solidity
     ]
-
-
 
