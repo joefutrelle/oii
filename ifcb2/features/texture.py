@@ -8,8 +8,8 @@ def masked_pixels(image,mask):
 def texture_pixels(image,mask):
     I = image.astype(np.float)
     p1, p99 = np.percentile(image,(1,99))
-    E = rescale_intensity(I, in_range=(p1,p99)) * 255
-    return E[np.where(mask)]
+    E = rescale_intensity(I,in_range=(p1,p99)) * 255
+    return masked_pixels(E,mask)
     
 def statxture(pixels):
     """computes a variety of texture stats from

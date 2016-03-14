@@ -45,12 +45,6 @@ class Blob(object):
         return masked_pixels(self.roi_image, self.image)
     @property
     @imemoize
-    def texture_pixels(self):
-        """all pixel values of the contrast-enhanced image, in the blob,
-        as a flat list"""
-        return texture_pixels(self.roi_image, self.image)
-    @property
-    @imemoize
     def regionprops(self):
         """region props of the blob (assumes single connected region)"""
         return regionprops(self.image)[0]
@@ -128,7 +122,7 @@ class Blob(object):
         """blob rotated so major axis is horizontal. may
         not be touching edges of returned image"""
         # FIXME v2. post-testing should use default niter=3
-        return rotate_blob(self.image, self.orientation, niter=1)
+        return rotate_blob(self.image, self.orientation, niter=2)
     @property
     @imemoize
     def rotated_area(self):
@@ -148,6 +142,10 @@ class Blob(object):
     @property
     def rotated_bbox_ywidth(self):
         return self.rotated_shape[0]
+    @property
+    def rotated_bbox_solidity(self):
+        return self.rotated_area / \
+            float(self.rotated_bbox_xwidth * self.rotated_bbox_ywidth)
     @property
     @imemoize
     def perimeter_image(self):
@@ -221,45 +219,6 @@ class Blob(object):
         return self.perimeter_stats[3]
     @property
     @imemoize
-    def texture_stats(self):
-        """mean intensity, average contrast, smoothness,
-        third moment, uniformity, entropy of texture pixels.
-        based on algorithm described in Digital Image Processing Using
-        MATLAB, pp . 464-468.
-        see texture_pixels"""
-        return statxture(self.texture_pixels)
-    @property
-    @imemoize
-    def texture_average_gray_level(self):
-        """average gray level of texture pixels"""
-        return self.texture_stats[0]
-    @property
-    @imemoize
-    def texture_average_contrast(self):
-        """average contrast of texture pixels"""
-        return self.texture_stats[1]
-    @property
-    @imemoize
-    def texture_smoothness(self):
-        """smoothness of texture pixels"""
-        return self.texture_stats[2]
-    @property
-    @imemoize
-    def texture_third_moment(self):
-        """third moment of texture pixels"""
-        return self.texture_stats[3]
-    @property
-    @imemoize
-    def texture_uniformity(self):
-        """uniformity of texture pixels"""
-        return self.texture_stats[4]
-    @property
-    @imemoize
-    def texture_entropy(self):
-        """entropy of texture pixels"""
-        return self.texture_stats[5]
-    @property
-    @imemoize
     def hausdorff_symmetry(self):
         """takes the rotated blob perimeter and compares it
         with itself rotated 180 degrees, rotated 90 degrees,
@@ -315,9 +274,6 @@ class Blob(object):
     @property
     def hflip_over_h180(self):
         return self.hflip / self.h180
-    @property
-    def rotated_bbox_solidity(self):
-        return 0 # unimplemented
         
 class Roi(object):
     def __init__(self,roi_image):
@@ -352,6 +308,53 @@ class Roi(object):
         """invariant moments computed using algorithm described in
         Digital Image Processing Using MATLAB, pp. 470-472"""
         return invmoments(self.blobs_image)
+    @property
+    @imemoize
+    def texture_pixels(self):
+        """all pixel values of the contrast-enhanced image, in the blob,
+        as a flat list"""
+        return texture_pixels(self.image, self.blobs_image)
+    @property
+    @imemoize
+    def texture_stats(self):
+        """mean intensity, average contrast, smoothness,
+        third moment, uniformity, entropy of texture pixels.
+        based on algorithm described in Digital Image Processing Using
+        MATLAB, pp . 464-468.
+        see texture_pixels"""
+        # average_gray_level, average_contrast, smoothness,
+        # third_moment, uniformity, entropy
+        return statxture(self.texture_pixels)
+    @property
+    @imemoize
+    def texture_average_gray_level(self):
+        """average gray level of texture pixels"""
+        return self.texture_stats[0]
+    @property
+    @imemoize
+    def texture_average_contrast(self):
+        """average contrast of texture pixels"""
+        return self.texture_stats[1]
+    @property
+    @imemoize
+    def texture_smoothness(self):
+        """smoothness of texture pixels"""
+        return self.texture_stats[2]
+    @property
+    @imemoize
+    def texture_third_moment(self):
+        """third moment of texture pixels"""
+        return self.texture_stats[3]
+    @property
+    @imemoize
+    def texture_uniformity(self):
+        """uniformity of texture pixels"""
+        return self.texture_stats[4]
+    @property
+    @imemoize
+    def texture_entropy(self):
+        """entropy of texture pixels"""
+        return self.texture_stats[5]
     @property
     @imemoize
     def phi(self,n):
@@ -468,12 +471,12 @@ def get_all_features(r):
         r.summed_major_axis_length,
         r.summed_minor_axis_length,
         r.summed_perimeter,
-        b.texture_average_contrast,
-        b.texture_average_gray_level,
-        b.texture_entropy,
-        b.texture_smoothness,
-        b.texture_third_moment,
-        b.texture_uniformity,
+        r.texture_average_contrast,
+        r.texture_average_gray_level,
+        r.texture_entropy,
+        r.texture_smoothness,
+        r.texture_third_moment,
+        r.texture_uniformity,
         b.rotated_area,
         b.rotated_bbox_xwidth,
         b.rotated_bbox_ywidth
