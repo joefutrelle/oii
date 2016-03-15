@@ -63,6 +63,12 @@ class Blob(object):
     def perimeter(self):
         return self.regionprops.perimeter
     @property
+    def area_over_perimeter_squared(self):
+        return self.area / self.perimeter**2
+    @property
+    def area_over_perimeter(self):
+        return self.area / self.perimeter
+    @property
     @imemoize
     def extent(self):
         """extent of blob"""
@@ -121,8 +127,7 @@ class Blob(object):
     def rotated_image(self):
         """blob rotated so major axis is horizontal. may
         not be touching edges of returned image"""
-        # FIXME v2. post-testing should use default niter=3
-        return rotate_blob(self.image, self.orientation, niter=2)
+        return rotate_blob(self.image, self.orientation)
     @property
     @imemoize
     def rotated_area(self):
@@ -239,33 +244,6 @@ class Blob(object):
     def hflip(self):
         return self.hausdorff_symmetry[2]
     @property
-    @imemoize
-    def ring_wedge(self):
-        pwr_integral, pwr_ratio, wedges, rings = ring_wedge(self.image)
-        return pwr_integral, pwr_ratio, wedges, rings
-    @property
-    @imemoize
-    def rw_power_integral(self):
-        return self.ring_wedge[0]
-    @property
-    @imemoize
-    def rw_power_ratio(self):
-        return self.ring_wedge[1]
-    @property
-    @imemoize
-    def wedge(self):
-        return self.ring_wedge[2]
-    @property
-    @imemoize
-    def ring(self):
-        return self.ring_wedge[3]
-    @property
-    def area_over_perimeter_squared(self):
-        return self.area / self.perimeter**2
-    @property
-    def area_over_perimeter(self):
-        return self.area / self.perimeter
-    @property
     def h90_over_hflip(self):
         return self.h90 / self.hflip
     @property
@@ -296,6 +274,13 @@ class Roi(object):
     @property
     def num_blobs(self):
         return len(self.blobs)
+    @property
+    @imemoize
+    def rotated_blobs_image(self):
+        if self.num_blobs == 0:
+            return None
+        orientation = self.blobs[0].orientation
+        return rotate_blob(self.blobs_image, orientation)
     @property
     @imemoize
     def hog(self):
@@ -360,6 +345,27 @@ class Roi(object):
     def phi(self,n):
         """nth invariant moment (see invmoments)"""
         return self.invmoments[n-1]
+    @property
+    @imemoize
+    def ring_wedge(self):
+        pwr_integral, pwr_ratio, wedges, rings = ring_wedge(self.blobs_image)
+        return pwr_integral, pwr_ratio, wedges, rings
+    @property
+    @imemoize
+    def rw_power_integral(self):
+        return self.ring_wedge[0]
+    @property
+    @imemoize
+    def rw_power_ratio(self):
+        return self.ring_wedge[1]
+    @property
+    @imemoize
+    def wedge(self):
+        return self.ring_wedge[2]
+    @property
+    @imemoize
+    def ring(self):
+        return self.ring_wedge[3]
     @imemoize
     def summed_attr(self, attr):
         return np.sum(getattr(b,attr) for b in self.blobs)
@@ -453,8 +459,8 @@ def get_all_features(r):
         b.minor_axis_length,
         b.orientation,
         b.perimeter,
-        b.rw_power_ratio,
-        b.rw_power_integral,
+        r.rw_power_ratio,
+        r.rw_power_integral,
         b.solidity
     ] + list(r.invmoments) + [
         r.num_blobs,
@@ -480,7 +486,7 @@ def get_all_features(r):
         b.rotated_area,
         b.rotated_bbox_xwidth,
         b.rotated_bbox_ywidth
-    ] + list(b.wedge) + list(b.ring) + list(r.hog) + [
+    ] + list(r.wedge) + list(r.ring) + list(r.hog) + [
         b.area_over_perimeter_squared,
         b.area_over_perimeter,
         b.h90_over_hflip,
