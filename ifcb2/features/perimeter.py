@@ -23,8 +23,8 @@ def perimeter_stats(points, equiv_diameter):
     returns mean, median, skewness, and kurtosis
     """
     B = np.vstack(points).T
-    # in H Sosik's version the square form is used,
-    # use shorter form instead
+    # in H Sosik's v2 the square form is used,
+    # use the short form here
     D = pdist(B) / equiv_diameter
     return hist_stats(D)
 

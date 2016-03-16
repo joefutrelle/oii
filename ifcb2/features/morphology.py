@@ -17,7 +17,7 @@ def find_perimeter(B):
     S = np.array([[ 0,-1, 0],
                   [-1, 4,-1],
                   [ 0,-1, 0]])
-    return correlate(B,S) > 0
+    return correlate(B,S,mode='constant') > 0
     
 def hysthresh(img,T1,T2):
     """hysteresis thresholding"""
