@@ -10,7 +10,7 @@ from oii.ifcb2.features.segmentation import segment_roi
 from oii.ifcb2.features.blobs import find_blobs, rotate_blob, rotate_blob_sor_v2
 from oii.ifcb2.features.blob_geometry import equiv_diameter, ellipse_properties, \
     invmoments, convex_hull, convex_hull_image, convex_hull_perimeter, \
-    feret_diameter
+    feret_diameter, binary_symmetry
 from oii.ifcb2.features.morphology import find_perimeter
 from oii.ifcb2.features.biovolume import distmap_volume, sor_volume, sor_volume_v2
 from oii.ifcb2.features.perimeter import perimeter_stats, hausdorff_symmetry
@@ -117,6 +117,10 @@ class Blob(object):
     def orientation(self):
         """return orientation of blob in degrees"""
         return (180/np.pi) * self.regionprops.orientation
+    @property
+    @imemoize
+    def centroid(self):
+        return self.regionprops.centroid
     @property
     @imemoize
     def solidity(self):
@@ -252,6 +256,19 @@ class Blob(object):
     @property
     def hflip_over_h180(self):
         return self.hflip / self.h180
+    @property
+    @imemoize
+    def binary_symmetry(self):
+        return binary_symmetry(self.rotated_image)
+    @property
+    def b180(self):
+        return self.binary_symmetry[0]
+    @property
+    def b90(self):
+        return self.binary_symmetry[1]
+    @property
+    def bflip(self):
+        return self.binary_symmetry[2]
         
 class Roi(object):
     def __init__(self,roi_image):

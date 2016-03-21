@@ -4,7 +4,9 @@ from numpy.linalg import eig
 
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import pdist
+
 from skimage.draw import polygon, line
+from skimage.measure import regionprops
 
 def blob_area(B):
     return np.sum(np.array(B).astype(np.bool))
@@ -118,3 +120,29 @@ def convex_hull_image(hull,shape):
     for row in np.hstack((hull, np.roll(hull,1,axis=0))):
         chi[line(*row)]=1
     return chi
+    
+def binary_symmetry(B):
+    # binary symmetry. should be passed a blob image
+    # where the major axis is horizontal
+    # first center blob image around blob centroid
+    # and leave enough room for 90 degree rotation
+    yc, xc = regionprops(B)[0].centroid
+    h, w = B.shape
+    s = max(yc,h-yc,xc,w-xc)
+    C = np.zeros((s*2,s*2),dtype=np.bool)
+    C[:h,:w]=B
+    C = np.roll(C,int(s-yc),axis=0)
+    C = np.roll(C,int(s-xc),axis=1)
+    # compute blob area
+    area = np.sum(B)
+    def ss(D):
+        return 1. * np.sum(np.logical_and(C,D)) / area
+    # now compute ratio of pixels in overlap to area
+    # for three different geometric transformations
+    # rotation 180 degrees
+    b180 = ss(np.flipud(np.fliplr(C)))
+    # rotation 90 degrees
+    b90 = ss(np.rot90(C))
+    # flipped across horizontal (major) axis
+    bflip = ss(np.flipud(C))
+    return b180, b90, bflip
