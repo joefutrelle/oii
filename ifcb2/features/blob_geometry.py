@@ -124,15 +124,15 @@ def convex_hull_image(hull,shape):
 def binary_symmetry(B):
     # binary symmetry. should be passed a blob image
     # where the major axis is horizontal
+    #
     # first center blob image around blob centroid
     # and leave enough room for 90 degree rotation
     yc, xc = regionprops(B)[0].centroid
     h, w = B.shape
     s = max(yc,h-yc,xc,w-xc)
     C = np.zeros((s*2,s*2),dtype=np.bool)
-    C[:h,:w]=B
-    C = np.roll(C,int(s-yc),axis=0)
-    C = np.roll(C,int(s-xc),axis=1)
+    y0, x0 = s-yc, s-xc
+    C[y0:y0+h,x0:x0+w]=B
     # compute blob area
     area = np.sum(B)
     def ss(D):
@@ -140,7 +140,7 @@ def binary_symmetry(B):
     # now compute ratio of pixels in overlap to area
     # for three different geometric transformations
     # rotation 180 degrees
-    b180 = ss(np.flipud(np.fliplr(C)))
+    b180 = ss(np.rot90(C,2))
     # rotation 90 degrees
     b90 = ss(np.rot90(C))
     # flipped across horizontal (major) axis
