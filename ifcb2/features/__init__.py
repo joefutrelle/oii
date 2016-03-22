@@ -40,11 +40,6 @@ class Blob(object):
         return self.image.size
     @property
     @imemoize
-    def pixels(self):
-        """all pixel values of pixels in blob, as a flat list"""
-        return masked_pixels(self.roi_image, self.image)
-    @property
-    @imemoize
     def regionprops(self):
         """region props of the blob (assumes single connected region)"""
         return regionprops(self.image)[0]
