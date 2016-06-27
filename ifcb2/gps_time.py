@@ -7,7 +7,6 @@ import pytz
 from jdcal import jd2gcal
 
 from oii.utils import memoize
-from oii.times import datetime2utcdatetime
 
 GPS_EPOCH_JULIAN = 2444244.5 # the GPS epoch as a Julian date
 GPS_CYCLE_WEEKS = 1024 # number of weeks in a GPS cycle
