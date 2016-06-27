@@ -58,7 +58,7 @@ def get_ls_jd():
     2. The offset between UTC and TAI following that leap second
     Tuples are returned in order of most recent first
     """
-    url='https://www.ietf.org/timezones/data/leap-seconds.list_fnord'
+    url='https://www.ietf.org/timezones/data/leap-seconds.list'
 
     try:
         r = requests.get(url, stream=True, timeout=1)
