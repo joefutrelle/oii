@@ -1,8 +1,9 @@
-import re
-import requests
 from datetime import datetime
 from math import floor
+import re
 
+import numpy as np
+import requests
 import pytz
 from jdcal import jd2gcal
 
@@ -12,6 +13,7 @@ GPS_EPOCH_JULIAN = 2444244.5 # the GPS epoch as a Julian date
 GPS_CYCLE_WEEKS = 1024 # number of weeks in a GPS cycle
 DAY_S = 86400. # number of seconds in a day
 UTC_TAI_OFFSET = 19 # offset between TAI and UTC
+MJD_EPOCH_JULIAN = 2400000.5 # MJD epoch as a Julian date
 
 # leap seconds as of 24 June 2016
 # used if offline
@@ -47,6 +49,7 @@ OFFLINE_LEAPSECONDS =  [
 
 def gps2julian(timeOfWeek, week, cycle=0):
     """Convert GPS time to Julian date"""
+    """Works for array-like objects"""
     week += cycle * GPS_CYCLE_WEEKS
     days = week * 7. + timeOfWeek / DAY_S + 0.5
     return GPS_EPOCH_JULIAN + days - 0.5
@@ -76,7 +79,7 @@ def get_ls_jd():
         (ntp_time, tai_offset) = [int(d) for d in re.match(r'(\d+)\s+(\d+).*',line).groups()]
         # convert ntp time to julian date
         mjd = ntp_time / 86400. + 15020 # modified julian date
-        jd = mjd + 2400000.5 # julian date
+        jd = mjd + MJD_EPOCH_JULIAN # julian date
         out.append((jd, tai_offset))
 
     return out[::-1]
