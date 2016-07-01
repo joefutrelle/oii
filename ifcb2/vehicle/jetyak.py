@@ -6,6 +6,19 @@ from scipy.io import loadmat
 from oii.utils import imemoize
 from oii.ifcb2.gps_time import gps2utc
 
+# column names
+TIME_UTC='TimeUTC' # UTC timestamp
+TIME_US='TimeUS' # relative time in microseconds
+ROLL='Roll' # vehicle roll
+PITCH='Pitch' # vehicle pitch
+LINE_NO='LineNo' # line number column
+GPS_MS='GMS' # GPS week second in milliseconds
+GPS_WEEK='GWk' # GPS week
+
+# table names
+GPS_TABLE='GPS' # GPS table (includes GPS_MS/GPS_WEEK and TIME_US)
+TELEMETRY_TABLE='AHR2' # table with TIME_US, lat/lon, ROLL, PITCH, and yaw
+
 class Px4(object):
     """represents a px4 logfile in mat format"""
     def __init__(self, path, load=True):
@@ -28,20 +41,20 @@ class Px4(object):
         except KeyError:
             labels = None
         df = pd.DataFrame(data, index=data[:,0], columns=labels)
-        df.pop('LineNo')
+        df.pop(LINE_NO)
         return df
     @imemoize
     def get_epoch_gps(self):
         """determine what TimeUS=0 (and therefore Time in s = 0)
         is in GPS time.
         returns second-of-week and week"""
-        gps = self.get_table('GPS')
+        gps = self.get_table(GPS_TABLE)
         # get row with first nonzero GMS
-        gms = gps['GMS'] # GPS milliseconds column
+        gms = gps[GPS_MS] # GPS milliseconds column
         init = gps.loc[gms != 0].iloc[0] # first nonzero value
-        time_s = init['TimeUS'] / 1000000. # convert TimeUS ms to s
-        gps_s = init['GMS'] / 1000. # convert GMS ms to s
-        gps_week = init['GWk']
+        time_s = init[TIME_US] / 1000000. # convert TimeUS ms to s
+        gps_s = init[GPS_MS] / 1000. # convert GMS ms to s
+        gps_week = init[GPS_WEEK]
         gps_time_s_offset = gps_s - time_s
         return gps_time_s_offset, gps_week
     @imemoize
@@ -51,9 +64,15 @@ class Px4(object):
         table = self.get_table(name)
         v_gps2utc = np.vectorize(gps2utc)
         gps_offset_s, gps_week = self.get_epoch_gps()
-        gps_s = table['TimeUS'] / 1000000. + gps_offset_s
-        table['TimeUTC'] = pd.Series(v_gps2utc(gps_s, gps_week), index=table.index)
+        gps_s = table[TIME_US] / 1000000. + gps_offset_s
+        table[TIME_UTC] = pd.Series(v_gps2utc(gps_s, gps_week), index=table.index)
         return table
+    @property
     @imemoize
     def telemetry(self):
         return self.get_utc_table('AHR2')
+
+def rpy_binned(px4, freq='10s'):
+    grouper = pd.Grouper(key=TIME_UTC, freq=freq)
+    cols = [ROLL, PITCH]
+    return px4.telemetry.groupby(grouper).mean()[cols]
