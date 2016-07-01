@@ -115,11 +115,12 @@ class AdcTime(object):
         adc.columns = self.schema
         adc[TIME_UTC] = add_seconds(self.sample_time, self.time_offset + adc[TRIGGER_TIME])
         return adc
-
-def roi_pos_binned(adc, freq='10s'):
-    grouper = pd.Grouper(key=TIME_UTC, freq=freq)
-    cols = [ROI_X, ROI_Y]
-    return adc.data.groupby(grouper).mean()[cols]
+    @property
+    @imemoize
+    def roi_pos_binned(self, freq='10s'):
+        grouper = pd.Grouper(key=TIME_UTC, freq=freq)
+        cols = [ROI_X, ROI_Y]
+        return self.data.groupby(grouper).mean()[cols]
 
     
         

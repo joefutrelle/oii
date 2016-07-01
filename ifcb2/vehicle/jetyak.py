@@ -71,8 +71,9 @@ class Px4(object):
     @imemoize
     def telemetry(self):
         return self.get_utc_table('AHR2')
-
-def rpy_binned(px4, freq='10s'):
-    grouper = pd.Grouper(key=TIME_UTC, freq=freq)
-    cols = [ROLL, PITCH]
-    return px4.telemetry.groupby(grouper).mean()[cols]
+    @property
+    @imemoize
+    def roll_pitch_binned(self, freq='10s'):
+        grouper = pd.Grouper(key=TIME_UTC, freq=freq)
+        cols = [ROLL, PITCH]
+        return self.telemetry.groupby(grouper).mean()[cols]
