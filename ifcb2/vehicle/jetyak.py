@@ -41,8 +41,9 @@ KML_TRACK_TEMPLATE = """
 
 class Px4(object):
     """represents a px4 logfile in mat format"""
-    def __init__(self, path, load=True):
+    def __init__(self, path, labels_from=None, load=True):
         self.path = path
+        self.labels_from = labels_from
         if load:
             self.load()
     def load(self, path=None):
@@ -50,17 +51,23 @@ class Px4(object):
             path = self.path
         self.px4 = loadmat(path, squeeze_me=True)
     @imemoize
+    def get_table_columns(self, table_name):
+        label_tname = table_name + '_label'
+        labels = self.px4 # default
+        if self.labels_from is not None:
+            labels = loadmat(self.labels_from, variable_names=[label_tname], squeeze_me=True)
+        return labels[label_tname]
+    @imemoize
     def get_table(self, name):
         """get a table by name as a dataframe.
         assumes the first column is called 'LineNo' and pops that
         and uses it as a data index. Looks for a table called {name}_label
         and attempts to use that as column names"""
         data = self.px4[name]
-        try:
-            labels = self.px4[name + '_label']
-        except KeyError:
-            labels = None
-        df = pd.DataFrame(data, index=data[:,0], columns=labels)
+        # if the following raises KeyError it is fatal because we have
+        # no column labels
+        columns = self.get_table_columns(name)
+        df = pd.DataFrame(data, index=data[:,0], columns=columns)
         df.pop(LINE_NO)
         return df
     @imemoize
