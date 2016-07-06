@@ -97,7 +97,7 @@ class AdcTime(object):
             try:
                 next_sample_time = next_bin.sample_time
             except AttributeError: # duck type
-                next_sample_time = AdcTime(next_bin).sample_time
+                next_sample_time = AdcTime(next_bin, time_offset=0).sample_time
             # compute interval between bin timestamps
             interval = next_sample_time - self.sample_time
             # now subtract run time
@@ -115,7 +115,6 @@ class AdcTime(object):
         adc.columns = self.schema
         adc[TIME_UTC] = add_seconds(self.sample_time, self.time_offset + adc[TRIGGER_TIME])
         return adc
-    @property
     @imemoize
     def roi_pos_binned(self, freq='10s'):
         grouper = pd.Grouper(key=TIME_UTC, freq=freq)
