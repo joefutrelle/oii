@@ -1,4 +1,3 @@
-
 import os, inspect
 import mimetypes
 import json
@@ -1138,6 +1137,8 @@ def serve_pid(pid):
             if req.product=='medium':
                 targets = get_req_targets()
                 return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
+            # default heft for JSON endpoint is "full"
+            targets = get_req_targets()
             return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
         if req.extension=='xml':
             targets = get_req_targets()
