@@ -39,6 +39,8 @@ KML_TRACK_TEMPLATE = """
 </kml>
 """
 
+DEFAULT_FREQ='10s'
+
 class Px4(object):
     """represents a px4 logfile in mat format"""
     def __init__(self, path, labels_from=None, load=True):
@@ -79,7 +81,7 @@ class Px4(object):
         # get row with first nonzero GMS
         gms = gps[GPS_MS] # GPS milliseconds column
         init = gps.loc[gms != 0].iloc[0] # first nonzero value
-        time_s = init[TIME_US] / 1000000. # convert TimeUS ms to s
+        time_s = init[TIME_US] / 1000000. # convert TimeUS microseconds to s
         gps_s = init[GPS_MS] / 1000. # convert GMS ms to s
         gps_week = init[GPS_WEEK]
         gps_time_s_offset = gps_s - time_s
@@ -97,18 +99,18 @@ class Px4(object):
     @property
     @imemoize
     def telemetry(self):
-        return self.get_utc_table('AHR2')
+        return self.get_utc_table(TELEMETRY_TABLE)
     @imemoize
-    def roll_pitch_binned(self, freq='10s'):
+    def roll_pitch_binned(self, freq=DEFAULT_FREQ):
         grouper = pd.Grouper(key=TIME_UTC, freq=freq)
         cols = [ROLL, PITCH]
         return self.telemetry.groupby(grouper).mean()[cols]
     @imemoize
-    def lat_lon_binned(self, freq='10s'):
+    def lat_lon_binned(self, freq=DEFAULT_FREQ):
         grouper = pd.Grouper(key=TIME_UTC, freq=freq)
         cols = [LAT, LON]
         return self.telemetry.groupby(grouper).mean()[cols]
-    def gps2kml(self, kml_path, freq='10s'):
+    def gps2kml(self, kml_path, freq=DEFAULT_FREQ):
         track = self.lat_lon_binned(freq)
         track[TIME_UTC] = track.index # make a time column from grouped index
         ts_series = track[TIME_UTC].iteritems()
