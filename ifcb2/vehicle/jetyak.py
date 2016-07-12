@@ -3,11 +3,10 @@ import pandas as pd
 
 from scipy.io import loadmat
 
-from jinja2.environment import Template
-
 from oii.utils import imemoize
 from oii.times import ISO_8601_FORMAT
 from oii.ifcb2.gps_time import gps2utc
+from oii.ifcb2.vehicle.kml import track2kml
 
 # column names
 TIME_UTC='TimeUTC' # UTC timestamp
@@ -23,21 +22,6 @@ LON='Lng' # longitude
 # table names
 GPS_TABLE='GPS' # GPS table (includes GPS_MS/GPS_WEEK and TIME_US)
 TELEMETRY_TABLE='AHR2' # table with TIME_US, lat/lon, ROLL, PITCH, and yaw
-
-KML_TRACK_TEMPLATE = """
-<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"
- xmlns:gx="http://www.google.com/kml/ext/2.2">
-<Folder>
-  <Placemark>
-    <gx:Track>{% for ts in ts_iter %}
-      <when>{{ts}}</when>{% endfor %}{% for lat, lon in ll_iter %}
-      <gx:coord>{{lon}} {{lat}} 0</gx:coord>{% endfor %}
-    </gx:Track>
-  </Placemark>
-</Folder>
-</kml>
-"""
 
 DEFAULT_FREQ='10s'
 
@@ -110,15 +94,6 @@ class Px4(object):
         grouper = pd.Grouper(key=TIME_UTC, freq=freq)
         cols = [LAT, LON]
         return self.telemetry.groupby(grouper).mean()[cols]
-    def gps2kml(self, kml_path, freq=DEFAULT_FREQ):
+    def track2kml(self, kml_path, freq=DEFAULT_FREQ):
         track = self.lat_lon_binned(freq)
-        track[TIME_UTC] = track.index # make a time column from grouped index
-        ts_series = track[TIME_UTC].iteritems()
-        ll_rows = track[[LAT, LON]].iterrows()
-        def fmt_date(ts):
-            return ts.to_datetime().strftime(ISO_8601_FORMAT)
-        context = {
-            'ts_iter': (fmt_date(ts) for _, ts in ts_series),
-            'll_iter': (row for _, row in ll_rows)
-        }
-        Template(KML_TRACK_TEMPLATE).stream(**context).dump(kml_path)
+        track2kml(track.index, track[LAT], track[LON], kml_path)
