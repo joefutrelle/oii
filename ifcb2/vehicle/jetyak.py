@@ -7,6 +7,7 @@ from oii.utils import imemoize
 from oii.times import ISO_8601_FORMAT
 from oii.ifcb2.gps_time import gps2utc
 from oii.ifcb2.vehicle.kml import track2kml
+from oii.ifcb2.vehicle import trackutil as tu
 
 # column names
 TIME_UTC='TimeUTC' # UTC timestamp
@@ -73,12 +74,13 @@ class Px4(object):
     @imemoize
     def get_utc_table(self, name):
         """get a named table with a TimeUS column and
-        add a "TimeUTC" column with UTC time"""
+        index it by UTC time; this will replace the existing index"""
         table = self.get_table(name)
         v_gps2utc = np.vectorize(gps2utc)
         gps_offset_s, gps_week = self.get_epoch_gps()
         gps_s = table[TIME_US] / 1000000. + gps_offset_s
-        table[TIME_UTC] = pd.Series(v_gps2utc(gps_s, gps_week), index=table.index)
+        #table[TIME_UTC] = pd.Series(v_gps2utc(gps_s, gps_week), index=table.index)
+        table.index = v_gps2utc(gps_s, gps_week)
         return table
     @property
     @imemoize
@@ -86,14 +88,12 @@ class Px4(object):
         return self.get_utc_table(TELEMETRY_TABLE)
     @imemoize
     def roll_pitch_binned(self, freq=DEFAULT_FREQ):
-        grouper = pd.Grouper(key=TIME_UTC, freq=freq)
-        cols = [ROLL, PITCH]
-        return self.telemetry.groupby(grouper).mean()[cols]
+        return tu.group_mean(self.telemetry, freq)[[ROLL, PITCH]]
     @imemoize
-    def lat_lon_binned(self, freq=DEFAULT_FREQ):
-        grouper = pd.Grouper(key=TIME_UTC, freq=freq)
-        cols = [LAT, LON]
-        return self.telemetry.groupby(grouper).mean()[cols]
-    def track2kml(self, kml_path, freq=DEFAULT_FREQ):
-        track = self.lat_lon_binned(freq)
-        track2kml(track.index, track[LAT], track[LON], kml_path)
+    def track(self, freq=DEFAULT_FREQ):
+        track = tu.group_mean(self.telemetry, freq)[[LAT, LON]]
+        track.columns = ['latitude', 'longitude']
+        return track
+    def track2kml(self, kml_path, freq=DEFAULT_FREQ, title=None):
+        track = self.track(freq)
+        track2kml(track, kml_path, title=title)

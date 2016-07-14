@@ -19,6 +19,7 @@ class CruiseTrack(object):
     """parse a cruise track. the assumption is that the cruise track is a .mat file
     containing the following variables (and possibly other ones, which will be ignored)
     'year','month','day','hour','minute','second','latitude','longitude'
+    times must be UTC
     the resulting dataframe is available via the track property
     """
     def __init__(self, path, load=True):
@@ -36,9 +37,11 @@ class CruiseTrack(object):
         # make those datetimes the index
         df.index = df.apply(row2datetime, axis=1)
         self.track = df[[LAT, LON]]
-    def track2kml(self, kml_path):
+    def track2kml(self, kml_path, title=None):
         df = self.track
-        track2kml(df.index, df[LAT], df[LON], kml_path)
+        if title is None:
+            title = 'Cruise track'
+        track2kml(df.index, df[LAT], df[LON], kml_path, title=title)
 
 class TrackBins(object):
     # take a track and find min and max times
@@ -78,6 +81,6 @@ class TrackBins(object):
         # remaining nas are for track points with no bin associated, drop them
         merged.dropna(inplace=True)
         return merged
-    def bins2kml(self, kml_path, c=None):
+    def bins2kml(self, kml_path, c=None, title=None):
         bt = self.bins_track()
-        bins2kml(bt, kml_path, c)
+        bins2kml(bt, kml_path, c=c, title=title)
