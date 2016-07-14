@@ -3,6 +3,7 @@ import pandas as pd
 from jinja2.environment import Template
 
 from oii.times import ISO_8601_FORMAT
+from oii.ifcb2 import PID
 
 KML_TRACK_TEMPLATE = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -43,7 +44,7 @@ KML_PLACEMARK_TEMPLATE="""
 <Document>
   <name>IFCB runs</name>{% for row in row_iter %}
   <Placemark>
-    <name>{{row['pid']}}</name>
+    <name>{{row['lid']}}</name>
     <Style>
       <IconStyle>
         <color>{{row['color']}}</color>
@@ -59,7 +60,7 @@ KML_PLACEMARK_TEMPLATE="""
     <Point>
       <coordinates>{{row['longitude']}},{{row['latitude']}},0</coordinates>
     </Point>
-    <description><![CDATA[<a href="{{row['pid']}}.html">{{row['pid']}}</a>]]></description>
+    <description><![CDATA[<a href="{{row['pid']}}.html">{{row['lid']}}</a>]]></description>
   </Placemark>{% endfor %}
 </Document>
 </kml>
@@ -73,15 +74,18 @@ def bins2kml(df, kml_path, c=None):
     longitude: decimal longitude
     in addition a column name bearing colors can be specified with the c keyword,
     it must contain abgr hex codes"""
+    f = df.copy()
+    f['lid'] = df[PID].str.replace(r'.*/','')
     def row_iter():
         color = 'ff0000ff'
-        for ix, cols in df.iterrows():
+        for ix, cols in f.iterrows():
             if c is not None:
                 color = cols[c]
             row = {
                 'date': ix.strftime(ISO_8601_FORMAT),
                 'latitude': cols['latitude'],
                 'longitude': cols['longitude'],
+                'lid': cols['lid'],
                 'pid': cols['pid'],
                 'color': color
             }
