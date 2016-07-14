@@ -28,6 +28,20 @@ ROI_X = 'ROIx'
 ROI_Y = 'ROIy'
 TIME_UTC = 'TimeUTC'
 
+"""
+assuming continuous sampling, here are the timings for two consecutive bins
+
+|bin 1 time (init)  |~10s sample uptake |~6s valve turn |run start         |bin 2 time (init)
++-------------------+-------------------+---------------+------------------+----------------
+  maybe debubble                                        {     run time     }
+  maybe refill
+
+(sample uptake time is approximately 10s per ml sampled)
+if sampling is not continuous, syringe number will be reinitialized in second file
+in that case, or if there is no following bin, check debubble flag in header
+(and just believe it) and offset by the appropriate trigger time offset measured above
+"""
+
 class AdcTime(object):
     def __init__(self, adc_path, time_offset=None, next_bin=None, continuous=True):
         """adc path. time_offset, if left unspecified,
@@ -64,7 +78,7 @@ class AdcTime(object):
         return headers
     @property
     @imemoize
-    def sample_time(self):
+    def sample_time(self): # actually, init time
         """return the UTC sample time from the headers"""
         timestamp = self.headers[SAMPLE_TIME]
         return datetime.strptime(timestamp,'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.UTC)
