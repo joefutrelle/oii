@@ -14,9 +14,15 @@ from oii.utils import imemoize
 def add_seconds(dt, s):
     return dt + timedelta(seconds=s)
 
-# first trigger time offsets measured by T Crockford
+# run time offsets from init time measured by T Crockford
 OFFSET_NO_DEBUBBLE = 35
 OFFSET_DEBUBBLE = 182
+
+# other timing offsets as measured by T Crockford
+# sample uptake time per ml
+UPTAKE_TIME_ML = 10
+# valve turn time (average)
+VALVE_TURN_TIME = 6
 
 # header and ADC column keys
 SAMPLE_TIME = 'sampleTime'
@@ -47,22 +53,19 @@ class AdcTime(object):
         """adc path. time_offset, if left unspecified,
         will be computed by searching for the next bin
         in the same directory--unless "continuous" is False
-        it's ok if path is missing extension"""
+        it's ok if path is missing extension.
+        time_offset is the number of seconds between init time
+        and start of sample uptake"""
         dr, name = os.path.split(adc_path)
-        name, ext = os.path.splitext(name)
-        self.adc_path = os.path.join(dr, name + '.adc')
-        self.hdr_path = os.path.join(dr, name + '.hdr')
-        # figure out time offset
-        self.time_offset = None
-        if time_offset is not None:
-            self.time_offset = time_offset
-        elif continuous:
-            if next_bin is not None:
-                self.set_time_offset(next_bin)
-            else:
-                self.set_time_offset(self.find_next_bin(dr))
-        else: # use debubble algo
-            self.set_time_offset(None)
+        lid, ext = os.path.splitext(name)
+        self.lid = lid
+        self.adc_path = os.path.join(dr, lid + '.adc')
+        self.hdr_path = os.path.join(dr, lid + '.hdr')
+        self.next_bin = next_bin
+        self.continuous = continuous
+        if continuous and next_bin is None:
+            # try to find next bin
+            self.next_bin = self.find_next_bin(dr)
     @property
     @imemoize
     def headers(self):
@@ -78,10 +81,31 @@ class AdcTime(object):
         return headers
     @property
     @imemoize
-    def sample_time(self): # actually, init time
-        """return the UTC sample time from the headers"""
-        timestamp = self.headers[SAMPLE_TIME]
+    def init_time(self):
+        """return the UTC init timestamp from the headers"""
+        timestamp = self.headers[SAMPLE_TIME] # init time is called "sample time" in headers
         return datetime.strptime(timestamp,'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.UTC)
+    @property
+    @imemoize
+    def run_time(self):
+        """get the run time of the sample. this is a duration in seconds"""
+        return float(self.headers[RUN_TIME])
+    @property
+    @imemoize
+    def sample_volume(self):
+        """sample volume in ml"""
+        return 1. # FIXME read from header field
+    @property
+    @imemoize
+    def uptake_time(self):
+        """return sample uptake time based on sample volume.
+        this is a duration in seconds"""
+        return self.sample_volume * UPTAKE_TIME_ML
+    @property
+    @imemoize
+    def sample_time(self):
+        """UTC timestamp of when sample uptake starts"""
+        return self.init_time + timedelta(seconds=self.time_offset)
     @property
     @imemoize
     def schema(self):
@@ -99,35 +123,35 @@ class AdcTime(object):
             return adc_paths[ix+1]
         except IndexError:
             return None
-    def set_time_offset(self, next_bin=None):
+    @property
+    @imemoize
+    def time_offset(self):
         """next_bin should be the path of the subsequent bin,
         or an AdcTime object wrapping it.
         if no next bin is specified, use the debubble flag
-        to select one of the measured offsets.
-        if time_offset has already been set, just return that."""
-        if self.time_offset is not None:
-            return self.time_offset
-        if next_bin is not None:
+        to select one of the measured offsets."""
+        if self.next_bin is not None:
             try:
-                next_sample_time = next_bin.sample_time
+                next_init_time = self.next_bin.init_time
             except AttributeError: # duck type
-                next_sample_time = AdcTime(next_bin, time_offset=0).sample_time
+                next_init_time = AdcTime(self.next_bin).init_time
             # compute interval between bin timestamps
-            interval = next_sample_time - self.sample_time
-            # now subtract run time
-            self.time_offset = interval.total_seconds() - float(self.headers[RUN_TIME])
+            interval = next_init_time - self.init_time
+            # now subtract run time and uptake / valve time
+            adjusted_run_time = self.run_time + VALVE_TURN_TIME + self.uptake_time
+            return interval.total_seconds() - adjusted_run_time
         else: # no next bin, use debubble flag
-            if self.headers[DEBUBBLE] == '1':
-                self.time_offset = OFFSET_DEBUBBLE
+            if self.headers[DEBUBBLE] == '1': # may not be true. believe it
+                return OFFSET_DEBUBBLE
             else:
-                self.time_offset = OFFSET_NO_DEBUBBLE
+                return OFFSET_NO_DEBUBBLE
     @property
     @imemoize
     def data(self):
         """read the adc data and add a 'TimeUTC' column"""
         adc = pd.read_csv(self.adc_path, header=None)
         adc.columns = self.schema
-        adc[TIME_UTC] = add_seconds(self.sample_time, self.time_offset + adc[TRIGGER_TIME])
+        adc[TIME_UTC] = add_seconds(self.sample_time, adc[TRIGGER_TIME])
         return adc
     @imemoize
     def roi_pos_binned(self, freq='10s'):
@@ -135,6 +159,14 @@ class AdcTime(object):
         cols = [ROI_X, ROI_Y]
         return self.data.groupby(grouper).mean()[cols]
 
-    
-        
-        
+def adc_time_series(data_dir):
+    """given a data dir, return a DataFrame indexed by UTC sample time
+    containing a row with bin LIDs"""
+    adcs = glob(os.path.join(data_dir,'*.adc'))
+    def rows():
+        for adc, next_adc in zip(adcs, adcs[1:] + [None]):
+            a = AdcTime(adc, next_bin=next_adc)
+            yield {'lid':a.lid, 'sample_time':a.sample_time}
+    df = pd.DataFrame(list(rows()))
+    df.index = df.pop('sample_time')
+    return df
