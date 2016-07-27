@@ -39,29 +39,20 @@ def check_adc(adc_path, schema_version=SCHEMA_VERSION_2):
         raise IntegrityException('.adc failed: ' + str(e)), None, sys.exc_info()[2]
 
 def check_roi(roi_path, targets):
+    roi_length = os.path.getsize(roi_path)
     pos = -1
-    def read_n(fin, n):
-        try:
-            r = fin.read(n)
-        except Exception, e:
-            raise IntegrityException('unable to read roi data: '+str(e)), None, sys.exc_info()[2]
-        if len(r) != n:
-            raise IntegrityException('roi file truncated')
-        return r
-    with open(roi_path,'rb') as fin:
-        for target in targets:
-            if pos == -1:
-                pos = target[BYTE_OFFSET]
-            # skip to next target
-            skip = target[BYTE_OFFSET] - pos
-            if skip < 0:
-                raise IntegrityException('.roi byte offsets non-monotonic: %d < %d' % (target[BYTE_OFFSET], pos))
-            read_n(fin, skip)
-            pos += skip
-            # now read the image data for this target
-            target_size = target[HEIGHT] * target[WIDTH]
-            target_data = read_n(fin, target_size)
-            pos += target_size
+    for target in targets:
+        if pos == -1:
+            pos = target[BYTE_OFFSET]
+        # skip to next target
+        skip = target[BYTE_OFFSET] - pos
+        if skip < 0:
+            raise IntegrityException('.roi byte offsets non-monotonic: %d < %d' % (target[BYTE_OFFSET], pos))
+        pos += skip
+        target_size = target[HEIGHT] * target[WIDTH]
+        pos += target_size
+        if pos > roi_length:
+            raise IntegrityException('.roi byte offset longer than ROI file: %d > %d' % (pos, roi_length))
 
 def check_fileset(fileset, schema_version=SCHEMA_VERSION_2):
     hdr_path = fileset[HDR]
