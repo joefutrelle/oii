@@ -138,6 +138,15 @@ def dashboard_config():
     Role.query = ScopedSession.query_property()
     UserRoles.query = ScopedSession.query_property()
 
+@app.teardown_request
+def teardown_request(exception):
+    Session = current_app.config.get(SCOPED_SESSION)
+    if exception:
+        Session.rollback()
+        Session.remove()
+    else:
+        Session.remove()
+
 def get_url_root():
     return current_app.config.get(DASHBOARD_BASE_URL, request.url_root)
 
