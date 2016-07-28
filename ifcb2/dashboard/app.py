@@ -13,11 +13,13 @@ from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
 from urllib import urlencode
+from contextlib import contextmanager
 
 from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
 from sqlalchemy import and_, func
+from sqlalchemy.exc import InvalidRequestError
 
 import numpy as np
 
@@ -141,10 +143,26 @@ def dashboard_config():
 @app.teardown_request
 def teardown_request(exception):
     Session = current_app.config.get(SCOPED_SESSION)
-    if exception:
-        Session.rollback()
+    if Session is not None:
+        if exception:
+            Session.rollback()
+            Session.remove()
         Session.remove()
-    else:
+
+@contextmanager
+def safe_session(session, exc=None):
+    Session = current_app.config.get(SCOPED_SESSION)
+    try:
+        yield
+    except InvalidRequestError:
+        if Session is not None:
+            Session.rollback()
+            Session.remove()
+            if exc is not None:
+                raise exc
+            else:
+                raise NotFound
+    if Session is not None:
         Session.remove()
 
 def get_url_root():
@@ -194,9 +212,12 @@ def parse_pid(pid):
     except StopIteration:
         raise
 
-@memoize(ttl=30)
+# don't know why this additional session management is required
+
+@memoize(ttl=30,ignore_exceptions=True)
 def get_data_roots(ts_label, product_type='raw'):
-    return files.get_data_roots(session, ts_label, product_type)
+    with safe_session(session, NotFound):
+        return files.get_data_roots(session, ts_label, product_type)
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
@@ -409,7 +430,7 @@ def volume(ts_label,start=None,end=None):
                 'bin_count': row[1],
                 'day': str(row[2])
             })
-    return Response(json.dumps(dv), mimetype=MIME_JSON)
+        return Response(json.dumps(dv), mimetype=MIME_JSON)
 
 def canonicalize_bin(b):
     return {
@@ -420,21 +441,23 @@ def canonicalize_bin(b):
 @app.route('/<ts_label>/feed.json')
 def serve_feed_json(ts_label):
     bins = []
-    with Feed(session, ts_label) as feed:
-        for b in feed.latest():
-            bins.append(canonicalize_bin(b))
-    return Response(json.dumps(bins), mimetype=MIME_JSON)
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            for b in feed.latest():
+                bins.append(canonicalize_bin(b))
+        return Response(json.dumps(bins), mimetype=MIME_JSON)
 
 # elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
 @app.route('/<ts_label>/api/feed/elapsed/<datetime:timestamp>')
 def elapsed(ts_label,timestamp=None):
-    with Feed(session, ts_label) as feed:
-        try:
-            delta = feed.elapsed(timestamp=timestamp)
-            return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
-        except IndexError:
-            abort(404)
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            try:
+                delta = feed.elapsed(timestamp=timestamp)
+                return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
+            except IndexError:
+                abort(404)
 
 def ts_metric(ts_label, callback, start=None, end=None, s=None):
     if s is None:
@@ -443,13 +466,14 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
         end = utcdtnow()
     if start is None:
         start = end - timedelta(seconds=s)
-    with Feed(session, ts_label) as feed:
-        result = []
-        for b in feed.time_range(start, end):
-            r = canonicalize_bin(b)
-            r.update(callback(b))
-            result.append(r)
-    return Response(json.dumps(result), mimetype=MIME_JSON)
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            result = []
+            for b in feed.time_range(start, end):
+                r = canonicalize_bin(b)
+                r.update(callback(b))
+                result.append(r)
+            return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>')
 @app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/last/<int:s>')
@@ -466,20 +490,21 @@ def serve_metric_series(ts_label,metric,start=None,end=None,s=None):
 
 # FIXME configurable time range
 def view_metrics(ts_label,metrics):
-    with Feed(session, ts_label) as feed:
-        # FIXME configurable time range
-        for b in feed.latest():
-            break
-        then = iso8601(b.sample_time.timetuple())
-        tmpl = {
-            'static': STATIC,
-            'timeseries': ts_label,
-            'metrics': [{
-                'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
-                'metric': metric,
-                'y_label': metric
-            } for metric in metrics]
-        }
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            # FIXME configurable time range
+            for b in feed.latest():
+                break
+                then = iso8601(b.sample_time.timetuple())
+                tmpl = {
+                    'static': STATIC,
+                    'timeseries': ts_label,
+                    'metrics': [{
+                        'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
+                        'metric': metric,
+                        'y_label': metric
+                    } for metric in metrics]
+                }
         return template_response('instrument.html',**tmpl)
 
 @app.route('/<ts_label>/trigger_rate.html')
@@ -506,9 +531,10 @@ def view_all_metrics(ts_label):
 @app.route('/<ts_label>/api/feed/nearest/<datetime:timestamp>')
 def nearest(ts_label, timestamp):
     #ts = struct_time2utcdatetime(parse_date_param(timestamp))
-    with Feed(session, ts_label) as feed:
-        for bin in feed.nearest(timestamp=timestamp):
-            break
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            for bin in feed.nearest(timestamp=timestamp):
+                break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
     resp = canonicalize_bin(bin)
@@ -524,8 +550,9 @@ def feed_massage_bins(ts_label,bins,include_skip=False):
     return resp
 
 def _serve_feed_day(ts_label,dt,include_skip=False):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt,include_skip)
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip)
     resp = feed_massage_bins(ts_label, bins, include_skip=include_skip)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
@@ -588,19 +615,20 @@ TAG_PAGE_SIZE=20
     
 # helper for tag search endpoints
 def search_tags(ts_label, tag_names, page=1, include_skip=False):
-    tags = parse_tags(tag_names)
-    session.expire_all()
-    r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
-        search_tags_all(tags, page, include_skip)
-    rows = [{
-        'time': iso8601(bin.sample_time.timetuple()),
-        'skip': bin.skip,
-        'n_comments': len(bin.comments),
-        'lid': bin.lid,
-        'pid': canonicalize(get_url_root(), ts_label, bin.lid),
-        'tags': map(unicode,bin.tags)
-    } for bin in r]
-    return rows, hasNext
+    with safe_session(session):
+        tags = parse_tags(tag_names)
+        session.expire_all()
+        r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
+                     search_tags_all(tags, page, include_skip)
+        rows = [{
+            'time': iso8601(bin.sample_time.timetuple()),
+            'skip': bin.skip,
+            'n_comments': len(bin.comments),
+            'lid': bin.lid,
+            'pid': canonicalize(get_url_root(), ts_label, bin.lid),
+            'tags': map(unicode,bin.tags)
+        } for bin in r]
+        return rows, hasNext
     
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
 @app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
@@ -698,9 +726,10 @@ def comment2dict(c, current_user=None):
 COMMENT_PAGE_SIZE=10
 
 def search_comments(ts_label, search_string, page=1):
-    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
-        search(search_string, page=page)
-    return [comment2dict(c) for c in r], hasNext
+    with safe_session(session):
+        r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+                     search(search_string, page=page)
+        return [comment2dict(c) for c in r], hasNext
 
 @app.route('/<ts_label>/api/recent_comments')
 @app.route('/<ts_label>/api/recent_comments/page/<int:page>')
@@ -1329,10 +1358,11 @@ def serve_wf_recent(n=None):
 #### skipping and tagging ####
 
 def get_orm_bin(req):
-    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
-    if b is None:
-        abort(404)
-    return b
+    with safe_session(session):
+        b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
+        if b is None:
+            abort(404)
+        return b
 
 @app.route('/api/get_skip/<url:pid>')
 def get_skip_flag(pid):
@@ -1345,21 +1375,16 @@ def get_skip_flag(pid):
     }
     return Response(json.dumps(result),mimetype=MIME_JSON)
 
-def get_orm_bin(req):
-    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
-    if b is None:
-        abort(404)
-    return b
-
 def set_skip_flag(b,value):
-    b.skip = value
-    session.commit()
-    result = {
-        'operation': 'set skip flag',
-        'skip': b.skip,
-        'lid': b.lid
-    }
-    return result
+    with safe_session(session):
+        b.skip = value
+        session.commit()
+        result = {
+            'operation': 'set skip flag',
+            'skip': b.skip,
+            'lid': b.lid
+        }
+        return result
 
 @app.route('/api/skip/<url:pid>')
 @api_login_roles_required('Admin')
@@ -1378,15 +1403,16 @@ def unskip_bin(pid):
     return Response(json.dumps(r),mimetype=MIME_JSON)
 
 def _skip_or_unskip_day(ts_label, dt, skip=True):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt,include_skip=True)
-    for b in bins:
-        b.skip = skip
-    session.commit()
-    r = {
-        'day': iso8601(dt.timetuple())
-    }
-    return Response(json.dumps(r), mimetype=MIME_JSON)
+    with safe_session(session):
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip=True)
+            for b in bins:
+                b.skip = skip
+                session.commit()
+                r = {
+                    'day': iso8601(dt.timetuple())
+                }
+            return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/skip_day/<datetime:dt>')
 @api_login_roles_required('Admin')

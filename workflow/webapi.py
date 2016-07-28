@@ -55,8 +55,7 @@ def teardown_request(exception):
     if exception:
         ScopedSession.rollback()
         ScopedSession.remove()
-    else:
-        ScopedSession.remove()
+    ScopedSession.remove()
 
 ### generic flask utils ###
 def parse_params(path, **defaults):
