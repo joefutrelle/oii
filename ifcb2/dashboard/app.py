@@ -20,7 +20,7 @@ from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
 from sqlalchemy import and_, func
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError, TimeoutError
 
 import numpy as np
 
@@ -127,7 +127,7 @@ def dashboard_config():
     workflow_client = WorkflowClient(workflow_url)
     # configure database session
     db_url = current_app.config.get(DATABASE_URL)
-    dbengine = create_engine(db_url)
+    dbengine = create_engine(db_url, pool_size=50, max_overflow=70, pool_recycle=3600)
     global Session
     Session = scoped_session(sessionmaker(bind=dbengine), scopefunc=flask._app_ctx_stack.__ident_func__)
     init_database(dbengine)
@@ -152,7 +152,8 @@ def teardown_request(exception):
 
 @contextmanager
 def safe_session(exc=None):
-    yield Session()
+    s = Session()
+    yield s
 
 def get_url_root():
     return current_app.config.get(DASHBOARD_BASE_URL, request.url_root)
@@ -255,7 +256,9 @@ def serve_features_bin(parsed):
 
 def serve_class_scores_bin(parsed):
     class_mat = get_product_file(parsed, 'class_scores')
-    csv_out = '\n'.join(class_scoresmat2csv(class_mat, parsed['bin_lid']))
+    if 'extension' in parsed and parsed['extension'] == 'mat':
+        return Response(file(class_mat), direct_passthrough=True, mimetype='application/octet-stream')
+    csv_out = class_scoresmat2csv(class_mat, parsed['bin_lid'])
     return Response(csv_out + '\n', mimetype='text/csv')
 
 def get_zip_entry_bytes(zipfile_path, entry_name):
@@ -906,24 +909,26 @@ def check_roots(ts_label):
 
 @app.route('/<ts_label>/api/accepts_products/<product_type>')
 def accepts_products(ts_label, product_type):
-    acc = Accession(session, ts_label)
-    accepts = acc.accepts_products(product_type)
-    return Response(json.dumps({
-        'time_series': ts_label,
-        product_type: accepts,
-        'accepts': accepts
-    }), mimetype=MIME_JSON)
+    with safe_session() as session:
+        acc = Accession(session, ts_label)
+        accepts = acc.accepts_products(product_type)
+        return Response(json.dumps({
+            'time_series': ts_label,
+            product_type: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
 
 @app.route('/api/accepts_product/<url:pid>')
 def accepts_product(pid):
     req = DashboardRequest(pid, request)
-    acc = Accession(session, req.time_series)
-    accepts = acc.accepts_products(req.product)
-    return Response(json.dumps({
-        'time_series': req.time_series,
-        req.product: accepts,
-        'accepts': accepts
-    }), mimetype=MIME_JSON)
+    with safe_session() as session:
+        acc = Accession(session, req.time_series)
+        accepts = acc.accepts_products(req.product)
+        return Response(json.dumps({
+            'time_series': req.time_series,
+            req.product: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
     
 # FIXME protect with api_login_roles_required
 @app.route('/<ts_label>/api/accede')
@@ -1083,7 +1088,10 @@ def serve_pid(pid):
             abort(404)
         add_pid(target, canonical_bin_pid)
         # check for image
-        mimetype = mimetypes.types_map['.' + extension]
+        try:
+            mimetype = mimetypes.types_map['.' + extension]
+        except:
+            mimetype = 'application/octet-stream'
         if mimetype.startswith('image/'):
             if req.product=='raw':
                 img = get_target_image(req.parsed, target, roi_path)
@@ -1211,7 +1219,8 @@ from time import sleep
 def product_exists(pid):
     req = DashboardRequest(pid, request)
     try:
-        destpath = files.get_product_destination(session, pid)
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
     except NotFound:
         abort(404)
     if os.path.exists(destpath):
@@ -1234,7 +1243,8 @@ def save_product(destpath, data):
 def deposit(pid):
     req = DashboardRequest(pid, request)
     try:
-        destpath = files.get_product_destination(session, pid)
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
     except NotFound:
         abort(404)
     product_data = request.data
