@@ -7,6 +7,8 @@ from io import BytesIO
 import tempfile
 from time import strptime
 
+import pandas as pd
+
 from scipy.io import loadmat
 from StringIO import StringIO
 from numpy.core.defchararray import rjust, replace
