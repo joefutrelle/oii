@@ -9,24 +9,21 @@ from oii.ifcb2.formats.roi import as_pil
 from oii.ifcb2.stitching import STITCHED, stitched_box, stitch_raw
 
 def normz(a):
-    m = max(a) + 0.000001 # dividing by zero is bad
-    return [float(x) / float(m) for x in a]
+    # note, not using eps, for backwards compatibility
+    m = np.max(a) + 0.000001
+    return a / m
 
 def avg(l):
     return sum(l) / len(l)
     
 def mv(eh):
-    n = 0.000001 # no dividing by zero
-    sum = 0
-    counts = zip(range(256), eh)
-    for color,count in counts:
-        n += count
-        sum += count * color
-    mean = sum / n
-    sum2 = 0
-    for color,count in counts:
-        sum2 += ((color - mean) ** 2) * count
-    variance = sum2 / n
+    # not using real eps, for backwards compatibility
+    eps = 0.000001 # no dividing by zero
+    colors = np.arange(256)
+    n = np.sum(eh) + eps
+    s = np.sum(eh * colors)
+    mean = np.sum(eh * colors) / n
+    variance = np.sum((colors - mean) ** 2 * eh) / n
     return (mean, variance)
 
 # FIXME this is still too sensitive to lower modes
@@ -36,17 +33,19 @@ def bright_mv(image,mask=None):
     # toast extrema
     return bright_mv_hist(eh)
 
+_BMH_KERNEL = np.array([2,2,2,2,2,4,8,2,1,1,1,1,1])
+
 def bright_mv_hist(histogram,exclude=[0,255]):
-    for x in exclude:
-        histogram[x] = 0 
+    histogram = np.array(histogram)
+    histogram[np.array(exclude)] = 0
     # smooth the filter, preferring peaks with sharp declines on the higher luminance end
-    peak = convolve(histogram,[2,2,2,2,2,4,8,2,1,1,1,1,1],'same')
+    peak = np.convolve(histogram,_BMH_KERNEL,'same')
     # now smooth that to eliminate noise
-    peak = convolve(peak,[1,1,1,1,1,1,1,1,1],'same')
+    peak = np.convolve(peak,np.ones(9),'same')
     # scale original signal to the normalized smoothed signal;
     # that will tend to deattenuate secondary peaks, and reduce variance of bimodal distros
-    scaled = [(x**20)*y for x,y in zip(normz(peak),histogram)] # FIXME magic number
-    # now compute mean and variance of the scaled signal
+    scaled = normz(peak)**20 * histogram
+    # now compute mean and variance
     return mv(scaled)
 
 def extract_background(image,estimated_background):
