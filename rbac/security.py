@@ -16,7 +16,10 @@ def api_user():
     token = request.headers.get(AUTHORIZATION_HEADER)
     if token and len(token) > 7 and token[0:7] == "Bearer ":
         token = token[7:].strip()
-        session = current_app.config.get('SESSION')
+        try:
+            session = current_app.config.get('SCOPED_SESSION')()
+        except:
+            session = current_app.config.get('SESSION') # FIXME broken
         apikey = session.query(APIKey).filter_by(token=token).first()
         if apikey:
             return apikey.user
