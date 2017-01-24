@@ -74,7 +74,7 @@ def do_copy(instrument):
         fs[lid] += [(src, dest)]
     for lid,sds in fs.items():
         try:
-            print 'initating safe copy for %s' % sds # FIXME debug
+            print 'initiating safe copy of %s' % sds # FIXME debug
             safe_copy_fileset(sds)
             print 'safe copying succeeded for %s' % sds # FIXME debug
             yield lid
