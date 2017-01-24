@@ -7,8 +7,6 @@ from io import BytesIO
 import tempfile
 from time import strptime
 
-import pandas as pd
-
 from scipy.io import loadmat
 from StringIO import StringIO
 from numpy.core.defchararray import rjust, replace
@@ -258,6 +256,10 @@ def slow_class_scoresmat2csv(matfile, bin_lid):
 
 def class_scoresmat2csv(matfile, bin_lid):
     """Convert a class score .mat file into a CSV representation"""
+    try:
+        import pandas as pd
+    except ImportError:
+        return '\n'.join(slow_class_scoresmat2csv(matfile, bin_lid))
     scores = loadmat(matfile, squeeze_me=True)
 
     prefix = bin_lid + '_'
