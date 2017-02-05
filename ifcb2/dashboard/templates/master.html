@@ -12,12 +12,12 @@
 <html>
 <head>
     <title>{% block title %}{% endblock %}</title>
-    {% block head %}
+{% block head %}
     <!-- jQuery -->
     <script type="text/javascript" src="{{static}}lib/jquery-1.9.1.min.js"></script>
     <!-- jQuery UI -->
-    <script type="text/javascript" src="{{static}}lib/jquery-ui-1.8.14.custom.min.js"></script>
-    <link type="text/css" href="{{static}}css/smoothness/jquery-ui-1.8.14.custom.css" rel="Stylesheet" />
+    <script type="text/javascript" src="{{static}}lib/jquery-ui-1.11.4.js"></script>
+    <link type="text/css" href="{{static}}css/smoothness/jquery-ui-1.11.4.min.css" rel="Stylesheet" />
     <!-- image_pager plugin -->
     <script type="text/javascript" src="{{static}}image_pager.js"></script>
     <link type="text/css" href="{{static}}image_pager.css" rel="Stylesheet"/>
@@ -29,6 +29,8 @@
     <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.time.js"></script>
     <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.navigate.js"></script>
     <script type="text/javascript" src="{{static}}lib/flot/jquery.flot.selection.js"></script>
+    <!-- filesize -->
+    <script type="text/javascript" src="{{static}}/lib/filesize.min.js"></script>
 
     <!-- OII utilities and CSS -->
     <script type="text/javascript" src="{{static}}js/oii-utils.js"></script>
@@ -45,12 +47,39 @@
     <script type="text/javascript" src="{{static}}collapsing.js"></script>
     <script type="text/javascript" src="{{static}}closebox.js"></script>
     <script type="text/javascript" src="{{static}}mosaic_pager.js"></script>
+    <script type="text/javascript" src="{{static}}bin_actions.js"></script>
     <script type="text/javascript" src="{{static}}bin_view.js"></script>
     <script type="text/javascript" src="{{static}}bin.js"></script>
+    <script type="text/javascript" src="{{static}}bin_tags.js"></script>
+    <script type="text/javascript" src="{{static}}bin_comments.js"></script>
     <script type="text/javascript" src="{{static}}target.js"></script>
     <script type="text/javascript" src="{{static}}scatter.js"></script>
     <script type="text/javascript" src="{{static}}timeseries.js"></script>
-    {% endblock head %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $.getJSON('/login_status', function(r) {
+        if(r.logged_in) {
+            $('#login').empty().html('<a href="/sec/logout">Log out</a>')
+                .find('a:first').on('click',function(e) {
+                    e.preventDefault(); // yeah, I know this is bad
+                    window.location.assign('/sec/logout?next=' + window.location);
+                });
+        } else {
+            $('#login').empty().html('<a href="/sec/logout">Log in</a>')
+                .find('a:first').on('click',function(e) {
+                    e.preventDefault();
+                    window.location.assign('/sec/login?next=' + window.location);
+                });
+        }
+        if(r.admin) {
+            $('#admin').empty().html('<a href="/admin">Admin</a>');
+        } else {
+            $('#admin').empty().html('<a href="/sec/login?next=/admin">Admin</a>');
+        }
+    });
+});
+</script>
+{% endblock head %}
 </head>
 <body>
   <div id="content">
@@ -69,11 +98,11 @@
     <br>
     <a href="mailto:hsosik@whoi.edu">Heidi Sosik</a>, <a href="mailto:rolson@whoi.edu">Robert Olson</a>, <a href="mailto:jfutrelle@whoi.edu">Joe Futrelle</a> @ <a href="http://www.whoi.edu/">Woods Hole Oceanographic Institution</a>
     <br>
-    Version 3.0alpha - March 2015 -
+    Version 4.3a - 24 January 2017 -
     <a href="/about">About</a>
     <a href="https://beagle.whoi.edu/redmine/projects/ifcb-web/wiki">User guide</a>
     <!-- FIXME makes assumptions about URLs -->
-    <a href="/admin">Admin</a>
+    <span id="login"><a href="/sec/login">Log in</a></span> <span id="admin"><a href="/sec/login?next=/admin">Admin</a></span>
     <a href="/api">API</a>
     <!--<a href="help/">About</a> /
     <a href="help.html" target="_none">Help</a-->

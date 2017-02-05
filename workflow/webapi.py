@@ -46,7 +46,16 @@ def config():
     dbengine = create_engine(db_url)
     Base.metadata.create_all(dbengine)
     global session
-    session = scoped_session(sessionmaker(bind=dbengine))()
+    global ScopedSession
+    ScopedSession = scoped_session(sessionmaker(bind=dbengine))
+    session = ScopedSession()
+
+@workflow_blueprint.teardown_request
+def teardown_request(exception):
+    if exception:
+        ScopedSession.rollback()
+        ScopedSession.remove()
+    ScopedSession.remove()
 
 ### generic flask utils ###
 def parse_params(path, **defaults):

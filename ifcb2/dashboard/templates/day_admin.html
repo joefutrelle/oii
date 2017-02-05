@@ -1,0 +1,60 @@
+{% extends "master.html" %}
+{% block head %}
+  {{ super() }}
+<script type="text/javascript">
+$(document).ready(function() {
+  $.getJSON('/{{ts_label}}/api/feed/day_skip/{{date}}',function(r) {
+    $.each(r,function(ix,b) {
+      var pid = b.pid;
+      $('#bins_table').append('<tr class="tbl">\
+         <td class="tbl">'+b['date']+'</a></td>\
+         <td class="tbl"><a href="'+pid+'.html">'+pid+'</a></td>\
+         <td class="tbl"><span class="skip"></span></td>\
+       </tr>').find('.skip:last').bin_skip(pid, false, b.skip);
+    });
+    $('tr:even').addClass('tbl_even');
+    $('#day_date').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/feed/nearest/{{date}}', function(r) { // find the nearest bin
+        window.location.href = '/{{ts_label}}/dashboard/'+r.pid;
+      });
+    });
+    $('#skip_all_bins').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/skip_day/{{date}}', function(r) {
+        location.reload(true);
+      });
+    });
+    $('#unskip_all_bins').on('click', function() {
+      $.getJSON('/{{ts_label}}/api/unskip_day/{{date}}', function(r) {
+        location.reload(true);
+      });
+    });
+  });
+});
+</script>
+{% endblock head %}
+{% block content %}
+<!--
+params:
+static - static content location
+ts_label - time series label
+date - day
+-->
+<div>
+  <div class="major h1">
+     <a href="{{prev_date_href}}" class="controlGray previousBin">&#x25C0;</a>
+     <a href="{{next_date_href}}" class="controlGray nextBin">&#x25B6;</a>
+     <a href="/{{ts_label}}">{{ts_label}}</a> day <span class="pseudolink" id="day_date">{{date}}</a>
+  </div>
+  <div class="major inline" style="margin-top:7px">
+    <span id="skip_all_bins" class="pseudolink">Skip all bins</span>
+    <span id="unskip_all_bins" class="pseudolink">Unskip all bins</span>
+  </div>
+  <table class="major" id="bins_table">
+    <tr class="tbl">
+      <th class="tbl">time</th>
+      <th class="tbl">pid</th>
+      <th class="tbl">actions</th>
+    </tr>
+  </table>
+</div>
+{% endblock content %}

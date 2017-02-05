@@ -4,80 +4,53 @@
   {{ super() }}
     <script type="text/javascript">
 $(document).ready(function() {
-    $('#bin_view').bin_page('{{bin_pid}}','{{time_series}}');
+    // ersatz history support for IE9, see #1857 for discussion
+    function historyPushState(state, pid, url) {
+        if(!!(window.history && history.pushState)) {
+            window.history.pushState(state, pid, url)
+        } else {
+            window.location.href = url;
+        }
+    }
+    var bin_pid = '{{bin_pid}}';
+    var time_series = '{{time_series}}';
+    function goToBin(bin_pid, pushState) {
+        if(pushState == undefined || pushState) {
+            historyPushState({bin_pid:bin_pid}, bin_pid, bin_pid+'.html');
+        }
+        $('#bin_pid').empty().append(bin_pid);
+        $('#metadata_container').bin_metadata(bin_pid, time_series);
+        $('#targets_container').bin_targets(bin_pid);
+        $('#fixity_container').bin_files(bin_pid, time_series);
+    }
+    $('#bin_view').bin_page(bin_pid, time_series);
+    $('#bin_view')
+        .bind('goto_bin', function(event, bin_pid) {
+            $('#bin_view').trigger('drawBinDisplay',[bin_pid]);
+            goToBin(bin_pid);
+        });
+    goToBin(bin_pid, 0);
+    window.onpopstate = function(event) {;
+        var bin_pid = event.state.bin_pid;
+        $('#bin_view').trigger('drawBinDisplay',[bin_pid]);
+        goToBin(bin_pid, 0);
+    }
 });
     </script>
 {% endblock head %}
 {% block content %}
-  <div class="major h1">Sample bin {{bin_pid}}</div>
+  <div class="major h1">Sample bin <span id="bin_pid"></span></div>
   <div id="bin_view" class="major"></div>
-  <div id="roi_image" class="major target_image"></div>
-  <div style="clear: both"></div>
-  <div class="major inline">
-    <div>
-      <b>{{date}}</b>
-      (<a href="/{{time_series}}/dashboard/{{bin_pid}}">Show in time series</a>)
-    </div>
-    <div class="metadata_key">context</div>
-{% for v in context %}
-    <div>{{v}}</div>
-{% endfor %}
-{% for k,v in properties %}
-  <div>
-    <span class="metadata_key">{{k}}</span>
-    <span class="metadata_value">{{v}}</span>
-  </div>
-{% endfor %}
-  </div>
-
-<!-- fixity -->
-<div>
-<table class="major inline">
-<tr class="tbl">
-  <th class="tbl">filename</th>
-  <th class="tbl">length</th>
-  <th class="tbl">sha1</th>
-  <th class="tbl">fixed</th>
-  <th class="tbl">local path</th>
-  <th class="tbl">status</th>
-</tr>
-{% for file in files %}
-  <tr class="tbl">
-    <td class="tbl"><a href="{{time_series}}/{{file.filename}}">{{file.filename}}</a></td>
-    <td class="tbl">{{file.length}}</td>
-    <td class="tbl">{{file.sha1}}</td>
-    <td class="tbl">{{file.fix_time}}</td>
-    <td class="tbl">{{file.local_path}}</td>
-    <td class="tbl">
-      {% for k,v in file.check.items() %}
-        {% if not v %}
-          <span class="status_bad">{{k}}</span>
-	{% else %}
-          <span class="status_good">{{k}}</span>
-        {% endif %}
-      {% endfor %}
-    </td>
-  </tr>
-{% endfor %}
-</table>
-</div>
-
+  
 <div style="clear: both"></div>
+<!-- metadata -->
+<div id="metadata_container"></div>
 
+<div style="clear:both"></div>
+<!-- fixity -->
+<div id="fixity_container"></div>
+
+<div style="clear:both"></div>
 <!-- targets -->
-<div><table class="major">
-<tr class="tbl">
-  <th class="tbl">#/trigger</th>
-  <th class="tbl">pid</th>
-  <th class="tbl">size</th>
-</tr>
-{% for target in targets %}
-  <tr class="tbl">
-    <td class="tbl">{{target['targetNumber']}}/{{target['trigger']}}</td>
-    <td class="tbl"><a href="{{target['pid']}}.html">{{target['pid']}}</a></td>
-    <td class="tbl">{{target['width']}}x{{target['height']}}</td>
-  </tr>
-{% endfor %}
-</table>
-</div>
+<div id="targets_container"></div>
 {% endblock content %}

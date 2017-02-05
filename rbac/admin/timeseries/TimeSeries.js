@@ -1,10 +1,10 @@
 
 
-ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function ($scope, TimeSeriesService) {
+ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'Restangular', 'TimeSeriesService', function ($scope, Restangular, TimeSeriesService) {
 
     // initialize local scope
     $scope.alert = null;
-    var restore = {};
+    $scope.restore = {};
 
     // load iniital data from api
     TimeSeriesService.list.then(function(serverResponse) {
@@ -28,8 +28,8 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
 
     // mark timeseries group for editing
     $scope.editTimeSeries = function(ts) {
-        restore[ts.id] = {};
-        angular.copy(ts, restore[ts.id]);
+        $scope.restore[ts.id] = {};
+        angular.copy(ts, $scope.restore[ts.id]);
         ts.edit = true;
     }
 
@@ -38,8 +38,10 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
         if (ts.id) {
             // cancel edit on saved timeseries
             // restore unedited copy
-            angular.copy(restore[ts.id], ts);
-            delete restore[ts.id];
+            console.log('cancel');
+			console.log($scope.restore[ts.id]);
+            angular.copy($scope.restore[ts.id], ts);
+            delete $scope.restore[ts.id];
         } else {
             // cancel creation of new timeseries
             $scope.time_series  = _.without($scope.time_series, ts);
@@ -50,16 +52,18 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
     $scope.saveTimeSeries = function(ts) {
 	console.log("saving time series "+ts.label);
         // remove blank paths before save
-        for (var i = 0; i < ts.data_dirs.length; i++) {
-            if (ts.data_dirs[i].path.trim() == "") {
-                $scope.removePath(ts, ts.data_dirs[i]);
-            }
-        }
+        $.each(ts.data_dirs, function(ix, dd) {
+			if(dd.path.trim()=="") {
+				$scope.removePath(ts, dd);
+			} else {
+				console.log(ts.label+" has "+dd.product_type+" path "+dd.path);
+			}
+		});
         if(ts.id) {
         // timeseries group already exists on server. update.
-        ts.patch().then(function(serverResponse) {
+        Restangular.copy(ts).patch().then(function(serverResponse) {
                 delete ts.edit;
-                delete restore[ts.id];
+                delete $scope.restore[ts.id];
                 $scope.alert = null;
         }, function(serverResponse) {
                 console.log(serverResponse);
@@ -78,11 +82,44 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
         }
     }
 
+    $scope.checkPathsTimeSeries = function(ts) {
+	var check_url = '/' + ts.label + '/api/check_roots';
+ 	var message = "No data found for "+ts.label;
+	$.getJSON(check_url, function(r) {
+	    message = "";
+	    $.each(r, function(root, found) {
+		if(found) {
+		    message = message + "Data found in "+root+". ";
+		} else {
+		    message = message + "NO DATA FOUND in "+root+"! ";
+		}
+	    });
+	    $scope.alert = message;
+	    $scope.$apply();
+	});
+    }
+
     $scope.accedeTimeSeries = function(ts) {
-	console.log("initiating accession on time series "+ts.label)
-	accession_url = "/" + ts.label + "/api/accede";
-	$scope.alert = "Initiating accession for "+ts.label+"...";
-	$.getJSON(accession_url, function(r) { });
+	var check_url = '/' + ts.label + '/api/check_roots';
+  	var accession_url = "/" + ts.label + "/api/accede";
+	$.getJSON(check_url, function(r) {
+            var someNotFound = false;
+	    $.each(r, function(root, found) {
+		if(!found) {
+                    $scope.alert = "ERROR: no data found in " + root + ".";
+		    $scope.$apply();
+		    someNotFound = true;
+                }
+            });
+	    if(!someNotFound) {
+		$scope.alert = "Data found, attempting to initiate accession for " + ts.label;
+		$scope.$apply();
+		$.getJSON(accession_url, function(r) {
+		    $scope.alert = "Data found, accession initiated for "+ts.label;
+		    $scope.$apply();
+		});
+            }
+        });
     };
 
     // remove timeseries group
@@ -94,9 +131,21 @@ ifcbAdmin.controller('TimeSeriesCtrl', ['$scope', 'TimeSeriesService', function 
 
     // remove path
     $scope.removePath = function(ts,p) {
-        // remove only from local scrope
+        // remove only from local scope
         // server is updated with saveTimeSeries()
         ts.data_dirs = _.without(ts.data_dirs, p);
     }
+
+$scope.$on('$locationChangeStart', function( event ) {
+	if($.isEmptyObject($scope.restore)) {
+		return;
+	}
+	$.each($scope.time_series, function(ix, ts) {
+		if(ts.edit) {
+			$scope.cancelTimeSeries(ts);
+			ts.edit = false;
+		}
+	});
+});
 
 }]);

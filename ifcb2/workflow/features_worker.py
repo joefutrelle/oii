@@ -15,12 +15,12 @@ from oii.workflow.async import async, wakeup_task
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE
 from oii.ifcb2.workflow import BLOBS2FEATURES
 from oii.ifcb2.identifiers import parse_pid
+from oii.rbac.utils import secure_upload
 
-### FIXME config this right
-client = WorkflowClient('http://128.128.14.19:9270')
+from worker_config import WORKFLOW_URL, MATLAB_BASE, MATLAB_EXEC_PATH, API_KEY
 
-MATLAB_EXEC_PATH='/usr/local/MATLAB/R2014b/bin/matlab'
-MATLAB_BASE='/home/ubuntu/dev/trunk'
+client = WorkflowClient(WORKFLOW_URL)
+
 MATLAB_DIRS = [
 'webservice_tools',
 'feature_extraction',
@@ -82,7 +82,7 @@ def extract_features(pid,job):
             else:
                 raise Exception('no features found')
             log_callback('uploading %s' % features_url)
-            upload(feature_csv, features_url)
+            secure_upload(feature_csv, features_url, API_KEY)
             if os.path.exists(multiblob_csv):
                 log_callback('multiblob found at %s' % multiblob_csv)
                 log_callback('uploading %s' % multiblob_url)

@@ -1,28 +1,32 @@
 import os, inspect
 import mimetypes
 import json
+import _strptime
 from time import strptime
 from io import BytesIO
 import re
 import PIL
 import shutil
-from oii.utils import gen_id
 from array import array
 from zipfile import ZipFile
 from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
+from urllib import urlencode
+from contextlib import contextmanager
 
+import flask
 from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
+from sqlalchemy.exc import InvalidRequestError, TimeoutError
 
 import numpy as np
 
 from skimage.segmentation import find_boundaries
 
-from oii.utils import coalesce, memoize
+from oii.utils import coalesce, memoize, gen_id, order_keys
 from oii.times import iso8601, parse_date_param, struct_time2utcdatetime, utcdtnow
 from oii.image.io import as_bytes, as_pil
 from oii.image import mosaic
@@ -36,18 +40,22 @@ from oii.image.pilutils import filename2format, thumbnail
 
 from oii.ifcb2 import get_resolver
 from oii.ifcb2 import files
-from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, User, Role, UserRoles
+from oii.ifcb2.orm import Base, Bin, TimeSeries, DataDirectory, BinComment, User, Role, UserRoles
 
 from oii.rbac.admin_api import timeseries_blueprint, manager_blueprint
-from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint
+from oii.rbac.admin_api import role_blueprint, user_blueprint, password_blueprint, user_admin_blueprint
 from oii.rbac.admin_api import instrument_blueprint, keychain_blueprint
 from oii.rbac import security
-from oii.rbac.security import roles_required
+from oii.rbac.security import current_user, effective_user
+from oii.rbac.security import login_required, api_required, api_login_required, roles_required, api_roles_required, api_login_roles_required
 
 from oii.ifcb2.feed import Feed
-from oii.ifcb2.formats.adc import Adc
+from oii.ifcb2.comments import Comments
+from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
+from oii.ifcb2.formats.adc import Adc, SCHEMA_VERSION_1
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
+from oii.ifcb2.accession import Accession
 from oii.ifcb2.identifiers import add_pids, add_pid, canonicalize, BIN_KEY
 from oii.ifcb2.represent import split_hdr, targets2csv, bin2xml, bin2json, bin2rdf, bin2zip, target2xml, target2rdf, bin2json_short, bin2json_medium, class_scoresmat2csv
 from oii.ifcb2.image import read_target_image
@@ -57,6 +65,8 @@ from oii.ifcb2.identifiers import PID, LID, ADC_COLS, SCHEMA_VERSION, TIMESTAMP,
 from oii.ifcb2.formats.adc import HEIGHT, WIDTH, TARGET_NUMBER
 from oii.ifcb2.stitching import STITCHED, PAIR, list_stitched_targets, stitch_raw
 from oii.ifcb2 import v1_stitching
+
+from oii.ifcb2.flow import get_flow
 
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
@@ -86,35 +96,28 @@ session = None
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-def init_database(dbengine, session):
-    """initialize database"""
-    Base.metadata.create_all(dbengine)
-    session.expire_all()
-    # init roles and test users
-    # this should go somewhere else later
-    for role in ['Admin','Instrument','Time Series', 'API']:
-        if not session.query(Role).filter_by(name=role).count():
-            r = Role(name=role)
-            session.add(r)
+def init_database(dbengine):
+    with safe_session() as session:
+        """initialize database"""
+        Base.metadata.create_all(dbengine)
+        session.expire_all()
+        # init roles and test users
+        # this should go somewhere else later
+        for role in ['Admin','Instrument','Time Series', 'API']:
+            if not session.query(Role).filter_by(name=role).count():
+                r = Role(name=role)
+                session.add(r)
+                session.commit()
+        if not session.query(User).filter_by(email='admin@whoi.edu').count():
+            u = User(
+                first_name='Test', last_name='Admin',
+                email='admin@whoi.edu', username='admin@whoi.edu',
+                password=user_manager.hash_password('12345678'),
+                is_enabled=True)
+            r = session.query(Role).filter_by(name='Admin').first()
+            u.roles.append(r)
+            session.add(u)
             session.commit()
-    if not session.query(User).filter_by(email='admin@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='Admin',
-            email='admin@whoi.edu', username='admin@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        r = session.query(Role).filter_by(name='Admin').first()
-        u.roles.append(r)
-        session.add(u)
-        session.commit()
-    if not session.query(User).filter_by(email='user@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='User',
-            email='user@whoi.edu', username='user@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        session.add(u)
-        session.commit()
 
 @app.before_first_request
 def dashboard_config():
@@ -123,21 +126,34 @@ def dashboard_config():
     workflow_url = current_app.config.get(WORKFLOW_URL)
     workflow_client = WorkflowClient(workflow_url)
     # configure database session
-    global session
     db_url = current_app.config.get(DATABASE_URL)
-    dbengine = create_engine(db_url)
-    ScopedSession = scoped_session(sessionmaker(bind=dbengine))
-    session = ScopedSession()
-    init_database(dbengine,session)
+    dbengine = create_engine(db_url, pool_size=50, max_overflow=70, pool_recycle=3600)
+    global Session
+    Session = scoped_session(sessionmaker(bind=dbengine), scopefunc=flask._app_ctx_stack.__ident_func__)
+    init_database(dbengine)
     current_app.config.update(
         DBENGINE=dbengine,
-        SCOPED_SESSION=ScopedSession,
-        SESSION=session
+        SCOPED_SESSION=Session
     )
     # instrument RBAC
-    User.query = ScopedSession.query_property()
-    Role.query = ScopedSession.query_property()
-    UserRoles.query = ScopedSession.query_property()
+    s = scoped_session(sessionmaker(bind=dbengine))
+    User.query = s.query_property()
+    Role.query = s.query_property()
+    UserRoles.query = s.query_property()
+    del s
+
+@app.teardown_request
+def teardown_request(exception):
+    if Session is not None:
+        if exception:
+            Session.rollback()
+            Session.remove()
+        Session.remove()
+
+@contextmanager
+def safe_session(exc=None):
+    s = Session()
+    yield s
 
 def get_url_root():
     return current_app.config.get(DASHBOARD_BASE_URL, request.url_root)
@@ -166,7 +182,12 @@ def template_response(template, mimetype=None, ttl=None, **kw):
         (mimetype, _) = mimetypes.guess_type(template)
     if mimetype is None:
         mimetype = 'application/octet-stream'
+    if 'static' not in kw:
+        kw.update({'static': STATIC})
     return Response(render_template(template,**kw), mimetype=mimetype, headers=max_age(ttl))
+
+def jsonr(obj):
+    return Response(json.dumps(obj), mimetype=MIME_JSON)
 
 #### generic IFCB utils #####
 # FIXME refactor!
@@ -181,9 +202,12 @@ def parse_pid(pid):
     except StopIteration:
         raise
 
-@memoize(ttl=30)
+# don't know why this additional session management is required
+
+@memoize(ttl=30,ignore_exceptions=True)
 def get_data_roots(ts_label, product_type='raw'):
-    return files.get_data_roots(session, ts_label, product_type)
+    with safe_session(NotFound) as session:
+        return files.get_data_roots(session, ts_label, product_type)
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
@@ -232,7 +256,9 @@ def serve_features_bin(parsed):
 
 def serve_class_scores_bin(parsed):
     class_mat = get_product_file(parsed, 'class_scores')
-    csv_out = '\n'.join(class_scoresmat2csv(class_mat, parsed['bin_lid']))
+    if 'extension' in parsed and parsed['extension'] == 'mat':
+        return Response(file(class_mat), direct_passthrough=True, mimetype='application/octet-stream')
+    csv_out = class_scoresmat2csv(class_mat, parsed['bin_lid'])
     return Response(csv_out + '\n', mimetype='text/csv')
 
 def get_zip_entry_bytes(zipfile_path, entry_name):
@@ -278,6 +304,7 @@ app.register_blueprint(timeseries_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(instrument_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(manager_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(user_blueprint, url_prefix=API_URL_PREFIX)
+app.register_blueprint(user_admin_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(role_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(password_blueprint, url_prefix=API_URL_PREFIX)
 app.register_blueprint(keychain_blueprint, url_prefix=API_URL_PREFIX)
@@ -293,6 +320,35 @@ def admin_root():
 @roles_required('Admin')
 def serve_static_admin(filename):
     return send_from_directory(ADMIN_APP_DIR, filename)
+
+# endpoint to determine if user is logged in as admin
+@app.route('/is_admin')
+@roles_required('Admin')
+def is_admin():
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+# endpoint to determine if user is logged in as anyone
+@app.route('/is_logged_in')
+@login_required
+def is_logged_in():
+    return Response(json.dumps(dict(logged_in=True,email=current_user.email)),mimetype=MIME_JSON)
+
+@app.route('/login_status')
+def login_status():
+    user = current_user
+    if user.is_authenticated():
+        r = {
+            'logged_in': True,
+            'email': user.email,
+            'admin': user.has_role('Admin')
+        }
+    else:
+        r = {
+            'logged_in': False,
+            'email': None,
+            'admin': False
+        }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/api')
 @app.route('/api.html')
@@ -317,23 +373,36 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
+    ts_label_notag, tag = parse_ts_label_tag(ts_label)
+    with safe_session() as session:
+        feed = Feed(session, ts_label)
+        total_bins = feed.total_bins()
+        total_data_volume = feed.total_data_volume()
     template = {
         'static': STATIC,
         'time_series': ts_label,
-        'all_metrics': METRICS
+        'all_metrics': METRICS,
+        'tag': tag,
+        'ts_label_notag': ts_label_notag,
+        'total_bins': total_bins,
+        'total_data_volume': total_data_volume
     }
     if pid is not None:
         template['pid'] = pid
     # fetch time series information
     all_series = []
     url_root = get_url_root()
-    for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
-        if ts_label is None: # no time series specified
-            return redirect(os.path.join(url_root, ts.label), code=302)
-        if ts.label == ts_label:
-            template['page_title'] = html.fromstring(ts.description).text_content()
-            template['title'] = ts.description
-        all_series.append((ts.label, ts.description))
+    with safe_session() as session:
+        for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
+            if ts_label is None: # no time series specified
+                return redirect(os.path.join(url_root, ts.label), code=302)
+            description = ts.description
+            if not description:
+                description = ts_label_notag
+            if ts.label == ts_label_notag:
+                template['page_title'] = html.fromstring(description).text_content()
+                template['title'] = description
+            all_series.append((ts.label, description))
     template['all_series'] = all_series
     template['base_url'] = url_root
     return template_response('timeseries.html', **template)
@@ -348,39 +417,42 @@ def serve_timeseries(ts_label=None, pid=None):
 @app.route('/<ts_label>/api/feed/volume/start/<datetime:start>/end/<datetime:end>')
 def volume(ts_label,start=None,end=None):
     dv = []
-    with Feed(session, ts_label) as feed:
-        for row in feed.daily_data_volume(start,end):
-            dv.append({
-                'gb': float(row[0]),
-                'bin_count': row[1],
-                'day': str(row[2])
-            })
-    return Response(json.dumps(dv), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for row in feed.daily_data_volume(start,end):
+                dv.append({
+                    'gb': float(row[0]),
+                    'bin_count': row[1],
+                    'day': str(row[2])
+                })
+            return Response(json.dumps(dv), mimetype=MIME_JSON)
 
-def canonicalize_bin(ts_label, b):
+def canonicalize_bin(b):
     return {
-        'pid': canonicalize(get_url_root(), ts_label, b.lid),
+        'pid': canonicalize(get_url_root(), b.ts_label, b.lid),
         'date': iso8601(b.sample_time.timetuple())
     }
 
 @app.route('/<ts_label>/feed.json')
 def serve_feed_json(ts_label):
     bins = []
-    with Feed(session, ts_label) as feed:
-        for b in feed.latest():
-            bins.append(canonicalize_bin(ts_label, b))
-    return Response(json.dumps(bins), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for b in feed.latest():
+                bins.append(canonicalize_bin(b))
+        return Response(json.dumps(bins), mimetype=MIME_JSON)
 
 # elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
 @app.route('/<ts_label>/api/feed/elapsed/<datetime:timestamp>')
 def elapsed(ts_label,timestamp=None):
-    with Feed(session, ts_label) as feed:
-        try:
-            delta = feed.elapsed(timestamp=timestamp)
-            return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
-        except IndexError:
-            abort(404)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            try:
+                delta = feed.elapsed(timestamp=timestamp)
+                return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
+            except IndexError:
+                abort(404)
 
 def ts_metric(ts_label, callback, start=None, end=None, s=None):
     if s is None:
@@ -389,69 +461,46 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
         end = utcdtnow()
     if start is None:
         start = end - timedelta(seconds=s)
-    with Feed(session, ts_label) as feed:
-        result = []
-        for b in feed.time_range(start, end):
-            r = canonicalize_bin(ts_label, b)
-            r.update(callback(b))
-            result.append(r)
-    return Response(json.dumps(result), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            result = []
+            for b in feed.time_range(start, end):
+                r = canonicalize_bin(b)
+                r.update(callback(b))
+                result.append(r)
+            return Response(json.dumps(result), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/feed/trigger_rate')
-@app.route('/<ts_label>/api/feed/trigger_rate/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/trigger_rate/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/trigger_rate/start/<datetime:start>/end/<datetime:end>')
-def trigger_rate(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'trigger_rate': float(b.trigger_rate)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/temperature')
-@app.route('/<ts_label>/api/feed/temperature/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/temperature/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/temperature/start/<datetime:start>/end/<datetime:end>')
-def temperature(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'temperature': float(b.temperature)
-        }
-    return ts_metric(ts_label,callback,start,end,s)
-
-@app.route('/<ts_label>/api/feed/humidity')
-@app.route('/<ts_label>/api/feed/humidity/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>')
-@app.route('/<ts_label>/api/feed/humidity/end/<datetime:end>/last/<int:s>')
-@app.route('/<ts_label>/api/feed/humidity/start/<datetime:start>/end/<datetime:end>')
-def humidity(ts_label,start=None,end=None,s=None):
-    def callback(b):
-        return {
-            'humidity': float(b.humidity)
-        }
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/end/<datetime:end>/last/<int:s>')
+@app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/start/<datetime:start>/end/<datetime:end>')
+def serve_metric_series(ts_label,metric,start=None,end=None,s=None):
+    # take advantage of the fact that bin attributes are named the same as our metric names here,
+    # and that they're all floating point
+    callback = lambda b: { metric: float(getattr(b,metric)) }
     return ts_metric(ts_label,callback,start,end,s)
 
 ## metric views ##
 
 # FIXME configurable time range
 def view_metrics(ts_label,metrics):
-    with Feed(session, ts_label) as feed:
-        # FIXME configurable time range
-        for b in feed.latest():
-            break
-        then = iso8601(b.sample_time.timetuple())
-        tmpl = {
-            'static': STATIC,
-            'timeseries': ts_label,
-            'metrics': [{
-                'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
-                'metric': metric,
-                'y_label': metric
-            } for metric in metrics]
-        }
-        return template_response('instrument.html',**tmpl)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            # FIXME configurable time range
+            for b in feed.latest():
+                break
+            then = iso8601(b.sample_time.timetuple())
+            tmpl = {
+                'static': STATIC,
+                'timeseries': ts_label,
+                'metrics': [{
+                    'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
+                    'metric': metric,
+                    'y_label': metric
+                } for metric in metrics]
+            }
+            return template_response('instrument.html',**tmpl)
 
 @app.route('/<ts_label>/trigger_rate.html')
 def view_trigger_rate(ts_label):
@@ -477,16 +526,52 @@ def view_all_metrics(ts_label):
 @app.route('/<ts_label>/api/feed/nearest/<datetime:timestamp>')
 def nearest(ts_label, timestamp):
     #ts = struct_time2utcdatetime(parse_date_param(timestamp))
-    with Feed(session, ts_label) as feed:
-        for bin in feed.nearest(timestamp=timestamp):
-            break
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for bin in feed.nearest(timestamp=timestamp):
+                break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
-    resp = canonicalize_bin(ts_label, bin)
+    resp = canonicalize_bin(bin)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-@app.route('/<ts_label>/api/feed/<after_before>/pid/<url:pid>')
-@app.route('/<ts_label>/api/feed/<after_before>/n/<int:n>/pid/<url:pid>')
+def feed_massage_bins(ts_label,bins,include_skip=False):
+    resp = []
+    for bin in bins:
+        entry = canonicalize_bin(bin)
+        if include_skip:
+            entry['skip'] = bin.skip
+        resp.append(entry);
+    return resp
+
+def _serve_feed_day(ts_label,dt,include_skip=False):
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip)
+    resp = feed_massage_bins(ts_label, bins, include_skip=include_skip)
+    return Response(json.dumps(resp), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/feed/day/<datetime:dt>')
+def serve_feed_day(ts_label,dt):
+    return _serve_feed_day(ts_label,dt)
+
+@app.route('/<ts_label>/api/feed/day_skip/<datetime:dt>')
+def serve_feed_day_skip(ts_label,dt):
+    return _serve_feed_day(ts_label,dt,include_skip=True)
+
+@app.route('/<ts_label>/api/feed/day_admin/<datetime:dt>')
+def serve_day_admin(ts_label,dt):
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'date': iso8601(dt.date().timetuple()),
+        'prev_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() - timedelta(days=1)).timetuple())),
+        'next_date_href': '/%s/api/feed/day_admin/%s' % (ts_label, iso8601((dt.date() + timedelta(days=1)).timetuple()))
+    }
+    return template_response('day_admin.html',**template)
+
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/pid/<url:pid>')
+@app.route('/<ts_label>/api/feed/<any(after,before):after_before>/n/<int:n>/pid/<url:pid>')
 def serve_after_before(ts_label,after_before,n=1,pid=None):
     if not after_before in ['before','after']:
         abort(400)
@@ -495,30 +580,272 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     except StopIteration:
         abort(404)
     bin_lid = parsed['bin_lid']
-    with Feed(session, ts_label) as feed:
-        if after_before=='before':
-            bins = list(feed.before(bin_lid, n))
-        else:
-            bins = list(feed.after(bin_lid, n))
-    resp = []
-    for bin in bins:
-        sample_time_str = iso8601(bin.sample_time.timetuple())
-        pid = canonicalize(get_url_root(), ts_label, bin.lid)
-        resp.append(dict(pid=pid, date=sample_time_str))
-    return Response(json.dumps(resp), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            if after_before=='before':
+                bins = list(feed.before(bin_lid, n))
+            else:
+                bins = list(feed.after(bin_lid, n))
+            resp = feed_massage_bins(ts_label, bins)
+            return Response(json.dumps(resp), mimetype=MIME_JSON)
 
-def parsed2files(parsed):
-    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
-    if b is None:
-        abort(404)
-    return b.files
+@app.route('/<ts_label>/api/feed/random')
+@app.route('/<ts_label>/api/feed/random/n/<int:n>')
+def serve_random(ts_label,n=1):
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = list(feed.random(n))
+            resp = feed_massage_bins(ts_label, bins)
+            return jsonr(resp)
 
-def pid2files(ts_label,pid):
+### tagging ###
+
+@app.route('/<ts_label>/api/tags/<url:pid>')
+def serve_tags(ts_label, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+def parse_tags(tag_names):
+    return [normalize_tag(t.strip()) for t in re.split(r'[,+]',tag_names)]
+
+TAG_PAGE_SIZE=20
+    
+# helper for tag search endpoints
+def search_tags(ts_label, tag_names, page=1, include_skip=False):
+    with safe_session() as session:
+        tags = parse_tags(tag_names)
+        session.expire_all()
+        r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
+                     search_tags_all(tags, page, include_skip)
+        rows = [{
+            'time': iso8601(bin.sample_time.timetuple()),
+            'skip': bin.skip,
+            'n_comments': len(bin.comments),
+            'lid': bin.lid,
+            'pid': canonicalize(get_url_root(), ts_label, bin.lid),
+            'tags': map(unicode,bin.tags)
+        } for bin in r]
+        return rows, hasNext
+    
+@app.route('/<ts_label>/api/search_tags/<tag_names>')
+@app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
+    rows, hasNext = search_tags(ts_label, tag_names, page)
+    return Response(json.dumps(rows), mimetype=MIME_JSON)
+
+# next, the HTML template version of this API call
+@app.route('/<ts_label>/search_tags/<tag_names>')
+@app.route('/<ts_label>/search_tags/<tag_names>/page/<int:page>')
+def serve_search_tags_template(ts_label, tag_names, page=1):
+    ts_label, _ = parse_ts_label_tag(ts_label)
+    is_admin = current_user.is_authenticated() and current_user.has_role('Admin')
+    rows, hasNext = search_tags(ts_label, tag_names, page, include_skip=is_admin)
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'tags': parse_tags(tag_names),
+        'rows': rows,
+        'page': page,
+        'prev': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, max(page-1,1)),
+        'hasNext': hasNext,
+        'next': '/%s/search_tags/%s/page/%d' % (ts_label, tag_names, page+1),
+        'isAdmin': is_admin
+    }
+    return template_response("tag_search.html", **template)
+
+def tag2dict(t):
+    bin_pid = canonicalize_bin(t.bin)['pid']
+    return {
+        'id': t.id,
+        'bin_pid': bin_pid,
+        'bin_lid': t.bin.lid,
+        'author': t.username,
+        'ts': iso8601(t.ts.timetuple()),
+        'tag': t.tag
+    }
+
+@app.route('/<ts_label>/api/recent_tags')
+@app.route('/<ts_label>/api/recent_tags/page/<int:page>')
+def serve_recent_tags(ts_label, page=1):
+    with safe_session() as session:
+        tags, hasNext = Tagging(session, ts_label, page_size=TAG_PAGE_SIZE).\
+                        recent(page)
+    return jsonr({
+        'tags': [tag2dict(t) for t in tags],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_tags/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_tags/page/%d' % (ts_label, max(page-1,1))
+    })
+
+@app.route('/<ts_label>/api/tag_cloud')
+@app.route('/<ts_label>/api/tag_cloud/limit/<int:limit>')
+def serve_tag_cloud(ts_label, limit=25):
+    with safe_session() as session:
+        cloud = Tagging(session, ts_label).tag_cloud(limit)
+        return Response(json.dumps(cloud), mimetype=MIME_JSON)
+    
+@app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
+@api_login_required
+def serve_add_tag(ts_label, tag_name, pid):
+    with safe_session() as session:
+        b = parsed2bin(parse_bin_query(ts_label, pid))
+        user_email = effective_user().email
+        Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
+        return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
+@api_login_required
+def serve_remove_tag(ts_label, tag_name, pid):
+    b = parsed2bin(parse_bin_query(ts_label, pid))
+    with safe_session() as session:
+        Tagging(session, ts_label).remove_tag(b, tag_name)
+        return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+
+@app.route('/autocomplete_tag',methods=['GET','POST'])
+def serve_autocomplete_tag():
+    stem = request.values['stem']
+    with safe_session() as session:
+        return Response(json.dumps(Tagging(session).autocomplete(stem)), mimetype=MIME_JSON)
+    
+### comments ###
+
+def comment2dict(c, current_user=None):
+    deletable = current_user is not None and \
+        current_user.is_authenticated() and \
+        (c.user_email==current_user.email or current_user.has_role('Admin'))
+    bin_pid = canonicalize_bin(c.bin)['pid']
+    return {
+        'id': c.id,
+        'bin_pid': bin_pid,
+        'bin_lid': c.bin.lid,
+        'author': c.username,
+        'ts': iso8601(c.ts.timetuple()),
+        'body': c.comment,
+        'deletable': deletable
+    }
+
+COMMENT_PAGE_SIZE=10
+
+def search_comments(ts_label, search_string, page=1):
+    with safe_session() as session:
+        r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+                     search(search_string, page=page)
+        return [comment2dict(c) for c in r], hasNext
+
+@app.route('/<ts_label>/api/recent_comments')
+@app.route('/<ts_label>/api/recent_comments/page/<int:page>')
+def serve_api_recent_comments(ts_label, page=1):
+    with safe_session() as session:
+        r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+                     recent(page)
+    return jsonr({
+        'comments': [comment2dict(c) for c in r],
+        'hasNext': hasNext,
+        'next': '/%s/api/recent_comments/page/%d' % (ts_label, page+1),
+        'prev': '/%s/api/recent_comments/page/%d' % (ts_label, max(page-1,1))
+    })        
+
+@app.route('/<ts_label>/search_comments')
+@app.route('/<ts_label>/search_comments/page/<int:page>')
+def serve_search_comments(ts_label, page=1):
+    search_query = request.args.get('q')
+    comments, hasNext = search_comments(ts_label, search_query, page)
+    q = urlencode({'q': search_query})
+    template = {
+        'static': STATIC,
+        'ts_label': ts_label,
+        'query': search_query,
+        'comments': comments,
+        'page': page,
+        'prev': '/%s/search_comments/page/%d?%s' % (ts_label, max(page-1,1),q),
+        'hasNext': hasNext,
+        'next': '/%s/search_comments/page/%d?%s' % (ts_label, page+1,q)
+    }
+    return template_response("comment_search.html", **template)
+
+@app.route('/api/comments/<url:pid>')
+def serve_comments(pid):
+    bin = pid2bin(pid)
+    r = [comment2dict(bc) for bc in bin.comments]
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/comments_editable/<url:pid>')
+def serve_comments_editable(pid):
+    bin = pid2bin(pid)
+    rc = [comment2dict(c, current_user) for c in bin.comments]
+    r = {
+        'addable': current_user.is_authenticated(),
+        'comments': rc
+    }
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/api/add_comment/<url:pid>',methods=['POST'])
+@api_login_required
+def serve_add_comment(pid):
+    with safe_session() as session:
+        bc = BinComment(comment=request.form['body'], user_email=current_user.email)
+        bin = pid2bin(pid)
+        bin.comments.append(bc)
+        session.commit()
+        return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
+    abort(500)
+    
+@app.route('/api/delete_comment/<int:id>')
+@api_login_required
+def serve_delete_comment(id):
+    with safe_session() as session:
+        session.expire_all()
+        bc = session.query(BinComment).filter(BinComment.id==id).first()
+        if bc is None:
+            abort(404)
+        bc.bin.comments.remove(bc)
+        session.commit()
+        return Response(json.dumps(dict(deleted=True)), mimetype=MIME_JSON)
+    abort(500)
+
+### time series acrtivity page ###
+
+@app.route('/<ts_label>/activity')
+def serve_timeseries_status(ts_label):
+    with safe_session() as session:
+        feed = Feed(session, ts_label)
+        total_bins = feed.total_bins()
+        total_data_volume = feed.total_data_volume()
+        mrb = feed.latest(1).first()
+        return template_response('timeseries_activity.html', **{
+            'ts_label': ts_label,
+            'total_bins': total_bins,
+            'total_data_volume': total_data_volume,
+            'mrb': canonicalize_bin(mrb)
+        });
+    
+### files and accession ###
+
+def parse_bin_query(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
+    return parsed
+    
+def parsed2bin(parsed):
+    with safe_session() as session:
+        b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
+        if b is None:
+            raise NotFound
+        return b
+    
+def parsed2files(parsed):
+    b = parsed2bin(parsed)
+    return b.files
+
+def pid2bin(pid):
+    return parsed2bin(parse_bin_query(None, pid))
+    
+def pid2files(ts_label,pid):
+    parsed = parse_bin_query(ts_label, pid)
     return parsed2files(parsed)
 
 def file2dict(f):
@@ -541,16 +868,21 @@ def get_files(parsed,check=False,fast=True):
     return result
 
 @app.route('/<ts_label>/api/files/<url:pid>')
+@roles_required('Admin')
 def serve_files(ts_label, pid):
     parsed = { 'ts_label': ts_label }
     try:
         parsed.update(parse_pid(pid))
     except StopIteration:
         abort(404)
-    result = get_files(parsed)
+    try:
+        result = get_files(parsed,check=True)
+    except NotFound:
+        abort(404)
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/files/check/<url:pid>')
+@roles_required('Admin')
 def check_files(ts_label, pid):
     # FIXME handle ts_label + lid
     # FIXME fast
@@ -562,6 +894,43 @@ def check_files(ts_label, pid):
     result = get_files(parsed,check=True,fast=True) # FIXME set fast to false
     return Response(json.dumps(result), mimetype=MIME_JSON)
 
+@app.route('/<ts_label>/api/check_roots')
+@roles_required('Admin')
+def check_roots(ts_label):
+    with safe_session() as session:
+        acc = Accession(session, ts_label)
+        r = {}
+        for root in acc.get_raw_roots():
+            r[root] = False
+            for fs in acc.list_filesets(root):
+                r[root] = True
+                break
+        return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/accepts_products/<product_type>')
+def accepts_products(ts_label, product_type):
+    with safe_session() as session:
+        acc = Accession(session, ts_label)
+        accepts = acc.accepts_products(product_type)
+        return Response(json.dumps({
+            'time_series': ts_label,
+            product_type: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
+
+@app.route('/api/accepts_product/<url:pid>')
+def accepts_product(pid):
+    req = DashboardRequest(pid, request)
+    with safe_session() as session:
+        acc = Accession(session, req.time_series)
+        accepts = acc.accepts_products(req.product)
+        return Response(json.dumps({
+            'time_series': req.time_series,
+            req.product: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
+    
+# FIXME protect with api_login_roles_required
 @app.route('/<ts_label>/api/accede')
 def accede(ts_label):
     # initiate batch accession
@@ -627,6 +996,63 @@ class DashboardRequest(object):
             self.extension = self.parsed['extension']
         self.timestamp = get_timestamp(self.parsed)
         self.product = self.parsed[PRODUCT]
+        self.stitch = self.schema_version == SCHEMA_VERSION_1
+
+@app.route('/api/bad_stitch/<url:pid>')
+@api_login_roles_required('Admin')
+def serve_bad_stitch(pid):
+    """for IFCB schema version 2 bins, figures out if it would have been stitched.
+    this is for detecting problem bins from before dashboard v4.2"""
+    req = DashboardRequest(pid, request)
+    def r(b,p=None):
+        return jsonr({
+            'stitched': b,
+            'product': p
+        })
+    if req.schema_version == SCHEMA_VERSION_1:
+        return r(False)
+    try:
+        paths = get_fileset(req.parsed)
+    except NotFound:
+        abort(404)
+    adc = Adc(paths['adc_path'], req.schema_version)
+    targets = list(adc.get_targets())
+    stitched_targets = list_stitched_targets(targets)
+    if len(stitched_targets) == len(targets):
+        # there never would have been a reason to stitch
+        return r(False)
+    # it could have been a bad stitch
+    # now check the binzip, if it exists
+    try:
+        binzip = get_product_file(req.parsed,'binzip')
+        csv_bytes = get_zip_entry_bytes(binzip,req.bin_lid + '.csv')
+        csv_lines = sum(1 for line in StringIO(csv_bytes)) - 1
+        # if csv has fewer ROIs than unstitched targets, the binzip contains bad stitches
+        if csv_lines < len(targets):
+            return r(True,'binzip')
+    except NotFound:
+        pass
+    # the blob zip could still be bad, check it
+    try:
+        blob_zip = get_product_file(req.parsed,'blobs')
+        zipfile = ZipFile(blob_zip)
+        n_blobs = len(zipfile.namelist())
+        zipfile.close()
+        # if fewer blobs than unstitched targets, the blob contains bad stitches
+        if n_blobs < len(targets):
+            return r(True,'blobs')
+    except NotFound:
+        pass
+    # the features could still be bad, check it
+    try:
+        features_csv = get_product_file(req.parsed,'features')
+        with open(features_csv) as csvin:
+            csv_lines = sum(1 for line in csvin) - 1
+            if csv_lines < len(targets):
+                return r(True,'features')
+    except NotFound:
+        pass
+    return r(False)
 
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
@@ -646,14 +1072,26 @@ def serve_pid(pid):
         canonical_bin_pid = canonicalize(req.url_root, req.time_series, req.bin_lid)
         target_no = int(req.parsed['target'])
         # pull three targets, then find any stitched pair
-        targets = adc.get_some_targets(target_no-1, 3)
-        targets = list_stitched_targets(targets)
+        offset=target_no-1
+        limit=3
+        if target_no==1: # if target_no is 1, pull two targets
+            offset=1
+            limit=2
+        targets = list(adc.get_some_targets(offset,limit))
+        if req.stitch:
+            targets = list_stitched_targets(targets)
+        target = None
         for t in targets:
             if t[TARGET_NUMBER] == target_no:
                 target = t
+        if target is None:
+            abort(404)
         add_pid(target, canonical_bin_pid)
         # check for image
-        mimetype = mimetypes.types_map['.' + extension]
+        try:
+            mimetype = mimetypes.types_map['.' + extension]
+        except:
+            mimetype = 'application/octet-stream'
         if mimetype.startswith('image/'):
             if req.product=='raw':
                 img = get_target_image(req.parsed, target, roi_path)
@@ -664,24 +1102,25 @@ def serve_pid(pid):
                 img = get_target_image(req.parsed, target, roi_path)
                 return serve_blob_image(req.parsed, mimetype, outline=True, target_img=img)
         # not an image, so get more metadata
-        targets = get_targets(adc, canonical_bin_pid)
+        targets = get_targets(adc, canonical_bin_pid, req.stitch)
         # not an image, check for JSON
         if extension == 'json':
             return Response(json.dumps(target),mimetype=MIME_JSON)
         target = get_target_metadata(target,targets)
+        target_ordered = [(k,target[k]) for k in order_keys(target, req.adc_cols)]
         # more metadata representations. we'll need the header
         hdr = parse_hdr_file(hdr_path)
         if extension == 'xml':
-            return Response(target2xml(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+            return Response(target2xml(req.canonical_pid, target_ordered, req.timestamp, canonical_bin_pid), mimetype='text/xml')
         if extension == 'rdf':
-            return Response(target2rdf(req.canonical_pid, target, req.timestamp, canonical_bin_pid), mimetype='text/xml')
+            return Response(target2rdf(req.canonical_pid, target_ordered, req.timestamp, canonical_bin_pid), mimetype='text/xml')
         if extension in ['html', 'htm']:
             template = {
                 'static': STATIC,
                 'target_pid': req.canonical_pid,
                 'bin_pid': canonical_bin_pid,
                 'properties': target,
-                'target': target.items(), # FIXME use order_keys
+                'target': target_ordered,
                 'date': req.timestamp
             }
             return template_response('target.html',**template)
@@ -700,19 +1139,31 @@ def serve_pid(pid):
         except NotFound:
             abort(404)
         # gonna need targets unless heft is medium or below
-        targets = []
-        if req.product != 'short':
-            targets = get_targets(adc, req.canonical_pid)
+        def get_req_targets():
+            return get_targets(adc, req.canonical_pid, req.stitch)
         # end of views
+        # computed position metrics
+        if req.product=='position':
+            targets = get_req_targets()
+            flow = get_flow(targets)
+            flow.update({
+                'pid': req.canonical_pid,
+                'date': req.timestamp
+            })
+            return jsonr(flow)
+        # targets for bin page
+        if req.product=='targetstable':
+            targets = get_req_targets()
+            return template_response('targets_table.html',**dict(targets=targets));
         # not a special view, handle representations of targets
         if req.extension=='csv':
-            adc_cols = req.parsed[ADC_COLS].split(' ')
-            lines = targets2csv(targets,adc_cols)
+            targets = get_req_targets()
+            lines = targets2csv(targets,req.adc_cols)
             return Response('\n'.join(lines)+'\n',mimetype='text/csv')
         # we'll need the header for the other representations
         hdr = parse_hdr_file(hdr_path)
         if req.extension in ['html', 'htm']:
-            targets = list(targets)
+            targets = list(get_req_targets())
             context, props = split_hdr(hdr)
             template = {
                 'static': STATIC,
@@ -723,53 +1174,81 @@ def serve_pid(pid):
                 'targets': targets,
                 'target_pids': [t['pid'] for t in targets],
                 'date': req.timestamp,
-                'files': get_files(req.parsed,check=True) # note: ORM call!
             }
-            print get_files(req.parsed)
             return template_response('bin.html', **template)
         if req.extension=='json':
             if req.product=='short':
                 return Response(bin2json_short(req.canonical_pid,hdr,req.timestamp),mimetype=MIME_JSON)
             if req.product=='medium':
+                targets = get_req_targets()
                 return Response(bin2json_medium(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
+            # default heft for JSON endpoint is "full"
+            targets = get_req_targets()
             return Response(bin2json(req.canonical_pid,hdr,targets,req.timestamp),mimetype=MIME_JSON)
         if req.extension=='xml':
+            targets = get_req_targets()
             return Response(bin2xml(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='rdf':
+            targets = get_req_targets()
             return Response(bin2rdf(req.canonical_pid,hdr,targets,req.timestamp),mimetype='text/xml')
         if req.extension=='zip':
             # look to see if the zipfile is resolvable
             try:
                 zip_path = get_product_file(req.parsed, 'binzip')
                 if os.path.exists(zip_path):
-                    return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+                    try:
+                        return Response(file(zip_path), direct_passthrough=True, mimetype='application/zip')
+                    except IOError:
+                        # for spurious false positives from os.path.exists (?)
+                        pass
             except NotFound:
                 pass
             except:
                 raise
+            targets = get_req_targets()
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
             return Response(buffer.getvalue(), mimetype='application/zip')
-    return 'unimplemented'
+    abort(404)
 
 ####### deposit ########
 
-@app.route('/<url:pid>',methods=['PUT'])
-def deposit(pid):
+from time import sleep
+
+@app.route('/api/product_exists/<url:pid>')
+def product_exists(pid):
     req = DashboardRequest(pid, request)
     try:
-        destpath = files.get_product_destination(session, pid)
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
     except NotFound:
         abort(404)
-    product_data = request.data
+    if os.path.exists(destpath):
+        return jsonr({'exists':True})
+    else:
+        abort(404)
+
+def save_product(destpath, data):
     destpath_part = '%s_%s.part' % (destpath, gen_id())
     try:
         os.makedirs(os.path.dirname(destpath))
     except:
         pass
     with open(destpath_part,'w') as out:
-        shutil.copyfileobj(StringIO(product_data), out)
-    os.rename(destpath_part, destpath)
+        shutil.copyfileobj(StringIO(data), out)
+    shutil.move(destpath_part, destpath)
+    
+@app.route('/<url:pid>',methods=['PUT'])
+@api_roles_required('Admin')
+def deposit(pid):
+    req = DashboardRequest(pid, request)
+    try:
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
+    except NotFound:
+        abort(404)
+    product_data = request.data
+    save_product(destpath, product_data)
     utcnow = iso8601()
     message = '%s wrote %d bytes to %s' % (utcnow, len(product_data), destpath)
     return Response(json.dumps(dict(
@@ -855,7 +1334,7 @@ def scatter(time_series,params,pid):
         abort(404)
     adc_path = paths['adc_path']
     adc = Adc(adc_path, req.schema_version)
-    targets = get_targets(adc, req.canonical_pid)
+    targets = get_targets(adc, req.canonical_pid, req.stitch)
     
     # check if we need to use features file
     features_targets = {}
@@ -876,7 +1355,84 @@ def scatter(time_series,params,pid):
     if req.extension=='json':
         return scatter_json(targets,req.canonical_pid,params['x'],params['y'],features_targets)
     abort(404)
-    
+
+#### workflow ####
+
+@app.route('/api/workflow/recent')
+@app.route('/api/workflow/recent/<int:n>')
+def serve_wf_recent(n=None):
+    r = workflow_client.most_recent(n)
+    return Response(json.dumps(r), mimetype=MIME_JSON)
+
+#### skipping and tagging ####
+
+def get_orm_bin(req):
+    with safe_session() as session:
+        b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
+        if b is None:
+            abort(404)
+        return b
+
+@app.route('/api/get_skip/<url:pid>')
+def get_skip_flag(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
+    result = {
+        'operation': 'get skip flag',
+        'skip': b.skip,
+        'pid': pid
+    }
+    return Response(json.dumps(result),mimetype=MIME_JSON)
+
+def set_skip_flag(b,value):
+    with safe_session() as session:
+        b.skip = value
+        session.commit()
+        result = {
+            'operation': 'set skip flag',
+            'skip': b.skip,
+            'lid': b.lid
+        }
+        return result
+
+@app.route('/api/skip/<url:pid>')
+@api_login_roles_required('Admin')
+def skip_bin(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
+    r = set_skip_flag(b,True)
+    return Response(json.dumps(r),mimetype=MIME_JSON)
+
+@app.route('/api/unskip/<url:pid>')
+@api_login_roles_required('Admin')
+def unskip_bin(pid):
+    req = DashboardRequest(pid, request)
+    b = get_orm_bin(req)
+    r = set_skip_flag(b,False)
+    return Response(json.dumps(r),mimetype=MIME_JSON)
+
+def _skip_or_unskip_day(ts_label, dt, skip=True):
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip=True)
+            for b in bins:
+                b.skip = skip
+                session.commit()
+                r = {
+                    'day': iso8601(dt.timetuple())
+                }
+            return Response(json.dumps(r), mimetype=MIME_JSON)
+
+@app.route('/<ts_label>/api/skip_day/<datetime:dt>')
+@api_login_roles_required('Admin')
+def skip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=True)
+
+@app.route('/<ts_label>/api/unskip_day/<datetime:dt>')
+@api_login_roles_required('Admin')
+def unskip_day(ts_label,dt):
+    return _skip_or_unskip_day(ts_label, dt, skip=False)
+
 #### mosaics #####
 
 def get_sorted_tiles(adc_path, schema_version, bin_pid):
@@ -885,7 +1441,8 @@ def get_sorted_tiles(adc_path, schema_version, bin_pid):
         (w,h) = t.size
         return 0 - (w * h)
     adc = Adc(adc_path, schema_version)
-    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid)]
+    stitch = schema_version == SCHEMA_VERSION_1
+    tiles = [Tile(t, (t[HEIGHT], t[WIDTH])) for t in get_targets(adc, bin_pid, stitch)]
     # FIXME instead of sorting tiles, sort targets to allow for non-geometric sort options
     tiles.sort(key=descending_size)
     return tiles
@@ -910,6 +1467,7 @@ def parse_mosaic_params(params):
     page = int(params[PAGE])
     return (size, scale, page)
 
+@app.route('/<time_series>/api/mosaic/pid/<url:pid>')
 @app.route('/<time_series>/api/mosaic/<path:params>/pid/<url:pid>')
 def serve_mosaic_image(time_series=None, pid=None, params='/'):
     """Generate a mosaic of ROIs from a sample bin.
@@ -922,6 +1480,24 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     size, scale, page = parse_mosaic_params(params)
     (w,h) = size
     parsed = parse_pid(pid)
+    extension = parsed['extension']
+    # caching
+    default_mosaic = False
+    if w==800 and h==600 and scale==0.33 and page==1:
+        default_mosaic = True
+    cached_path = None
+    if default_mosaic and extension=='jpg':
+        try:
+            product_pid = next(ifcb().as_product(pid,'mosaic'))['pid']
+            with safe_session() as session:
+                cached_path = files.get_product_destination(session, product_pid)
+                if os.path.exists(cached_path):
+                    return Response(file(cached_path),direct_passthrough=True,mimetype='image/jpeg')
+        except NotFound:
+            pass
+        except StopIteration:
+            pass
+    # didn't find a cached version, need to make one
     schema_version = parsed['schema_version']
     try:
         paths = get_fileset(parsed)
@@ -929,11 +1505,10 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
         abort(404)
     adc_path = paths['adc_path']
     roi_path = paths['roi_path']
-    bin_pid = canonicalize(get_url_root(), time_series, parsed['bin_lid'])
+    bin_pid = parsed['namespace'] + parsed['bin_lid']
     # perform layout operation
     scaled_size = (int(w/scale), int(h/scale))
     layout = list(get_mosaic_layout(adc_path, schema_version, bin_pid, scaled_size, page))
-    extension = parsed['extension']
     # serve JSON on request
     if extension == 'json':
         return Response(json.dumps(list(layout2json(layout, scale))), mimetype=MIME_JSON)
@@ -948,6 +1523,8 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
             image_layout.append(Tile(PIL.Image.fromarray(image), tile.size, tile.position))
     # produce and serve composite image
     mosaic_image = thumbnail(mosaic.composite(image_layout, scaled_size, mode='L', bgcolor=160), (w,h))
+    if cached_path is not None and mimetype=='image/jpeg':
+        save_product(cached_path, as_bytes(mosaic_image))
     #pil_format = filename2format('foo.%s' % extension)
     return Response(as_bytes(mosaic_image), mimetype=mimetype)
 

@@ -26,6 +26,17 @@ def utc_datetime_attribute_instrument_listener(cls, key, inst):
 def fix_utc(cls):
     event.listen(cls, 'attribute_instrument', utc_datetime_attribute_instrument_listener)
 
+def page_query(q, page, page_size):
+    hasNext = False
+    if page > 0:
+        start,end = (page-1)*page_size, (page*page_size) + 1
+        q = q[start:end]
+    r = list(q)
+    if page > 0 and len(r) > page_size:
+        hasNext = True
+        r = r[:-1]
+    return r, hasNext
+    
 @contextmanager
 def xa(db_url, metadata=None):
     """Provide a transactional scope around a series of operations."""

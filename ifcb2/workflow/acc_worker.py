@@ -26,11 +26,11 @@ Scheduled task:
 - configged with a workflow client and the time series label
 - hit the "wakeup" endpoint with the acquisition key
 """
+from dashboard_conf import WORKFLOW_URL
 
-### FIXME config this right
 from oii.ifcb2.session import session
 
-client = WorkflowClient()
+client = WorkflowClient(WORKFLOW_URL)
 
 def schedule_products(pid, client):
     """dependencies:
@@ -55,7 +55,7 @@ def do_acc(pid, job):
     session.expire_all() # don't be stale!
     acc = Accession(session,ts_label)#,fast=True)
     # FIXME fast=True disables checksumming
-    client.update(pid,ttl=60) # allow 60s for accession
+    client.update(pid,ttl=3600) # allow 1hr for accession
     ret = acc.add_fileset(fileset)
     if ret=='ADDED':
         schedule_products(pid, client)
@@ -71,5 +71,5 @@ def acc_wakeup(ignore):
     client.do_all_work(
         roles=[WILD2RAW],
         callback=do_acc,
-        ttl=40,
+        ttl=3600, # 1hr
         message='accession complete')

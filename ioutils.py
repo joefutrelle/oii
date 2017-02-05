@@ -3,8 +3,8 @@ import requests
 def isok(r):
     return r.status_code < 400
 
-def download(url,path):
-    r = requests.get(url)
+def download(url,path,headers={}):
+    r = requests.get(url,headers=headers)
     if not isok(r):
         raise IOError('GET returned %d' % r.status_code)
     with open(path,'wb') as f:
@@ -12,10 +12,10 @@ def download(url,path):
             f.write(chunk)
             f.flush()
 
-def upload(path,url):
+def upload(path,url,headers={}):
     with open(path,'rb') as bi:
         bytez = bi.read() # read and pass bytes as data for 12.04 version of requests
-        r = requests.put(url, data=bytez) 
+        r = requests.put(url, data=bytez, headers=headers) 
         if not isok(r):
             raise IOError('PUT returned %d' % r.status_code)
 

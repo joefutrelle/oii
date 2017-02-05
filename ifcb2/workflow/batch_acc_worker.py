@@ -13,12 +13,13 @@ from oii.ifcb2.workflow import WILD_PRODUCT, RAW_PRODUCT, BINZIP_PRODUCT
 from oii.ifcb2.workflow import BLOBS_PRODUCT, FEATURES_PRODUCT, WEBCACHE_PRODUCT
 from oii.ifcb2.workflow import WILD2RAW, RAW2BINZIP, BINZIP2BLOBS, BLOBS2FEATURES, BINZIP2WEBCACHE
 
-### FIXME config this right
+from dashboard_conf import DASHBOARD_BASE_URL, WORKFLOW_URL
+
 from oii.ifcb2.session import session
 
-client = WorkflowClient()
+client = WorkflowClient(WORKFLOW_URL)
 #URL_PREFIX='http://128.128.14.19:8080/'
-URL_PREFIX='http://demi.whoi.edu/'
+URL_PREFIX=DASHBOARD_BASE_URL
 
 ### end FIXME
 
@@ -76,7 +77,8 @@ def acc_wakeup(wakeup_key):
                     mutex.heartbeat() # retain mutex
                     then = time.time()
                 client.wakeup() # wakeup workers
-            logging.warn('END BATCH %s' % time_series)
+            logging.warn('END BATCH %s: %d bins scheduled' % (time_series,count))
             client.wakeup()
     except Busy:
+        logging.warn('BATCH not waking up')
         pass

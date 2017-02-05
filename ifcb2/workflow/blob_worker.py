@@ -15,13 +15,13 @@ from oii.workflow.async import async, wakeup_task
 from oii.ifcb2 import PID, LID, TS_LABEL, NAMESPACE
 from oii.ifcb2.workflow import BINZIP2BLOBS
 from oii.ifcb2.identifiers import parse_pid, PID, LID 
+from oii.rbac.utils import secure_upload
 
-### FIXME config this right
-client = WorkflowClient('http://128.128.14.19:9270')
+from worker_config import WORKFLOW_URL, MATLAB_BASE, MATLAB_EXEC_PATH, API_KEY
+
+client = WorkflowClient(WORKFLOW_URL)
 
 # configure MATLAB
-MATLAB_EXEC_PATH='/usr/local/MATLAB/R2014b/bin/matlab'
-MATLAB_BASE='/home/ubuntu/dev/trunk'
 MATLAB_DIRS=[
 'feature_extraction',
 'feature_extraction/blob_extraction',
@@ -65,7 +65,7 @@ def extract_blobs(pid,job):
             if not os.path.exists(blobs_file):
                 raise Exception('missing output file')
             log_callback('depositing %s' % blobs_file)
-            upload(blobs_file, deposit_url)
+            secure_upload(blobs_file, deposit_url, API_KEY)
             log_callback('deposited %s' % blobs_file)
     log_callback('completed %s' % bin_pid)
     client.wakeup()

@@ -59,11 +59,12 @@ class Product(Base):
         # if ttl is set to FOREVER, no longer expire
         # if ttl is set to an integer, expire in that many seconds
         # if ttl is None, make no change to expiration time or ttl
-        if ttl==FOREVER:
-            self.ttl = None
-            self.expires = None
-        elif ttl is not None:
-            self.ttl = int(ttl)
+        if ttl is not None:
+            ttl = int(ttl)
+            if ttl==FOREVER:
+                self.ttl = None
+            else:
+                self.ttl = ttl
         if self.ttl is not None:
             self.expires = self.ts + timedelta(seconds=self.ttl)
         else:

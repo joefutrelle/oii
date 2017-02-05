@@ -35,60 +35,39 @@
             <th></th>
           </tr>
         </thead>
-        <tbody ng-if="newuser">
-            <tr>
-                <td>
-                    <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="newuser.first_name" ng-minlength="3" ng-maxlength="255" required></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="newuser.last_name" ng-minlength="3" ng-maxlength="255" required></div>
-                    </div>
-                </td>
-                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="newuser.email"></td>
-                <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
-                <td>
-                  <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-primary btn-sm" ng-disabled="!newuser.first_name || !newuser.last_name || !newuser.email" ng-click="saveUser(newuser)">Save</button>
-                    <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelUser(newuser)">Cancel</button>
-                  </div>
-                </td>
-            </tr>
-        </tbody>
-        <tbody ng-repeat="user in users.list">
-            <tr ng-if="!isEditing(user)" ng-class="{'text-muted': user.disabled}">
+        <tbody ng-repeat="user in users">
+            <tr ng-if="!user.edit" ng-class="{'text-muted': user.disabled}">
                 <td><strong>{{user.first_name}} {{user.last_name}}</strong></td>
                 <td>{{user.email}}</td>
-                <!-- <td ng-repeat="role in roles">
-                    <span ng-if="isMember(role,user)" class="glyphicon glyphicon-ok"></span>
-                    <span ng-if="!isMember(role,user)" class="glyphicon glyphicon-remove"></span>
-                </td> -->
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                     <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default btn-sm" ng-click="editUser(user)">Edit</button>
                     <button type="button" class="btn btn-default btn-sm" ng-click="setPassword(user)">Set Password</button>
-                    <button ng-if="user.is_enabled" type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to disable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Disable</button>
-                    <button ng-if="!user.is_enabled" type="button" class="btn btn-warning btn-sm" ng-confirm-message="Are you sure you want to enable the user '{{user.name}}'?" ng-confirm-condition="true" ng-confirm-click="toggleUser(user)">Enable</button>
+		    <button ng-if="!isAdmin(user)" type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to grant administrative privileges to {{user.first_name}} {{user.last_name}}?" ng-confirm-condition="true" ng-confirm-click="promoteUser(user)">Promote</button>
+		    <button ng-if="isAdmin(user)" type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to revoke administrative privileges for {{user.first_name}} {{user.last_name}}?" ng-confirm-condition="true" ng-confirm-click="demoteUser(user)">Demote</button>
+                    <button ng-if="user.is_enabled" type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to disable {{user.first_name}} {{user.last_name}}?" ng-confirm-condition="true" ng-confirm-click="enableUser(user,false)">Disable</button>
+                    <button ng-if="!user.is_enabled" type="button" class="btn btn-warning btn-sm" ng-confirm-message="Are you sure you want to enable {{user.first_name}} {{user.last_name}}?" ng-confirm-condition="true" ng-confirm-click="enableUser(user,true)">Enable</button>
+		    <button type="button" class="btn btn-default btn-sm" ng-confirm-message="Are you sure you want to delete {{user.first_name}} {{user.last_name}}?" ng-confirm-condition="true" ng-confirm-click="deleteUser(user)">Delete</button>
                     </div>
                 </td>
             </tr>
 	    <!-- edit mode -->
-	    <tr ng-if="isEditing(user)">
+	    <tr ng-if="user.edit">
                 <td>
                     <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="editing[user.id].first_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="First Name" ng-model="user.first_name" ng-minlength="3" ng-maxlength="255" required></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="editing[user.id].last_name" ng-minlength="3" ng-maxlength="255" required></div>
+                        <div class="col-md-12"><input type="text" class="form-control" placeholder="Last Name" ng-model="user.last_name" ng-minlength="3" ng-maxlength="255" required></div>
                     </div>
                 </td>
-                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="editing[user.id].email"></td>
+                <td><input type="email" class="form-control" placeholder="jsmith@domain.com" ng-model="user.email"></td>
                 <td><div ng-repeat="role in user.roles">{{role.name}}</div></td>
                 <td>
                   <div class="btn-group pull-right btn-sm">
                     <button type="button" class="btn btn-primary btn-sm" ng-disabled="!user.first_name || !user.last_name || !user.email" ng-click="saveUser(user)">Save</button>
-                    <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelUser(editing[user.id])">Cancel</button>
+                    <button type="button" class="btn btn-default btn-sm" ng-confirm-click="cancelUser(user)">Cancel</button>
                   </div>
                 </td>
 	    </tr>

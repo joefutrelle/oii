@@ -1,0 +1,7 @@
+{% for target in targets %}
+  <tr class="tbl">
+    <td class="tbl">{{target['targetNumber']}}/{{target['trigger']}}</td>
+    <td class="tbl"><a href="{{target['pid']}}.html">{{target['pid']}}</a></td>
+    <td class="tbl">{{target['width']}}x{{target['height']}}</td>
+  </tr>
+{% endfor %}

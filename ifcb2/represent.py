@@ -3,10 +3,13 @@ import re
 import json
 from zipfile import ZipFile, ZIP_DEFLATED
 import shutil
+from io import BytesIO
 import tempfile
 from time import strptime
 
 from scipy.io import loadmat
+from StringIO import StringIO
+from numpy.core.defchararray import rjust, replace
 
 from jinja2 import Environment
 
@@ -18,7 +21,7 @@ from oii.times import iso8601
 from oii.ifcb2 import SCHEMA_VERSION, NAMESPACE, BIN_LID
 from oii.ifcb2.identifiers import parse_pid, as_product, get_timestamp, add_pids, PID
 from oii.ifcb2.identifiers import TIMESTAMP, TIMESTAMP_FORMAT
-from oii.ifcb2.formats.adc import Adc, TARGET_NUMBER
+from oii.ifcb2.formats.adc import Adc, TARGET_NUMBER, SCHEMA_VERSION_1
 from oii.ifcb2.formats.hdr import parse_hdr_file
 from oii.ifcb2.image import read_target_image
 
@@ -156,6 +159,7 @@ def binpid2zip(pid, outfile, log_callback=None):
             log_callback(msg)
     """Generate a zip file given a canonical pid"""
     parsed = parse_pid(pid)
+    stitch = parsed[SCHEMA_VERSION] == SCHEMA_VERSION_1
     bin_pid = ''.join([parsed[NAMESPACE], parsed[BIN_LID]])
     timestamp = iso8601(strptime(parsed[TIMESTAMP], parsed[TIMESTAMP_FORMAT]))
     log('copying raw data for %s to temp files ...' % bin_pid)
@@ -167,8 +171,13 @@ def binpid2zip(pid, outfile, log_callback=None):
         adc_path = adc_tmp.name
         drain(UrlSource(bin_pid+'.adc'), LocalFileSink(adc_path))
         adc = Adc(adc_path, parsed[SCHEMA_VERSION])
-        unstitched_targets = add_pids(adc.get_targets(), bin_pid)
-        stitched_targets = list_stitched_targets(unstitched_targets)
+        targets = add_pids(adc.get_targets(), bin_pid)
+        if stitch:
+            targets = list_stitched_targets(targets)
+        else:
+            targets = [t.copy() for t in targets]
+            for target in targets:
+                target[STITCHED] = 0
     with tempfile.NamedTemporaryFile() as roi_tmp:
         roi_path = roi_tmp.name
         drain(UrlSource(bin_pid+'.roi'), LocalFileSink(roi_path))
@@ -183,7 +192,7 @@ def binpid2zip(pid, outfile, log_callback=None):
         outfile - where to write resulting zip file"""
         log('creating zip file for %s' % bin_pid)
         with open(outfile,'wb') as fout:
-            return bin2zip(parsed,bin_pid,stitched_targets,hdr,timestamp,roi_path,fout)
+            bin2zip(parsed,bin_pid,targets,hdr,timestamp,roi_path,fout)
 
 # individual target representations
 
@@ -208,10 +217,16 @@ TARGET_RDF_TEMPLATE="""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-synt
 """
 
 def _target2metadata(pid, target, timestamp, bin_pid, template):
+    # duck type target; if it's a dict, convert to duples, otherwise assume duples
+    try:
+        target = target.items()
+    except AttributeError:
+        pass
     bindings = {
         'pid': pid,
-        'target': target.items(), # FIXME sort according to ADC schema using oii.utils.order_keys
-        'targetNumber': target['targetNumber'],
+        'target': target,
+        'timestamp': timestamp,
+        'targetNumber': dict(target)['targetNumber'],
         'bin_pid': bin_pid
     }
     return Environment().from_string(template).render(**bindings)
@@ -222,7 +237,7 @@ def target2xml(pid, target, timestamp, bin_pid):
 def target2rdf(pid, target, timestamp, bin_pid):
     return _target2metadata(pid, target, timestamp, bin_pid, TARGET_RDF_TEMPLATE)
 
-def class_scoresmat2csv(matfile, bin_lid):
+def slow_class_scoresmat2csv(matfile, bin_lid):
     """Convert a class score .mat file into a CSV representation"""
     mat = loadmat(matfile)
 
@@ -238,3 +253,23 @@ def class_scoresmat2csv(matfile, bin_lid):
     for roi, row in zip(roinum[:,0], scores[:]):
         fmt = ['"%s_%05d"' % (bin_lid, roi)] + [re.sub(r'000$','','%.4f' % c) for c in row.tolist()]
         yield ','.join(fmt)
+
+def class_scoresmat2csv(matfile, bin_lid):
+    """Convert a class score .mat file into a CSV representation"""
+    try:
+        import pandas as pd
+    except ImportError:
+        return '\n'.join(slow_class_scoresmat2csv(matfile, bin_lid))
+    scores = loadmat(matfile, squeeze_me=True)
+
+    prefix = bin_lid + '_'
+    cols = scores['class2useTB'][:-1] # exclude last class: 'unclassified'
+    df = pd.DataFrame(scores['TBscores'], columns=cols)
+    p = scores['roinum'].astype(str)
+    p = replace(rjust(p,6,'0'),'0',prefix,1)
+    pid = pd.Series(p)
+    df.insert(0,'pid',pid)
+    s = StringIO()
+    df.to_csv(s,index=False, float_format='%f')
+    csv_out = s.getvalue().replace('0.000000','0.0')
+    return csv_out
