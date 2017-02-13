@@ -255,6 +255,9 @@ def serve_features_bin(parsed):
 
 def serve_class_scores_bin(parsed):
     class_mat = get_product_file(parsed, 'class_scores')
+    if 'extension' in parsed:
+        if parsed['extension']=='mat':
+            return Response(file(class_mat), direct_passthrough=True, mimetype='application/octet-stream')
     csv_out = '\n'.join(class_scoresmat2csv(class_mat, parsed['bin_lid']))
     return Response(csv_out + '\n', mimetype='text/csv')
 
@@ -594,6 +597,19 @@ def serve_random(ts_label,n=1):
             bins = list(feed.random(n))
             resp = feed_massage_bins(ts_label, bins)
             return jsonr(resp)
+
+### geospatial support #####
+
+@app.route('/<ts_label>/api/geo/points.json')
+def serve_geo_points(ts_label):
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            wkt = feed.geo2multipoint()
+    return jsonr({'points':wkt})
+
+@app.route('/<ts_label>/map.html')
+def serve_geo_map(ts_label):
+    return template_response('map.html', ts_label=ts_label, title=ts_label)
 
 ### tagging ###
 
