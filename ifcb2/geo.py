@@ -9,9 +9,29 @@ from oii.ifcb2.feed import Feed
 from oii.ifcb2.vehicle.cruise import TrackBins
 
 def load_track_csv(csv_in):
-    # fixme deal with detecting headings or lack of headings
     track = pd.read_csv(csv_in)
-    track.index = pd.to_datetime(track.pop(track.columns[0]))
+    # test number of columns
+    if len(track.columns) != 3:
+        raise ValueError('CSV must have three columns: time, latitude, and longitude')
+    # test for missing column headers
+    try:
+        # if the column name is a float, that's a data row
+        float(track.columns[1])
+        try:
+            # if this is ssekable, seek to 0
+            csv_in.seek(0)
+        except AttributeError:
+            # otherwise assume it's reopenable
+            pass
+        # reparse the CSV with no header row
+        track = pd.read_csv(csv_in, header=None)
+    except ValueError:
+        # we got good column headers
+        pass
+    # FIXME check to see if lat/lon are switched
+    track.columns = ['time','latitude','longitude']
+    # parse UTC times and make into index
+    track.index = pd.to_datetime(track.pop('time'))
     track.index = track.index.tz_localize(pytz.utc)
     return track
 
