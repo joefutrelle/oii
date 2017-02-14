@@ -131,11 +131,3 @@ class Feed(object):
             timestamp = utcdtnow()
         latest = self.latest(1,timestamp)[0]
         return timestamp - latest.sample_time
-    ## geo
-    def geo2multipoint(self, begin=None, end=None):
-        pts = []
-        for b in self.time_range(begin, end):
-            if b.lon is not None and b.lat is not None:
-                pts.append('{:.6f} {:.6f}'.format(b.lon, b.lat))
-        wkt = 'MULTIPOINT({})'.format(','.join(pts))
-        return wkt

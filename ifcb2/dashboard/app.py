@@ -50,6 +50,7 @@ from oii.rbac.security import current_user, effective_user
 from oii.rbac.security import login_required, api_required, api_login_required, roles_required, api_roles_required, api_login_roles_required
 
 from oii.ifcb2.feed import Feed
+from oii.ifcb2.geo import GeoFeed, load_track_csv
 from oii.ifcb2.comments import Comments
 from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
 from oii.ifcb2.formats.adc import Adc, SCHEMA_VERSION_1
@@ -603,11 +604,37 @@ def serve_random(ts_label,n=1):
 @app.route('/<ts_label>/api/geo/points.json')
 def serve_geo_points(ts_label):
     with safe_session() as session:
-        with Feed(session, ts_label) as feed:
-            wkt = feed.geo2multipoint()
+        with GeoFeed(session, ts_label) as geo:
+            wkt = geo.track2multipoint()
     return jsonr({'points':wkt})
 
-@app.route('/<ts_label>/map.html')
+@app.route('/<ts_label>/geo/upload_track.html')
+def serve_geo_upload_form(ts_label):
+    return template_response('upload_track.html', ts_label=ts_label)
+
+@app.route('/<ts_label>/api/geo/clear_track')
+def serve_geo_clear(ts_label):
+    with safe_session() as session:
+        with GeoFeed(session, ts_label) as geo:
+            geo.clear_track()
+    return jsonr({'status':'cleared'})
+
+@app.route('/<ts_label>/api/geo/upload_track',methods=['POST'])
+def serve_geo_upload(ts_label):
+    infile = request.files['file']
+    # read CSV
+    try:
+        track = load_track_csv(infile)
+    except:
+        abort(400)
+    # merge track
+    with safe_session() as session:
+        with GeoFeed(session, ts_label) as geo:
+            geo.merge_track(track)
+    # redirect to map page
+    return redirect('/{}/geo/map.html'.format(ts_label))
+
+@app.route('/<ts_label>/geo/map.html')
 def serve_geo_map(ts_label):
     return template_response('map.html', ts_label=ts_label, title=ts_label)
 
