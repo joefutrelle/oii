@@ -68,6 +68,8 @@ from oii.ifcb2 import v1_stitching
 
 from oii.ifcb2.flow import get_flow
 
+from .get_roi_features import get_roi_features_json
+
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
@@ -1071,6 +1073,10 @@ def serve_pid(pid):
     if 'target' in req.parsed:
         canonical_bin_pid = canonicalize(req.url_root, req.time_series, req.bin_lid)
         target_no = int(req.parsed['target'])
+        if req.product=='features': # single roi features
+            feature_csv = get_product_file(req.parsed, 'features')
+            j = get_roi_features_json(feature_csv, target_no)
+            return Response(j,mimetype='application/json')
         # pull three targets, then find any stitched pair
         offset=target_no-1
         limit=3
