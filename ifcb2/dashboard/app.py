@@ -1012,6 +1012,21 @@ def serve_bad_stitch(pid):
         pass
     return r(False)
 
+def roisizes(targets):
+    targets = list(targets)
+    n = [t['targetNumber'] for t in targets]
+    pid = [t['pid'] for t in targets]
+    height = [t['height'] for t in targets]
+    width = [t['width'] for t in targets]
+    return {
+        'targetNumber': n,
+        'pid': pid,
+        'height': height,
+        'width': width
+    }
+
+############## main PID endpoint
+
 @app.route('/<url:pid>',methods=['GET'])
 def serve_pid(pid):
     req = DashboardRequest(pid, request)
@@ -1110,6 +1125,9 @@ def serve_pid(pid):
         if req.product=='targetstable':
             targets = get_req_targets()
             return template_response('targets_table.html',**dict(targets=targets));
+        if req.product=='roisizes':
+            targets = get_req_targets()
+            return jsonr(roisizes(targets))
         # not a special view, handle representations of targets
         if req.extension=='csv':
             targets = get_req_targets()
