@@ -6,7 +6,7 @@ from sqlalchemy import and_, or_, not_, desc, func, cast, Numeric
 from oii.times import utcdtnow, datetime2utcdatetime
 from oii.ifcb2.orm import Bin, File
 
-from oii.ifcb2.tagging import parse_ts_label_tag, normalize_tag
+from oii.ifcb2.tagging import parse_ts_label_tags, normalize_tag
 
 def _time_range_params(start_time=None, end_time=None):
     if start_time is None:
@@ -17,26 +17,29 @@ def _time_range_params(start_time=None, end_time=None):
 
 class Feed(object):
     """use with with"""
-    def __init__(self, session, ts_label, tag=None):
+    def __init__(self, session, ts_label, tags=None):
         self.session = session
-        if tag is None:
-            self.ts_label, self.tag = parse_ts_label_tag(ts_label)
+        if tags is None:
+            self.ts_label, self.tags = parse_ts_label_tags(ts_label)
+        elif isinstance(tags, str):
+            self.tags = [tags]
         else:
-            self.tag = tag
+            self.tags = tags
     def __enter__(self):
         return self
     def __exit__(self,type,value,traceback):
         pass
-    def _with_tag(self, q):
-        if self.tag is not None:
-            q = q.filter(Bin.tags.contains(normalize_tag(self.tag)))
+    def _with_tags(self, q):
+        if self.tags:
+            for tag in self.tags:
+                q = q.filter(Bin.tags.contains(normalize_tag(tag)))
         return q
     def _ts_query(self, start_time=None, end_time=None, include_skip=False):
         start_time, end_time = _time_range_params(start_time, end_time)
         q = self.session.query(Bin).\
             filter(Bin.ts_label==self.ts_label).\
             filter(and_(Bin.sample_time >= start_time, Bin.sample_time <= end_time))
-        q = self._with_tag(q)
+        q = self._with_tags(q)
         if not include_skip:
             q = q.filter(~Bin.skip)
         return q
@@ -54,19 +57,19 @@ class Feed(object):
         q = self.session.query(cast(func.sum(File.length) / 1073741824.0, Numeric(6,2)), func.count(File.id) / 3, func.DATE(Bin.sample_time)).\
             filter(and_(Bin.ts_label==self.ts_label, Bin.sample_time >= start_time, Bin.sample_time <= end_time, ~Bin.skip)).\
             filter(Bin.id==File.bin_id)
-        q = self._with_tag(q)
+        q = self._with_tags(q)
         q = q.group_by(func.DATE(Bin.sample_time)).\
             order_by(func.DATE(Bin.sample_time))
         return q
     def total_data_volume(self):
         q = self.session.query(func.sum(File.length)).join(Bin).\
             filter(Bin.ts_label==self.ts_label)
-        q = self._with_tag(q)
+        q = self._with_tags(q)
         return q.scalar()
     def total_bins(self):
         q = self.session.query(func.count(Bin.id)).\
             filter(Bin.ts_label==self.ts_label)
-        q = self._with_tag(q)
+        q = self._with_tags(q)
         return q.scalar()
     def nearest(self,n=1,timestamp=None):
         """nearest bin. timestamp must be a utc datetime, defaults to now"""
@@ -97,7 +100,7 @@ class Feed(object):
             filter(Bin.ts_label==self.ts_label).\
             filter(~Bin.skip)
         if with_tag:
-            q = self._with_tag(q)
+            q = self._with_tags(q)
         return q
     def after(self,bin_lid,n=1):
         """n bins after a given one"""
