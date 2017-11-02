@@ -31,7 +31,7 @@ $(document).ready(function() {
         {% if tags %}
         <a href="/{{ts_label_notag}}">{{title|safe}}</a>
         bins tagged
-	{% for tag in tags %} <a href="/{{ts_label_notag}}/search_tags/{{tag}}">{{tag}}</a>
+	<a href="/{{ts_label_notag}}/search_tags/{{tags[0]}}">{{tags[0]}}</a>{% for tag in tags[1:] %}, <a href="/{{ts_label_notag}}/search_tags/{{tag}}">{{tag}}</a>
 	{% endfor %}
         {% else %}
         {{title|safe}}
