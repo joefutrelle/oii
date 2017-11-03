@@ -8,6 +8,8 @@ import tempfile
 from time import strptime
 
 from scipy.io import loadmat
+from StringIO import StringIO
+from numpy.core.defchararray import rjust, replace
 
 from jinja2 import Environment
 
@@ -235,7 +237,7 @@ def target2xml(pid, target, timestamp, bin_pid):
 def target2rdf(pid, target, timestamp, bin_pid):
     return _target2metadata(pid, target, timestamp, bin_pid, TARGET_RDF_TEMPLATE)
 
-def class_scoresmat2csv(matfile, bin_lid):
+def slow_class_scoresmat2csv(matfile, bin_lid):
     """Convert a class score .mat file into a CSV representation"""
     mat = loadmat(matfile)
 
@@ -251,3 +253,23 @@ def class_scoresmat2csv(matfile, bin_lid):
     for roi, row in zip(roinum[:,0], scores[:]):
         fmt = ['"%s_%05d"' % (bin_lid, roi)] + [re.sub(r'000$','','%.4f' % c) for c in row.tolist()]
         yield ','.join(fmt)
+
+def class_scoresmat2csv(matfile, bin_lid):
+    """Convert a class score .mat file into a CSV representation"""
+    try:
+        import pandas as pd
+    except ImportError:
+        return '\n'.join(slow_class_scoresmat2csv(matfile, bin_lid))
+    scores = loadmat(matfile, squeeze_me=True)
+
+    prefix = bin_lid + '_'
+    cols = scores['class2useTB'][:-1] # exclude last class: 'unclassified'
+    df = pd.DataFrame(scores['TBscores'], columns=cols)
+    p = scores['roinum'].astype(str)
+    p = replace(rjust(p,6,'0'),'0',prefix,1)
+    pid = pd.Series(p)
+    df.insert(0,'pid',pid)
+    s = StringIO()
+    df.to_csv(s,index=False, float_format='%f')
+    csv_out = s.getvalue().replace('0.000000','0.0')
+    return csv_out

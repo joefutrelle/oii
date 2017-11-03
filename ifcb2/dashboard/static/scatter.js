@@ -389,7 +389,6 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                 .css('height', $this.data(HEIGHT));
             plot = $.plot($this, [$this.data(PLOT_DATA)], $this.data(PLOT_OPTIONS));
             $this.data('roi_pids', roi_pids);
-            $this.data('point_data', point_data);
         });
         $this.bind("plotselected", function (evt, ranges) {
             console.log(evt);
@@ -406,7 +405,7 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                 .css('width', '45%');
             // for each point on the scatter plot
             var total_displayed = 0;
-            $.each($this.data('point_data'), function (ix, point) {
+            $.each($this.data(PLOT_DATA).data, function (ix, point) {
                 var x = point[0];
                 var y = point[1];
                 // if it's in the selection rectangle

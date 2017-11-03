@@ -13,11 +13,14 @@ from lxml import html
 from StringIO import StringIO
 from datetime import timedelta
 from urllib import urlencode
+from contextlib import contextmanager
 
+import flask
 from flask import Response, abort, request, render_template, current_app
 from flask import render_template_string, redirect, send_from_directory
 
 from sqlalchemy import and_, func
+from sqlalchemy.exc import InvalidRequestError, TimeoutError
 
 import numpy as np
 
@@ -65,6 +68,8 @@ from oii.ifcb2 import v1_stitching
 
 from oii.ifcb2.flow import get_flow
 
+from .get_roi_features import get_roi_features_json
+
 from oii.ifcb2.dashboard.flasksetup import app
 from oii.ifcb2.dashboard.flasksetup import session, dbengine, user_manager
 
@@ -93,27 +98,28 @@ session = None
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-def init_database(dbengine, session):
-    """initialize database"""
-    Base.metadata.create_all(dbengine)
-    session.expire_all()
-    # init roles and test users
-    # this should go somewhere else later
-    for role in ['Admin','Instrument','Time Series', 'API']:
-        if not session.query(Role).filter_by(name=role).count():
-            r = Role(name=role)
-            session.add(r)
+def init_database(dbengine):
+    with safe_session() as session:
+        """initialize database"""
+        Base.metadata.create_all(dbengine)
+        session.expire_all()
+        # init roles and test users
+        # this should go somewhere else later
+        for role in ['Admin','Instrument','Time Series', 'API']:
+            if not session.query(Role).filter_by(name=role).count():
+                r = Role(name=role)
+                session.add(r)
+                session.commit()
+        if not session.query(User).filter_by(email='admin@whoi.edu').count():
+            u = User(
+                first_name='Test', last_name='Admin',
+                email='admin@whoi.edu', username='admin@whoi.edu',
+                password=user_manager.hash_password('12345678'),
+                is_enabled=True)
+            r = session.query(Role).filter_by(name='Admin').first()
+            u.roles.append(r)
+            session.add(u)
             session.commit()
-    if not session.query(User).filter_by(email='admin@whoi.edu').count():
-        u = User(
-            first_name='Test', last_name='Admin',
-            email='admin@whoi.edu', username='admin@whoi.edu',
-            password=user_manager.hash_password('12345678'),
-            is_enabled=True)
-        r = session.query(Role).filter_by(name='Admin').first()
-        u.roles.append(r)
-        session.add(u)
-        session.commit()
 
 @app.before_first_request
 def dashboard_config():
@@ -122,21 +128,34 @@ def dashboard_config():
     workflow_url = current_app.config.get(WORKFLOW_URL)
     workflow_client = WorkflowClient(workflow_url)
     # configure database session
-    global session
     db_url = current_app.config.get(DATABASE_URL)
-    dbengine = create_engine(db_url)
-    ScopedSession = scoped_session(sessionmaker(bind=dbengine))
-    session = ScopedSession()
-    init_database(dbengine,session)
+    dbengine = create_engine(db_url, pool_size=50, max_overflow=70, pool_recycle=3600)
+    global Session
+    Session = scoped_session(sessionmaker(bind=dbengine), scopefunc=flask._app_ctx_stack.__ident_func__)
+    init_database(dbengine)
     current_app.config.update(
         DBENGINE=dbengine,
-        SCOPED_SESSION=ScopedSession,
-        SESSION=session
+        SCOPED_SESSION=Session
     )
     # instrument RBAC
-    User.query = ScopedSession.query_property()
-    Role.query = ScopedSession.query_property()
-    UserRoles.query = ScopedSession.query_property()
+    s = scoped_session(sessionmaker(bind=dbengine))
+    User.query = s.query_property()
+    Role.query = s.query_property()
+    UserRoles.query = s.query_property()
+    del s
+
+@app.teardown_request
+def teardown_request(exception):
+    if Session is not None:
+        if exception:
+            Session.rollback()
+            Session.remove()
+        Session.remove()
+
+@contextmanager
+def safe_session(exc=None):
+    s = Session()
+    yield s
 
 def get_url_root():
     return current_app.config.get(DASHBOARD_BASE_URL, request.url_root)
@@ -185,9 +204,12 @@ def parse_pid(pid):
     except StopIteration:
         raise
 
-@memoize(ttl=30)
+# don't know why this additional session management is required
+
+@memoize(ttl=30,ignore_exceptions=True)
 def get_data_roots(ts_label, product_type='raw'):
-    return files.get_data_roots(session, ts_label, product_type)
+    with safe_session(NotFound) as session:
+        return files.get_data_roots(session, ts_label, product_type)
 
 def get_timestamp(parsed_pid):
     return iso8601(strptime(parsed_pid[TIMESTAMP], parsed_pid[TIMESTAMP_FORMAT]))
@@ -236,7 +258,9 @@ def serve_features_bin(parsed):
 
 def serve_class_scores_bin(parsed):
     class_mat = get_product_file(parsed, 'class_scores')
-    csv_out = '\n'.join(class_scoresmat2csv(class_mat, parsed['bin_lid']))
+    if 'extension' in parsed and parsed['extension'] == 'mat':
+        return Response(file(class_mat), direct_passthrough=True, mimetype='application/octet-stream')
+    csv_out = class_scoresmat2csv(class_mat, parsed['bin_lid'])
     return Response(csv_out + '\n', mimetype='text/csv')
 
 def get_zip_entry_bytes(zipfile_path, entry_name):
@@ -352,9 +376,10 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
     ts_label_notag, tags = parse_ts_label_tags(ts_label)
-    feed = Feed(session, ts_label)
-    total_bins = feed.total_bins()
-    total_data_volume = feed.total_data_volume()
+    with safe_session() as session:
+        feed = Feed(session, ts_label)
+        total_bins = feed.total_bins()
+        total_data_volume = feed.total_data_volume()
     template = {
         'static': STATIC,
         'time_series': ts_label,
@@ -369,16 +394,17 @@ def serve_timeseries(ts_label=None, pid=None):
     # fetch time series information
     all_series = []
     url_root = get_url_root()
-    for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
-        if ts_label is None: # no time series specified
-            return redirect(os.path.join(url_root, ts.label), code=302)
-        description = ts.description
-        if not description:
-            description = ts_label_notag
-        if ts.label == ts_label_notag:
-            template['page_title'] = html.fromstring(description).text_content()
-            template['title'] = description
-        all_series.append((ts.label, description))
+    with safe_session() as session:
+        for ts in session.query(TimeSeries).filter(TimeSeries.enabled).order_by(TimeSeries.label):
+            if ts_label is None: # no time series specified
+                return redirect(os.path.join(url_root, ts.label), code=302)
+            description = ts.description
+            if not description:
+                description = ts_label_notag
+            if ts.label == ts_label_notag:
+                template['page_title'] = html.fromstring(description).text_content()
+                template['title'] = description
+            all_series.append((ts.label, description))
     template['all_series'] = all_series
     template['base_url'] = url_root
     return template_response('timeseries.html', **template)
@@ -393,14 +419,15 @@ def serve_timeseries(ts_label=None, pid=None):
 @app.route('/<ts_label>/api/feed/volume/start/<datetime:start>/end/<datetime:end>')
 def volume(ts_label,start=None,end=None):
     dv = []
-    with Feed(session, ts_label) as feed:
-        for row in feed.daily_data_volume(start,end):
-            dv.append({
-                'gb': float(row[0]),
-                'bin_count': row[1],
-                'day': str(row[2])
-            })
-    return Response(json.dumps(dv), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for row in feed.daily_data_volume(start,end):
+                dv.append({
+                    'gb': float(row[0]),
+                    'bin_count': row[1],
+                    'day': str(row[2])
+                })
+            return Response(json.dumps(dv), mimetype=MIME_JSON)
 
 def canonicalize_bin(b):
     return {
@@ -411,21 +438,23 @@ def canonicalize_bin(b):
 @app.route('/<ts_label>/feed.json')
 def serve_feed_json(ts_label):
     bins = []
-    with Feed(session, ts_label) as feed:
-        for b in feed.latest():
-            bins.append(canonicalize_bin(b))
-    return Response(json.dumps(bins), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for b in feed.latest():
+                bins.append(canonicalize_bin(b))
+        return Response(json.dumps(bins), mimetype=MIME_JSON)
 
 # elapsed time since most recent bin before timestamp default now
 @app.route('/<ts_label>/api/feed/elapsed')
 @app.route('/<ts_label>/api/feed/elapsed/<datetime:timestamp>')
 def elapsed(ts_label,timestamp=None):
-    with Feed(session, ts_label) as feed:
-        try:
-            delta = feed.elapsed(timestamp=timestamp)
-            return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
-        except IndexError:
-            abort(404)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            try:
+                delta = feed.elapsed(timestamp=timestamp)
+                return Response(json.dumps(dict(elapsed=delta.total_seconds())), mimetype=MIME_JSON)
+            except IndexError:
+                abort(404)
 
 def ts_metric(ts_label, callback, start=None, end=None, s=None):
     if s is None:
@@ -434,13 +463,14 @@ def ts_metric(ts_label, callback, start=None, end=None, s=None):
         end = utcdtnow()
     if start is None:
         start = end - timedelta(seconds=s)
-    with Feed(session, ts_label) as feed:
-        result = []
-        for b in feed.time_range(start, end):
-            r = canonicalize_bin(b)
-            r.update(callback(b))
-            result.append(r)
-    return Response(json.dumps(result), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            result = []
+            for b in feed.time_range(start, end):
+                r = canonicalize_bin(b)
+                r.update(callback(b))
+                result.append(r)
+            return Response(json.dumps(result), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>')
 @app.route('/<ts_label>/api/feed/<any(trigger_rate,temperature,humidity):metric>/last/<int:s>')
@@ -457,21 +487,22 @@ def serve_metric_series(ts_label,metric,start=None,end=None,s=None):
 
 # FIXME configurable time range
 def view_metrics(ts_label,metrics):
-    with Feed(session, ts_label) as feed:
-        # FIXME configurable time range
-        for b in feed.latest():
-            break
-        then = iso8601(b.sample_time.timetuple())
-        tmpl = {
-            'static': STATIC,
-            'timeseries': ts_label,
-            'metrics': [{
-                'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
-                'metric': metric,
-                'y_label': metric
-            } for metric in metrics]
-        }
-        return template_response('instrument.html',**tmpl)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            # FIXME configurable time range
+            for b in feed.latest():
+                break
+            then = iso8601(b.sample_time.timetuple())
+            tmpl = {
+                'static': STATIC,
+                'timeseries': ts_label,
+                'metrics': [{
+                    'endpoint': '/%s/api/feed/%s/end/%s' % (ts_label, metric, then),
+                    'metric': metric,
+                    'y_label': metric
+                } for metric in metrics]
+            }
+            return template_response('instrument.html',**tmpl)
 
 @app.route('/<ts_label>/trigger_rate.html')
 def view_trigger_rate(ts_label):
@@ -497,9 +528,10 @@ def view_all_metrics(ts_label):
 @app.route('/<ts_label>/api/feed/nearest/<datetime:timestamp>')
 def nearest(ts_label, timestamp):
     #ts = struct_time2utcdatetime(parse_date_param(timestamp))
-    with Feed(session, ts_label) as feed:
-        for bin in feed.nearest(timestamp=timestamp):
-            break
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            for bin in feed.nearest(timestamp=timestamp):
+                break
     #sample_time_str = iso8601(bin.sample_time.timetuple())
     #pid = canonicalize(request.url_root, ts_label, bin.lid)
     resp = canonicalize_bin(bin)
@@ -515,8 +547,9 @@ def feed_massage_bins(ts_label,bins,include_skip=False):
     return resp
 
 def _serve_feed_day(ts_label,dt,include_skip=False):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt,include_skip)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip)
     resp = feed_massage_bins(ts_label, bins, include_skip=include_skip)
     return Response(json.dumps(resp), mimetype=MIME_JSON)
 
@@ -549,21 +582,23 @@ def serve_after_before(ts_label,after_before,n=1,pid=None):
     except StopIteration:
         abort(404)
     bin_lid = parsed['bin_lid']
-    with Feed(session, ts_label) as feed:
-        if after_before=='before':
-            bins = list(feed.before(bin_lid, n))
-        else:
-            bins = list(feed.after(bin_lid, n))
-    resp = feed_massage_bins(ts_label, bins)
-    return Response(json.dumps(resp), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            if after_before=='before':
+                bins = list(feed.before(bin_lid, n))
+            else:
+                bins = list(feed.after(bin_lid, n))
+            resp = feed_massage_bins(ts_label, bins)
+            return Response(json.dumps(resp), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/feed/random')
 @app.route('/<ts_label>/api/feed/random/n/<int:n>')
 def serve_random(ts_label,n=1):
-    with Feed(session, ts_label) as feed:
-        bins = list(feed.random(n))
-        resp = feed_massage_bins(ts_label, bins)
-        return jsonr(resp)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = list(feed.random(n))
+            resp = feed_massage_bins(ts_label, bins)
+            return jsonr(resp)
 
 ### tagging ###
 
@@ -579,19 +614,20 @@ TAG_PAGE_SIZE=20
     
 # helper for tag search endpoints
 def search_tags(ts_label, tag_names, page=1, include_skip=False):
-    tags = parse_tags(tag_names)
-    session.expire_all()
-    r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
-        search_tags_all(tags, page, include_skip)
-    rows = [{
-        'time': iso8601(bin.sample_time.timetuple()),
-        'skip': bin.skip,
-        'n_comments': len(bin.comments),
-        'lid': bin.lid,
-        'pid': canonicalize(get_url_root(), ts_label, bin.lid),
-        'tags': map(unicode,bin.tags)
-    } for bin in r]
-    return rows, hasNext
+    with safe_session() as session:
+        tags = parse_tags(tag_names)
+        session.expire_all()
+        r, hasNext = Tagging(session, ts_label, TAG_PAGE_SIZE).\
+                     search_tags_all(tags, page, include_skip)
+        rows = [{
+            'time': iso8601(bin.sample_time.timetuple()),
+            'skip': bin.skip,
+            'n_comments': len(bin.comments),
+            'lid': bin.lid,
+            'pid': canonicalize(get_url_root(), ts_label, bin.lid),
+            'tags': map(unicode,bin.tags)
+        } for bin in r]
+        return rows, hasNext
     
 @app.route('/<ts_label>/api/search_tags/<tag_names>')
 @app.route('/<ts_label>/api/search_tags/<tag_names>/page/<int:page>')
@@ -634,8 +670,9 @@ def tag2dict(t):
 @app.route('/<ts_label>/api/recent_tags')
 @app.route('/<ts_label>/api/recent_tags/page/<int:page>')
 def serve_recent_tags(ts_label, page=1):
-    tags, hasNext = Tagging(session, ts_label, page_size=TAG_PAGE_SIZE).\
-        recent(page)
+    with safe_session() as session:
+        tags, hasNext = Tagging(session, ts_label, page_size=TAG_PAGE_SIZE).\
+                        recent(page)
     return jsonr({
         'tags': [tag2dict(t) for t in tags],
         'hasNext': hasNext,
@@ -646,28 +683,32 @@ def serve_recent_tags(ts_label, page=1):
 @app.route('/<ts_label>/api/tag_cloud')
 @app.route('/<ts_label>/api/tag_cloud/limit/<int:limit>')
 def serve_tag_cloud(ts_label, limit=25):
-    cloud = Tagging(session, ts_label).tag_cloud(limit)
-    return Response(json.dumps(cloud), mimetype=MIME_JSON)
+    with safe_session() as session:
+        cloud = Tagging(session, ts_label).tag_cloud(limit)
+        return Response(json.dumps(cloud), mimetype=MIME_JSON)
     
 @app.route('/<ts_label>/api/add_tag/<tag_name>/<url:pid>')
 @api_login_required
 def serve_add_tag(ts_label, tag_name, pid):
-    b = parsed2bin(parse_bin_query(ts_label, pid))
-    user_email = effective_user().email
-    Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
-    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+    with safe_session() as session:
+        b = parsed2bin(parse_bin_query(ts_label, pid))
+        user_email = effective_user().email
+        Tagging(session, ts_label).add_tag(b, tag_name, user_email=user_email)
+        return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/remove_tag/<tag_name>/<url:pid>')
 @api_login_required
 def serve_remove_tag(ts_label, tag_name, pid):
     b = parsed2bin(parse_bin_query(ts_label, pid))
-    Tagging(session, ts_label).remove_tag(b, tag_name)
-    return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
+    with safe_session() as session:
+        Tagging(session, ts_label).remove_tag(b, tag_name)
+        return Response(json.dumps(map(unicode,b.tags)), mimetype=MIME_JSON)
 
 @app.route('/autocomplete_tag',methods=['GET','POST'])
 def serve_autocomplete_tag():
     stem = request.values['stem']
-    return Response(json.dumps(Tagging(session).autocomplete(stem)), mimetype=MIME_JSON)
+    with safe_session() as session:
+        return Response(json.dumps(Tagging(session).autocomplete(stem)), mimetype=MIME_JSON)
     
 ### comments ###
 
@@ -689,15 +730,17 @@ def comment2dict(c, current_user=None):
 COMMENT_PAGE_SIZE=10
 
 def search_comments(ts_label, search_string, page=1):
-    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
-        search(search_string, page=page)
-    return [comment2dict(c) for c in r], hasNext
+    with safe_session() as session:
+        r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+                     search(search_string, page=page)
+        return [comment2dict(c) for c in r], hasNext
 
 @app.route('/<ts_label>/api/recent_comments')
 @app.route('/<ts_label>/api/recent_comments/page/<int:page>')
 def serve_api_recent_comments(ts_label, page=1):
-    r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
-        recent(page)
+    with safe_session() as session:
+        r, hasNext = Comments(session, ts_label, page_size=COMMENT_PAGE_SIZE).\
+                     recent(page)
     return jsonr({
         'comments': [comment2dict(c) for c in r],
         'hasNext': hasNext,
@@ -742,45 +785,42 @@ def serve_comments_editable(pid):
 @app.route('/api/add_comment/<url:pid>',methods=['POST'])
 @api_login_required
 def serve_add_comment(pid):
-    bc = BinComment(comment=request.form['body'], user_email=current_user.email)
-    bin = pid2bin(pid)
-    bin.comments.append(bc)
-    try:
+    with safe_session() as session:
+        bc = BinComment(comment=request.form['body'], user_email=current_user.email)
+        bin = pid2bin(pid)
+        bin.comments.append(bc)
         session.commit()
         return Response(json.dumps(comment2dict(bc)), mimetype=MIME_JSON)
-    except:
-        session.rollback()
     abort(500)
     
 @app.route('/api/delete_comment/<int:id>')
 @api_login_required
 def serve_delete_comment(id):
-    session.expire_all()
-    bc = session.query(BinComment).filter(BinComment.id==id).first()
-    if bc is None:
-        abort(404)
-    bc.bin.comments.remove(bc)
-    try:
+    with safe_session() as session:
+        session.expire_all()
+        bc = session.query(BinComment).filter(BinComment.id==id).first()
+        if bc is None:
+            abort(404)
+        bc.bin.comments.remove(bc)
         session.commit()
         return Response(json.dumps(dict(deleted=True)), mimetype=MIME_JSON)
-    except:
-        session.rollback()
     abort(500)
 
 ### time series acrtivity page ###
 
 @app.route('/<ts_label>/activity')
 def serve_timeseries_status(ts_label):
-    feed = Feed(session, ts_label)
-    total_bins = feed.total_bins()
-    total_data_volume = feed.total_data_volume()
-    mrb = feed.latest(1).first()
-    return template_response('timeseries_activity.html', **{
-        'ts_label': ts_label,
-        'total_bins': total_bins,
-        'total_data_volume': total_data_volume,
-        'mrb': canonicalize_bin(mrb)
-    });
+    with safe_session() as session:
+        feed = Feed(session, ts_label)
+        total_bins = feed.total_bins()
+        total_data_volume = feed.total_data_volume()
+        mrb = feed.latest(1).first()
+        return template_response('timeseries_activity.html', **{
+            'ts_label': ts_label,
+            'total_bins': total_bins,
+            'total_data_volume': total_data_volume,
+            'mrb': canonicalize_bin(mrb)
+        });
     
 ### files and accession ###
 
@@ -793,10 +833,11 @@ def parse_bin_query(ts_label, pid):
     return parsed
     
 def parsed2bin(parsed):
-    b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
-    if b is None:
-        raise NotFound
-    return b
+    with safe_session() as session:
+        b = session.query(Bin).filter(and_(Bin.lid==parsed['lid'],Bin.ts_label==parsed['ts_label'])).first()
+        if b is None:
+            raise NotFound
+        return b
     
 def parsed2files(parsed):
     b = parsed2bin(parsed)
@@ -858,35 +899,38 @@ def check_files(ts_label, pid):
 @app.route('/<ts_label>/api/check_roots')
 @roles_required('Admin')
 def check_roots(ts_label):
-    acc = Accession(session, ts_label)
-    r = {}
-    for root in acc.get_raw_roots():
-        r[root] = False
-        for fs in acc.list_filesets(root):
-            r[root] = True
-            break
-    return Response(json.dumps(r), mimetype=MIME_JSON)
+    with safe_session() as session:
+        acc = Accession(session, ts_label)
+        r = {}
+        for root in acc.get_raw_roots():
+            r[root] = False
+            for fs in acc.list_filesets(root):
+                r[root] = True
+                break
+        return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/accepts_products/<product_type>')
 def accepts_products(ts_label, product_type):
-    acc = Accession(session, ts_label)
-    accepts = acc.accepts_products(product_type)
-    return Response(json.dumps({
-        'time_series': ts_label,
-        product_type: accepts,
-        'accepts': accepts
-    }), mimetype=MIME_JSON)
+    with safe_session() as session:
+        acc = Accession(session, ts_label)
+        accepts = acc.accepts_products(product_type)
+        return Response(json.dumps({
+            'time_series': ts_label,
+            product_type: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
 
 @app.route('/api/accepts_product/<url:pid>')
 def accepts_product(pid):
     req = DashboardRequest(pid, request)
-    acc = Accession(session, req.time_series)
-    accepts = acc.accepts_products(req.product)
-    return Response(json.dumps({
-        'time_series': req.time_series,
-        req.product: accepts,
-        'accepts': accepts
-    }), mimetype=MIME_JSON)
+    with safe_session() as session:
+        acc = Accession(session, req.time_series)
+        accepts = acc.accepts_products(req.product)
+        return Response(json.dumps({
+            'time_series': req.time_series,
+            req.product: accepts,
+            'accepts': accepts
+        }), mimetype=MIME_JSON)
     
 # FIXME protect with api_login_roles_required
 @app.route('/<ts_label>/api/accede')
@@ -1044,6 +1088,10 @@ def serve_pid(pid):
     if 'target' in req.parsed:
         canonical_bin_pid = canonicalize(req.url_root, req.time_series, req.bin_lid)
         target_no = int(req.parsed['target'])
+        if req.product=='features': # single roi features
+            feature_csv = get_product_file(req.parsed, 'features')
+            j = get_roi_features_json(feature_csv, target_no)
+            return Response(j,mimetype='application/json')
         # pull three targets, then find any stitched pair
         offset=target_no-1
         limit=3
@@ -1061,7 +1109,10 @@ def serve_pid(pid):
             abort(404)
         add_pid(target, canonical_bin_pid)
         # check for image
-        mimetype = mimetypes.types_map['.' + extension]
+        try:
+            mimetype = mimetypes.types_map['.' + extension]
+        except:
+            mimetype = 'application/octet-stream'
         if mimetype.startswith('image/'):
             if req.product=='raw':
                 img = get_target_image(req.parsed, target, roi_path)
@@ -1192,7 +1243,8 @@ from time import sleep
 def product_exists(pid):
     req = DashboardRequest(pid, request)
     try:
-        destpath = files.get_product_destination(session, pid)
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
     except NotFound:
         abort(404)
     if os.path.exists(destpath):
@@ -1215,7 +1267,8 @@ def save_product(destpath, data):
 def deposit(pid):
     req = DashboardRequest(pid, request)
     try:
-        destpath = files.get_product_destination(session, pid)
+        with safe_session() as session:
+            destpath = files.get_product_destination(session, pid)
     except NotFound:
         abort(404)
     product_data = request.data
@@ -1338,10 +1391,11 @@ def serve_wf_recent(n=None):
 #### skipping and tagging ####
 
 def get_orm_bin(req):
-    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
-    if b is None:
-        abort(404)
-    return b
+    with safe_session() as session:
+        b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
+        if b is None:
+            abort(404)
+        return b
 
 @app.route('/api/get_skip/<url:pid>')
 def get_skip_flag(pid):
@@ -1354,21 +1408,16 @@ def get_skip_flag(pid):
     }
     return Response(json.dumps(result),mimetype=MIME_JSON)
 
-def get_orm_bin(req):
-    b = session.query(Bin).filter(and_(Bin.lid==req.lid,Bin.ts_label==req.time_series)).first()
-    if b is None:
-        abort(404)
-    return b
-
 def set_skip_flag(b,value):
-    b.skip = value
-    session.commit()
-    result = {
-        'operation': 'set skip flag',
-        'skip': b.skip,
-        'lid': b.lid
-    }
-    return result
+    with safe_session() as session:
+        b.skip = value
+        session.commit()
+        result = {
+            'operation': 'set skip flag',
+            'skip': b.skip,
+            'lid': b.lid
+        }
+        return result
 
 @app.route('/api/skip/<url:pid>')
 @api_login_roles_required('Admin')
@@ -1387,15 +1436,16 @@ def unskip_bin(pid):
     return Response(json.dumps(r),mimetype=MIME_JSON)
 
 def _skip_or_unskip_day(ts_label, dt, skip=True):
-    with Feed(session, ts_label) as feed:
-        bins = feed.day(dt,include_skip=True)
-    for b in bins:
-        b.skip = skip
-    session.commit()
-    r = {
-        'day': iso8601(dt.timetuple())
-    }
-    return Response(json.dumps(r), mimetype=MIME_JSON)
+    with safe_session() as session:
+        with Feed(session, ts_label) as feed:
+            bins = feed.day(dt,include_skip=True)
+            for b in bins:
+                b.skip = skip
+                session.commit()
+                r = {
+                    'day': iso8601(dt.timetuple())
+                }
+            return Response(json.dumps(r), mimetype=MIME_JSON)
 
 @app.route('/<ts_label>/api/skip_day/<datetime:dt>')
 @api_login_roles_required('Admin')
@@ -1463,9 +1513,10 @@ def serve_mosaic_image(time_series=None, pid=None, params='/'):
     if default_mosaic and extension=='jpg':
         try:
             product_pid = next(ifcb().as_product(pid,'mosaic'))['pid']
-            cached_path = files.get_product_destination(session, product_pid)
-            if os.path.exists(cached_path):
-                return Response(file(cached_path),direct_passthrough=True,mimetype='image/jpeg')
+            with safe_session() as session:
+                cached_path = files.get_product_destination(session, product_pid)
+                if os.path.exists(cached_path):
+                    return Response(file(cached_path),direct_passthrough=True,mimetype='image/jpeg')
         except NotFound:
             pass
         except StopIteration:
