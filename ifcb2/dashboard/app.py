@@ -51,7 +51,7 @@ from oii.rbac.security import login_required, api_required, api_login_required, 
 
 from oii.ifcb2.feed import Feed
 from oii.ifcb2.comments import Comments
-from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, normalize_tag
+from oii.ifcb2.tagging import Tagging, parse_ts_label_tag, parse_ts_label_tags, normalize_tag
 from oii.ifcb2.formats.adc import Adc, SCHEMA_VERSION_1
 
 from oii.ifcb2.files import parsed_pid2fileset, NotFound
@@ -375,7 +375,7 @@ METRICS=['trigger_rate', 'temperature', 'humidity']
 @app.route('/<ts_label>/dashboard/')
 @app.route('/<ts_label>/dashboard/<url:pid>')
 def serve_timeseries(ts_label=None, pid=None):
-    ts_label_notag, tag = parse_ts_label_tag(ts_label)
+    ts_label_notag, tags = parse_ts_label_tags(ts_label)
     with safe_session() as session:
         feed = Feed(session, ts_label)
         total_bins = feed.total_bins()
@@ -384,7 +384,7 @@ def serve_timeseries(ts_label=None, pid=None):
         'static': STATIC,
         'time_series': ts_label,
         'all_metrics': METRICS,
-        'tag': tag,
+        'tags': tags,
         'ts_label_notag': ts_label_notag,
         'total_bins': total_bins,
         'total_data_volume': total_data_volume

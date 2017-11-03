@@ -28,9 +28,11 @@ $(document).ready(function() {
 <div id="title" class="major">
   <div id="title_content">
     <div class="title">
-        {% if tag %}
+        {% if tags %}
         <a href="/{{ts_label_notag}}">{{title|safe}}</a>
-        bins tagged <a href="/{{ts_label_notag}}/search_tags/{{tag}}">{{tag}}</a>
+        bins tagged
+	<a href="/{{ts_label_notag}}/search_tags/{{tags[0]}}">{{tags[0]}}</a>{% for tag in tags[1:] %}, <a href="/{{ts_label_notag}}/search_tags/{{tag}}">{{tag}}</a>
+	{% endfor %}
         {% else %}
         {{title|safe}}
         {% endif %}

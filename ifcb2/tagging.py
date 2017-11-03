@@ -9,14 +9,20 @@ from oii.ifcb2.orm import Bin, BinTag
 def normalize_tag(tagname):
     return re.sub(r'[^\w ]','',tagname.lower())
 
-def parse_ts_label_tag(ts_label_tag):
-    if ts_label_tag is None:
+def parse_ts_label_tags(ts_label_tags):
+    if ts_label_tags is None:
         return None, None
-    try:
-        ts_label, tag = re.split(':',ts_label_tag)
-    except ValueError:
-        ts_label, tag = ts_label_tag, None
-    return ts_label, tag
+    else:
+        vals = re.split(':',ts_label_tags)
+        ts_label, tags = vals[0], vals[1:]
+        return ts_label, tags
+
+def parse_ts_label_tag(ts_label_tag):
+    ts_label, tags = parse_ts_label_tags(ts_label_tag)
+    if not tags:
+        return ts_label, None
+    else:
+        return ts_label, tags[0]
 
 class Tagging(object):
     def __init__(self, session, ts_label=None, page_size=10):

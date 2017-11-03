@@ -21,9 +21,7 @@ $(document).ready(function() {
     <a href="/{{ts_label}}">{{ts_label}}</a> bins tagged {{', '.join(tags)}}
     <div id="search" class="normal_font" style="float:right"></div>
     <div class="normal_font">See in timeseries:
-        {% for tag in tags %}
-        <a href="/{{ts_label}}:{{tag}}">{{tag}}</a>
-        {% endfor %}
+        <a href="/{{ts_label}}:{{':'.join(tags)}}">{{', '.join(tags)}}</a>
     </div>
 </div>
 <div id="results">
