@@ -32,7 +32,8 @@
 	target_metadata: function(target_pid) {
 	    return this.each(function () {
 		var $this = $(this); // retain ref to $(this)
-		$.get(target_pid+'.xml', function(x) {
+		targetpidpath = new URL(target_pid).pathname;
+		$.get(targetpidpath+'.xml', function(x) {
 		    $(x).find('Target *').each(function(ix, thang) {
 			var key = $(thang).get(0).tagName;
 			var value = $(thang).text();

@@ -57,7 +57,8 @@
                                 '(<a href="/'+time_series+'/dashboard/'+bin_pid+'">Show in time series</a>)</div>'+
                                 '<div class="bin_metadata"></div>'+
                             '</div>');
-                $.getJSON(bin_pid+'_short.json',function(r) {
+		binpidpath = new URL(bin_pid).pathname;
+                $.getJSON(binpidpath+'_short.json',function(r) {
                     $this.find('.bin_date').empty().append(r.date);
                     $this.find('.bin_metadata').append('<div class="metadata_key">context</div>');
                     $.each(r.context, function(ix, v) {
@@ -90,7 +91,8 @@
                                     '</tr>'+
                                 '</table>'+
                             '</div>');
-                $.get(bin_pid+'_targetstable',function(r) {
+		binpidpath = new URL(bin_pid).pathname;
+                $.get(binpidpath+'_targetstable',function(r) {
                     $this.find('.targets_table').append(r);
                     $this.find('.targets_table tr:even').addClass('tbl_even');
                 });

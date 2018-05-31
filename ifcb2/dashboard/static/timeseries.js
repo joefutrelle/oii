@@ -42,7 +42,8 @@ function timeseries_setup(e, pid, timeseries) {
             historyPushState({pid:pid, mosaic_state:{}}, pid, '/'+timeseries+'/dashboard/'+pid);
         }
         // update date label on timeline control
-        $.getJSON(pid+'_short.json', function(r) { // need date information
+	pidpath = new URL(pid).pathname;
+        $.getJSON(pidpath+'_short.json', function(r) { // need date information
             $ws.data('selected_pid',r.pid);
             // set the time markers accordingly
             $('#date_label').empty().append(r.date); // FIXME no ms
@@ -199,7 +200,8 @@ function timeseries_setup(e, pid, timeseries) {
     // the ROI image is closable and initially hidden
     $('#roi_image').closeBox().css('display: none');
     function showRoi(evt, roi_pid) {
-        $.getJSON(roi_pid+'.json', function(r) {
+	roipidpath = new URL(roi_pid).pathname;
+        $.getJSON(roipidpath+'.json', function(r) {
             // use grayLoadingImage from image_pager to display the ROI
             var roi_width = r.height; // note that h/w is swapped (90 degrees rotated)
             var roi_height = r.width; // note that h/w is swapped (90 degrees rotated)

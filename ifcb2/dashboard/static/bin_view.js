@@ -104,7 +104,8 @@
                         .find('span').addClass('bin_label');
                     $this.find('.bin_actions');
                     // handle the total rois and timeago
-                    $.getJSON(pid+'_medium.json', function(r) {
+		    pidpath = new URL(pid).pathname;
+                    $.getJSON(pidpath+'_medium.json', function(r) {
                         $this.find('.imagepager_rois_total').empty().append(r.targets.length+'');
                         $this.find('.imagepager_date').attr('title',r.date).timeago();
                         $this.data(DATE,r.date);
@@ -122,7 +123,8 @@
                             if($this.data(DATE) != undefined) {
                                 create_day_link($this.data(DATE));
                             } else {
-                                $.getJSON(pid+'_medium.json', function(r) {
+				pidpath = new URL(pid).pathname;
+                                $.getJSON(pidpath+'_medium.json', function(r) {
                                     create_day_link(r.date);
                                     $this.data(DATE,r.date);
                                 });

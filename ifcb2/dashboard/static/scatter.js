@@ -417,7 +417,8 @@ function scatter_setup(elt, timeseries, pid, width, height) {
                     total_displayed++;
                     var pid = $this.data('roi_pids')[ix];
                     console.log("adding pid: " + pid);
-                    $('#roi_image').append('<a href="' + pid + '.html" target="_blank"><img src="' + pid + '.jpg"></img></a>');
+		    pidpath = new URL(pid).pathname;
+                    $('#roi_image').append('<a href="' + pidpath + '.html" target="_blank"><img src="' + pidpath + '.jpg"></img></a>');
                 }
             });
         });

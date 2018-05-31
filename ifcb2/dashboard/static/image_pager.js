@@ -8,6 +8,11 @@
 // to go to a page fire a gotopage event
 (function($) {
     function grayLoadingImage(node, image_href, width, height) {
+	if(image_href.startsWith('http')) {
+	    rel_image_href = new URL(image_href).pathname;
+	} else {
+	    rel_image_href = image_href;
+	}
 	$(node).empty()
 	    .append('<div></div>').find('div').addClass('imagepager_frame')
 	    .css('width',width).css('height',height)
@@ -20,14 +25,14 @@
 	    .css('display','none')
             .addClass('page_image')
 	    .addClass('imagepager_nodisplay')
-	    .attr('src',image_href)
+	    .attr('src', rel_image_href)
 	    .load(function() {
 		$(node).find('.imagepager_placeholder').remove()
 		    .end()
 		    .find('img')
 		    .attr('width',width).attr('height',height)
 		    .css('display','block');
-		console.log('loaded '+image_href);
+		console.log('loaded '+rel_image_href);
 	    }).error(function() {
 		$(node).find('.imagepager_placeholder')
 		    .removeClass('imagepager_placeholder')
