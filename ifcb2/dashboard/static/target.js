@@ -1,7 +1,7 @@
 (function($) {
     $.fn.extend({
 	target_image: function(target_pid, width, height) {
-	    var image = target_pid + '.jpg'
+	    var image = target_pid + '.png'
 	    var blob = target_pid + '_blob.png'
 	    var outline = target_pid + '_blob_outline.png'
 	    var labels = ['image', 'blob', 'outline'];
