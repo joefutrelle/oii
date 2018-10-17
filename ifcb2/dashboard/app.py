@@ -1232,7 +1232,21 @@ def serve_pid(pid):
             targets = get_req_targets()
             buffer = BytesIO()
             bin2zip(req.parsed,req.canonical_pid,targets,hdr,req.timestamp,roi_path,buffer)
-            return Response(buffer.getvalue(), mimetype='application/zip')
+            data = buffer.getvalue()
+            binzip_pid = next(ifcb().as_product(req.canonical_pid, 'binzip'))['pid']
+            with safe_session() as session:
+                try:
+                    binzip_path = files.get_product_destination(session, binzip_pid)
+                except NotFound:
+                    binzip_path = None
+            if binzip_path is not None:
+                try:
+                    os.makedirs(os.path.dirname(binzip_path))
+                except OSError: # usually because directory exists
+                    pass
+                with open(binzip_path,'wb') as fout:
+                    fout.write(data)
+            return Response(data, mimetype='application/zip')
     abort(404)
 
 ####### deposit ########
