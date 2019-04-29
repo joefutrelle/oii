@@ -79,6 +79,7 @@
             <val>D${yearday}</val>
             <!-- pre-2014 directory structure -->
             <val>D${year}/D${yearday}</val>
+	    <val>${year}/${yearday}</val><!-- FIXME debug -->
           </var>
         </test>
       </first>
@@ -140,15 +141,22 @@
         <test var="product" eq="blobs">
           <var name="filename">
             <val>${bin_lid}_blobs_v2.zip</val>
+            <val>${bin_lid}_blobs_v4.zip</val>
             <val>${bin_lid}.zip</val>
           </var>
         </test>
         <test var="product" eq="features">
-          <var name="filename">${bin_lid}_fea_v2.csv</var>
+	  <var name="filename">
+	    <val>${bin_lid}_fea_v2.csv</val>
+	    <val>${bin_lid}_fea_v4.csv</val>	    
+	  </var>
         </test>
         <test var="product" eq="multiblob">
           <!-- feature sidecar files -->
-          <var name="filename">multiblob/${bin_lid}_multiblob_v2.csv</var>
+	  <var name="filename">
+	    <val>multiblob/${bin_lid}_multiblob_v2.csv</val>
+	    <val>multiblob/${bin_lid}_multiblob_v4.csv</val>
+	  </var>
         </test>
         <test var="product" eq="class_scores">
           <var name="filename">{bin_lid}_class_v1.mat</var>
@@ -164,10 +172,16 @@
         <!-- try product-specific directory structures -->
         <first>
           <test var="product" eq="blobs">
-            <var name="file_path">${root}/${year}/${yearday}/${filename}</var>
+	    <var name="file_path">
+	      <val>${root}/${year}/${yearday}/${filename}</val>
+	      <val>${root}/${year}/D${yearday}/${filename}</val>
+	    </var>
           </test>
           <test var="product" eq="features">
-            <var name="file_path">${root}/features${year}_v2/${bin_lid}_fea_v2.csv</var>
+	    <var name="file_path">
+	      <val>${root}/features${year}_v2/${bin_lid}_fea_v2.csv</val>
+	      <val>${root}/features${year}_v2/${bin_lid}_fea_v4.csv</val>
+	    </var>
           </test>
           <test var="product" eq="class_scores">
             <var name="file_path">${root}/class${year}_v1/${bin_lid}_class_v1.mat</var>
